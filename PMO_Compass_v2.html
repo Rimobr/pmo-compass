@@ -2488,6 +2488,73 @@ const WI = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: services/context-builder ─ Monta o contexto real do projeto ativo para a IA -->
+<script data-module="services/context-builder">
+const ContextBuilder = (() => {
+  function fmtMoney(v) { return 'R$' + Math.round(v||0).toLocaleString('pt-BR'); }
+
+  // Lê os dados reais do projeto ativo (mesmas tabelas que as páginas usam) e formata em texto
+  // para a IA usar como fonte da verdade — substitui o contexto fixo que existia antes.
+  function build() {
+    const activeId = DB.getActiveProjectId();
+    const projectName = (DB.listProjects().find(p => p.id === activeId) || {}).name || 'Projeto sem nome';
+
+    const wbs = DB.get('wbs') || [];
+    const decisions = (DB.get('decisions') || []).filter(d => d.status === 'pending');
+    const team = DB.get('team') || [];
+    const scope = (DB.get('scopeChanges') || []).filter(s => s.status === 'pending');
+    const meetings = (DB.get('meetings') || []).slice(0, 3);
+    const repo = DB.get('repository') || [];
+
+    const wbsLines = wbs.length
+      ? wbs.map(m => `- ${m.label}: ${m.pct}% concluído, status ${m.status}${m.critical ? ' (crítico)' : ''}`).join('\n')
+      : '(nenhuma entrega cadastrada na WBS)';
+
+    const decisionLines = decisions.length
+      ? decisions.map(d => `- [${d.severity}] ${d.title} — ${d.body || ''}`).join('\n')
+      : '(nenhuma decisão pendente)';
+
+    const teamLines = team.length
+      ? team.map(m => `- ${m.name} (${m.role}): ${m.workloadPct}% de carga${(m.signals&&m.signals.length) ? ' — ' + m.signals.join('; ') : ''}`).join('\n')
+      : '(nenhum membro cadastrado)';
+
+    const scopeLines = scope.length
+      ? scope.map(s => `- ${s.title} (+${s.impactDays||0}d, ${fmtMoney(s.impactCost)})`).join('\n')
+      : '(nenhuma mudança de escopo pendente)';
+
+    const meetingLines = meetings.length
+      ? meetings.map(m => `- ${m.title} (${m.date}): ${m.summary || ''}`).join('\n')
+      : '(nenhuma ata registrada)';
+
+    const repoLines = repo.length
+      ? repo.map(r => `- ${r.name} (${(r.ext||'').toUpperCase()})`).join('\n')
+      : '(nenhum documento indexado)';
+
+    return `Projeto ativo: "${projectName}"
+
+WBS (entregas):
+${wbsLines}
+
+Decisões pendentes:
+${decisionLines}
+
+Equipe:
+${teamLines}
+
+Mudanças de escopo pendentes:
+${scopeLines}
+
+Últimas atas de reunião:
+${meetingLines}
+
+Documentos indexados no repositório (nomes — ainda sem o conteúdo completo, ver P0 do plano):
+${repoLines}`;
+  }
+
+  return { build };
+})();
+</script>
+
 <!-- ■ MODULE: services/ai ─ Claude API -->
 <script data-module="services/ai">
 const AI = (() => {
@@ -2496,20 +2563,22 @@ const AI = (() => {
     openai: { model:'gpt-4o', label:'ChatGPT (OpenAI)' },
     google: { model:'gemini-2.0-flash', label:'Gemini (Google)' }
   };
-  const SYSTEM = `Você é a IA do PMO Compass, sistema de apoio à decisão para gerentes de projetos.
-
-Contexto do projeto ativo "Portal Nexus — Controle de Estoque":
-- 12 documentos indexados: requisitos v0.4, atas de reunião, cronograma v3, lições aprendidas, relatório piloto, plano treinamentos
-- Histórico de 4 projetos: PRJ-67, PRJ-44, Valdori Distribuidora, Grupo Beltrano
-- Status atual: prazo 83%, CPI 0,88, 4 decisões pendentes, 1 membro em burnout (Bruno M. — 89%), 5 mudanças de escopo abertas (+R$22k, +18d)
-- Risco crítico: integração ERP (RF-ERP-008) bloqueada — padrão idêntico ao PRJ-67 (causou 18 dias de atraso)
+  const SYSTEM_RULES = `Você é a IA do PMO Compass, sistema de apoio à decisão para gerentes de projetos.
 
 Regras obrigatórias:
-1. Cite sempre a fonte documental de cada informação (ex: "Ata 14/06", "Lição PRJ-67", "Requisitos v0.4 p.19")
+1. Cite sempre a fonte no contexto abaixo que embasa cada informação (ex: nome da entrega da WBS, da decisão, da ata ou do documento)
 2. Adapte a linguagem: entrega para equipe, risco para controle, valor para executivos
 3. Seja conciso e acionável — direto ao ponto
-4. Se não tiver a informação nos documentos, diga explicitamente
-5. Nunca invente dados ou métricas`;
+4. Se não tiver a informação no contexto abaixo, diga isso explicitamente
+5. Nunca invente dados ou métricas que não estejam no contexto`;
+
+  // Monta o system prompt na hora de cada chamada, com os dados reais do projeto ativo —
+  // antes disso o contexto vinha fixo (projeto fictício "Portal Nexus"), mesmo com outro projeto ativo.
+  function buildSystem() {
+    let context = '(não foi possível carregar o contexto do projeto)';
+    try { context = ContextBuilder.build(); } catch(e) { console.warn('ContextBuilder falhou', e); }
+    return `${SYSTEM_RULES}\n\nContexto real do projeto ativo:\n${context}`;
+  }
 
   async function send(messages, opts) {
     const provider = (opts && opts.provider) || Store.getProvider();
@@ -2524,7 +2593,7 @@ Regras obrigatórias:
   }
 
   async function sendAnthropic(messages, key, opts) {
-    const system = (opts && opts.system) || SYSTEM;
+    const system = (opts && opts.system) || buildSystem();
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
       headers:{ 'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-calls':'true' },
@@ -2536,7 +2605,7 @@ Regras obrigatórias:
   }
 
   async function sendOpenAI(messages, key, opts) {
-    const system = (opts && opts.system) || SYSTEM;
+    const system = (opts && opts.system) || buildSystem();
     const oaMessages = [{ role:'system', content:system }, ...messages.map(m=>({ role:m.role, content:m.content }))];
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method:'POST',
@@ -2549,7 +2618,7 @@ Regras obrigatórias:
   }
 
   async function sendGoogle(messages, key, opts) {
-    const system = (opts && opts.system) || SYSTEM;
+    const system = (opts && opts.system) || buildSystem();
     const contents = messages.map(m => ({ role: m.role==='assistant' ? 'model' : 'user', parts:[{ text:m.content }] }));
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.google.model}:generateContent?key=${key}`;
     const res = await fetch(url, {
