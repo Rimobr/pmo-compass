@@ -1675,7 +1675,7 @@ const Cloud = (() => {
         if(typeof Decisions !== 'undefined') Decisions.render();
       }
       if(docs.data) {
-        DB.set('repository', docs.data.map(x => ({ id:x.id, name:x.name, ext:x.ext, meta:x.meta, addedAt:x.added_at, tags:x.tags||[], indexPct:x.index_pct })));
+        DB.set('repository', docs.data.map(x => ({ id:x.id, name:x.name, ext:x.ext, meta:x.meta, addedAt:x.added_at, tags:x.tags||[], indexPct:x.index_pct, content:x.content||'' })));
         if(typeof Repo !== 'undefined') Repo.render();
       }
       T.show('☁️ Dados sincronizados do Supabase.');
@@ -1702,7 +1702,7 @@ const Cloud = (() => {
 
   function pushDocument(it) {
     if(!client || !session) return;
-    client.from('documents').upsert({ id:it.id, name:it.name, ext:it.ext, meta:it.meta, added_at:it.addedAt, tags:it.tags, index_pct:it.indexPct }).then(()=>{}).catch(()=>{});
+    client.from('documents').upsert({ id:it.id, name:it.name, ext:it.ext, meta:it.meta, added_at:it.addedAt, tags:it.tags, index_pct:it.indexPct, content:it.content||'' }).then(()=>{}).catch(()=>{});
   }
   function deleteDocument(id) { if(client && session) client.from('documents').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
 
@@ -2526,9 +2526,23 @@ const ContextBuilder = (() => {
       ? meetings.map(m => `- ${m.title} (${m.date}): ${m.summary || ''}`).join('\n')
       : '(nenhuma ata registrada)';
 
-    const repoLines = repo.length
-      ? repo.map(r => `- ${r.name} (${(r.ext||'').toUpperCase()})`).join('\n')
+    // Documentos mais recentes primeiro — limitados para não estourar o tamanho do prompt.
+    // Seleção por relevância (busca textual/semântica) fica para uma etapa seguinte; por ora é recência.
+    const MAX_DOCS_IN_CONTEXT = 8;
+    const MAX_EXCERPT_CHARS = 500;
+    const repoSorted = [...repo].sort((a, b) => (b.addedAt||'').localeCompare(a.addedAt||''));
+    const repoForContext = repoSorted.slice(0, MAX_DOCS_IN_CONTEXT);
+    const repoLines = repoForContext.length
+      ? repoForContext.map(r => {
+          if(!r.content) return `- ${r.name} (${(r.ext||'').toUpperCase()}) — sem conteúdo indexado ainda`;
+          const clean = r.content.replace(/\s+/g, ' ').trim();
+          const excerpt = clean.slice(0, MAX_EXCERPT_CHARS) + (clean.length > MAX_EXCERPT_CHARS ? '…' : '');
+          return `- ${r.name} (${(r.ext||'').toUpperCase()})\n  Trecho: "${excerpt}"`;
+        }).join('\n')
       : '(nenhum documento indexado)';
+    const repoNote = repo.length > repoForContext.length
+      ? `\n(mostrando os ${repoForContext.length} documentos mais recentes de ${repo.length} indexados)`
+      : '';
 
     return `Projeto ativo: "${projectName}"
 
@@ -2547,8 +2561,8 @@ ${scopeLines}
 Últimas atas de reunião:
 ${meetingLines}
 
-Documentos indexados no repositório (nomes — ainda sem o conteúdo completo, ver P0 do plano):
-${repoLines}`;
+Documentos indexados no repositório (com trecho real do conteúdo, quando disponível):
+${repoLines}${repoNote}`;
   }
 
   return { build };
@@ -2857,6 +2871,8 @@ const FileIntake = (() => {
     return result.value;
   }
 
+  const MAX_CONTENT_CHARS = 20000; // limite de texto persistido por documento — localStorage tem espaço finito
+
   async function handleFiles(fileList) {
     if(!Auth.guard('business')) return;
     const files = Array.from(fileList || []);
@@ -2870,10 +2886,12 @@ const FileIntake = (() => {
     for(const f of files) {
       const ext = (f.name.split('.').pop() || '').toLowerCase();
       let preview = '';
+      let content = ''; // texto completo (anonimizado), persistido no repositório — antes era descartado após o preview
       if(READABLE_EXT.includes(ext)) {
         try {
           const raw = await f.text();
           const { text, redactions } = anonymize(raw);
+          content = text.slice(0, MAX_CONTENT_CHARS);
           preview = text.slice(0, 600);
           totalRedactions += redactions;
         } catch(e) { /* leitura falhou, segue sem prévia */ }
@@ -2881,6 +2899,7 @@ const FileIntake = (() => {
         try {
           const raw = await extractPdfText(f);
           const { text, redactions } = anonymize(raw);
+          content = text.slice(0, MAX_CONTENT_CHARS);
           preview = text.slice(0, 600);
           totalRedactions += redactions;
         } catch(e) { extractionFailures++; }
@@ -2888,12 +2907,13 @@ const FileIntake = (() => {
         try {
           const raw = await extractDocxText(f);
           const { text, redactions } = anonymize(raw);
+          content = text.slice(0, MAX_CONTENT_CHARS);
           preview = text.slice(0, 600);
           totalRedactions += redactions;
         } catch(e) { extractionFailures++; }
       }
       const kb = (f.size / 1024).toFixed(0);
-      const repoItem = { id:genId(), name:f.name, ext, meta:`${kb} KB · local`, addedAt:today, tags:['Novo','Descaracterizado (LGPD)'], indexPct:100 };
+      const repoItem = { id:genId(), name:f.name, ext, meta:`${kb} KB · local`, addedAt:today, tags:['Novo','Descaracterizado (LGPD)'], indexPct:100, content };
       Repo.add(repoItem);
       items.push({ name:f.name, size:f.size, ext, preview });
     }

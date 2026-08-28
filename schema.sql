@@ -113,7 +113,8 @@ create table if not exists public.documents (
   meta text,
   added_at date default current_date,
   tags jsonb not null default '[]',
-  index_pct int not null default 100
+  index_pct int not null default 100,
+  content text not null default '' -- texto extraído (PDF/DOCX) já anonimizado (LGPD), usado como contexto real da IA
 );
 
 -- 5) ROW LEVEL SECURITY — espelha os 4 perfis já usados no app -------------
