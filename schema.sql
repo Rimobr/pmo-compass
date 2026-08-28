@@ -78,6 +78,7 @@ create table if not exists public.wbs_modules (
   start_date date,
   end_date date,
   critical boolean not null default false,
+  predecessors jsonb not null default '[]', -- ids de outras entregas/subtarefas — usado no cálculo real de caminho crítico (CPM)
   updated_at timestamptz default now()
 );
 
@@ -88,6 +89,7 @@ create table if not exists public.wbs_tasks (
   status text not null default 'neu' check (status in ('grn','amb','red','neu')),
   start_date date,
   end_date date,
+  predecessors jsonb not null default '[]',
   updated_at timestamptz default now()
 );
 

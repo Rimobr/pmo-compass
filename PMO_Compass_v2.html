@@ -1333,6 +1333,7 @@ body.icons-failed i[data-fb]::before{
         <span><span class="gantt-leg-sw" style="background:var(--amb)"></span>Em andamento</span>
         <span><span class="gantt-leg-sw gantt-bar-stripe" style="background:var(--red)"></span>Bloqueado / risco crítico</span>
         <span><span class="gantt-leg-sw" style="background:var(--s3);border:1px solid var(--b2)"></span>Não iniciado</span>
+        <span><span class="gantt-leg-sw" style="background:var(--s3);outline:2px solid var(--acc);outline-offset:1px"></span>Caminho crítico (folga zero)</span>
         <span><span class="gantt-leg-sw" style="background:var(--acc);width:2px;border-radius:0"></span>Hoje</span>
       </div>
     </div>
@@ -1351,7 +1352,7 @@ body.icons-failed i[data-fb]::before{
       <div class="lbl"><i class="ti ti-brain"></i>Análise IA da WBS</div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <div style="background:var(--rd);border:1px solid var(--rb);border-radius:var(--r8);padding:10px 12px;font-size:12.5px;color:var(--t2)"><i class="ti ti-alert-triangle" style="color:var(--red)"></i> <strong style="color:var(--t1)">Gargalo crítico:</strong> Módulo 2 (Integração ERP) em 12% está bloqueando 3 outros itens (2.2, 2.3 e reconciliação de inventário). Resolução do RF-ERP-008 desbloqueia 40% do backlog restante.</div>
-        <div style="background:var(--amd);border:1px solid var(--ambb);border-radius:var(--r8);padding:10px 12px;font-size:12.5px;color:var(--t2)"><i class="ti ti-clock" style="color:var(--amb)"></i> <strong style="color:var(--t1)">Caminho crítico:</strong> 2.1 → 2.2 → 2.3 → piloto completo. Tempo estimado: 28 dias após decisão técnica.</div>
+        <div style="background:var(--amd);border:1px solid var(--ambb);border-radius:var(--r8);padding:10px 12px;font-size:12.5px;color:var(--t2)" id="wbs-cpm-line"><i class="ti ti-clock" style="color:var(--amb)"></i> <strong style="color:var(--t1)">Caminho crítico:</strong> calculando…</div>
         <div style="background:var(--gd);border:1px solid var(--gb);border-radius:var(--r8);padding:10px 12px;font-size:12.5px;color:var(--t2)"><i class="ti ti-check-circle" style="color:var(--grn)"></i> <strong style="color:var(--t1)">Em dia:</strong> Módulos 1 e 5 estão no ritmo correto. Governança pode ser completada em paralelo enquanto ERP é resolvido.</div>
       </div>
     </div>
@@ -1664,8 +1665,8 @@ const Cloud = (() => {
       ]);
       if(mods.data) {
         const wbs = mods.data.map(m => ({
-          id:m.id, label:m.label, status:m.status, pct:m.pct, start:m.start_date, end:m.end_date, critical:m.critical,
-          children:(tasks.data||[]).filter(t => t.module_id===m.id).map(t => ({id:t.id,label:t.label,status:t.status,start:t.start_date,end:t.end_date}))
+          id:m.id, label:m.label, status:m.status, pct:m.pct, start:m.start_date, end:m.end_date, critical:m.critical, predecessors:m.predecessors||[],
+          children:(tasks.data||[]).filter(t => t.module_id===m.id).map(t => ({id:t.id,label:t.label,status:t.status,start:t.start_date,end:t.end_date,predecessors:t.predecessors||[]}))
         }));
         DB.set('wbs', wbs);
         if(typeof WBS !== 'undefined') WBS.render();
@@ -1685,11 +1686,11 @@ const Cloud = (() => {
   // ── Push best-effort: nunca bloqueia a UI local, só tenta manter o servidor ao dia ──
   function pushWbsModule(m) {
     if(!client || !session) return;
-    client.from('wbs_modules').upsert({ id:m.id, label:m.label, status:m.status, pct:m.pct, start_date:m.start, end_date:m.end, critical:m.critical }).then(()=>{}).catch(()=>{});
+    client.from('wbs_modules').upsert({ id:m.id, label:m.label, status:m.status, pct:m.pct, start_date:m.start, end_date:m.end, critical:m.critical, predecessors:m.predecessors||[] }).then(()=>{}).catch(()=>{});
   }
   function pushWbsTask(moduleId, t) {
     if(!client || !session) return;
-    client.from('wbs_tasks').upsert({ id:t.id, module_id:moduleId, label:t.label, status:t.status, start_date:t.start, end_date:t.end }).then(()=>{}).catch(()=>{});
+    client.from('wbs_tasks').upsert({ id:t.id, module_id:moduleId, label:t.label, status:t.status, start_date:t.start, end_date:t.end, predecessors:t.predecessors||[] }).then(()=>{}).catch(()=>{});
   }
   function deleteWbsModule(id) { if(client && session) client.from('wbs_modules').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
   function deleteWbsTask(id) { if(client && session) client.from('wbs_tasks').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
@@ -1768,29 +1769,29 @@ const DB = (() => {
         { id:'w2', label:'2. Integração ERP', status:'red', pct:12, start:'2026-06-02', end:'2026-07-20', critical:true,
           children:[
             { id:'w2t1', label:'2.1 Definição de arquitetura (RF-ERP-008)', status:'red', start:'2026-06-02', end:'2026-06-20' },
-            { id:'w2t2', label:'2.2 Conciliação de saldos', status:'neu', start:'2026-06-20', end:'2026-07-05' },
-            { id:'w2t3', label:'2.3 Logs de reprocessamento', status:'neu', start:'2026-07-05', end:'2026-07-20' }
+            { id:'w2t2', label:'2.2 Conciliação de saldos', status:'neu', start:'2026-06-20', end:'2026-07-05', predecessors:['w2t1'] },
+            { id:'w2t3', label:'2.3 Logs de reprocessamento', status:'neu', start:'2026-07-05', end:'2026-07-20', predecessors:['w2t2'] }
           ]
         },
         { id:'w3', label:'3. Transferências entre filiais', status:'amb', pct:45, start:'2026-05-20', end:'2026-07-10', critical:false,
           children:[
             { id:'w3t1', label:'3.1 Solicitação e registro de transferência', status:'grn', start:'2026-05-20', end:'2026-06-02' },
-            { id:'w3t2', label:'3.2 Status em trânsito', status:'amb', start:'2026-06-02', end:'2026-06-25' },
-            { id:'w3t3', label:'3.3 Confirmação no destino por bipagem', status:'neu', start:'2026-06-25', end:'2026-07-10' }
+            { id:'w3t2', label:'3.2 Status em trânsito', status:'amb', start:'2026-06-02', end:'2026-06-25', predecessors:['w3t1'] },
+            { id:'w3t3', label:'3.3 Confirmação no destino por bipagem', status:'neu', start:'2026-06-25', end:'2026-07-10', predecessors:['w3t2'] }
           ]
         },
         { id:'w4', label:'4. Inventário e auditoria', status:'amb', pct:30, start:'2026-06-01', end:'2026-07-25', critical:false,
           children:[
             { id:'w4t1', label:'4.1 Inventário por bipagem', status:'amb', start:'2026-06-01', end:'2026-06-22' },
-            { id:'w4t2', label:'4.2 Comparação com ERP', status:'neu', start:'2026-06-22', end:'2026-07-15' },
+            { id:'w4t2', label:'4.2 Comparação com ERP', status:'neu', start:'2026-06-22', end:'2026-07-15', predecessors:['w4t1'] },
             { id:'w4t3', label:'4.3 Trilha de auditoria completa', status:'grn', start:'2026-06-01', end:'2026-06-15' }
           ]
         },
         { id:'w5', label:'5. Governança e perfis de acesso', status:'grn', pct:60, start:'2026-05-10', end:'2026-06-30', critical:false,
           children:[
             { id:'w5t1', label:'5.1 Controle de perfis por filial', status:'grn', start:'2026-05-10', end:'2026-05-24' },
-            { id:'w5t2', label:'5.2 Logs de ação por usuário', status:'grn', start:'2026-05-24', end:'2026-06-07' },
-            { id:'w5t3', label:'5.3 Relatório de auditoria gerencial', status:'neu', start:'2026-06-07', end:'2026-06-30' }
+            { id:'w5t2', label:'5.2 Logs de ação por usuário', status:'grn', start:'2026-05-24', end:'2026-06-07', predecessors:['w5t1'] },
+            { id:'w5t3', label:'5.3 Relatório de auditoria gerencial', status:'neu', start:'2026-06-07', end:'2026-06-30', predecessors:['w5t2'] }
           ]
         }
       ],
@@ -2485,6 +2486,86 @@ const WI = (() => {
   }
 
   return { render, sel, adopt, openAdd, openEdit, saveFromModal, deleteFromModal, closeModal, resetCache };
+})();
+</script>
+
+<!-- ■ MODULE: services/cpm ─ Método do Caminho Crítico (CPM) real, a partir de dependências entre itens -->
+<script data-module="services/cpm">
+const CPM = (() => {
+  function parseDate(s) { const [y,m,d] = (s||'2026-01-01').split('-').map(Number); return new Date(y,(m||1)-1,d||1); }
+  function dayDiff(a,b) { return Math.round((b - a) / 86400000); }
+
+  // items: [{id, start:'YYYY-MM-DD', end:'YYYY-MM-DD', predecessors:[id,...]}]
+  // Retorna { error, result } — result é Map<id, {earlyStart, earlyFinish, lateStart, lateFinish, floatDays, critical}>,
+  // tudo em dias relativos ao início mais cedo entre os itens considerados (dia 0).
+  //
+  // Só entram no cálculo itens que fazem parte de alguma dependência real (têm predecessora
+  // cadastrada ou são predecessora de outro item) — um item isolado, sem nenhuma relação
+  // declarada, não deve competir pelo "fim do projeto" só por ter uma data de término tardia.
+  function compute(allItems) {
+    if(!allItems || !allItems.length) return { error:null, result:new Map() };
+    const allById = new Map(allItems.map(it => [it.id, it]));
+    const connectedIds = new Set();
+    allItems.forEach(it => {
+      const preds = (it.predecessors||[]).filter(p => allById.has(p) && p !== it.id);
+      if(preds.length) { connectedIds.add(it.id); preds.forEach(p => connectedIds.add(p)); }
+    });
+    const items = allItems.filter(it => connectedIds.has(it.id));
+    if(!items.length) return { error:null, result:new Map() };
+
+    const byId = new Map(items.map(it => [it.id, it]));
+    const duration = new Map(items.map(it => [it.id, Math.max(1, dayDiff(parseDate(it.start), parseDate(it.end)))]));
+    const globalStart = items.reduce((min, it) => { const d = parseDate(it.start); return d < min ? d : min; }, parseDate(items[0].start));
+
+    // Sucessores + grau de entrada, só considerando predecessoras que existem de fato na lista
+    const succMap = new Map(items.map(it => [it.id, []]));
+    const inDeg = new Map(items.map(it => [it.id, 0]));
+    items.forEach(it => {
+      (it.predecessors||[]).forEach(p => {
+        if(byId.has(p) && p !== it.id) { succMap.get(p).push(it.id); inDeg.set(it.id, inDeg.get(it.id) + 1); }
+      });
+    });
+
+    // Ordenação topológica (Kahn) — se sobrar item sem processar, há dependência circular
+    const queue = items.filter(it => inDeg.get(it.id) === 0).map(it => it.id);
+    const order = [];
+    while(queue.length) {
+      const id = queue.shift();
+      order.push(id);
+      succMap.get(id).forEach(s => { inDeg.set(s, inDeg.get(s) - 1); if(inDeg.get(s) === 0) queue.push(s); });
+    }
+    if(order.length !== items.length) return { error:'Dependência circular detectada entre itens da WBS — corrija antes de recalcular.', result:new Map() };
+
+    // Forward pass — respeita a data de início cadastrada, mas nunca antes do fim das predecessoras
+    const earlyStart = new Map(), earlyFinish = new Map();
+    order.forEach(id => {
+      const ownStart = dayDiff(globalStart, parseDate(byId.get(id).start));
+      const preds = (byId.get(id).predecessors||[]).filter(p => byId.has(p));
+      const es = preds.length ? Math.max(ownStart, ...preds.map(p => earlyFinish.get(p))) : ownStart;
+      earlyStart.set(id, es);
+      earlyFinish.set(id, es + duration.get(id));
+    });
+
+    const projectEnd = Math.max(...order.map(id => earlyFinish.get(id)));
+
+    // Backward pass
+    const lateFinish = new Map(), lateStart = new Map();
+    [...order].reverse().forEach(id => {
+      const succs = succMap.get(id);
+      const lf = succs.length ? Math.min(...succs.map(s => lateStart.get(s))) : projectEnd;
+      lateFinish.set(id, lf);
+      lateStart.set(id, lf - duration.get(id));
+    });
+
+    const result = new Map();
+    order.forEach(id => {
+      const floatDays = lateStart.get(id) - earlyStart.get(id);
+      result.set(id, { earlyStart:earlyStart.get(id), earlyFinish:earlyFinish.get(id), lateStart:lateStart.get(id), lateFinish:lateFinish.get(id), floatDays, critical: floatDays <= 0 });
+    });
+    return { error:null, result };
+  }
+
+  return { compute };
 })();
 </script>
 
@@ -4488,6 +4569,51 @@ const WBS = (() => {
   function resetCache() { data = null; }
   function persist() { DB.set('wbs', data); }
 
+  // ── Caminho crítico real (CPM), a partir das dependências cadastradas ──
+  let cpmResult = new Map();
+  let cpmHasDeps = false;
+
+  function buildFlatItems() {
+    ensureLoaded();
+    const items = [];
+    data.forEach(m => {
+      items.push({ id:m.id, label:m.label, start:m.start, end:m.end, predecessors:m.predecessors||[] });
+      (m.children||[]).forEach(t => items.push({ id:t.id, label:t.label, start:t.start, end:t.end, predecessors:t.predecessors||[] }));
+    });
+    return items;
+  }
+
+  function computeCpm() {
+    const items = buildFlatItems();
+    cpmHasDeps = items.some(it => (it.predecessors||[]).length > 0);
+    if(!cpmHasDeps) { cpmResult = new Map(); renderCpmSummary(); return; }
+    const { error, result } = CPM.compute(items);
+    if(error) { cpmResult = new Map(); if(typeof T !== 'undefined') T.show('⚠️ ' + error); renderCpmSummary(); return; }
+    cpmResult = result;
+    renderCpmSummary();
+  }
+
+  function isCritical(id) { const r = cpmResult.get(id); return !!(r && r.critical); }
+  function moduleHasCriticalChild(m) { return (m.children||[]).some(t => isCritical(t.id)); }
+
+  function renderCpmSummary() {
+    const el = document.getElementById('wbs-cpm-line');
+    if(!el) return;
+    if(!cpmHasDeps) {
+      el.innerHTML = `<i class="ti ti-info-circle" style="color:var(--t3)"></i> <strong style="color:var(--t1)">Caminho crítico:</strong> nenhuma dependência cadastrada ainda — edite uma entrega/subtarefa e defina predecessoras para calcular o caminho crítico real.`;
+      return;
+    }
+    const items = buildFlatItems().filter(it => isCritical(it.id));
+    if(!items.length) {
+      el.innerHTML = `<i class="ti ti-info-circle" style="color:var(--t3)"></i> <strong style="color:var(--t1)">Caminho crítico:</strong> não foi possível calcular com as dependências atuais.`;
+      return;
+    }
+    items.sort((a,b) => cpmResult.get(a.id).earlyStart - cpmResult.get(b.id).earlyStart);
+    const totalDays = Math.max(...[...cpmResult.values()].map(r => r.earlyFinish));
+    const chain = items.map(it => escapeHtml(it.label)).join(' → ');
+    el.innerHTML = `<i class="ti ti-clock" style="color:var(--amb)"></i> <strong style="color:var(--t1)">Caminho crítico (calculado):</strong> ${chain}. Duração total: ${totalDays} dias.`;
+  }
+
   function toggle(id) {
     expand[id] = expand[id] === undefined ? false : !expand[id];
     renderTree();
@@ -4497,9 +4623,11 @@ const WBS = (() => {
     const root = document.getElementById('wbs-tree-root');
     if(!root) return;
     ensureLoaded();
+    computeCpm();
     let html = '';
     data.forEach((m, i) => {
       const open = expand[m.id] === undefined ? (i < 2) : expand[m.id];
+      const onCpm = isCritical(m.id) || moduleHasCriticalChild(m);
       html += `<div class="wbs-row wbs-l1" style="${i>0?'margin-top:4px':''}">
         <i class="ti ${open?'ti-chevron-down':'ti-chevron-right'}" style="font-size:12px;color:var(--t3);transition:transform .15s;cursor:pointer" onclick="WBS.toggle('${m.id}')"></i>
         <span style="cursor:pointer;flex:1" onclick="WBS.toggle('${m.id}')">${escapeHtml(m.label)}</span>
@@ -4507,6 +4635,7 @@ const WBS = (() => {
           <div class="wbs-mini-bar"><div class="wbs-mini-fill" style="width:${m.pct}%;background:${STATUS_COLOR[m.status]}"></div></div>
           <span class="wbs-pct ${pctClass(m.pct)}">${m.pct}%</span>
           ${m.critical ? '<span class="badge b-red" style="margin-left:6px">Risco crítico</span>' : ''}
+          ${onCpm ? '<span class="badge b-acc" style="margin-left:6px" title="Folga zero — atraso aqui atrasa o projeto"><i class="ti ti-link"></i> Caminho crítico</span>' : ''}
           <button class="wbs-ic-btn" data-perm="business" title="Nova subtarefa" onclick="event.stopPropagation();WBS.openAddTask('${m.id}')"><i class="ti ti-plus"></i></button>
           <button class="wbs-ic-btn" data-perm="business" title="Editar entrega" onclick="event.stopPropagation();WBS.openEditModule('${m.id}')"><i class="ti ti-edit"></i></button>
         </div>
@@ -4519,6 +4648,7 @@ const WBS = (() => {
           <span style="flex:1">${escapeHtml(t.label)}</span>
           <div class="wbs-bar-wrap">
             <span class="badge ${b.cls}">${b.txt}</span>
+            ${isCritical(t.id) ? '<span class="badge b-acc" title="Folga zero — atraso aqui atrasa o projeto"><i class="ti ti-link"></i> Caminho crítico</span>' : ''}
             <button class="wbs-ic-btn" data-perm="business" title="Editar subtarefa" onclick="WBS.openEditTask('${m.id}','${t.id}')"><i class="ti ti-edit"></i></button>
           </div>
         </div>`;
@@ -4534,6 +4664,7 @@ const WBS = (() => {
     const body = document.getElementById('gantt-body');
     if(!ruler || !body) return;
     ensureLoaded();
+    computeCpm();
     if(!data.length) { ruler.innerHTML=''; body.innerHTML = '<div style="padding:20px;color:var(--t3);font-size:12.5px">Nenhuma entrega cadastrada ainda.</div>'; return; }
 
     let minD = TODAY, maxD = TODAY;
@@ -4561,10 +4692,11 @@ const WBS = (() => {
       const gs = parseDate(g.start), ge = parseDate(g.end);
       const left = pctPos(gs), width = Math.max(pctPos(ge) - pctPos(gs), 1.2);
       const stripe = g.critical ? ' gantt-bar-stripe' : '';
+      const gOutline = (isCritical(g.id) || moduleHasCriticalChild(g)) ? 'outline:2px solid var(--acc);outline-offset:1px;' : '';
       rows += `<div class="gantt-row gantt-row-l1">
         <div class="gantt-lbl" title="${escapeHtml(g.label)}">${escapeHtml(g.label)}</div>
         <div class="gantt-track">
-          <div class="gantt-bar${stripe}" style="left:${left}%;width:${width}%;border-color:${STATUS_COLOR[g.status]}" title="${escapeHtml(g.label)} · ${fmtDate(gs)}–${fmtDate(ge)} · ${g.pct}%">
+          <div class="gantt-bar${stripe}" style="left:${left}%;width:${width}%;border-color:${STATUS_COLOR[g.status]};${gOutline}" title="${escapeHtml(g.label)} · ${fmtDate(gs)}–${fmtDate(ge)} · ${g.pct}%${isCritical(g.id)||moduleHasCriticalChild(g)?' · Caminho crítico':''}">
             <div class="gantt-bar-fill" style="width:${g.pct}%;background:${STATUS_COLOR[g.status]}"></div>
           </div>
         </div>
@@ -4573,10 +4705,11 @@ const WBS = (() => {
         const cs = parseDate(c.start), ce = parseDate(c.end);
         const cl = pctPos(cs), cw = Math.max(pctPos(ce) - pctPos(cs), 1.2);
         const cstripe = c.status==='red' ? ' gantt-bar-stripe' : '';
+        const cOutline = isCritical(c.id) ? 'outline:2px solid var(--acc);outline-offset:1px;' : '';
         rows += `<div class="gantt-row gantt-row-l2">
           <div class="gantt-lbl" title="${escapeHtml(c.label)}">${escapeHtml(c.label)}</div>
           <div class="gantt-track">
-            <div class="gantt-bar${cstripe}" style="left:${cl}%;width:${cw}%;background:${STATUS_COLOR[c.status]};opacity:.85" title="${escapeHtml(c.label)} · ${fmtDate(cs)}–${fmtDate(ce)}"></div>
+            <div class="gantt-bar${cstripe}" style="left:${cl}%;width:${cw}%;background:${STATUS_COLOR[c.status]};opacity:.85;${cOutline}" title="${escapeHtml(c.label)} · ${fmtDate(cs)}–${fmtDate(ce)}${isCritical(c.id)?' · Caminho crítico':''}"></div>
           </div>
         </div>`;
       });
@@ -4608,6 +4741,19 @@ const WBS = (() => {
     document.getElementById('wbs-f-pct').value = (pct === undefined || pct === null) ? '' : pct;
   }
 
+  // Lista todos os outros itens (entregas + subtarefas) como opções de predecessora, excluindo o próprio item
+  // (e, no caso de uma entrega, também suas próprias subtarefas — não faz sentido depender de si mesma).
+  function populatePredecessorOptions(excludeIds, selectedIds) {
+    const sel = document.getElementById('wbs-f-preds');
+    if(!sel) return;
+    const options = [];
+    data.forEach(m => {
+      if(!excludeIds.includes(m.id)) options.push({ id:m.id, label:m.label });
+      (m.children||[]).forEach(t => { if(!excludeIds.includes(t.id)) options.push({ id:t.id, label:'　└ ' + t.label }); });
+    });
+    sel.innerHTML = options.map(o => `<option value="${escapeHtml(o.id)}"${(selectedIds||[]).includes(o.id)?' selected':''}>${escapeHtml(o.label)}</option>`).join('');
+  }
+
   function openModal() { document.getElementById('modal-wbs-item').classList.remove('hidden'); }
   function closeModal() { document.getElementById('modal-wbs-item').classList.add('hidden'); }
 
@@ -4620,6 +4766,7 @@ const WBS = (() => {
     document.getElementById('wbs-f-pct-wrap').style.display = '';
     document.getElementById('wbs-f-delete-btn').style.display = 'none';
     fillCommon('', '', '', 'neu', 0);
+    populatePredecessorOptions([], []);
     openModal();
   }
 
@@ -4634,6 +4781,7 @@ const WBS = (() => {
     document.getElementById('wbs-f-pct-wrap').style.display = '';
     document.getElementById('wbs-f-delete-btn').style.display = '';
     fillCommon(m.label, m.start, m.end, m.status, m.pct);
+    populatePredecessorOptions([m.id, ...(m.children||[]).map(t=>t.id)], m.predecessors||[]);
     openModal();
   }
 
@@ -4646,6 +4794,7 @@ const WBS = (() => {
     document.getElementById('wbs-f-pct-wrap').style.display = 'none';
     document.getElementById('wbs-f-delete-btn').style.display = 'none';
     fillCommon('', '', '', 'neu');
+    populatePredecessorOptions([], []);
     openModal();
   }
 
@@ -4661,6 +4810,7 @@ const WBS = (() => {
     document.getElementById('wbs-f-pct-wrap').style.display = 'none';
     document.getElementById('wbs-f-delete-btn').style.display = '';
     fillCommon(t.label, t.start, t.end, t.status);
+    populatePredecessorOptions([taskId], t.predecessors||[]);
     openModal();
   }
 
@@ -4673,29 +4823,31 @@ const WBS = (() => {
     const status = document.getElementById('wbs-f-status').value;
     const pctRaw = document.getElementById('wbs-f-pct').value;
     const pct = Math.max(0, Math.min(100, parseInt(pctRaw,10) || 0));
+    const predsSel = document.getElementById('wbs-f-preds');
+    const predecessors = predsSel ? Array.from(predsSel.selectedOptions).map(o => o.value) : [];
 
     if(!label) { T.show('⚠️ Dê um nome para a entrega/subtarefa antes de salvar.'); return; }
     if(!start || !end) { T.show('⚠️ Preencha as datas de início e fim.'); return; }
     if(parseDate(end) < parseDate(start)) { T.show('⚠️ A data de fim não pode ser antes da data de início.'); return; }
 
     if(modalCtx.mode === 'add-module') {
-      data.push({ id:genId('wm'), label, status, pct, start, end, critical: status==='red', children:[] });
+      data.push({ id:genId('wm'), label, status, pct, start, end, critical: status==='red', predecessors, children:[] });
       T.show('✅ Nova entrega adicionada!');
       Trail.log(`Nova entrega criada: ${label}`, Auth.getName(), status==='red'?'Risco crítico':(status==='grn'?'Concluída':'Em andamento'), status==='red'?'b-red':(status==='grn'?'b-grn':'b-amb'));
     } else if(modalCtx.mode === 'edit-module') {
       const m = data.find(x => x.id === modalCtx.moduleId);
-      if(m) { m.label=label; m.status=status; m.pct=pct; m.start=start; m.end=end; m.critical = status==='red'; }
+      if(m) { m.label=label; m.status=status; m.pct=pct; m.start=start; m.end=end; m.critical = status==='red'; m.predecessors = predecessors; }
       T.show('✅ Entrega atualizada!');
       Trail.log(`Entrega atualizada: ${label} (${pct}%)`, Auth.getName(), status==='red'?'Risco crítico':(status==='grn'?'Concluída':'Em andamento'), status==='red'?'b-red':(status==='grn'?'b-grn':'b-amb'));
     } else if(modalCtx.mode === 'add-task') {
       const m = data.find(x => x.id === modalCtx.moduleId);
-      if(m) { m.children = m.children || []; m.children.push({ id:genId('wt'), label, status, start, end }); }
+      if(m) { m.children = m.children || []; m.children.push({ id:genId('wt'), label, status, start, end, predecessors }); }
       T.show('✅ Subtarefa adicionada!');
       Trail.log(`Nova subtarefa: ${label}`, Auth.getName(), '', 'b-acc');
     } else if(modalCtx.mode === 'edit-task') {
       const m = data.find(x => x.id === modalCtx.moduleId);
       const t = m && (m.children||[]).find(x => x.id === modalCtx.taskId);
-      if(t) { t.label=label; t.status=status; t.start=start; t.end=end; }
+      if(t) { t.label=label; t.status=status; t.start=start; t.end=end; t.predecessors = predecessors; }
       T.show('✅ Subtarefa atualizada!');
       Trail.log(`Subtarefa atualizada: ${label}`, Auth.getName(), '', 'b-acc');
     }
@@ -4916,6 +5068,11 @@ const WBS = (() => {
           <div class="field-label">% Progresso</div>
           <input class="input" type="number" min="0" max="100" id="wbs-f-pct" placeholder="0–100">
         </div>
+      </div>
+      <div>
+        <div class="field-label">Depende de (predecessoras)</div>
+        <select class="input" id="wbs-f-preds" multiple size="5" style="height:auto"></select>
+        <div style="font-size:11px;color:var(--t3);margin-top:4px">Ctrl/Cmd+clique para selecionar mais de uma. Usado para calcular o caminho crítico real.</div>
       </div>
     </div>
     <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
