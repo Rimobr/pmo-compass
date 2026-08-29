@@ -805,20 +805,20 @@ body.icons-failed i[data-fb]::before{
       <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">
         <div class="ring-wrap">
           <svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="var(--s3)" stroke-width="6"/><circle cx="32" cy="32" r="26" fill="none" stroke="var(--grn)" stroke-width="6" stroke-dasharray="163.4" stroke-dashoffset="36" stroke-linecap="round"/></svg>
-          <div class="ring-lbl">78<small>/100</small></div>
+          <div class="ring-lbl" id="hs-ring-lbl">—<small>/100</small></div>
         </div>
         <div>
-          <div style="font-size:14px;font-weight:600">Índice geral: 78</div>
-          <div style="font-size:12px;color:var(--t2);margin-top:3px">3 dimensões com atenção</div>
-          <div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap"><span class="badge b-amb">Orçamento</span><span class="badge b-amb">Equipe</span><span class="badge b-red">Scope creep</span></div>
+          <div style="font-size:14px;font-weight:600" id="hs-index-text">Índice geral: —</div>
+          <div style="font-size:12px;color:var(--t2);margin-top:3px" id="hs-attention-text"></div>
+          <div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap" id="hs-badges-root"></div>
         </div>
       </div>
-      <div class="hbar"><span class="hbar-lbl">Cronograma</span><div class="hbar-track"><div class="hbar-fill" style="width:83%;background:var(--grn)"></div></div><span class="hbar-pct">83%</span></div>
-      <div class="hbar"><span class="hbar-lbl">Orçamento</span><div class="hbar-track"><div class="hbar-fill" style="width:71%;background:var(--amb)"></div></div><span class="hbar-pct">71%</span></div>
-      <div class="hbar"><span class="hbar-lbl">Equipe/Burnout</span><div class="hbar-track"><div class="hbar-fill" style="width:65%;background:var(--amb)"></div></div><span class="hbar-pct">65%</span></div>
-      <div class="hbar"><span class="hbar-lbl">Qualidade</span><div class="hbar-track"><div class="hbar-fill" style="width:76%;background:var(--acc)"></div></div><span class="hbar-pct">76%</span></div>
-      <div class="hbar"><span class="hbar-lbl">Aprendizado</span><div class="hbar-track"><div class="hbar-fill" style="width:72%;background:var(--pur)"></div></div><span class="hbar-pct">72%</span></div>
-      <div class="hbar"><span class="hbar-lbl">Scope control</span><div class="hbar-track"><div class="hbar-fill" style="width:48%;background:var(--red)"></div></div><span class="hbar-pct">48%</span></div>
+      <div class="hbar"><span class="hbar-lbl">Cronograma</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-schedule-fill" style="width:0%;background:var(--grn)"></div></div><span class="hbar-pct" id="hs-hbar-schedule-pct">—</span></div>
+      <div class="hbar"><span class="hbar-lbl">Orçamento</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-budget-fill" style="width:0%;background:var(--amb)"></div></div><span class="hbar-pct" id="hs-hbar-budget-pct">—</span></div>
+      <div class="hbar"><span class="hbar-lbl">Equipe/Burnout</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-team-fill" style="width:0%;background:var(--amb)"></div></div><span class="hbar-pct" id="hs-hbar-team-pct">—</span></div>
+      <div class="hbar"><span class="hbar-lbl">Qualidade</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-quality-fill" style="width:0%;background:var(--acc)"></div></div><span class="hbar-pct" id="hs-hbar-quality-pct">—</span></div>
+      <div class="hbar"><span class="hbar-lbl">Aprendizado</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-learning-fill" style="width:0%;background:var(--pur)"></div></div><span class="hbar-pct" id="hs-hbar-learning-pct">—</span></div>
+      <div class="hbar"><span class="hbar-lbl">Scope control</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-scope-fill" style="width:0%;background:var(--red)"></div></div><span class="hbar-pct" id="hs-hbar-scope-pct">—</span></div>
     </div>
     <div class="card">
       <div class="lbl"><i class="ti ti-sparkles"></i>Alertas da IA — agora</div>
@@ -3545,6 +3545,38 @@ const Dashboard = (() => {
     }
 
     renderBudgetKpis();
+    renderHealthScore();
+  }
+
+  function renderHealthScore() {
+    if(typeof HealthScore === 'undefined') return;
+    const metrics = HealthScore.computeMetrics();
+    const score = HealthScore.calculate(metrics);
+    HealthScore.updateRingDisplay(score);
+
+    const ringLbl = document.getElementById('hs-ring-lbl');
+    if(ringLbl) ringLbl.innerHTML = score + '<small>/100</small>';
+    setText('hs-index-text', 'Índice geral: ' + score);
+
+    const attentionDims = Object.entries(metrics).filter(([k,v]) => v < 70);
+    const attEl = document.getElementById('hs-attention-text');
+    if(attEl) attEl.textContent = attentionDims.length ? `${attentionDims.length} dimensão(ões) com atenção` : 'Todas as dimensões saudáveis';
+    const badgesRoot = document.getElementById('hs-badges-root');
+    if(badgesRoot) {
+      badgesRoot.innerHTML = attentionDims.map(([k,v]) => {
+        const cls = v < 50 ? 'b-red' : 'b-amb';
+        return `<span class="badge ${cls}">${HealthScore.DIM_LABEL[k]||k}</span>`;
+      }).join('');
+    }
+
+    Object.keys(metrics).forEach(k => {
+      const v = metrics[k];
+      const fillEl = document.getElementById('hs-hbar-'+k+'-fill');
+      const pctEl = document.getElementById('hs-hbar-'+k+'-pct');
+      const color = v >= 70 ? 'var(--grn)' : (v >= 50 ? 'var(--amb)' : 'var(--red)');
+      if(fillEl) { fillEl.style.width = v + '%'; fillEl.style.background = color; }
+      if(pctEl) pctEl.textContent = v + '%';
+    });
   }
 
   function renderBudgetKpis() {
@@ -4521,7 +4553,9 @@ const Report = (() => {
     const stakeholderCritico = stakeholders.filter(s => s.engagement === 'critico')
       .sort((a,b) => new Date(a.lastContact) - new Date(b.lastContact))[0];
 
-    const saude = Math.round((aderencia + (100 - Math.min(scopeAbertos.length*10,100)) + (100 - Math.min(membrosCriticos.length*30,100))) / 3);
+    // Mesma fórmula unificada usada no Dashboard (services/health-score) — antes havia um cálculo
+    // duplicado e mais simples aqui, considerando só 3 das 6 dimensões.
+    const saude = (typeof HealthScore !== 'undefined') ? HealthScore.calculate(HealthScore.computeMetrics()) : aderencia;
 
     return { wbs, decisions, repository, stakeholders, lessons, scope, team, meetings,
       aderencia, pendentes, criticasPendentes, modulosCriticos, modulosConcluidos, membrosCriticos,
@@ -6196,11 +6230,44 @@ const HealthScore = (() => {
     if(label) label.innerHTML = score + '<small>/100</small>';
   }
 
-  // Example: recalculate when KPI group is toggled
-  const defaultMetrics = { schedule:83, budget:71, team:65, quality:76, learning:72, scope:48 };
-  const score = calculate(defaultMetrics);
+  // Reúne as 6 dimensões a partir de dados reais do projeto ativo — cada uma tem uma fonte
+  // concreta, nenhuma é decorativa. Onde não há dado suficiente para julgar, assume-se 100
+  // (neutro/sem problema detectado) em vez de inventar um número.
+  const DIM_LABEL = { schedule:'Cronograma', budget:'Orçamento', team:'Equipe', quality:'Qualidade', learning:'Aprendizado', scope:'Scope creep' };
 
-  return { calculate, getStatus, updateRingDisplay, defaultMetrics };
+  function computeMetrics() {
+    const wbs = DB.get('wbs') || [];
+    const scope = DB.get('scopeChanges') || [];
+    const team = DB.get('team') || [];
+    const lessons = DB.get('lessons') || [];
+    const meetings = DB.get('meetings') || [];
+
+    // Cronograma: aderência média da WBS (mesma base usada no Dashboard e no Relatório)
+    const schedule = wbs.length ? Math.round(wbs.reduce((s,m) => s + (m.pct||0), 0) / wbs.length) : 100;
+
+    // Scope creep: penaliza mudanças de escopo ainda abertas (mesma fórmula já usada no Relatório)
+    const scopeAbertos = scope.filter(s => s.status === 'pending' || s.status === 'analysis');
+    const scopeScore = Math.max(0, 100 - Math.min(scopeAbertos.length * 10, 100));
+
+    // Equipe: penaliza membros em zona crítica de carga (mesma fórmula já usada no Relatório)
+    const membrosCriticos = team.filter(m => (m.workloadPct||0) >= 85);
+    const teamScore = Math.max(0, 100 - Math.min(membrosCriticos.length * 30, 100));
+
+    // Orçamento: CPI real (services/budget-js) — sem custo real lançado ainda, considera neutro
+    const bm = (typeof Budget !== 'undefined') ? Budget.computeMetrics() : { CPI:null };
+    const budgetScore = bm.CPI != null ? Math.max(0, Math.min(100, Math.round(bm.CPI * 100))) : 100;
+
+    // Qualidade: proxy real — % de ações de reunião já concluídas (execução do que foi combinado)
+    const allActions = meetings.reduce((arr,m) => arr.concat(m.actions||[]), []);
+    const qualityScore = allActions.length ? Math.round(allActions.filter(a => a.done).length / allActions.length * 100) : 100;
+
+    // Aprendizado: % de lições aprendidas já aplicadas neste projeto
+    const learningScore = lessons.length ? Math.round(lessons.filter(l => l.applied).length / lessons.length * 100) : 100;
+
+    return { schedule, budget:budgetScore, team:teamScore, quality:qualityScore, learning:learningScore, scope:scopeScore };
+  }
+
+  return { calculate, getStatus, updateRingDisplay, computeMetrics, WEIGHTS, DIM_LABEL };
 })();
 </script>
 
