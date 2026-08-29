@@ -671,7 +671,8 @@ body.icons-failed i[data-fb]::before{
     <button class="ico-btn" onclick="R.go('decisions')" title="Notificações"><i class="ti ti-bell"></i><span class="bdot"></span></button>
     <button class="ico-btn" data-perm="business" onclick="Wizard.open()" title="Novo projeto"><i class="ti ti-plus"></i></button>
     <button class="ico-btn" onclick="R.go('settings')" title="Configurações"><i class="ti ti-settings"></i></button>
-    <span class="role-badge" id="tb-role-tag" onclick="Auth.openModal()" title="Clique para trocar de perfil" style="cursor:pointer">Administrador</span>
+    <span id="tb-cloud-badge" onclick="Auth.openModal()" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:999px;background:var(--s2);color:var(--t3)" title="Carregando…"><i class="ti ti-cloud" style="font-size:12px"></i></span>
+    <span class="role-badge" id="tb-role-tag" onclick="Auth.openModal()" title="Clique para ver sua conta" style="cursor:pointer">Administrador</span>
     <div class="ava" id="tb-avatar" title="Marcos R." onclick="Auth.openModal()" style="cursor:pointer">MR</div>
   </div>
 </header>
@@ -995,21 +996,16 @@ body.icons-failed i[data-fb]::before{
       <button class="btn btn-sm btn-acc" onclick="Cloud.configure()" style="align-self:flex-start"><i class="ti ti-plug"></i>Conectar</button>
     </div>
 
+    <!-- Login/logout viraram ponto único no menu de perfil (topo da tela) — aqui fica só a configuração técnica do projeto -->
     <div id="cloud-login-box" style="display:none;flex-direction:column;gap:8px">
-      <input class="input" id="cloud-f-email" type="email" placeholder="e-mail">
-      <input class="input" id="cloud-f-password" type="password" placeholder="senha (mín. 6 caracteres)">
-      <div class="btn-row">
-        <button class="btn btn-sm btn-acc" onclick="Cloud.signIn()"><i class="ti ti-lock"></i>Entrar</button>
-        <button class="btn btn-sm" onclick="Cloud.signUp()"><i class="ti ti-plus"></i>Criar conta</button>
-        <button class="btn btn-sm btn-red" onclick="Cloud.disconnect()"><i class="ti ti-x"></i>Desconectar projeto</button>
-      </div>
-      <div style="font-size:11px;color:var(--t3)"><i class="ti ti-info-circle"></i> Toda conta nova nasce com perfil "Consulta" — peça a um administrador para promovê-la rodando um UPDATE no Supabase.</div>
+      <div style="font-size:12px;color:var(--t2);line-height:1.6"><i class="ti ti-info-circle"></i> Projeto conectado. Para entrar ou criar conta, clique no seu perfil no canto superior direito da tela.</div>
+      <button class="btn btn-sm btn-red" style="align-self:flex-start" onclick="Cloud.disconnect()"><i class="ti ti-x"></i>Desconectar projeto</button>
     </div>
 
     <div id="cloud-signedin-box" style="display:none;flex-direction:column;gap:8px">
+      <div style="font-size:12px;color:var(--t2)"><i class="ti ti-info-circle"></i> Para sair da conta, use o menu de perfil no canto superior direito.</div>
       <div class="btn-row">
         <button class="btn btn-sm btn-acc" onclick="Cloud.pullAll()"><i class="ti ti-refresh-alert"></i>Sincronizar agora</button>
-        <button class="btn btn-sm" onclick="Cloud.signOut()"><i class="ti ti-lock"></i>Sair da conta</button>
         <button class="btn btn-sm btn-red" onclick="Cloud.disconnect()"><i class="ti ti-x"></i>Desconectar projeto</button>
       </div>
     </div>
@@ -1519,18 +1515,38 @@ const Auth = (() => {
     return (parts.slice(0,2).join('') || FALLBACK_INITIALS[role] || 'PM').toUpperCase();
   }
 
+  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
   function apply() {
     document.body.setAttribute('data-role', state.role);
     const ava = document.getElementById('tb-avatar');
-    if(ava) { ava.textContent = initialsFor(state.name, state.role); ava.title = `${state.name} — ${label()} · clique para trocar de perfil`; }
+    if(ava) { ava.textContent = initialsFor(state.name, state.role); ava.title = `${state.name} — ${label()} · clique para ver sua conta`; }
     const tag = document.getElementById('tb-role-tag');
     if(tag) tag.textContent = label();
-    const cloudNote = document.getElementById('auth-cloud-note');
-    if(cloudNote) cloudNote.style.display = cloudManaged ? '' : 'none';
-    document.querySelectorAll('.auth-role-opt').forEach(el => {
-      el.style.opacity = cloudManaged ? '.5' : '';
-      el.style.pointerEvents = cloudManaged ? 'none' : '';
-    });
+    updateCloudBadge();
+  }
+
+  // Indicador sempre visível na barra superior — antes não havia nenhum sinal fora da tela
+  // de Configurações de que existia (ou não) uma sessão real do Supabase.
+  function updateCloudBadge() {
+    const badge = document.getElementById('tb-cloud-badge');
+    if(!badge) return;
+    const signedIn = (typeof Cloud !== 'undefined') && Cloud.isSignedIn();
+    const configured = (typeof Cloud !== 'undefined') && Cloud.isConfigured();
+    if(signedIn) {
+      const email = (Cloud.getEmail && Cloud.getEmail()) || '';
+      badge.innerHTML = `<i class="ti ti-cloud-check" style="font-size:12px"></i> ${escapeHtml(email)}`;
+      badge.style.background = 'var(--gd)'; badge.style.color = 'var(--grn)';
+      badge.title = `Conectado como ${email} — clique para gerenciar sua conta`;
+    } else if(configured) {
+      badge.innerHTML = '<i class="ti ti-cloud" style="font-size:12px"></i>';
+      badge.style.background = 'var(--amd)'; badge.style.color = 'var(--amb)';
+      badge.title = 'Conectado ao Supabase, mas você não está logado — clique para entrar';
+    } else {
+      badge.innerHTML = '<i class="ti ti-cloud-off" style="font-size:12px"></i>';
+      badge.style.background = 'var(--s2)'; badge.style.color = 'var(--t3)';
+      badge.title = 'Modo local — sem backend em nuvem conectado';
+    }
   }
 
   // Chamado pelo módulo Cloud após um login real no Supabase — o perfil passa a vir do banco
@@ -1543,13 +1559,56 @@ const Auth = (() => {
   function clearCloudManaged() { cloudManaged = false; apply(); }
   function isCloudManaged() { return cloudManaged; }
 
+  // Um único modal cobre os 3 estados possíveis: logado de verdade, Supabase conectado
+  // mas sem login, ou modo totalmente local — antes login (Configurações) e perfil
+  // (aqui) eram duas telas separadas que não se falavam.
   function openModal() {
-    pendingRole = state.role;
-    document.getElementById('auth-f-name').value = state.name;
-    document.querySelectorAll('.auth-role-opt').forEach(el => el.classList.toggle('sel', el.dataset.role === state.role));
+    const signedIn = (typeof Cloud !== 'undefined') && Cloud.isSignedIn();
+    const configured = (typeof Cloud !== 'undefined') && Cloud.isConfigured();
+
+    const setDisplay = (id, show) => { const el = document.getElementById(id); if(el) el.style.display = show ? '' : 'none'; };
+    setDisplay('auth-cloud-signedin-box', signedIn);
+    setDisplay('auth-cloud-login-box', configured && !signedIn);
+    setDisplay('auth-cloud-connect-box', !configured);
+    setDisplay('auth-local-box', !signedIn);
+
+    const titleEl = document.getElementById('auth-modal-title');
+    const subEl = document.getElementById('auth-modal-sub');
+    if(signedIn) {
+      if(titleEl) titleEl.textContent = 'Sua conta';
+      if(subEl) subEl.textContent = 'Conta real, sincronizada na nuvem';
+      const emailEl = document.getElementById('auth-cloud-email'); if(emailEl) emailEl.textContent = (Cloud.getEmail && Cloud.getEmail()) || '';
+      const roleNoteEl = document.getElementById('auth-cloud-role-note'); if(roleNoteEl) roleNoteEl.textContent = 'Perfil (definido no banco de dados): ' + label();
+    } else {
+      if(titleEl) titleEl.textContent = configured ? 'Entrar ou continuar local' : 'Perfil de acesso';
+      if(subEl) subEl.textContent = 'Quem está usando o PMO Compass agora';
+      pendingRole = state.role;
+      document.getElementById('auth-f-name').value = state.name;
+      document.querySelectorAll('.auth-role-opt').forEach(el => el.classList.toggle('sel', el.dataset.role === state.role));
+    }
+    const emailInp = document.getElementById('auth-f-email'); if(emailInp) emailInp.value = '';
+    const passInp = document.getElementById('auth-f-password'); if(passInp) passInp.value = '';
+
     document.getElementById('modal-auth').classList.remove('hidden');
   }
   function closeModal() { document.getElementById('modal-auth').classList.add('hidden'); }
+
+  // Login/logout reais, chamados direto daqui — não precisa mais ir em Configurações pra isso
+  async function doSignIn() {
+    const email = document.getElementById('auth-f-email').value.trim();
+    const password = document.getElementById('auth-f-password').value;
+    const ok = await Cloud.doSignIn(email, password);
+    if(ok) closeModal();
+  }
+  async function doSignUp() {
+    const email = document.getElementById('auth-f-email').value.trim();
+    const password = document.getElementById('auth-f-password').value;
+    await Cloud.doSignUp(email, password); // não fecha — cadastro pode exigir confirmação por e-mail antes de logar
+  }
+  async function doSignOut() {
+    await Cloud.signOut();
+    closeModal();
+  }
   function pickRole(role) {
     if(cloudManaged) { T.show('🔒 Perfil gerenciado pelo Supabase — peça a um administrador para alterar.'); return; }
     pendingRole = role;
@@ -1571,7 +1630,7 @@ const Auth = (() => {
     return false;
   }
 
-  return { load, getRole, getName, label, can, guard, openModal, closeModal, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged };
+  return { load, getRole, getName, label, can, guard, openModal, closeModal, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, doSignIn, doSignUp, doSignOut, updateCloudBadge };
 })();
 </script>
 
@@ -1603,6 +1662,7 @@ const Cloud = (() => {
     if(configBox) configBox.style.display = isConfigured() ? 'none' : '';
     if(loginBox) loginBox.style.display = (isConfigured() && !isSignedIn()) ? '' : 'none';
     if(signedInBox) signedInBox.style.display = isSignedIn() ? '' : 'none';
+    if(typeof Auth !== 'undefined' && Auth.updateCloudBadge) Auth.updateCloudBadge();
   }
 
   async function loadSdk() {
@@ -1648,28 +1708,29 @@ const Cloud = (() => {
     T.show('Desconectado. Voltando ao modo local.');
   }
 
-  async function signIn() {
-    if(!client) { T.show('⚠️ Configure a URL e a chave do Supabase primeiro.'); return; }
-    const email = document.getElementById('cloud-f-email').value.trim();
-    const password = document.getElementById('cloud-f-password').value;
-    if(!email || !password) { T.show('⚠️ Preencha e-mail e senha.'); return; }
+  function getEmail() { return session ? session.user.email : null; }
+
+  // doSignIn/doSignUp fazem o trabalho de verdade e retornam sucesso/falha — usados tanto
+  // pelo formulário técnico em Configurações quanto pelo modal de perfil (ponto único de login).
+  async function doSignIn(email, password) {
+    if(!client) { T.show('⚠️ Configure a URL e a chave do Supabase primeiro.'); return false; }
+    if(!email || !password) { T.show('⚠️ Preencha e-mail e senha.'); return false; }
     const { data, error } = await client.auth.signInWithPassword({ email, password });
-    if(error) { T.show('❌ ' + error.message); return; }
+    if(error) { T.show('❌ ' + error.message); return false; }
     session = data.session;
     reflectUi();
     await afterSignIn();
     T.show('✅ Login realizado!');
+    return true;
   }
-
-  async function signUp() {
-    if(!client) { T.show('⚠️ Configure a URL e a chave do Supabase primeiro.'); return; }
-    const email = document.getElementById('cloud-f-email').value.trim();
-    const password = document.getElementById('cloud-f-password').value;
-    if(!email || !password) { T.show('⚠️ Preencha e-mail e senha.'); return; }
-    if(password.length < 6) { T.show('⚠️ A senha precisa ter pelo menos 6 caracteres.'); return; }
+  async function doSignUp(email, password) {
+    if(!client) { T.show('⚠️ Configure a URL e a chave do Supabase primeiro.'); return false; }
+    if(!email || !password) { T.show('⚠️ Preencha e-mail e senha.'); return false; }
+    if(password.length < 6) { T.show('⚠️ A senha precisa ter pelo menos 6 caracteres.'); return false; }
     const { error } = await client.auth.signUp({ email, password });
-    if(error) { T.show('❌ ' + error.message); return; }
+    if(error) { T.show('❌ ' + error.message); return false; }
     T.show('✅ Conta criada! Se a confirmação por e-mail estiver ativa no seu projeto, confirme antes de entrar. Novo usuário nasce como "Consulta" — peça a um admin para promovê-lo.');
+    return true;
   }
 
   async function signOut() {
@@ -1762,7 +1823,7 @@ const Cloud = (() => {
   }
   function deleteCostActual(id) { if(client && session) client.from('cost_actuals').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
 
-  return { load, configure, disconnect, isConfigured, isSignedIn, signIn, signUp, signOut, pullAll,
+  return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, doSignIn, doSignUp, signOut, pullAll,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushDecision, deleteDecision, pushDocument, deleteDocument,
     pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual };
@@ -5649,38 +5710,69 @@ const WBS = (() => {
 <div class="modal-ov hidden" id="modal-auth" onclick="if(event.target===this)Auth.closeModal()">
   <div class="modal-box" style="width:460px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <div class="modal-title">Perfil de acesso</div>
+      <div class="modal-title" id="auth-modal-title">Sua conta</div>
       <button class="btn btn-sm" onclick="Auth.closeModal()"><i class="ti ti-x"></i></button>
     </div>
-    <div class="modal-sub">Define o que fica visível e editável nesta sessão do navegador</div>
-    <div>
-      <div class="field-label" style="margin-bottom:6px">Seu nome</div>
-      <input class="input" id="auth-f-name" placeholder="Ex: Marcos R." style="margin-bottom:14px">
+    <div class="modal-sub" id="auth-modal-sub">Quem está usando o PMO Compass agora — ponto único de entrada/saída</div>
+
+    <!-- Logado de verdade no Supabase: mostra quem é e o botão de sair de verdade -->
+    <div id="auth-cloud-signedin-box" style="display:none;margin-bottom:14px">
+      <div style="padding:12px;background:var(--gd);border:1px solid var(--gb);border-radius:var(--r8)">
+        <div style="font-size:12.5px;color:var(--t1);font-weight:600;display:flex;align-items:center;gap:6px"><i class="ti ti-cloud-check" style="color:var(--grn)"></i>Conectado ao Supabase</div>
+        <div style="font-size:12px;color:var(--t2);margin-top:4px" id="auth-cloud-email">—</div>
+        <div style="font-size:11.5px;color:var(--t3);margin-top:4px" id="auth-cloud-role-note">Perfil: —</div>
+      </div>
+      <button class="btn btn-sm btn-red" style="width:100%;justify-content:center;margin-top:10px" onclick="Auth.doSignOut()"><i class="ti ti-logout"></i>Sair da conta</button>
     </div>
-    <div class="field-label" style="margin-bottom:8px">Perfil</div>
-    <div id="auth-cloud-note" style="display:none;margin-bottom:10px;padding:8px 10px;background:var(--ad);border-radius:var(--r8);font-size:11px;color:var(--acc)"><i class="ti ti-cloud"></i> Perfil gerenciado pelo Supabase — só um administrador pode alterá-lo (banco de dados).</div>
-    <div class="auth-role-opt" data-role="admin" onclick="Auth.pickRole('admin')">
-      <div class="aro-ico"><i class="ti ti-shield-lock"></i></div>
-      <div class="aro-body"><div class="aro-title">Administrador</div><div class="aro-desc">Acesso completo: WBS, decisões, repositório, chaves de IA, integrações e limpeza de dados.</div></div>
+
+    <!-- Supabase conectado, mas ninguém logado: login/cadastro direto aqui, sem precisar ir em Configurações -->
+    <div id="auth-cloud-login-box" style="display:none;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--b1)">
+      <div class="field-label" style="margin-bottom:6px"><i class="ti ti-cloud"></i> Entrar com sua conta Supabase</div>
+      <input class="input" id="auth-f-email" type="email" placeholder="seu@email.com" style="margin-bottom:8px">
+      <input class="input" id="auth-f-password" type="password" placeholder="Senha" style="margin-bottom:8px">
+      <div class="btn-row">
+        <button class="btn btn-sm btn-acc" onclick="Auth.doSignIn()"><i class="ti ti-login"></i>Entrar</button>
+        <button class="btn btn-sm" onclick="Auth.doSignUp()"><i class="ti ti-plus"></i>Criar conta</button>
+      </div>
+      <div style="font-size:11px;color:var(--t3);margin-top:6px">Toda conta nova nasce com perfil "Consulta" — peça a um administrador para promovê-la.</div>
     </div>
-    <div class="auth-role-opt" data-role="gerente" onclick="Auth.pickRole('gerente')">
-      <div class="aro-ico"><i class="ti ti-users-group"></i></div>
-      <div class="aro-body"><div class="aro-title">Gerente</div><div class="aro-desc">Gerencia WBS, decisões e repositório do dia a dia. Sem acesso a chaves de IA/integrações/limpeza.</div></div>
+
+    <!-- Nenhum Supabase configurado ainda: aponta pra Configurações, sem duplicar o formulário técnico de URL/chave aqui -->
+    <div id="auth-cloud-connect-box" style="display:none;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--b1)">
+      <div style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:8px">Sem backend em nuvem conectado — os dados ficam só neste navegador.</div>
+      <button class="btn btn-sm" onclick="Auth.closeModal();R.go('settings');SettingsTabs.show('cloud')"><i class="ti ti-cloud"></i>Conectar Supabase</button>
     </div>
-    <div class="auth-role-opt" data-role="consulta" onclick="Auth.pickRole('consulta')">
-      <div class="aro-ico"><i class="ti ti-search"></i></div>
-      <div class="aro-body"><div class="aro-title">Consulta</div><div class="aro-desc">Somente leitura — vê tudo, não cria, edita, exclui ou altera configurações.</div></div>
-    </div>
-    <div class="auth-role-opt" data-role="manutencao" onclick="Auth.pickRole('manutencao')">
-      <div class="aro-ico"><i class="ti ti-settings"></i></div>
-      <div class="aro-body"><div class="aro-title">Manutenção</div><div class="aro-desc">Cuida de chaves de IA, integrações e backup/limpeza. Sem acesso a WBS/decisões/repositório.</div></div>
-    </div>
-    <div style="margin-top:12px;padding:10px 12px;background:var(--s2);border-radius:var(--r8);font-size:11px;color:var(--t3);line-height:1.5">
-      <i class="ti ti-info-circle" style="font-size:13px"></i> Este controle é local ao navegador (não há login de servidor) — ideal para evitar cliques acidentais e organizar quem faz o quê, mas não substitui autenticação real em um ambiente multiusuário.
-    </div>
-    <div class="btn-row" style="margin-top:16px;justify-content:flex-end">
-      <button class="btn btn-sm" onclick="Auth.closeModal()">Cancelar</button>
-      <button class="btn btn-sm btn-acc" onclick="Auth.save()"><i class="ti ti-device-floppy"></i>Salvar perfil</button>
+
+    <!-- Perfil local — some inteiro quando há login real via Supabase, pra não sugerir que os dois coexistem -->
+    <div id="auth-local-box">
+      <div>
+        <div class="field-label" style="margin-bottom:6px">Seu nome (modo local)</div>
+        <input class="input" id="auth-f-name" placeholder="Ex: Marcos R." style="margin-bottom:14px">
+      </div>
+      <div class="field-label" style="margin-bottom:8px">Perfil</div>
+      <div class="auth-role-opt" data-role="admin" onclick="Auth.pickRole('admin')">
+        <div class="aro-ico"><i class="ti ti-shield-lock"></i></div>
+        <div class="aro-body"><div class="aro-title">Administrador</div><div class="aro-desc">Acesso completo: WBS, decisões, repositório, chaves de IA, integrações e limpeza de dados.</div></div>
+      </div>
+      <div class="auth-role-opt" data-role="gerente" onclick="Auth.pickRole('gerente')">
+        <div class="aro-ico"><i class="ti ti-users-group"></i></div>
+        <div class="aro-body"><div class="aro-title">Gerente</div><div class="aro-desc">Gerencia WBS, decisões e repositório do dia a dia. Sem acesso a chaves de IA/integrações/limpeza.</div></div>
+      </div>
+      <div class="auth-role-opt" data-role="consulta" onclick="Auth.pickRole('consulta')">
+        <div class="aro-ico"><i class="ti ti-search"></i></div>
+        <div class="aro-body"><div class="aro-title">Consulta</div><div class="aro-desc">Somente leitura — vê tudo, não cria, edita, exclui ou altera configurações.</div></div>
+      </div>
+      <div class="auth-role-opt" data-role="manutencao" onclick="Auth.pickRole('manutencao')">
+        <div class="aro-ico"><i class="ti ti-settings"></i></div>
+        <div class="aro-body"><div class="aro-title">Manutenção</div><div class="aro-desc">Cuida de chaves de IA, integrações e backup/limpeza. Sem acesso a WBS/decisões/repositório.</div></div>
+      </div>
+      <div style="margin-top:12px;padding:10px 12px;background:var(--s2);border-radius:var(--r8);font-size:11px;color:var(--t3);line-height:1.5">
+        <i class="ti ti-info-circle" style="font-size:13px"></i> Este controle é local ao navegador (não há login de servidor) — ideal para evitar cliques acidentais e organizar quem faz o quê, mas não substitui autenticação real em um ambiente multiusuário.
+      </div>
+      <div class="btn-row" style="margin-top:16px;justify-content:flex-end">
+        <button class="btn btn-sm" onclick="Auth.closeModal()">Cancelar</button>
+        <button class="btn btn-sm btn-acc" onclick="Auth.save()"><i class="ti ti-device-floppy"></i>Salvar perfil</button>
+      </div>
     </div>
   </div>
 </div>
