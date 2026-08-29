@@ -696,6 +696,7 @@ body.icons-failed i[data-fb]::before{
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-planejamento')"><i class="ti ti-sitemap sb-gico"></i>Planejamento<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
       <button class="si" data-p="wbs" onclick="R.go('wbs')"><i class="ti ti-sitemap"></i>WBS</button>
+      <button class="si" data-p="budget" onclick="R.go('budget')"><i class="ti ti-wallet"></i>Orçamento e Custos</button>
       <button class="si" data-p="scope" onclick="R.go('scope')"><i class="ti ti-git-diff"></i>Scope Changes</button>
       <button class="si" data-p="estimates" onclick="R.go('estimates')"><i class="ti ti-ruler"></i>Estimativas IA</button>
       <button class="si" data-p="whatif" onclick="R.go('whatif')"><i class="ti ti-arrows-split"></i>What-If</button>
@@ -762,13 +763,13 @@ body.icons-failed i[data-fb]::before{
   <div class="kg" id="kg-bud">
     <div class="kg-hdr" onclick="KG.tog('kg-bud')">
       <div class="kg-l"><div class="kg-ico" style="background:var(--amd)"><i class="ti ti-coin" style="color:var(--amb)"></i></div><span class="kg-title">Orçamento e custo</span><span class="kg-n">4 KPIs</span></div>
-      <div class="kg-r"><span class="kg-st c-wa"><span class="sdot sdot-amb"></span>Atenção</span><i class="ti ti-chevron-down kg-chev op"></i></div>
+      <div class="kg-r"><span class="kg-st c-wa" id="dash-bud-status"><span class="sdot sdot-amb"></span>Atenção</span><i class="ti ti-chevron-down kg-chev op"></i></div>
     </div>
     <div class="kg-body">
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-amb"></span>Consumo</div><div class="kpi-val">71<span class="kpi-unit">%</span></div><div class="kpi-delta c-wa"><i class="ti ti-alert-triangle"></i>+12% vs plano</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-amb"></span>CPI</div><div class="kpi-val">0<span class="kpi-unit">.88</span></div><div class="kpi-delta c-wa">Abaixo de 1,0</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Reserva</div><div class="kpi-val" style="font-size:17px">R$28k</div><div class="kpi-delta c-up">Intacta</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-amb"></span>EAC</div><div class="kpi-val" style="font-size:17px">R$312k</div><div class="kpi-delta c-wa">+R$12k vs base</div></div>
+      <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-consumo-dot"></span>Consumo</div><div class="kpi-val" id="dash-kpi-consumo">—<span class="kpi-unit">%</span></div><div class="kpi-delta" id="dash-kpi-consumo-sub"></div></div>
+      <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-cpi-dot"></span>CPI</div><div class="kpi-val" id="dash-kpi-cpi">—</div><div class="kpi-delta" id="dash-kpi-cpi-sub"></div></div>
+      <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-reserva-dot"></span>Reserva</div><div class="kpi-val" style="font-size:17px" id="dash-kpi-reserva">—</div><div class="kpi-delta" id="dash-kpi-reserva-sub"></div></div>
+      <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-eac-dot"></span>EAC</div><div class="kpi-val" style="font-size:17px" id="dash-kpi-eac">—</div><div class="kpi-delta" id="dash-kpi-eac-sub"></div></div>
     </div>
   </div>
 
@@ -1174,6 +1175,36 @@ body.icons-failed i[data-fb]::before{
           <button class="btn btn-sm" onclick="T.show('✅ Lembrete agendado para 5 dias!')"><i class="ti ti-calendar"></i>Agendar lembrete</button>
         </div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ■ MODULE: pages/budget -->
+<section class="page" id="p-budget" data-module="pages/budget">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Orçamento e Custos</div><div class="pg-sub">Consumo, CPI, EAC e reserva calculados a partir de linhas de orçamento e lançamentos de custo reais — não são mais números ilustrativos.</div></div>
+    <div class="btn-row">
+      <button class="btn btn-sm btn-acc" data-perm="business" onclick="Budget.openAddLine()"><i class="ti ti-plus"></i>Linha de orçamento</button>
+      <button class="btn btn-sm btn-acc" data-perm="business" onclick="Budget.openAddActual()"><i class="ti ti-receipt"></i>Lançar custo</button>
+    </div>
+  </div>
+
+  <div class="g4">
+    <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="bud-kpi-consumo-dot"></span>Consumo</div><div class="kpi-val" id="bud-kpi-consumo">—</div><div class="kpi-delta" id="bud-kpi-consumo-sub"></div></div>
+    <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="bud-kpi-cpi-dot"></span>CPI</div><div class="kpi-val" id="bud-kpi-cpi">—</div><div class="kpi-delta" id="bud-kpi-cpi-sub"></div></div>
+    <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="bud-kpi-reserva-dot"></span>Reserva</div><div class="kpi-val" style="font-size:17px" id="bud-kpi-reserva">—</div><div class="kpi-delta" id="bud-kpi-reserva-sub"></div></div>
+    <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="bud-kpi-eac-dot"></span>EAC</div><div class="kpi-val" style="font-size:17px" id="bud-kpi-eac">—</div><div class="kpi-delta" id="bud-kpi-eac-sub"></div></div>
+  </div>
+  <div id="bud-note-root" style="font-size:11.5px;color:var(--t3);margin:8px 0 14px"></div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="lbl"><i class="ti ti-wallet"></i>Linhas de orçamento (baseline)</div>
+      <div id="bud-lines-root"></div>
+    </div>
+    <div class="card">
+      <div class="lbl"><i class="ti ti-receipt-2"></i>Lançamentos de custo</div>
+      <div id="bud-actuals-root"></div>
     </div>
   </div>
 </section>
@@ -1657,11 +1688,13 @@ const Cloud = (() => {
   async function pullAll() {
     if(!client || !session) return;
     try {
-      const [mods, tasks, decs, docs] = await Promise.all([
+      const [mods, tasks, decs, docs, budLines, costActs] = await Promise.all([
         client.from('wbs_modules').select('*'),
         client.from('wbs_tasks').select('*'),
         client.from('decisions').select('*'),
-        client.from('documents').select('*')
+        client.from('documents').select('*'),
+        client.from('budget_lines').select('*'),
+        client.from('cost_actuals').select('*')
       ]);
       if(mods.data) {
         const wbs = mods.data.map(m => ({
@@ -1679,6 +1712,13 @@ const Cloud = (() => {
         DB.set('repository', docs.data.map(x => ({ id:x.id, name:x.name, ext:x.ext, meta:x.meta, addedAt:x.added_at, tags:x.tags||[], indexPct:x.index_pct, content:x.content||'' })));
         if(typeof Repo !== 'undefined') Repo.render();
       }
+      if(budLines.data) {
+        DB.set('budgetLines', budLines.data.map(l => ({ id:l.id, label:l.label, plannedValue:l.planned_value, wbsModuleId:l.wbs_module_id||'', isReserve:!!l.is_reserve })));
+      }
+      if(costActs.data) {
+        DB.set('costActuals', costActs.data.map(a => ({ id:a.id, label:a.label, amount:a.amount, date:a.entry_date, budgetLineId:a.budget_line_id||'', kind:a.kind })));
+      }
+      if((budLines.data || costActs.data) && typeof Budget !== 'undefined') { Budget.resetCache(); Budget.render(); }
       T.show('☁️ Dados sincronizados do Supabase.');
     } catch(e) { console.warn('Supabase: falha ao sincronizar', e); }
   }
@@ -1707,9 +1747,21 @@ const Cloud = (() => {
   }
   function deleteDocument(id) { if(client && session) client.from('documents').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
 
+  function pushBudgetLine(l) {
+    if(!client || !session) return;
+    client.from('budget_lines').upsert({ id:l.id, label:l.label, planned_value:l.plannedValue, wbs_module_id:l.wbsModuleId||null, is_reserve:!!l.isReserve }).then(()=>{}).catch(()=>{});
+  }
+  function deleteBudgetLine(id) { if(client && session) client.from('budget_lines').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
+  function pushCostActual(a) {
+    if(!client || !session) return;
+    client.from('cost_actuals').upsert({ id:a.id, label:a.label, amount:a.amount, entry_date:a.date, budget_line_id:a.budgetLineId||null, kind:a.kind }).then(()=>{}).catch(()=>{});
+  }
+  function deleteCostActual(id) { if(client && session) client.from('cost_actuals').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
+
   return { load, configure, disconnect, isConfigured, isSignedIn, signIn, signUp, signOut, pullAll,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
-    pushDecision, deleteDecision, pushDocument, deleteDocument };
+    pushDecision, deleteDecision, pushDocument, deleteDocument,
+    pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual };
 })();
 </script>
 
@@ -1751,7 +1803,7 @@ const DB = (() => {
   function storageKeyFor(projectId) { return projectId === 'nexus' ? 'pmo_db_v1' : ('pmo_db_v1__' + projectId); }
 
   function seedEmpty() {
-    return { version:1, wbs:[], decisions:[], repository:[], stakeholders:[], trail:[], lessons:[], scopeChanges:[], team:[], meetings:[], estimateHistory:[], scenarios:[] };
+    return { version:1, wbs:[], decisions:[], repository:[], stakeholders:[], trail:[], lessons:[], scopeChanges:[], team:[], meetings:[], estimateHistory:[], scenarios:[], budgetLines:[], costActuals:[] };
   }
 
   function seed() {
@@ -1877,6 +1929,23 @@ const DB = (() => {
             { id:'a5', who:'Marcos R.', text:'Iniciar contato com fornecedor de identificação', due:'2026-06-10', done:true }
           ]
         }
+      ],
+      budgetLines: [
+        { id:'bl1', label:'1. Rastreabilidade por matrícula', plannedValue:60000, wbsModuleId:'w1', isReserve:false },
+        { id:'bl2', label:'2. Integração ERP', plannedValue:90000, wbsModuleId:'w2', isReserve:false },
+        { id:'bl3', label:'3. Transferências entre filiais', plannedValue:55000, wbsModuleId:'w3', isReserve:false },
+        { id:'bl4', label:'4. Inventário e auditoria', plannedValue:45000, wbsModuleId:'w4', isReserve:false },
+        { id:'bl5', label:'5. Governança e perfis de acesso', plannedValue:30000, wbsModuleId:'w5', isReserve:false },
+        { id:'blr', label:'Reserva de contingência', plannedValue:28000, wbsModuleId:'', isReserve:true }
+      ],
+      costActuals: [
+        { id:'ca1', label:'Consultoria — leitor de bipagem, sprints 1-2', amount:30000, date:'2026-05-20', budgetLineId:'bl1', kind:'real' },
+        { id:'ca2', label:'Ajustes de UX — cadastro de matrículas', amount:18000, date:'2026-06-10', budgetLineId:'bl1', kind:'real' },
+        { id:'ca3', label:'Consultoria de arquitetura ERP (RF-ERP-008)', amount:25000, date:'2026-06-15', budgetLineId:'bl2', kind:'real' },
+        { id:'ca4', label:'Contrato adicional de suporte ERP', amount:10000, date:'2026-06-18', budgetLineId:'bl2', kind:'comprometido' },
+        { id:'ca5', label:'Desenvolvimento — transferências entre filiais', amount:26000, date:'2026-06-05', budgetLineId:'bl3', kind:'real' },
+        { id:'ca6', label:'Inventário e trilha de auditoria — sprint 1', amount:15000, date:'2026-06-08', budgetLineId:'bl4', kind:'real' },
+        { id:'ca7', label:'Perfis de acesso e logs — implementação', amount:16000, date:'2026-05-25', budgetLineId:'bl5', kind:'real' }
       ]
     };
   }
@@ -1897,6 +1966,8 @@ const DB = (() => {
     if(!Array.isArray(c.meetings)) c.meetings = defaults.meetings;
     if(!Array.isArray(c.estimateHistory)) c.estimateHistory = defaults.estimateHistory;
     if(!Array.isArray(c.scenarios)) c.scenarios = defaults.scenarios;
+    if(!Array.isArray(c.budgetLines)) c.budgetLines = defaults.budgetLines;
+    if(!Array.isArray(c.costActuals)) c.costActuals = defaults.costActuals;
     return c;
   }
 
@@ -1923,7 +1994,7 @@ const DB = (() => {
     cache = null;
     load();
     // Cada módulo de página guarda os dados numa variável própria — precisa ser avisado da troca
-    [WBS, Repo, Decisions, Trail, Stakeholders, Lessons, Scope, Burnout, Meetings, Estimates, WI].forEach(mod => {
+    [WBS, Repo, Decisions, Trail, Stakeholders, Lessons, Scope, Burnout, Meetings, Estimates, WI, Budget].forEach(mod => {
       if(typeof mod !== 'undefined' && mod && typeof mod.resetCache === 'function') mod.resetCache();
     });
     if(typeof renderAllModules === 'function') renderAllModules();
@@ -2066,7 +2137,7 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','settings','repository','stakeholders','scope','estimates','loop','wbs','help'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','help'];
   function go(id) {
     pages.forEach(p => {
       const el = document.getElementById('p-'+p);
@@ -2082,6 +2153,7 @@ const R = (() => {
     if(id === 'loop' && typeof Loop !== 'undefined') Loop.render();
     if(id === 'portfolio' && typeof Portfolio !== 'undefined') Portfolio.render();
     if(id === 'resources' && typeof Resources !== 'undefined') Resources.render();
+    if(id === 'budget' && typeof Budget !== 'undefined') Budget.render();
     if(typeof Nav !== 'undefined') { Nav.expandGroupFor(id); Nav.renderBreadcrumb(id); }
   }
   function init() {
@@ -2099,7 +2171,7 @@ const Nav = (() => {
   // Mapa página → grupo, usado para abrir automaticamente o grupo certo ao navegar
   const GROUP_OF = {
     decisions:'sbg-decisao', loop:'sbg-decisao', trail:'sbg-decisao', report:'sbg-decisao',
-    wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento',
+    wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento',
     burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe',
     lessons:'sbg-conhecimento', meetings:'sbg-conhecimento', repository:'sbg-conhecimento', chat:'sbg-conhecimento',
     portfolio:'sbg-projetos'
@@ -2171,7 +2243,7 @@ const Nav = (() => {
   };
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
-    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If',
+    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos',
     burnout:'Burnout Radar', resources:'Recursos', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
     portfolio:'Portfólio', settings:'Configurações', help:'Ajuda'
@@ -3105,6 +3177,7 @@ function renderAllModules() {
   Estimates.render();
   WI.render();
   Resources.render();
+  Budget.render();
   Dashboard.render();
 }
 
@@ -3470,6 +3543,56 @@ const Dashboard = (() => {
       else if(atrasadas <= 2) statusEl.innerHTML = '<span class="sdot sdot-amb"></span>Atenção';
       else statusEl.innerHTML = '<span class="sdot sdot-red"></span>Crítico';
     }
+
+    renderBudgetKpis();
+  }
+
+  function renderBudgetKpis() {
+    if(typeof Budget === 'undefined') return;
+    const setDot = (id, cls) => { const el = document.getElementById(id); if(el) el.className = 'sdot ' + cls; };
+    const m = Budget.computeMetrics();
+    const statusEl = document.getElementById('dash-bud-status');
+
+    if(!m.hasLines) {
+      setText('dash-kpi-consumo', '');
+      const cEl = document.getElementById('dash-kpi-consumo'); if(cEl) cEl.innerHTML = '—<span class="kpi-unit"></span>';
+      setText('dash-kpi-cpi', '—');
+      setText('dash-kpi-reserva', '—');
+      setText('dash-kpi-eac', '—');
+      ['dash-kpi-consumo-sub','dash-kpi-cpi-sub','dash-kpi-reserva-sub','dash-kpi-eac-sub'].forEach(id => setText(id, 'Sem linhas de orçamento'));
+      if(statusEl) statusEl.innerHTML = '<span class="sdot sdot-acc"></span>Sem dados';
+      return;
+    }
+
+    const consumoEl = document.getElementById('dash-kpi-consumo');
+    if(consumoEl) consumoEl.innerHTML = m.consumoPct + '<span class="kpi-unit">%</span>';
+    setDot('dash-kpi-consumo-dot', m.consumoPct > 100 ? 'sdot-red' : (m.consumoPct > 85 ? 'sdot-amb' : 'sdot-grn'));
+    setText('dash-kpi-consumo-sub', m.BAC > 0 ? (Math.round((m.AC/m.BAC)*100) - 100) + '% vs plano' : '');
+
+    if(m.CPI == null) {
+      setText('dash-kpi-cpi', '—');
+      setDot('dash-kpi-cpi-dot', 'sdot-acc');
+      setText('dash-kpi-cpi-sub', 'Sem custo real ainda');
+    } else {
+      setText('dash-kpi-cpi', m.CPI.toFixed(2));
+      setDot('dash-kpi-cpi-dot', m.CPI >= 1 ? 'sdot-grn' : (m.CPI >= 0.9 ? 'sdot-amb' : 'sdot-red'));
+      setText('dash-kpi-cpi-sub', m.CPI >= 1 ? 'Dentro do planejado' : 'Abaixo de 1,0');
+    }
+
+    const fmtK = n => { const v = Math.round(n||0); return (Math.abs(v)>=1000 ? 'R$'+Math.round(v/1000)+'k' : 'R$'+v); };
+    setText('dash-kpi-reserva', fmtK(m.reserveRemaining));
+    setText('dash-kpi-reserva-sub', m.reserveConsumed > 0 ? '-'+fmtK(m.reserveConsumed)+' consumida' : 'Intacta');
+    setDot('dash-kpi-reserva-dot', m.reserveRemaining < 0 ? 'sdot-red' : (m.reserveConsumed > 0 ? 'sdot-amb' : 'sdot-grn'));
+
+    setText('dash-kpi-eac', fmtK(m.EAC));
+    setText('dash-kpi-eac-sub', (m.EAC > m.BAC ? '+' : '') + fmtK(m.EAC - m.BAC) + ' vs base');
+    setDot('dash-kpi-eac-dot', m.EAC > m.BAC * 1.05 ? 'sdot-red' : (m.EAC > m.BAC ? 'sdot-amb' : 'sdot-grn'));
+
+    if(statusEl) {
+      if(m.CPI != null && m.CPI < 0.9) statusEl.innerHTML = '<span class="sdot sdot-red"></span>Crítico';
+      else if((m.CPI != null && m.CPI < 1) || m.reserveRemaining < m.reserveInitial * 0.3) statusEl.innerHTML = '<span class="sdot sdot-amb"></span>Atenção';
+      else statusEl.innerHTML = '<span class="sdot sdot-grn"></span>Saudável';
+    }
   }
 
   return { render };
@@ -3763,6 +3886,303 @@ const Scope = (() => {
   }
 
   return { render, openAdd, openEdit, saveFromModal, deleteFromModal, setStatus, closeModal, resetCache };
+})();
+</script>
+
+<!-- ■ MODULE: pages/budget-js -->
+<script data-module="pages/budget-js">
+const Budget = (() => {
+  let lines = null, actuals = null;
+  let lineModalCtx = { mode:null, id:null };
+  let actualModalCtx = { mode:null, id:null };
+
+  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function genId(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+  function fmtMoney(n) { return 'R$' + Math.round(n||0).toLocaleString('pt-BR'); }
+  function fmtMoneyK(n) { const v = Math.round(n||0); return Math.abs(v) >= 1000 ? 'R$' + Math.round(v/1000) + 'k' : fmtMoney(v); }
+
+  function ensureLoaded() { if(!lines) lines = DB.get('budgetLines'); if(!actuals) actuals = DB.get('costActuals'); return { lines, actuals }; }
+  function resetCache() { lines = null; actuals = null; }
+  function persistLines() { DB.set('budgetLines', lines); }
+  function persistActuals() { DB.set('costActuals', actuals); }
+
+  // Núcleo do cálculo EVM (Consumo/CPI/EAC/Reserva) — usado também pelo Dashboard e pelo Portfólio.
+  // Sem projectId, calcula para o projeto ativo.
+  function computeMetrics(projectId) {
+    const pid = projectId || DB.getActiveProjectId();
+    const ls = DB.getForProject(pid, 'budgetLines') || [];
+    const ac = DB.getForProject(pid, 'costActuals') || [];
+    const wbs = DB.getForProject(pid, 'wbs') || [];
+    const scope = DB.getForProject(pid, 'scopeChanges') || [];
+
+    const baseLines = ls.filter(l => !l.isReserve);
+    const reserveLines = ls.filter(l => l.isReserve);
+    const BAC = baseLines.reduce((s,l) => s + (l.plannedValue||0), 0);
+    const reserveInitial = reserveLines.reduce((s,l) => s + (l.plannedValue||0), 0);
+
+    const AC = ac.filter(a => a.kind === 'real').reduce((s,a) => s + (a.amount||0), 0);
+    const committed = ac.filter(a => a.kind === 'comprometido').reduce((s,a) => s + (a.amount||0), 0);
+
+    // EV só considera linhas vinculadas a uma entrega da WBS — sem isso não dá pra saber o % concluído.
+    let EV = 0, unlinkedCount = 0;
+    baseLines.forEach(l => {
+      if(!l.wbsModuleId) { unlinkedCount++; return; }
+      const m = wbs.find(x => x.id === l.wbsModuleId);
+      if(m) EV += (l.plannedValue||0) * ((m.pct||0) / 100);
+    });
+
+    const CPI = AC > 0 ? EV / AC : null;
+    const EAC = (CPI && CPI > 0) ? AC + (BAC - EV) / CPI : BAC;
+    const consumoPct = BAC > 0 ? Math.round((AC / BAC) * 100) : 0;
+    // Reserva é consumida por mudanças de escopo já aprovadas — reaproveita o dado real de Scope Changes.
+    const reserveConsumed = scope.filter(s => s.status === 'approved').reduce((s,x) => s + (x.impactCost||0), 0);
+    const reserveRemaining = reserveInitial - reserveConsumed;
+
+    return { BAC, reserveInitial, AC, committed, EV, CPI, EAC, consumoPct, reserveConsumed, reserveRemaining, unlinkedCount, hasLines: ls.length > 0 };
+  }
+
+  function render() {
+    ensureLoaded();
+    renderKpis();
+    renderLines();
+    renderActuals();
+  }
+
+  function renderKpis() {
+    const m = computeMetrics();
+    const setText = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+    const setDot = (id, cls) => { const el = document.getElementById(id); if(el) el.className = 'sdot ' + cls; };
+
+    if(!m.hasLines) {
+      ['bud-kpi-consumo','bud-kpi-cpi','bud-kpi-eac','bud-kpi-reserva'].forEach(id => setText(id, '—'));
+      ['bud-kpi-consumo-sub','bud-kpi-cpi-sub','bud-kpi-eac-sub','bud-kpi-reserva-sub'].forEach(id => setText(id, ''));
+      const note = document.getElementById('bud-note-root');
+      if(note) note.innerHTML = '<i class="ti ti-info-circle"></i> Nenhuma linha de orçamento cadastrada ainda — os KPIs aparecem quando houver ao menos uma linha.';
+      return;
+    }
+
+    setText('bud-kpi-consumo', m.consumoPct + '%');
+    setDot('bud-kpi-consumo-dot', m.consumoPct > 100 ? 'sdot-red' : (m.consumoPct > 85 ? 'sdot-amb' : 'sdot-grn'));
+    setText('bud-kpi-consumo-sub', fmtMoney(m.AC) + ' de ' + fmtMoney(m.BAC));
+
+    if(m.CPI == null) {
+      setText('bud-kpi-cpi', '—');
+      setDot('bud-kpi-cpi-dot', 'sdot-acc');
+      setText('bud-kpi-cpi-sub', 'Sem custo real lançado ainda');
+    } else {
+      setText('bud-kpi-cpi', m.CPI.toFixed(2));
+      setDot('bud-kpi-cpi-dot', m.CPI >= 1 ? 'sdot-grn' : (m.CPI >= 0.9 ? 'sdot-amb' : 'sdot-red'));
+      setText('bud-kpi-cpi-sub', m.CPI >= 1 ? 'Dentro ou acima do planejado' : 'Abaixo de 1,0');
+    }
+
+    setText('bud-kpi-eac', fmtMoneyK(m.EAC));
+    setText('bud-kpi-eac-sub', (m.EAC > m.BAC ? '+' : '') + fmtMoneyK(m.EAC - m.BAC) + ' vs base');
+    setDot('bud-kpi-eac-dot', m.EAC > m.BAC * 1.05 ? 'sdot-red' : (m.EAC > m.BAC ? 'sdot-amb' : 'sdot-grn'));
+
+    setText('bud-kpi-reserva', fmtMoneyK(m.reserveRemaining));
+    setText('bud-kpi-reserva-sub', m.reserveConsumed > 0 ? '-' + fmtMoney(m.reserveConsumed) + ' consumida' : 'Intacta');
+    setDot('bud-kpi-reserva-dot', m.reserveRemaining < 0 ? 'sdot-red' : (m.reserveConsumed > 0 ? 'sdot-amb' : 'sdot-grn'));
+
+    const note = document.getElementById('bud-note-root');
+    if(note) note.innerHTML = m.unlinkedCount
+      ? `<i class="ti ti-alert-triangle" style="color:var(--amb)"></i> ${m.unlinkedCount} linha(s) de orçamento sem entrega da WBS vinculada — não entram no cálculo de EV/CPI.`
+      : '';
+  }
+
+  function renderLines() {
+    const root = document.getElementById('bud-lines-root');
+    if(!root) return;
+    if(!lines.length) { root.innerHTML = `<div style="text-align:center;padding:20px 10px;color:var(--t3);font-size:12.5px">Nenhuma linha de orçamento ainda.</div>`; return; }
+    const wbs = DB.get('wbs') || [];
+    root.innerHTML = lines.map(l => {
+      const wbsLabel = l.wbsModuleId ? (wbs.find(m=>m.id===l.wbsModuleId)||{}).label : '';
+      return `<div class="set-row">
+        <div>
+          <div class="set-lbl">${escapeHtml(l.label)}${l.isReserve ? ' <span class="badge b-neu">Reserva</span>' : ''}</div>
+          <div class="set-sub">${fmtMoney(l.plannedValue)}${wbsLabel ? ' · ' + escapeHtml(wbsLabel) : (l.isReserve ? '' : ' · sem entrega vinculada')}</div>
+        </div>
+        <button class="wbs-ic-btn" data-perm="business" title="Editar" onclick="Budget.openEditLine('${l.id}')"><i class="ti ti-edit"></i></button>
+      </div>`;
+    }).join('');
+  }
+
+  function renderActuals() {
+    const root = document.getElementById('bud-actuals-root');
+    if(!root) return;
+    if(!actuals.length) { root.innerHTML = `<div style="text-align:center;padding:20px 10px;color:var(--t3);font-size:12.5px">Nenhum lançamento de custo ainda.</div>`; return; }
+    const sorted = [...actuals].sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    root.innerHTML = sorted.map(a => {
+      const line = lines.find(l => l.id === a.budgetLineId);
+      const kindBadge = a.kind === 'comprometido' ? '<span class="badge b-amb">Comprometido</span>' : '<span class="badge b-grn">Real</span>';
+      return `<div class="set-row">
+        <div>
+          <div class="set-lbl">${escapeHtml(a.label)} ${kindBadge}</div>
+          <div class="set-sub">${fmtMoney(a.amount)} · ${a.date||''}${line ? ' · ' + escapeHtml(line.label) : ''}</div>
+        </div>
+        <button class="wbs-ic-btn" data-perm="business" title="Editar" onclick="Budget.openEditActual('${a.id}')"><i class="ti ti-edit"></i></button>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Modal: linha de orçamento ──
+  function openLineModal() { document.getElementById('modal-budget-line').classList.remove('hidden'); }
+  function closeLineModal() { document.getElementById('modal-budget-line').classList.add('hidden'); }
+
+  function populateWbsOptions(selectedId) {
+    const sel = document.getElementById('bud-line-f-wbs');
+    if(!sel) return;
+    const wbs = DB.get('wbs') || [];
+    sel.innerHTML = '<option value="">Nenhuma</option>' + wbs.map(m => `<option value="${escapeHtml(m.id)}"${m.id===selectedId?' selected':''}>${escapeHtml(m.label)}</option>`).join('');
+  }
+
+  function openAddLine() {
+    if(!Auth.guard('business')) return;
+    ensureLoaded();
+    lineModalCtx = { mode:'add', id:null };
+    document.getElementById('bud-line-modal-title').textContent = 'Nova linha de orçamento';
+    document.getElementById('bud-line-f-delete-btn').style.display = 'none';
+    document.getElementById('bud-line-f-label').value = '';
+    document.getElementById('bud-line-f-value').value = '';
+    document.getElementById('bud-line-f-reserve').checked = false;
+    populateWbsOptions('');
+    openLineModal();
+  }
+
+  function openEditLine(id) {
+    if(!Auth.guard('business')) return;
+    ensureLoaded();
+    const l = lines.find(x => x.id === id);
+    if(!l) return;
+    lineModalCtx = { mode:'edit', id };
+    document.getElementById('bud-line-modal-title').textContent = 'Editar linha de orçamento';
+    document.getElementById('bud-line-f-delete-btn').style.display = '';
+    document.getElementById('bud-line-f-label').value = l.label;
+    document.getElementById('bud-line-f-value').value = l.plannedValue;
+    document.getElementById('bud-line-f-reserve').checked = !!l.isReserve;
+    populateWbsOptions(l.wbsModuleId||'');
+    openLineModal();
+  }
+
+  function saveLineFromModal() {
+    if(!Auth.guard('business')) return;
+    ensureLoaded();
+    const label = document.getElementById('bud-line-f-label').value.trim();
+    const plannedValue = parseFloat(document.getElementById('bud-line-f-value').value) || 0;
+    const wbsModuleId = document.getElementById('bud-line-f-wbs').value;
+    const isReserve = document.getElementById('bud-line-f-reserve').checked;
+    if(!label) { T.show('⚠️ Dê um nome para a linha de orçamento.'); return; }
+
+    if(lineModalCtx.mode === 'add') {
+      const l = { id:genId('bl'), label, plannedValue, wbsModuleId, isReserve };
+      lines.push(l);
+      T.show('✅ Linha de orçamento adicionada!');
+      Trail.log(`Linha de orçamento criada: ${label} (${fmtMoney(plannedValue)})`, Auth.getName(), '', 'b-acc');
+      Cloud.pushBudgetLine(l);
+    } else {
+      const l = lines.find(x => x.id === lineModalCtx.id);
+      if(l) { l.label=label; l.plannedValue=plannedValue; l.wbsModuleId=wbsModuleId; l.isReserve=isReserve; Cloud.pushBudgetLine(l); }
+      T.show('✅ Linha atualizada!');
+    }
+    persistLines();
+    render();
+    closeLineModal();
+  }
+
+  function deleteLineFromModal() {
+    if(!Auth.guard('business')) return;
+    ensureLoaded();
+    if(!confirm('Excluir esta linha de orçamento?')) return;
+    lines = lines.filter(x => x.id !== lineModalCtx.id);
+    Cloud.deleteBudgetLine(lineModalCtx.id);
+    persistLines();
+    render();
+    closeLineModal();
+    T.show('🗑️ Linha excluída.');
+  }
+
+  // ── Modal: lançamento de custo ──
+  function openActualModal() { document.getElementById('modal-budget-actual').classList.remove('hidden'); }
+  function closeActualModal() { document.getElementById('modal-budget-actual').classList.add('hidden'); }
+
+  function populateLineOptions(selectedId) {
+    const sel = document.getElementById('bud-actual-f-line');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">Nenhuma</option>' + lines.map(l => `<option value="${escapeHtml(l.id)}"${l.id===selectedId?' selected':''}>${escapeHtml(l.label)}</option>`).join('');
+  }
+
+  function openAddActual() {
+    if(!Auth.guard('business')) return;
+    ensureLoaded();
+    if(!lines.length) { T.show('⚠️ Cadastre uma linha de orçamento antes de lançar um custo.'); return; }
+    actualModalCtx = { mode:'add', id:null };
+    document.getElementById('bud-actual-modal-title').textContent = 'Novo lançamento de custo';
+    document.getElementById('bud-actual-f-delete-btn').style.display = 'none';
+    document.getElementById('bud-actual-f-label').value = '';
+    document.getElementById('bud-actual-f-amount').value = '';
+    document.getElementById('bud-actual-f-date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('bud-actual-f-kind').value = 'real';
+    populateLineOptions('');
+    openActualModal();
+  }
+
+  function openEditActual(id) {
+    if(!Auth.guard('business')) return;
+    ensureLoaded();
+    const a = actuals.find(x => x.id === id);
+    if(!a) return;
+    actualModalCtx = { mode:'edit', id };
+    document.getElementById('bud-actual-modal-title').textContent = 'Editar lançamento de custo';
+    document.getElementById('bud-actual-f-delete-btn').style.display = '';
+    document.getElementById('bud-actual-f-label').value = a.label;
+    document.getElementById('bud-actual-f-amount').value = a.amount;
+    document.getElementById('bud-actual-f-date').value = a.date;
+    document.getElementById('bud-actual-f-kind').value = a.kind || 'real';
+    populateLineOptions(a.budgetLineId||'');
+    openActualModal();
+  }
+
+  function saveActualFromModal() {
+    if(!Auth.guard('business')) return;
+    ensureLoaded();
+    const label = document.getElementById('bud-actual-f-label').value.trim();
+    const amount = parseFloat(document.getElementById('bud-actual-f-amount').value) || 0;
+    const date = document.getElementById('bud-actual-f-date').value;
+    const budgetLineId = document.getElementById('bud-actual-f-line').value;
+    const kind = document.getElementById('bud-actual-f-kind').value;
+    if(!label) { T.show('⚠️ Descreva o lançamento.'); return; }
+    if(!date) { T.show('⚠️ Informe a data.'); return; }
+
+    if(actualModalCtx.mode === 'add') {
+      const a = { id:genId('ca'), label, amount, date, budgetLineId, kind };
+      actuals.push(a);
+      T.show('✅ Custo lançado!');
+      Trail.log(`Custo lançado: ${label} (${fmtMoney(amount)})`, Auth.getName(), kind==='real'?'Custo real':'Comprometido', 'b-acc');
+      Cloud.pushCostActual(a);
+    } else {
+      const a = actuals.find(x => x.id === actualModalCtx.id);
+      if(a) { a.label=label; a.amount=amount; a.date=date; a.budgetLineId=budgetLineId; a.kind=kind; Cloud.pushCostActual(a); }
+      T.show('✅ Lançamento atualizado!');
+    }
+    persistActuals();
+    render();
+    closeActualModal();
+  }
+
+  function deleteActualFromModal() {
+    if(!Auth.guard('business')) return;
+    ensureLoaded();
+    if(!confirm('Excluir este lançamento de custo?')) return;
+    actuals = actuals.filter(x => x.id !== actualModalCtx.id);
+    Cloud.deleteCostActual(actualModalCtx.id);
+    persistActuals();
+    render();
+    closeActualModal();
+    T.show('🗑️ Lançamento excluído.');
+  }
+
+  return { render, computeMetrics, resetCache,
+    openAddLine, openEditLine, saveLineFromModal, deleteLineFromModal, closeLineModal,
+    openAddActual, openEditActual, saveActualFromModal, deleteActualFromModal, closeActualModal };
 })();
 </script>
 
@@ -4264,6 +4684,7 @@ const Portfolio = (() => {
     const decisions = DB.getForProject(projectId, 'decisions') || [];
     const repository = DB.getForProject(projectId, 'repository') || [];
     const scope = DB.getForProject(projectId, 'scopeChanges') || [];
+    const budget = (typeof Budget !== 'undefined') ? Budget.computeMetrics(projectId) : { hasLines:false, consumoPct:0 };
 
     const aderencia = wbs.length ? Math.round(wbs.reduce((s,m)=>s+(m.pct||0),0) / wbs.length) : 0;
     const pendentes = decisions.filter(d => d.status === 'pending').length;
@@ -4274,7 +4695,7 @@ const Portfolio = (() => {
     if(aderencia >= 70 && scopeAbertos === 0) { status = 'b-grn'; statusLabel = 'Saudável'; }
     else if(aderencia < 40 || scopeAbertos >= 3) { status = 'b-red'; statusLabel = 'Em risco'; }
 
-    return { aderencia, pendentes, scopeAbertos, escopoScore, status, statusLabel, docs: repository.length, hasData: wbs.length > 0 || decisions.length > 0 || repository.length > 0 };
+    return { aderencia, pendentes, scopeAbertos, escopoScore, status, statusLabel, docs: repository.length, hasData: wbs.length > 0 || decisions.length > 0 || repository.length > 0, budget };
   }
 
   function barColor(pct) { return pct >= 70 ? 'var(--grn)' : (pct >= 40 ? 'var(--amb)' : 'var(--red)'); }
@@ -4289,12 +4710,15 @@ const Portfolio = (() => {
     root.innerHTML = projects.map(p => {
       const s = computeStats(p.id);
       const isActive = p.id === activeId;
+      const hasBudget = s.budget.hasLines;
       const badges = [
         s.scopeAbertos > 0 ? '<span class="badge b-red">Scope creep</span>' : '<span class="badge b-grn">Escopo ok</span>',
-        '<span class="badge b-amb">Orçamento*</span>',
+        !hasBudget ? '<span class="badge b-neu">Orçamento: sem dados</span>' : (s.budget.consumoPct > 100 ? '<span class="badge b-red">Orçamento estourado</span>' : (s.budget.consumoPct > 85 ? '<span class="badge b-amb">Orçamento: atenção</span>' : '<span class="badge b-grn">Orçamento ok</span>')),
         s.aderencia >= 70 ? '<span class="badge b-grn">Prazo ok</span>' : '<span class="badge b-amb">Prazo: atenção</span>'
       ].join('');
-      const emptyNote = !s.hasData ? `<div style="font-size:10px;color:var(--t3);margin-top:6px">Projeto ainda sem dados — troque para ele e comece a preencher a WBS.</div>` : `<div style="font-size:10px;color:var(--t3);margin-top:6px">*Orçamento ainda é ilustrativo — sem módulo de custos real implementado</div>`;
+      const emptyNote = !s.hasData ? `<div style="font-size:10px;color:var(--t3);margin-top:6px">Projeto ainda sem dados — troque para ele e comece a preencher a WBS.</div>` : (!hasBudget ? `<div style="font-size:10px;color:var(--t3);margin-top:6px">Sem linhas de orçamento cadastradas — cadastre em Orçamento e Custos.</div>` : '');
+      const budgetPct = hasBudget ? s.budget.consumoPct : 0;
+      const budgetColor = hasBudget ? barColor(100 - Math.min(budgetPct, 100)) : 'var(--s3)';
       return `<div class="pc-card${isActive?' sel':''}" onclick="DB.switchProject('${p.id}');R.go('dashboard')">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
           <div><div class="pc-name">${escapeHtml(p.name)}${isActive?' <span style=\"font-size:10px;color:var(--acc);font-weight:400\">· ativo</span>':''}</div><div class="pc-client">${escapeHtml(p.client||'')}</div></div>
@@ -4302,7 +4726,7 @@ const Portfolio = (() => {
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">${badges}</div>
         <div class="pb-row"><span class="pb-lbl">Prazo (WBS)</span><div class="pb-track"><div class="pb-fill" style="width:${s.aderencia}%;background:${barColor(s.aderencia)}"></div></div><span class="pb-pct">${s.aderencia}%</span></div>
-        <div class="pb-row"><span class="pb-lbl">Orçamento*</span><div class="pb-track"><div class="pb-fill" style="width:71%;background:var(--amb)"></div></div><span class="pb-pct">71%</span></div>
+        <div class="pb-row"><span class="pb-lbl">Orçamento</span><div class="pb-track"><div class="pb-fill" style="width:${Math.min(budgetPct,100)}%;background:${budgetColor}"></div></div><span class="pb-pct">${hasBudget ? budgetPct+'%' : '—'}</span></div>
         <div class="pb-row"><span class="pb-lbl">Escopo</span><div class="pb-track"><div class="pb-fill" style="width:${s.escopoScore}%;background:${barColor(s.escopoScore)}"></div></div><span class="pb-pct">${s.escopoScore}%</span></div>
         <div style="font-size:11px;color:var(--t3);margin-top:10px;display:flex;gap:10px"><span><i class="ti ti-files" style="font-size:11px"></i> ${s.docs} docs</span><span><i class="ti ti-brain" style="font-size:11px"></i> ${s.pendentes} decisões</span></div>
         ${emptyNote}
@@ -5261,6 +5685,57 @@ const WBS = (() => {
       <button class="btn btn-sm btn-red" id="scope-f-delete-btn" style="display:none" onclick="Scope.deleteFromModal()"><i class="ti ti-trash"></i>Excluir</button>
       <button class="btn btn-sm" onclick="Scope.closeModal()">Cancelar</button>
       <button class="btn btn-sm btn-acc" onclick="Scope.saveFromModal()"><i class="ti ti-device-floppy"></i>Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ■ MODULE: ui/budget-line-modal -->
+<div class="modal-ov hidden" id="modal-budget-line" onclick="if(event.target===this)Budget.closeLineModal()">
+  <div class="modal-box" style="width:460px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" id="bud-line-modal-title">Nova linha de orçamento</div>
+      <button class="btn btn-sm" onclick="Budget.closeLineModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-sub">Parte do orçamento total aprovado (baseline / BAC)</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><div class="field-label">Nome</div><input class="input" id="bud-line-f-label" placeholder="Ex: Integração ERP"></div>
+      <div class="g2" style="gap:10px">
+        <div><div class="field-label">Valor planejado (R$)</div><input class="input" type="number" id="bud-line-f-value" placeholder="Ex: 90000"></div>
+        <div><div class="field-label">Entrega da WBS vinculada</div><select class="input" id="bud-line-f-wbs"><option value="">Nenhuma</option></select></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--t2)"><input type="checkbox" id="bud-line-f-reserve">É a reserva de contingência (não entra no BAC)</label>
+    </div>
+    <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
+      <button class="btn btn-sm btn-red" id="bud-line-f-delete-btn" style="display:none" onclick="Budget.deleteLineFromModal()"><i class="ti ti-trash"></i>Excluir</button>
+      <button class="btn btn-sm" onclick="Budget.closeLineModal()">Cancelar</button>
+      <button class="btn btn-sm btn-acc" onclick="Budget.saveLineFromModal()"><i class="ti ti-device-floppy"></i>Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ■ MODULE: ui/budget-actual-modal -->
+<div class="modal-ov hidden" id="modal-budget-actual" onclick="if(event.target===this)Budget.closeActualModal()">
+  <div class="modal-box" style="width:460px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" id="bud-actual-modal-title">Novo lançamento de custo</div>
+      <button class="btn btn-sm" onclick="Budget.closeActualModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-sub">Custo real ou comprometido, vinculado a uma linha de orçamento</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><div class="field-label">Descrição</div><input class="input" id="bud-actual-f-label" placeholder="Ex: NF 1234 — consultoria ERP"></div>
+      <div class="g2" style="gap:10px">
+        <div><div class="field-label">Valor (R$)</div><input class="input" type="number" id="bud-actual-f-amount" placeholder="Ex: 12000"></div>
+        <div><div class="field-label">Data</div><input class="input" type="date" id="bud-actual-f-date"></div>
+      </div>
+      <div class="g2" style="gap:10px">
+        <div><div class="field-label">Linha de orçamento</div><select class="input" id="bud-actual-f-line"></select></div>
+        <div><div class="field-label">Tipo</div><select class="input" id="bud-actual-f-kind"><option value="real">Custo real (pago)</option><option value="comprometido">Comprometido (contratado)</option></select></div>
+      </div>
+    </div>
+    <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
+      <button class="btn btn-sm btn-red" id="bud-actual-f-delete-btn" style="display:none" onclick="Budget.deleteActualFromModal()"><i class="ti ti-trash"></i>Excluir</button>
+      <button class="btn btn-sm" onclick="Budget.closeActualModal()">Cancelar</button>
+      <button class="btn btn-sm btn-acc" onclick="Budget.saveActualFromModal()"><i class="ti ti-device-floppy"></i>Salvar</button>
     </div>
   </div>
 </div>

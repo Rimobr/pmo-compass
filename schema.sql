@@ -119,17 +119,41 @@ create table if not exists public.documents (
   content text not null default '' -- texto extraído (PDF/DOCX) já anonimizado (LGPD), usado como contexto real da IA
 );
 
--- 5) ROW LEVEL SECURITY — espelha os 4 perfis já usados no app -------------
-alter table public.wbs_modules enable row level security;
-alter table public.wbs_tasks   enable row level security;
-alter table public.decisions   enable row level security;
-alter table public.documents   enable row level security;
+-- 5) ORÇAMENTO E CUSTOS -----------------------------------------------------
+create table if not exists public.budget_lines (
+  id text primary key,
+  label text not null,
+  planned_value numeric not null default 0,
+  wbs_module_id text references public.wbs_modules(id) on delete set null,
+  is_reserve boolean not null default false, -- linha de reserva de contingência, não entra no BAC
+  updated_at timestamptz default now()
+);
+
+create table if not exists public.cost_actuals (
+  id text primary key,
+  label text not null,
+  amount numeric not null default 0,
+  entry_date date default current_date,
+  budget_line_id text references public.budget_lines(id) on delete set null,
+  kind text not null default 'real' check (kind in ('real','comprometido')),
+  updated_at timestamptz default now()
+);
+
+-- 6) ROW LEVEL SECURITY — espelha os 4 perfis já usados no app -------------
+alter table public.wbs_modules  enable row level security;
+alter table public.wbs_tasks    enable row level security;
+alter table public.decisions    enable row level security;
+alter table public.documents    enable row level security;
+alter table public.budget_lines enable row level security;
+alter table public.cost_actuals enable row level security;
 
 -- Leitura: qualquer usuário autenticado vê tudo (todos os 4 perfis leem)
-create policy "wbs_modules_read" on public.wbs_modules for select using (auth.role() = 'authenticated');
-create policy "wbs_tasks_read"   on public.wbs_tasks   for select using (auth.role() = 'authenticated');
-create policy "decisions_read"   on public.decisions   for select using (auth.role() = 'authenticated');
-create policy "documents_read"   on public.documents   for select using (auth.role() = 'authenticated');
+create policy "wbs_modules_read"  on public.wbs_modules  for select using (auth.role() = 'authenticated');
+create policy "wbs_tasks_read"    on public.wbs_tasks    for select using (auth.role() = 'authenticated');
+create policy "decisions_read"    on public.decisions    for select using (auth.role() = 'authenticated');
+create policy "documents_read"    on public.documents    for select using (auth.role() = 'authenticated');
+create policy "budget_lines_read" on public.budget_lines for select using (auth.role() = 'authenticated');
+create policy "cost_actuals_read" on public.cost_actuals for select using (auth.role() = 'authenticated');
 
 -- Escrita (INSERT/UPDATE/DELETE): só admin e gerente — equivalente ao data-perm="business" do app
 create policy "wbs_modules_write" on public.wbs_modules for all
@@ -145,6 +169,14 @@ create policy "decisions_write" on public.decisions for all
   with check (public.current_role() in ('admin','gerente'));
 
 create policy "documents_write" on public.documents for all
+  using (public.current_role() in ('admin','gerente'))
+  with check (public.current_role() in ('admin','gerente'));
+
+create policy "budget_lines_write" on public.budget_lines for all
+  using (public.current_role() in ('admin','gerente'))
+  with check (public.current_role() in ('admin','gerente'));
+
+create policy "cost_actuals_write" on public.cost_actuals for all
   using (public.current_role() in ('admin','gerente'))
   with check (public.current_role() in ('admin','gerente'));
 
