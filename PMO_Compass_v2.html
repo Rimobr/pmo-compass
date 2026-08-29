@@ -1107,8 +1107,8 @@ body.icons-failed i[data-fb]::before{
   <div class="card card-accent">
     <div class="lbl" style="color:var(--acc)"><i class="ti ti-brain"></i>Contexto da IA — baseado nos documentos indexados</div>
     <div class="g3">
-      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:12px"><div style="font-size:11px;color:var(--t3);margin-bottom:4px">Documentos indexados</div><div style="font-size:22px;font-weight:700;color:var(--t1)" id="repo-kpi-count">12</div><div style="font-size:11.5px;color:var(--grn);margin-top:3px">de 13 carregados</div></div>
-      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:12px"><div style="font-size:11px;color:var(--t3);margin-bottom:4px">Confiança contextual</div><div style="font-size:22px;font-weight:700;color:var(--grn)">94%</div><div style="font-size:11.5px;color:var(--t3);margin-top:3px">alta cobertura</div></div>
+      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:12px"><div style="font-size:11px;color:var(--t3);margin-bottom:4px">Documentos indexados</div><div style="font-size:22px;font-weight:700;color:var(--t1)" id="repo-kpi-count">12</div><div style="font-size:11.5px;color:var(--t3);margin-top:3px" id="repo-kpi-count-sub">—</div></div>
+      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:12px"><div style="font-size:11px;color:var(--t3);margin-bottom:4px">Confiança contextual</div><div style="font-size:22px;font-weight:700;color:var(--t1)" id="repo-kpi-confidence">—</div><div style="font-size:11.5px;color:var(--t3);margin-top:3px" id="repo-kpi-confidence-sub">—</div></div>
       <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:12px"><div style="font-size:11px;color:var(--t3);margin-bottom:4px">Última atualização</div><div style="font-size:22px;font-weight:700;color:var(--t1)" id="repo-kpi-updated">8<span style="font-size:14px;font-weight:400;color:var(--t2)">min</span></div><div style="font-size:11.5px;color:var(--t3);margin-top:3px">ago</div></div>
     </div>
   </div>
@@ -3016,6 +3016,23 @@ const Repo = (() => {
     const sub = document.getElementById('repo-doc-count'); if(sub) sub.textContent = data.length;
     const kpi = document.getElementById('repo-kpi-count'); if(kpi) kpi.textContent = data.length;
     if(justChanged) { const upd = document.getElementById('repo-kpi-updated'); if(upd) upd.innerHTML = 'agora'; }
+
+    // "Confiança contextual" real: % de documentos com texto extraído persistido (não só nome) —
+    // é exatamente o que ContextBuilder consegue de fato citar pra IA. Antes era um "94%" fixo.
+    const withContent = data.filter(d => (d.content||'').trim().length > 0).length;
+    const countSubEl = document.getElementById('repo-kpi-count-sub');
+    if(countSubEl) countSubEl.textContent = data.length ? `${withContent} com conteúdo indexado` : 'nenhum documento ainda';
+    const confEl = document.getElementById('repo-kpi-confidence');
+    const confSubEl = document.getElementById('repo-kpi-confidence-sub');
+    if(confEl && confSubEl) {
+      if(!data.length) { confEl.textContent = '—'; confSubEl.textContent = 'sem documentos'; }
+      else {
+        const pct = Math.round(withContent / data.length * 100);
+        confEl.textContent = pct + '%';
+        confEl.style.color = pct >= 70 ? 'var(--grn)' : (pct >= 40 ? 'var(--amb)' : 'var(--red)');
+        confSubEl.textContent = pct >= 70 ? 'alta cobertura' : (pct >= 40 ? 'cobertura parcial' : 'baixa cobertura — reenvie os documentos antigos');
+      }
+    }
   }
 
   function add(item) {
