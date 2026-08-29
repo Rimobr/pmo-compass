@@ -1068,11 +1068,10 @@ body.icons-failed i[data-fb]::before{
 <!-- ■ MODULE: pages/repository -->
 <section class="page" id="p-repository" data-module="pages/repository">
   <div class="pg-hdr">
-    <div><div class="pg-title">Repositório de Documentos</div><div class="pg-sub"><span id="repo-doc-count">12</span> documentos indexados · Busca semântica ativa · Base de contexto da IA</div></div>
+    <div><div class="pg-title">Repositório de Documentos</div><div class="pg-sub"><span id="repo-doc-count">12</span> documentos indexados · Busca por texto ativa · Base de contexto da IA</div></div>
     <div class="btn-row">
-      <button class="btn btn-sm btn-acc" data-perm="business" onclick="T.show('Selecionando arquivo para upload…')"><i class="ti ti-upload"></i>Adicionar documento</button>
+      <button class="btn btn-sm btn-acc" data-perm="business" onclick="document.getElementById('fi-files-inp').click()"><i class="ti ti-upload"></i>Adicionar documento</button>
       <button class="btn btn-sm btn-acc" data-perm="business" onclick="T.show('Conectando ao Google Drive…')"><i class="ti ti-brand-google-drive"></i>Conectar Drive</button>
-      <button class="btn btn-sm"><i class="ti ti-search"></i>Busca semântica</button>
     </div>
   </div>
 
@@ -1119,6 +1118,11 @@ body.icons-failed i[data-fb]::before{
   </div>
 
   <div class="card">
+    <div class="lbl" style="display:flex;align-items:center;gap:8px;justify-content:space-between">
+      <span><i class="ti ti-search"></i>Buscar por nome ou conteúdo</span>
+    </div>
+    <input class="input" id="repo-search-inp" placeholder="Ex: cláusula de multa, ERP, cronograma…" style="margin-bottom:12px" oninput="Repo.search(this.value)">
+    <div id="repo-search-note" style="font-size:11.5px;color:var(--t3);margin:-6px 0 10px;display:none"></div>
     <div id="repo-list-root"></div>
   </div>
 
@@ -2865,12 +2869,30 @@ const Trail = (() => {
 <script data-module="services/repo">
 const Repo = (() => {
   let data = null;
+  let searchTerm = '';
   function ensureLoaded() { if(!data) data = DB.get('repository'); return data; }
   function resetCache() { data = null; }
   function persist() { DB.set('repository', data); }
 
   function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function fmtDateBR(iso) { const [y,m,d] = (iso||'').split('-'); return (d&&m&&y) ? `${d}/${m}/${y}` : (iso||'agora'); }
+
+  // Busca por texto real (nome + conteúdo indexado) — antes o app dizia "busca semântica ativa"
+  // sem nenhuma busca implementada. Não é semântica (não usa embeddings), é busca por trecho —
+  // já cobre o caso de uso mais comum: achar em qual documento algo foi mencionado.
+  function search(term) { searchTerm = term || ''; render(); }
+
+  function matchSnippet(content, term) {
+    if(!content || !term) return '';
+    const idx = content.toLowerCase().indexOf(term.toLowerCase());
+    if(idx === -1) return '';
+    const start = Math.max(0, idx - 60);
+    const end = Math.min(content.length, idx + term.length + 60);
+    let snippet = content.slice(start, end).replace(/\s+/g, ' ').trim();
+    const re = new RegExp('(' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
+    snippet = escapeHtml(snippet).replace(re, '<mark style="background:var(--amd);color:var(--t1);border-radius:2px">$1</mark>');
+    return (start > 0 ? '…' : '') + snippet + (end < content.length ? '…' : '');
+  }
 
   function iconFor(ext) {
     ext = (ext||'').toLowerCase();
@@ -2884,12 +2906,25 @@ const Repo = (() => {
   function render(justChanged) {
     ensureLoaded();
     const root = document.getElementById('repo-list-root');
+    const noteEl = document.getElementById('repo-search-note');
     if(root) {
+      const term = searchTerm.trim();
+      let list = [...data].sort((a,b) => (b.addedAt||'').localeCompare(a.addedAt||''));
+      if(term) {
+        const t = term.toLowerCase();
+        list = list.filter(it => (it.name||'').toLowerCase().includes(t) || (it.content||'').toLowerCase().includes(t));
+      }
+      if(noteEl) {
+        if(term) { noteEl.style.display = ''; noteEl.textContent = `${list.length} de ${data.length} documento(s) — busca por "${term}" no nome e no conteúdo indexado.`; }
+        else noteEl.style.display = 'none';
+      }
+
       if(!data.length) {
         root.innerHTML = `<div style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12.5px">Nenhum documento no repositório ainda. Use o card acima para adicionar arquivos.</div>`;
+      } else if(!list.length) {
+        root.innerHTML = `<div style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12.5px">Nenhum documento encontrado para "${escapeHtml(term)}".</div>`;
       } else {
-        const sorted = [...data].sort((a,b) => (b.addedAt||'').localeCompare(a.addedAt||''));
-        root.innerHTML = sorted.map(it => {
+        root.innerHTML = list.map(it => {
           const ic = iconFor(it.ext);
           const tagsHtml = (it.tags||[]).map(t => `<span class="badge b-neu">${escapeHtml(t)}</span>`).join('');
           const indexing = it.indexPct < 100;
@@ -2899,6 +2934,9 @@ const Repo = (() => {
           const statusCol = indexing
             ? ''
             : `<div class="repo-status"><div style="font-size:11px;color:var(--grn);display:flex;align-items:center;gap:4px"><i class="ti ti-check-circle" style="font-size:13px"></i>100%</div></div>`;
+          const nameMatches = term && (it.name||'').toLowerCase().includes(term.toLowerCase());
+          const snippet = (term && !nameMatches) ? matchSnippet(it.content, term) : '';
+          const snippetHtml = snippet ? `<div style="font-size:11px;color:var(--t2);margin-top:5px;line-height:1.5">${snippet}</div>` : '';
           return `<div class="repo-item" data-id="${escapeHtml(it.id)}">
             <div class="repo-ico" style="background:${ic.bg}"><i class="ti ${ic.ico}" style="color:${ic.color}"></i></div>
             <div style="flex:1;min-width:0">
@@ -2906,6 +2944,7 @@ const Repo = (() => {
               <div class="repo-meta">${(it.ext||'').toUpperCase()} · ${escapeHtml(it.meta||'')} · Adicionado ${fmtDateBR(it.addedAt)}</div>
               <div class="repo-tags">${indexing?'<span class="badge b-amb">Processando…</span>':'<span class="badge b-acc">Indexado</span>'}${tagsHtml}</div>
               ${statusHtml}
+              ${snippetHtml}
             </div>
             ${statusCol}
             <button class="wbs-ic-btn" data-perm="business" title="Remover documento" onclick="Repo.remove('${it.id}')"><i class="ti ti-trash"></i></button>
@@ -2944,6 +2983,9 @@ const Repo = (() => {
   function focusItem(id) {
     ensureLoaded();
     if(!data.some(x => x.id === id)) { T.show('⚠️ Documento não encontrado no repositório (pode ter sido removido).'); return; }
+    searchTerm = ''; // limpa a busca — senão o documento pode estar escondido pelo filtro
+    const inp = document.getElementById('repo-search-inp'); if(inp) inp.value = '';
+    render();
     R.go('repository');
     const el = document.querySelector(`.repo-item[data-id="${id}"]`);
     if(!el) return;
@@ -2953,7 +2995,7 @@ const Repo = (() => {
     setTimeout(() => { el.style.outline = ''; el.style.outlineOffset = ''; }, 2000);
   }
 
-  return { render, add, remove, focusItem, resetCache };
+  return { render, add, remove, focusItem, search, resetCache };
 })();
 </script>
 
