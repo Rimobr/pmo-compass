@@ -1848,10 +1848,10 @@ const DB = (() => {
         }
       ],
       decisions: [
-        { id:'d1', severity:'crit', pct:92, title:'Escalar integração ERP ao comitê executivo até 20/06', body:'Padrão idêntico ao PRJ-67. Sem decisão esta semana, risco de cascata de 18 dias. Ocorreu em 2 de 3 projetos similares com ERP externo.', sources:[{ico:'file-text',label:'Ata 14/06'},{ico:'books',label:'Lição PRJ-67'}], status:'pending', actions:['accept','postpone3','reject'] },
+        { id:'d1', severity:'crit', pct:92, title:'Escalar integração ERP ao comitê executivo até 20/06', body:'Padrão idêntico ao PRJ-67. Sem decisão esta semana, risco de cascata de 18 dias. Ocorreu em 2 de 3 projetos similares com ERP externo.', sources:[{ico:'file-text',label:'Ata 14/06',repoId:'r2'},{ico:'books',label:'Lição PRJ-67'}], status:'pending', actions:['accept','postpone3','reject'] },
         { id:'d2', severity:'crit', pct:88, title:'Redistribuir SC-005 de Bruno M. para Ana P. — burnout iminente', body:'Bruno M. em 89% de carga há 14 dias. Histórico: após 85% por 12+ dias, produtividade cai 40% por 3 semanas — custo real de +2 semanas de projeto.', sources:[{ico:'heartbeat',label:'Burnout Radar'},{ico:'books',label:'Padrão: 3 projetos'}], status:'pending', actions:['accept','postpone2'] },
         { id:'d3', severity:'alto', pct:84, title:'Congelar novas mudanças de escopo — 5 abertas, +R$22k em risco', body:'Projetos com 3+ mudanças abertas sem aprovação atrasaram em 100% dos casos históricos. SC-003 a SC-007 aguardam há média de 8 dias.', sources:[{ico:'git-diff',label:'SC-003 a SC-007'},{ico:'books',label:'Padrão PRJ-44'}], status:'pending', actions:['accept','postpone7','reject'] },
-        { id:'d4', severity:'medio', pct:71, title:'Formalizar 7 ações das atas — responsáveis sem ciência formal', body:'IA processou 3 atas e identificou 7 ações implícitas. Sem formalização, risco de não execução e retrabalho futuro.', sources:[{ico:'notes',label:'Ata 14/06 · 10/06 · 05/06'}], status:'pending', actions:['gotomeetings'] }
+        { id:'d4', severity:'medio', pct:71, title:'Formalizar 7 ações das atas — responsáveis sem ciência formal', body:'IA processou 3 atas e identificou 7 ações implícitas. Sem formalização, risco de não execução e retrabalho futuro.', sources:[{ico:'notes',label:'Ata 14/06',repoId:'r2'}], status:'pending', actions:['gotomeetings'] }
       ],
       repository: [
         { id:'r1', name:'Requisitos Portal Nexus — Estoque v0.4', ext:'pdf', meta:'27 páginas · 2,1 MB', addedAt:'2026-05-28', tags:['Requisitos','MVP','HUs'], indexPct:100 },
@@ -2899,7 +2899,7 @@ const Repo = (() => {
           const statusCol = indexing
             ? ''
             : `<div class="repo-status"><div style="font-size:11px;color:var(--grn);display:flex;align-items:center;gap:4px"><i class="ti ti-check-circle" style="font-size:13px"></i>100%</div></div>`;
-          return `<div class="repo-item">
+          return `<div class="repo-item" data-id="${escapeHtml(it.id)}">
             <div class="repo-ico" style="background:${ic.bg}"><i class="ti ${ic.ico}" style="color:${ic.color}"></i></div>
             <div style="flex:1;min-width:0">
               <div class="repo-name">${escapeHtml(it.name)}</div>
@@ -2939,7 +2939,21 @@ const Repo = (() => {
     T.show('🗑️ Documento removido do repositório.');
   }
 
-  return { render, add, remove, resetCache };
+  // Navega até o Repositório e destaca visualmente um documento específico —
+  // usado pelos chips de fonte em Decisões, que agora linkam para o documento real.
+  function focusItem(id) {
+    ensureLoaded();
+    if(!data.some(x => x.id === id)) { T.show('⚠️ Documento não encontrado no repositório (pode ter sido removido).'); return; }
+    R.go('repository');
+    const el = document.querySelector(`.repo-item[data-id="${id}"]`);
+    if(!el) return;
+    el.scrollIntoView({ behavior:'smooth', block:'center' });
+    el.style.outline = '2px solid var(--acc)';
+    el.style.outlineOffset = '2px';
+    setTimeout(() => { el.style.outline = ''; el.style.outlineOffset = ''; }, 2000);
+  }
+
+  return { render, add, remove, focusItem, resetCache };
 })();
 </script>
 
@@ -3222,8 +3236,14 @@ const Decisions = (() => {
     medio:{cls:'b-acc', label:'MÉDIO', border:null}
   };
 
+  // Chip vira link real quando a fonte tem repoId (documento existente no Repositório) —
+  // antes era sempre texto solto, mesmo quando a "fonte" era, de fato, um documento real.
   function sourcesHtml(sources) {
-    return (sources||[]).map(s => `<span class="chip"><i class="ti ti-${s.icon}"></i>${escapeHtml(s.label)}</span>`).join('');
+    return (sources||[]).map(s => {
+      const icon = s.ico || s.icon || 'file-text';
+      if(s.repoId) return `<span class="chip" style="cursor:pointer" title="Abrir documento no Repositório" onclick="Repo.focusItem('${escapeHtml(s.repoId)}')"><i class="ti ti-${icon}"></i>${escapeHtml(s.label)}<i class="ti ti-external-link" style="font-size:10px;margin-left:2px"></i></span>`;
+      return `<span class="chip"><i class="ti ti-${icon}"></i>${escapeHtml(s.label)}</span>`;
+    }).join('');
   }
 
   function actionButtons(d) {
@@ -3331,6 +3351,11 @@ const Decisions = (() => {
     document.getElementById('dec-f-title').value = '';
     document.getElementById('dec-f-body').value = '';
     document.getElementById('dec-f-severity').value = 'medio';
+    const sel = document.getElementById('dec-f-sources');
+    if(sel) {
+      const repo = DB.get('repository') || [];
+      sel.innerHTML = repo.map(r => `<option value="${r.id}">${(r.name||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</option>`).join('');
+    }
     document.getElementById('modal-decision').classList.remove('hidden');
   }
   function closeModal() { document.getElementById('modal-decision').classList.add('hidden'); }
@@ -3340,7 +3365,13 @@ const Decisions = (() => {
     const body = document.getElementById('dec-f-body').value.trim();
     const severity = document.getElementById('dec-f-severity').value;
     if(!title) { T.show('⚠️ Dê um título para a decisão.'); return; }
-    data.unshift({ id:genId(), severity, pct:100, title, body: body || '(sem descrição adicional)', sources:[{icon:'edit',label:'Registro manual'}], status:'pending', actions:['accept','postpone3','reject'] });
+    const repo = DB.get('repository') || [];
+    const sourcesSel = document.getElementById('dec-f-sources');
+    const selectedIds = sourcesSel ? Array.from(sourcesSel.selectedOptions).map(o => o.value) : [];
+    const sources = selectedIds.length
+      ? selectedIds.map(id => { const r = repo.find(x => x.id === id); return { repoId:id, ico:'file-text', label: r ? r.name : id }; })
+      : [{ ico:'edit', label:'Registro manual' }];
+    data.unshift({ id:genId(), severity, pct:100, title, body: body || '(sem descrição adicional)', sources, status:'pending', actions:['accept','postpone3','reject'] });
     persist();
     render();
     closeModal();
@@ -5558,6 +5589,11 @@ const WBS = (() => {
           <option value="alto">Alto</option>
           <option value="crit">Crítico</option>
         </select>
+      </div>
+      <div>
+        <div class="field-label">Documentos que embasam esta decisão</div>
+        <select class="input" id="dec-f-sources" multiple size="4" style="height:auto"></select>
+        <div style="font-size:11px;color:var(--t3);margin-top:4px">Ctrl/Cmd+clique para selecionar mais de um. Fica com link direto para o documento no Repositório.</div>
       </div>
     </div>
     <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
