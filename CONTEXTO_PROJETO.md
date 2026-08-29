@@ -68,21 +68,20 @@ PMO Compass é um sistema de apoio à decisão para gerentes de projetos, com IA
 
 Arquivos: `manifest.json`, `sw.js`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`. Precisam estar **na mesma pasta** que o HTML. O botão de instalar só aparece quando hospedado via http/https — não funciona abrindo o arquivo local. Já está hospedado (ver seção 1), então isso funciona em produção.
 
-## 7. Duas identidades separadas — fonte comum de confusão
+## 7. Identidade — perfil local vs login Supabase, unificados em 28/08/2026
 
-O app tem **dois sistemas de identidade que não se comunicam visualmente**:
+O app tem dois sistemas de identidade com naturezas diferentes, que **hoje compartilham um único ponto de entrada** na UI:
 
-1. **Perfil de acesso local** (`core/auth`, módulo `Auth`) — nome + papel (Administrador/Gerente/Consulta/Manutenção) salvos em `localStorage`, **sem senha, sem sessão real**. Trocado clicando no nome no topo da tela. Não tem "sair" porque não é uma sessão — o próprio modal já avisa isso no rodapé. Serve só pra não deixar alguém clicar em algo que o papel dele não deveria fazer.
-2. **Login Supabase real** (`core/cloud`, módulo `Cloud`) — e-mail/senha reais, só acessível em **Configurações → Nuvem & Automação**. Tem "Sair da conta" de verdade, mas só aparece quando há sessão ativa.
+1. **Perfil de acesso local** (`core/auth`, módulo `Auth`) — nome + papel (Administrador/Gerente/Consulta/Manutenção) salvos em `localStorage`, **sem senha, sem sessão real**. Existe pra evitar cliques acidentais em modo local (sem backend), não substitui autenticação.
+2. **Login Supabase real** (`core/cloud`, módulo `Cloud`) — e-mail/senha reais, papel vindo do banco (`profiles.role`) via `Auth.setFromCloud()`.
 
-**Problema conhecido:** nada na interface principal (fora da tela de Configurações) indica se há sessão Supabase ativa nem de qual e-mail — dá pra estar "Administrador" no seletor local e não estar logado em lugar nenhum, sem perceber. Ficou registrado como sugestão de melhoria (indicador de sessão real na barra superior), ainda não implementado.
+**Como fica agora:** clicar no avatar/badge no topo da tela (`Auth.openModal()`) abre **um único modal** que se adapta ao estado real — mostra "Conectado como {email}" + botão "Sair da conta" quando há sessão Supabase real; mostra um formulário de entrar/criar conta quando o projeto está conectado mas ninguém logou ainda; ou mostra o seletor local (com atalho pra conectar Supabase) quando não há backend configurado. Um badge (`tb-cloud-badge`) sempre visível na barra superior mostra qual desses 3 estados está ativo, mesmo sem abrir o modal. A tela de Configurações → Nuvem & Automação manteve só a parte técnica (URL/chave do projeto, sincronizar, desconectar) — login/logout não vivem mais lá.
 
 ## 8. Pendências conhecidas (não são "esquecimento" — são decisões conscientes de escopo)
 
 **P0 — segurança/infra, dependem de decisão do usuário:**
 1. Chave de IA ainda fica no navegador — o ideal para produção é uma função de servidor (ex: Supabase Edge Function) fazendo a chamada e escondendo a chave.
 2. Promover o primeiro Administrador hoje exige rodar SQL manual no painel do Supabase — não tem interface própria ainda.
-3. Indicador de sessão Supabase ativa na UI principal (ver seção 7) — não implementado.
 
 **Resolvidos em 28/08/2026** (não confiar em versões antigas de outras conversas que digam o contrário):
 - ~~Orçamento/custos ilustrativo~~ → módulo `Budget` real, CPI/EAC/Consumo/Reserva calculados.
@@ -92,6 +91,7 @@ O app tem **dois sistemas de identidade que não se comunicam visualmente**:
 - ~~3 fórmulas de saúde divergentes~~ → unificadas em `HealthScore`.
 - ~~Fontes de decisões eram texto livre~~ → `sources[].repoId` linka pro documento real.
 - ~~"Busca semântica ativa" sem busca nenhuma~~ → busca por texto real (`Repo.search`).
+- ~~Login local e login Supabase sem relação visível, sem indicador de sessão~~ → modal único + badge na barra superior (ver seção 7).
 
 A página **Ajuda** dentro do próprio app (`R.go('help')`) tem a lista completa do que está "Pronto" vs "Em desenvolvimento", mas **pode estar desatualizada** em relação aos itens resolvidos acima — ainda não foi revisada após esta rodada. Vale atualizar antes de confiar nela cegamente.
 
