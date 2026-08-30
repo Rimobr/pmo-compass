@@ -139,7 +139,32 @@ create table if not exists public.cost_actuals (
   updated_at timestamptz default now()
 );
 
--- 6) ROW LEVEL SECURITY — espelha os 4 perfis já usados no app -------------
+-- 6) CHAVES DE IA VINCULADAS AO USUÁRIO -------------------------------------
+-- Cada pessoa continua usando (e pagando) a própria chave de IA — mas em vez de
+-- ficar só no localStorage do navegador, fica guardada aqui, amarrada à conta.
+-- Nunca é lida de volta pelo navegador: só a Edge Function (ai-proxy), que roda
+-- no servidor com a service_role key, consegue ler o valor de fato. O cliente só
+-- consegue inserir/atualizar/apagar a própria linha — não há policy de SELECT.
+create table if not exists public.user_ai_keys (
+  user_id uuid references auth.users(id) on delete cascade,
+  provider text not null check (provider in ('anthropic','openai','google')),
+  api_key text not null,
+  updated_at timestamptz default now(),
+  primary key (user_id, provider)
+);
+
+alter table public.user_ai_keys enable row level security;
+
+create policy "user_ai_keys_insert_own" on public.user_ai_keys
+  for insert with check (auth.uid() = user_id);
+create policy "user_ai_keys_update_own" on public.user_ai_keys
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "user_ai_keys_delete_own" on public.user_ai_keys
+  for delete using (auth.uid() = user_id);
+-- Sem policy de SELECT para authenticated/anon — de propósito. Só a Edge Function
+-- (com a service_role key, que ignora RLS) consegue ler o valor da chave.
+
+-- 7) ROW LEVEL SECURITY — espelha os 4 perfis já usados no app -------------
 alter table public.wbs_modules  enable row level security;
 alter table public.wbs_tasks    enable row level security;
 alter table public.decisions    enable row level security;

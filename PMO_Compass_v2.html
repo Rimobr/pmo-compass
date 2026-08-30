@@ -950,14 +950,15 @@ body.icons-failed i[data-fb]::before{
   <div id="settings-panel-ia">
   <div class="card">
     <div class="lbl"><i class="ti ti-cpu"></i>Provedor de IA</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px">Escolha qual IA processa o Chat, as decisões e a análise de documentos. Você pode configurar mais de um provedor e trocar quando quiser — cada chave fica <strong style="color:var(--t1)">salva apenas no seu navegador</strong>, nunca enviada a terceiros.</p>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px">Escolha qual IA processa o Chat, as decisões e a análise de documentos. Você pode configurar mais de um provedor e trocar quando quiser.</p>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px" id="prov-mode-note"><strong style="color:var(--t1)">Modo local:</strong> cada chave fica salva só neste navegador.</p>
 
     <div class="prov-row" id="prov-anthropic">
       <div class="prov-radio" data-perm="settings" onclick="Store.setProvider('anthropic')" title="Usar Claude (Anthropic)"></div>
       <div class="prov-body">
-        <div class="prov-name"><i class="ti ti-brain" style="color:var(--acc)"></i>Claude (Anthropic)<span class="badge b-acc" id="prov-badge-anthropic" style="display:none">Ativo</span></div>
+        <div class="prov-name"><i class="ti ti-brain" style="color:var(--acc)"></i>Claude (Anthropic)<span class="badge b-acc" id="prov-badge-anthropic" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-anthropic" style="display:none">Configurada</span></div>
         <div class="prov-desc">Padrão do PMO Compass — forte em analisar documentos longos e avaliar risco de projetos.</div>
-        <div class="prov-inp-row"><input class="input" id="api-inp-anthropic" type="password" placeholder="sk-ant-api03-..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('anthropic')"><i class="ti ti-device-floppy"></i>Salvar</button></div>
+        <div class="prov-inp-row"><input class="input" id="api-inp-anthropic" type="password" placeholder="sk-ant-api03-..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('anthropic')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-anthropic" style="display:none" onclick="Store.removeKey('anthropic')"><i class="ti ti-trash"></i></button></div>
         <div style="font-size:11px;color:var(--t3);margin-top:5px">Obtenha em <a href="https://console.anthropic.com" target="_blank" rel="noopener" style="color:var(--acc)">console.anthropic.com</a> · claude-sonnet-4-6</div>
       </div>
     </div>
@@ -965,9 +966,9 @@ body.icons-failed i[data-fb]::before{
     <div class="prov-row" id="prov-openai">
       <div class="prov-radio" data-perm="settings" onclick="Store.setProvider('openai')" title="Usar ChatGPT (OpenAI)"></div>
       <div class="prov-body">
-        <div class="prov-name"><i class="ti ti-sparkles" style="color:var(--grn)"></i>ChatGPT (OpenAI)<span class="badge b-acc" id="prov-badge-openai" style="display:none">Ativo</span></div>
+        <div class="prov-name"><i class="ti ti-sparkles" style="color:var(--grn)"></i>ChatGPT (OpenAI)<span class="badge b-acc" id="prov-badge-openai" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-openai" style="display:none">Configurada</span></div>
         <div class="prov-desc">Alternativa da OpenAI — bom custo-benefício para chat e resumos rápidos.</div>
-        <div class="prov-inp-row"><input class="input" id="api-inp-openai" type="password" placeholder="sk-proj-..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('openai')"><i class="ti ti-device-floppy"></i>Salvar</button></div>
+        <div class="prov-inp-row"><input class="input" id="api-inp-openai" type="password" placeholder="sk-proj-..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('openai')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-openai" style="display:none" onclick="Store.removeKey('openai')"><i class="ti ti-trash"></i></button></div>
         <div style="font-size:11px;color:var(--t3);margin-top:5px">Obtenha em <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" style="color:var(--acc)">platform.openai.com</a> · gpt-4o</div>
       </div>
     </div>
@@ -975,9 +976,9 @@ body.icons-failed i[data-fb]::before{
     <div class="prov-row" id="prov-google">
       <div class="prov-radio" data-perm="settings" onclick="Store.setProvider('google')" title="Usar Gemini (Google)"></div>
       <div class="prov-body">
-        <div class="prov-name"><i class="ti ti-brand-google" style="color:var(--pur)"></i>Gemini (Google)<span class="badge b-acc" id="prov-badge-google" style="display:none">Ativo</span></div>
+        <div class="prov-name"><i class="ti ti-brand-google" style="color:var(--pur)"></i>Gemini (Google)<span class="badge b-acc" id="prov-badge-google" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-google" style="display:none">Configurada</span></div>
         <div class="prov-desc">Alternativa do Google — boa opção se você já usa o ecossistema Google Workspace.</div>
-        <div class="prov-inp-row"><input class="input" id="api-inp-google" type="password" placeholder="AIza..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('google')"><i class="ti ti-device-floppy"></i>Salvar</button></div>
+        <div class="prov-inp-row"><input class="input" id="api-inp-google" type="password" placeholder="AIza..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('google')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-google" style="display:none" onclick="Store.removeKey('google')"><i class="ti ti-trash"></i></button></div>
         <div style="font-size:11px;color:var(--t3);margin-top:5px">Obtenha em <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--acc)">aistudio.google.com</a> · gemini-2.0-flash</div>
       </div>
     </div>
@@ -1672,6 +1673,7 @@ const Cloud = (() => {
     if(signedInBox) signedInBox.style.display = isSignedIn() ? '' : 'none';
     if(typeof Auth !== 'undefined' && Auth.updateCloudBadge) Auth.updateCloudBadge();
     if(typeof Users !== 'undefined') Users.render();
+    if(typeof Store !== 'undefined' && Store.reflectCloudMode) Store.reflectCloudMode();
   }
 
   async function loadSdk() {
@@ -1719,6 +1721,39 @@ const Cloud = (() => {
 
   function getEmail() { return session ? session.user.email : null; }
   function getUserId() { return session ? session.user.id : null; }
+
+  // ── Chaves de IA vinculadas à conta (nunca voltam pro navegador depois de salvas) ──
+  async function saveAiKey(provider, apiKey) {
+    if(!client || !session) return false;
+    const { error } = await client.from('user_ai_keys').upsert({ user_id: session.user.id, provider, api_key: apiKey });
+    if(error) { T.show('❌ ' + error.message); return false; }
+    return true;
+  }
+  async function deleteAiKey(provider) {
+    if(!client || !session) return false;
+    const { error } = await client.from('user_ai_keys').delete().eq('user_id', session.user.id).eq('provider', provider);
+    if(error) { T.show('❌ ' + error.message); return false; }
+    return true;
+  }
+  // Não lê a chave de volta (isso é impossível por design — sem policy de SELECT) — só
+  // pergunta pra Edge Function quais provedores têm chave salva, sem nunca ver o valor.
+  async function getAiKeyStatus() {
+    if(!client || !session) return null;
+    try {
+      const { data, error } = await client.functions.invoke('ai-proxy', { body:{ action:'status' } });
+      if(error) { console.warn('ai-proxy status falhou', error); return null; }
+      return data && data.has;
+    } catch(e) { console.warn('ai-proxy indisponível — função pode não estar publicada ainda', e); return null; }
+  }
+  // Chama a IA através do servidor — a chave real nunca passa pelo navegador nesta chamada.
+  async function sendAi(provider, messages, system) {
+    if(!client || !session) return { error:'Não conectado ao Supabase.' };
+    try {
+      const { data, error } = await client.functions.invoke('ai-proxy', { body:{ action:'send', provider, messages, system } });
+      if(error) return { error: error.message || 'Falha ao chamar a IA pelo servidor.' };
+      return data || { error:'Resposta vazia do servidor.' };
+    } catch(e) { return { error: e.message || 'Falha ao chamar a IA pelo servidor.' }; }
+  }
 
   // Lista todos os perfis (permitido pra admin via policy profiles_admin_select_all) —
   // usado pela tela de Usuários, pra promover/rebaixar gente sem precisar de SQL manual.
@@ -1849,7 +1884,8 @@ const Cloud = (() => {
   }
   function deleteCostActual(id) { if(client && session) client.from('cost_actuals').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
 
-  return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, doSignIn, doSignUp, signOut, pullAll,
+  return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole,
+    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, doSignIn, doSignUp, signOut, pullAll,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushDecision, deleteDecision, pushDocument, deleteDocument,
     pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual };
@@ -2217,25 +2253,82 @@ const Store = (() => {
     if(state.apiKey && !state.apiKeys.anthropic) state.apiKeys.anthropic = state.apiKey;
     if(!state.aiProvider || !PROVIDERS.includes(state.aiProvider)) state.aiProvider = 'anthropic';
 
-    PROVIDERS.forEach(p => {
-      const inp = document.getElementById('api-inp-'+p);
-      if(inp && state.apiKeys[p]) inp.value = state.apiKeys[p];
-    });
+    reflectCloudMode();
     reflectProvider();
   }
 
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
 
-  function saveKey(provider) {
+  // Alterna a UI entre "modo local" (chave visível, guardada no navegador) e "vinculada à
+  // conta" (nunca volta pro navegador depois de salva — só um status configurada/não).
+  function reflectCloudMode() {
+    const signedIn = (typeof Cloud !== 'undefined') && Cloud.isSignedIn();
+    const noteEl = document.getElementById('prov-mode-note');
+    if(noteEl) {
+      noteEl.innerHTML = signedIn
+        ? '<strong style="color:var(--t1)">Vinculada à sua conta:</strong> cada chave fica guardada no servidor, junto com seu login — nunca volta pro navegador depois de salva, nem pra você mesmo.'
+        : '<strong style="color:var(--t1)">Modo local:</strong> cada chave fica salva só neste navegador.';
+    }
+    PROVIDERS.forEach(p => {
+      const inp = document.getElementById('api-inp-'+p);
+      const statusEl = document.getElementById('prov-status-'+p);
+      const removeBtn = document.getElementById('prov-remove-'+p);
+      if(inp) inp.value = (!signedIn && state.apiKeys[p]) ? state.apiKeys[p] : '';
+      if(statusEl) statusEl.style.display = 'none';
+      if(removeBtn) removeBtn.style.display = 'none';
+    });
+    if(signedIn) refreshCloudStatus();
+  }
+
+  async function refreshCloudStatus() {
+    if(typeof Cloud === 'undefined') return;
+    const has = await Cloud.getAiKeyStatus();
+    if(!has) return;
+    PROVIDERS.forEach(p => {
+      const statusEl = document.getElementById('prov-status-'+p);
+      const removeBtn = document.getElementById('prov-remove-'+p);
+      if(statusEl) statusEl.style.display = has[p] ? '' : 'none';
+      if(removeBtn) removeBtn.style.display = has[p] ? '' : 'none';
+    });
+  }
+
+  async function saveKey(provider) {
     if(!Auth.guard('settings')) return;
     provider = (provider && PROVIDERS.includes(provider)) ? provider : (state.aiProvider || 'anthropic');
     const inp = document.getElementById('api-inp-'+provider);
     if(!inp) return;
+    const value = inp.value.trim();
+    if(!value) { T.show('⚠️ Cole uma chave antes de salvar.'); return; }
+
+    if(typeof Cloud !== 'undefined' && Cloud.isSignedIn()) {
+      const ok = await Cloud.saveAiKey(provider, value);
+      if(ok) { inp.value = ''; T.show('✅ Chave de ' + PROVIDER_LABEL[provider] + ' salva na sua conta.'); refreshCloudStatus(); }
+      return;
+    }
+
     if(!state.apiKeys) state.apiKeys = { anthropic:'', openai:'', google:'' };
-    state.apiKeys[provider] = inp.value.trim();
+    state.apiKeys[provider] = value;
     if(provider === 'anthropic') state.apiKey = state.apiKeys.anthropic; // mantém compatibilidade retroativa
     save();
-    T.show('✅ Chave de ' + PROVIDER_LABEL[provider] + ' salva no navegador com segurança');
+    T.show('✅ Chave de ' + PROVIDER_LABEL[provider] + ' salva no navegador');
+  }
+
+  async function removeKey(provider) {
+    if(!Auth.guard('settings')) return;
+    if(!PROVIDERS.includes(provider)) return;
+    if(!confirm('Remover a chave de ' + PROVIDER_LABEL[provider] + '?')) return;
+
+    if(typeof Cloud !== 'undefined' && Cloud.isSignedIn()) {
+      const ok = await Cloud.deleteAiKey(provider);
+      if(ok) { T.show('🗑️ Chave removida da sua conta.'); refreshCloudStatus(); }
+      return;
+    }
+
+    state.apiKeys[provider] = '';
+    if(provider === 'anthropic') state.apiKey = '';
+    save();
+    const inp = document.getElementById('api-inp-'+provider); if(inp) inp.value = '';
+    T.show('🗑️ Chave removida.');
   }
 
   function setProvider(provider) {
@@ -2272,7 +2365,7 @@ const Store = (() => {
     state = { apiKey:'', aiProvider:'anthropic', apiKeys:{ anthropic:'', openai:'', google:'' } };
     T.show('Dados locais removidos.');
   }
-  return { load, saveKey, getKey, getProvider, setProvider, providerLabel, clear, get: () => state };
+  return { load, saveKey, removeKey, getKey, getProvider, setProvider, providerLabel, clear, reflectCloudMode, get: () => state };
 })();
 </script>
 
@@ -2893,8 +2986,16 @@ Regras obrigatórias:
 
   async function send(messages, opts) {
     const provider = (opts && opts.provider) || Store.getProvider();
-    const key = Store.getKey(provider);
     const cfg = CONFIG[provider] || CONFIG.anthropic;
+
+    // Logado de verdade: a chave nunca sai do servidor — a chamada passa pelo ai-proxy,
+    // que busca a chave DESSE usuário e fala com o provedor por trás, sem expor nada aqui.
+    if(typeof Cloud !== 'undefined' && Cloud.isSignedIn()) {
+      const system = (opts && opts.system) || buildSystem();
+      return await Cloud.sendAi(provider, messages, system);
+    }
+
+    const key = Store.getKey(provider);
     if(!key) return { error:`API Key de ${cfg.label} não configurada. Vá em Configurações → Provedor de IA.` };
     try {
       if(provider === 'openai') return await sendOpenAI(messages, key, opts);
