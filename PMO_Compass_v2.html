@@ -1011,6 +1011,14 @@ body.icons-failed i[data-fb]::before{
     </div>
   </div>
 
+  <!-- Só aparece para quem está logado como Administrador via Supabase — antes, promover alguém exigia SQL manual -->
+  <div class="card" id="users-card" style="display:none">
+    <div class="lbl"><i class="ti ti-users"></i>Usuários (perfis do Supabase)</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Promova ou rebaixe o perfil de qualquer conta cadastrada — não precisa mais rodar SQL manual no Supabase (exceto para o primeiríssimo Administrador, que precisa existir antes de qualquer promoção pelo app).</p>
+    <div id="users-list-root"></div>
+    <button class="btn btn-sm" style="margin-top:8px" onclick="Users.refresh()"><i class="ti ti-refresh"></i>Atualizar lista</button>
+  </div>
+
   <div class="card">
     <div class="lbl"><i class="ti ti-brain"></i>IA e análise</div>
     <div class="set-row"><div><div class="set-lbl">Sugestões automáticas de decisão</div><div class="set-sub">A IA analisa o repositório e sugere decisões proativamente</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
@@ -1663,6 +1671,7 @@ const Cloud = (() => {
     if(loginBox) loginBox.style.display = (isConfigured() && !isSignedIn()) ? '' : 'none';
     if(signedInBox) signedInBox.style.display = isSignedIn() ? '' : 'none';
     if(typeof Auth !== 'undefined' && Auth.updateCloudBadge) Auth.updateCloudBadge();
+    if(typeof Users !== 'undefined') Users.render();
   }
 
   async function loadSdk() {
@@ -1709,6 +1718,23 @@ const Cloud = (() => {
   }
 
   function getEmail() { return session ? session.user.email : null; }
+  function getUserId() { return session ? session.user.id : null; }
+
+  // Lista todos os perfis (permitido pra admin via policy profiles_admin_select_all) —
+  // usado pela tela de Usuários, pra promover/rebaixar gente sem precisar de SQL manual.
+  async function listProfiles() {
+    if(!client || !session) return [];
+    const { data, error } = await client.from('profiles').select('id,name,role,created_at').order('created_at', { ascending:true });
+    if(error) { console.warn('Supabase: falha ao listar perfis', error); return []; }
+    return data || [];
+  }
+
+  async function updateUserRole(userId, role) {
+    if(!client || !session) return false;
+    const { error } = await client.from('profiles').update({ role }).eq('id', userId);
+    if(error) { T.show('❌ ' + error.message); return false; }
+    return true;
+  }
 
   // doSignIn/doSignUp fazem o trabalho de verdade e retornam sucesso/falha — usados tanto
   // pelo formulário técnico em Configurações quanto pelo modal de perfil (ponto único de login).
@@ -1823,10 +1849,63 @@ const Cloud = (() => {
   }
   function deleteCostActual(id) { if(client && session) client.from('cost_actuals').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
 
-  return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, doSignIn, doSignUp, signOut, pullAll,
+  return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, doSignIn, doSignUp, signOut, pullAll,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushDecision, deleteDecision, pushDocument, deleteDocument,
     pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual };
+})();
+</script>
+
+<!-- ■ MODULE: ui/users ─ Promover/rebaixar perfis do Supabase pela interface, sem SQL manual -->
+<script data-module="ui/users">
+const Users = (() => {
+  const ROLE_LABEL = { admin:'Administrador', gerente:'Gerente', consulta:'Consulta', manutencao:'Manutenção' };
+  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // Mostra/esconde o card inteiro — só faz sentido pra quem está logado de verdade como admin
+  function render() {
+    const card = document.getElementById('users-card');
+    if(!card) return;
+    const show = (typeof Cloud !== 'undefined') && Cloud.isSignedIn() && Auth.getRole() === 'admin';
+    card.style.display = show ? '' : 'none';
+    if(show) refresh();
+  }
+
+  async function refresh() {
+    const root = document.getElementById('users-list-root');
+    if(!root) return;
+    root.innerHTML = `<div style="font-size:12px;color:var(--t3)"><i class="ti ti-loader-2"></i> Carregando…</div>`;
+    const profiles = await Cloud.listProfiles();
+    if(!profiles.length) { root.innerHTML = `<div style="font-size:12px;color:var(--t3)">Nenhum perfil encontrado.</div>`; return; }
+    const myId = Cloud.getUserId();
+    root.innerHTML = profiles.map(p => {
+      const isMe = p.id === myId;
+      const opts = Object.keys(ROLE_LABEL).map(r => `<option value="${r}"${r===p.role?' selected':''}>${ROLE_LABEL[r]}</option>`).join('');
+      return `<div class="set-row">
+        <div>
+          <div class="set-lbl">${escapeHtml(p.name || '(sem nome)')}${isMe ? ' <span class="badge b-acc">você</span>' : ''}</div>
+          <div class="set-sub" style="font-family:var(--font-mono);font-size:10.5px">${escapeHtml(p.id)}</div>
+        </div>
+        <select class="input" style="width:auto" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>
+      </div>`;
+    }).join('');
+  }
+
+  async function changeRole(userId, role, isMe) {
+    if(isMe === 'true' || isMe === true) {
+      if(!confirm('Isso é o seu próprio perfil. Tem certeza que quer mudar?')) { refresh(); return; }
+    }
+    const ok = await Cloud.updateUserRole(userId, role);
+    if(ok) {
+      T.show('✅ Perfil atualizado.');
+      if((userId === Cloud.getUserId())) { Auth.setFromCloud(Auth.getName(), role); } // se mudou o próprio, reflete na hora
+      refresh();
+    } else {
+      refresh(); // reverte o <select> pro valor real
+    }
+  }
+
+  return { render, refresh, changeRole };
 })();
 </script>
 
