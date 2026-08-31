@@ -79,11 +79,14 @@ O app tem dois sistemas de identidade com naturezas diferentes, que **hoje compa
 
 ## 8. Pendências conhecidas (não são "esquecimento" — são decisões conscientes de escopo)
 
-**P0 — segurança/infra, dependem de decisão do usuário:**
-1. Chave de IA ainda fica no navegador — o ideal para produção é uma função de servidor (ex: Supabase Edge Function) fazendo a chamada e escondendo a chave.
-2. Promover o primeiro Administrador hoje exige rodar SQL manual no painel do Supabase — não tem interface própria ainda.
+Os 2 itens P0 que restavam foram resolvidos em 31/08/2026:
 
-**Resolvidos em 28/08/2026** (não confiar em versões antigas de outras conversas que digam o contrário):
+- **Chave de IA no navegador** → cada pessoa continua usando (e pagando) a própria chave de IA, mas agora fica vinculada à conta no Supabase (tabela `user_ai_keys`, sem policy de SELECT — nem o próprio navegador consegue reler depois de salva). A chamada real à IA passa pela Edge Function `ai-proxy` (`supabase/functions/ai-proxy/index.ts`), que busca a chave da pessoa autenticada e fala com Anthropic/OpenAI/Google a partir do servidor. **Já publicada e testada em produção** (`npx supabase functions deploy ai-proxy`, confirmado respondendo). Modo local (sem login) continua funcionando exatamente como antes, sem essa proteção — é inerente a não ter conta vinculada.
+- **Promover Administrador exigia SQL manual** → tela "Usuários" em Configurações → Nuvem, visível só pra quem já é Administrador logado de verdade. O primeiríssimo Administrador de cada projeto Supabase novo ainda precisa do UPDATE manual (SETUP.md) — inerente ao modelo (precisa já ser admin pra promover alguém pela interface).
+
+Não há mais pendências P0 conhecidas nesta rodada.
+
+**Resolvidos em 28-31/08/2026** (não confiar em versões antigas de outras conversas que digam o contrário):
 - ~~Orçamento/custos ilustrativo~~ → módulo `Budget` real, CPI/EAC/Consumo/Reserva calculados.
 - ~~Contexto da IA fixo/fictício~~ → `ContextBuilder` monta contexto real do projeto ativo.
 - ~~Texto de documentos descartado após upload~~ → persistido em `repository[].content`.
@@ -92,6 +95,8 @@ O app tem dois sistemas de identidade com naturezas diferentes, que **hoje compa
 - ~~Fontes de decisões eram texto livre~~ → `sources[].repoId` linka pro documento real.
 - ~~"Busca semântica ativa" sem busca nenhuma~~ → busca por texto real (`Repo.search`).
 - ~~Login local e login Supabase sem relação visível, sem indicador de sessão~~ → modal único + badge na barra superior (ver seção 7).
+- ~~Chave de IA exposta no navegador~~ → vinculada à conta, nunca relida pelo cliente (ver acima).
+- ~~Promoção de admin via SQL manual~~ → tela "Usuários" em Configurações → Nuvem (ver acima).
 
 A página **Ajuda** dentro do próprio app (`R.go('help')`) tem a lista completa do que está "Pronto" vs "Em desenvolvimento", mas **pode estar desatualizada** em relação aos itens resolvidos acima — ainda não foi revisada após esta rodada. Vale atualizar antes de confiar nela cegamente.
 
@@ -107,6 +112,7 @@ A página **Ajuda** dentro do próprio app (`R.go('help')`) tem a lista completa
 - `PMO_Compass_v2.html` — a aplicação completa
 - `manifest.json`, `sw.js`, `icon-*.png`, `apple-touch-icon.png` — PWA
 - `schema.sql` — schema Supabase (testado com projeto real)
+- `supabase/functions/ai-proxy/index.ts` — Edge Function que protege as chaves de IA (já publicada — `npx supabase functions deploy ai-proxy`, projeto vinculado via `npx supabase link --project-ref cjvpnavjrzbdnxtahnin`). Se reescrever esse arquivo, precisa rodar o deploy de novo.
 - `SETUP.md` — passo a passo de configuração do Supabase
 - `PMO_Compass_Validacao_Competitiva.md` — análise de mercado/concorrência feita anteriormente
 - `CONTEXTO_PROJETO.md` — este arquivo
