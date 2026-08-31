@@ -1594,6 +1594,7 @@ const Auth = (() => {
       if(subEl) subEl.textContent = 'Conta real, sincronizada na nuvem';
       const emailEl = document.getElementById('auth-cloud-email'); if(emailEl) emailEl.textContent = (Cloud.getEmail && Cloud.getEmail()) || '';
       const roleNoteEl = document.getElementById('auth-cloud-role-note'); if(roleNoteEl) roleNoteEl.textContent = 'Perfil (definido no banco de dados): ' + label();
+      const cloudNameInp = document.getElementById('auth-f-cloud-name'); if(cloudNameInp) cloudNameInp.value = state.name;
     } else {
       if(titleEl) titleEl.textContent = configured ? 'Entrar ou continuar local' : 'Perfil de acesso';
       if(subEl) subEl.textContent = 'Quem está usando o PMO Compass agora';
@@ -1603,6 +1604,7 @@ const Auth = (() => {
     }
     const emailInp = document.getElementById('auth-f-email'); if(emailInp) emailInp.value = '';
     const passInp = document.getElementById('auth-f-password'); if(passInp) passInp.value = '';
+    const signupNameInp = document.getElementById('auth-f-signup-name'); if(signupNameInp) signupNameInp.value = '';
 
     document.getElementById('modal-auth').classList.remove('hidden');
   }
@@ -1632,11 +1634,19 @@ const Auth = (() => {
   async function doSignUp() {
     const email = document.getElementById('auth-f-email').value.trim();
     const password = document.getElementById('auth-f-password').value;
-    await Cloud.doSignUp(email, password); // não fecha — cadastro pode exigir confirmação por e-mail antes de logar
+    const name = document.getElementById('auth-f-signup-name').value.trim();
+    await Cloud.doSignUp(email, password, name); // não fecha — cadastro pode exigir confirmação por e-mail antes de logar
   }
   async function doSignOut() {
     await Cloud.signOut();
     closeModal();
+  }
+  async function saveCloudName() {
+    const inp = document.getElementById('auth-f-cloud-name');
+    const name = inp ? inp.value.trim() : '';
+    if(!name) { T.show('⚠️ Digite um nome.'); return; }
+    const ok = await Cloud.updateOwnName(name);
+    if(ok) { setFromCloud(name, state.role); T.show('✅ Nome atualizado!'); }
   }
   function pickRole(role) {
     if(cloudManaged) { T.show('🔒 Perfil gerenciado pelo Supabase — peça a um administrador para alterar.'); return; }
@@ -1659,7 +1669,7 @@ const Auth = (() => {
     return false;
   }
 
-  return { load, getRole, getName, label, can, guard, openModal, closeModal, toggleLocalBox, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, doSignIn, doSignUp, doSignOut, updateCloudBadge };
+  return { load, getRole, getName, label, can, guard, openModal, closeModal, toggleLocalBox, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, doSignIn, doSignUp, doSignOut, saveCloudName, updateCloudBadge };
 })();
 </script>
 
@@ -1804,13 +1814,25 @@ const Cloud = (() => {
     T.show('✅ Login realizado!');
     return true;
   }
-  async function doSignUp(email, password) {
+  async function doSignUp(email, password, name) {
     if(!client) { T.show('⚠️ Configure a URL e a chave do Supabase primeiro.'); return false; }
     if(!email || !password) { T.show('⚠️ Preencha e-mail e senha.'); return false; }
     if(password.length < 6) { T.show('⚠️ A senha precisa ter pelo menos 6 caracteres.'); return false; }
-    const { error } = await client.auth.signUp({ email, password });
+    // O nome vai em raw_user_meta_data — o gatilho handle_new_user() usa ele pra preencher
+    // profiles.name; sem isso, cai no prefixo do e-mail (ex: "ricardo_moreto" em vez do nome real).
+    const options = name ? { data: { name } } : undefined;
+    const { error } = await client.auth.signUp({ email, password, options });
     if(error) { T.show('❌ ' + error.message); return false; }
     T.show('✅ Conta criada! Se a confirmação por e-mail estiver ativa no seu projeto, confirme antes de entrar. Novo usuário nasce como "Consulta" — peça a um admin para promovê-lo.');
+    return true;
+  }
+
+  // Deixa a pessoa já logada trocar o próprio nome de exibição — RLS já permitia
+  // (profiles_update_own_name), só faltava a interface pra isso.
+  async function updateOwnName(name) {
+    if(!client || !session) return false;
+    const { error } = await client.from('profiles').update({ name }).eq('id', session.user.id);
+    if(error) { T.show('❌ ' + error.message); return false; }
     return true;
   }
 
@@ -1905,7 +1927,7 @@ const Cloud = (() => {
   function deleteCostActual(id) { if(client && session) client.from('cost_actuals').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
 
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole,
-    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, doSignIn, doSignUp, signOut, pullAll,
+    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignUp, signOut, pullAll,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushDecision, deleteDecision, pushDocument, deleteDocument,
     pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual };
@@ -5968,12 +5990,17 @@ const WBS = (() => {
         <div style="font-size:12px;color:var(--t2);margin-top:4px" id="auth-cloud-email">—</div>
         <div style="font-size:11.5px;color:var(--t3);margin-top:4px" id="auth-cloud-role-note">Perfil: —</div>
       </div>
+      <div style="margin-top:10px">
+        <div class="field-label" style="margin-bottom:6px">Como quer ser chamado</div>
+        <div class="prov-inp-row"><input class="input" id="auth-f-cloud-name" placeholder="Seu nome"><button class="btn btn-sm btn-acc" onclick="Auth.saveCloudName()"><i class="ti ti-device-floppy"></i>Salvar</button></div>
+      </div>
       <button class="btn btn-sm btn-red" style="width:100%;justify-content:center;margin-top:10px" onclick="Auth.doSignOut()"><i class="ti ti-logout"></i>Sair da conta</button>
     </div>
 
     <!-- Supabase conectado, mas ninguém logado: login/cadastro direto aqui, sem precisar ir em Configurações -->
     <div id="auth-cloud-login-box" style="display:none;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--b1)">
       <div class="field-label" style="margin-bottom:6px"><i class="ti ti-cloud"></i> Entrar com sua conta Supabase</div>
+      <input class="input" id="auth-f-signup-name" placeholder="Seu nome (só pra criar conta nova)" style="margin-bottom:8px">
       <input class="input" id="auth-f-email" type="email" placeholder="seu@email.com" style="margin-bottom:8px">
       <input class="input" id="auth-f-password" type="password" placeholder="Senha" style="margin-bottom:8px">
       <div class="btn-row">
