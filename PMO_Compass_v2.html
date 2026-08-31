@@ -1645,8 +1645,11 @@ const Auth = (() => {
     const inp = document.getElementById('auth-f-cloud-name');
     const name = inp ? inp.value.trim() : '';
     if(!name) { T.show('⚠️ Digite um nome.'); return; }
+    const btn = document.getElementById('auth-cloud-name-save-btn');
+    if(btn) btn.disabled = true; // evita clique duplo enquanto salva
     const ok = await Cloud.updateOwnName(name);
-    if(ok) { setFromCloud(name, state.role); T.show('✅ Nome atualizado!'); }
+    if(btn) btn.disabled = false;
+    if(ok) { setFromCloud(name, state.role); T.show('✅ Nome atualizado!'); closeModal(); }
   }
   function pickRole(role) {
     if(cloudManaged) { T.show('🔒 Perfil gerenciado pelo Supabase — peça a um administrador para alterar.'); return; }
@@ -5992,7 +5995,7 @@ const WBS = (() => {
       </div>
       <div style="margin-top:10px">
         <div class="field-label" style="margin-bottom:6px">Como quer ser chamado</div>
-        <div class="prov-inp-row"><input class="input" id="auth-f-cloud-name" placeholder="Seu nome"><button class="btn btn-sm btn-acc" onclick="Auth.saveCloudName()"><i class="ti ti-device-floppy"></i>Salvar</button></div>
+        <div class="prov-inp-row"><input class="input" id="auth-f-cloud-name" placeholder="Seu nome"><button class="btn btn-sm btn-acc" id="auth-cloud-name-save-btn" onclick="Auth.saveCloudName()"><i class="ti ti-device-floppy"></i>Salvar</button></div>
       </div>
       <button class="btn btn-sm btn-red" style="width:100%;justify-content:center;margin-top:10px" onclick="Auth.doSignOut()"><i class="ti ti-logout"></i>Sair da conta</button>
     </div>
