@@ -2379,13 +2379,22 @@ const Store = (() => {
   function getProvider() { return state.aiProvider || 'anthropic'; }
   function providerLabel(p) { return PROVIDER_LABEL[p || getProvider()] || p; }
 
+  // Usado nas telas que só querem saber "dá pra chamar a IA agora?" antes de tentar — logado
+  // via Supabase, a chave vive no servidor (Store.getKey sempre vazio aqui, de propósito), então
+  // não dá pra checar de verdade sem chamar o servidor; a chamada real (AI.send) já trata o caso
+  // de não haver chave configurada lá, então aqui só evita o falso negativo "não configurada".
+  function hasKeyOrCloud(provider) {
+    if(typeof Cloud !== 'undefined' && Cloud.isSignedIn()) return true;
+    return !!getKey(provider);
+  }
+
   function clear() {
     if(!confirm('Limpar todos os dados locais?')) return;
     localStorage.removeItem(KEY);
     state = { apiKey:'', aiProvider:'anthropic', apiKeys:{ anthropic:'', openai:'', google:'' } };
     T.show('Dados locais removidos.');
   }
-  return { load, saveKey, removeKey, getKey, getProvider, setProvider, providerLabel, clear, reflectCloudMode, get: () => state };
+  return { load, saveKey, removeKey, getKey, hasKeyOrCloud, getProvider, setProvider, providerLabel, clear, reflectCloudMode, get: () => state };
 })();
 </script>
 
@@ -2411,6 +2420,7 @@ const R = (() => {
     if(id === 'portfolio' && typeof Portfolio !== 'undefined') Portfolio.render();
     if(id === 'resources' && typeof Resources !== 'undefined') Resources.render();
     if(id === 'budget' && typeof Budget !== 'undefined') Budget.render();
+    if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
     if(typeof Nav !== 'undefined') { Nav.expandGroupFor(id); Nav.renderBreadcrumb(id); }
   }
   function init() {
@@ -3418,7 +3428,7 @@ const FileIntake = (() => {
     const box = document.getElementById('fi-results');
     if(!box) return;
 
-    if(!Store.getKey()) {
+    if(!Store.hasKeyOrCloud()) {
       box.innerHTML = `<div class="card-accent" style="border-radius:var(--r8);padding:12px;margin-top:12px;font-size:12px;color:var(--t2)"><i class="ti ti-info-circle"></i> Arquivos indexados localmente. Configure uma chave de IA em <strong style="color:var(--t1)">Configurações → Provedor de IA</strong> para receber a primeira avaliação automática.</div>`;
       return;
     }
@@ -3453,6 +3463,25 @@ const FileIntake = (() => {
 <script data-module="pages/chat-js">
 const Chat = (() => {
   let hist = [];
+  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // Saudação com nome e números reais — antes era texto fixo ("Olá, Marcos... 12 documentos...")
+  // que não tinha relação nenhuma com quem estava logado ou com os dados do projeto ativo.
+  // Só roda se a conversa ainda não começou, pra não apagar um chat em andamento ao navegar de volta.
+  function renderGreeting() {
+    if(hist.length) return;
+    const log = document.getElementById('chat-log');
+    if(!log) return;
+    const firstName = (typeof Auth !== 'undefined' ? (Auth.getName()||'') : '').trim().split(/\s+/)[0] || '';
+    const repoCount = (typeof DB !== 'undefined') ? (DB.get('repository')||[]).length : 0;
+    const lessonsApplied = (typeof DB !== 'undefined') ? (DB.get('lessons')||[]).filter(l => l.applied).length : 0;
+    const projects = (typeof DB !== 'undefined') ? DB.listProjects() : [];
+    const activeProject = projects.find(p => p.id === DB.getActiveProjectId());
+    const greet = firstName ? `Olá, ${escapeHtml(firstName)}.` : 'Olá.';
+    log.innerHTML = `<div class="chat-msg"><div class="chat-ico" style="background:var(--ad)"><i class="ti ti-compass" style="color:var(--acc)"></i></div><div class="bub ai">${greet} Tenho <strong>${repoCount} documento(s) indexado(s)</strong>, <strong>${lessonsApplied} lição(ões) aplicada(s)</strong> e histórico de <strong>${projects.length} projeto(s)</strong>. O que precisa saber sobre ${escapeHtml(activeProject ? activeProject.name : 'este projeto')}?</div></div>`;
+  }
+  function render() { renderGreeting(); }
+
   function addMsg(role, text) {
     const log = document.getElementById('chat-log');
     if(!log) return;
@@ -3479,7 +3508,7 @@ const Chat = (() => {
     if(!inp) return;
     const txt = inp.value.trim(); if(!txt) return;
     addMsg('user', txt); hist.push({role:'user',content:txt}); inp.value=''; inp.disabled=true;
-    if(!Store.getKey()) { addMsg('assistant','⚠️ **API Key não configurada.** Vá em **Configurações → Provedor de IA** e insira a chave do provedor escolhido.'); inp.disabled=false; return; }
+    if(!Store.hasKeyOrCloud()) { addMsg('assistant','⚠️ **API Key não configurada.** Vá em **Configurações → Provedor de IA** e insira a chave do provedor escolhido.'); inp.disabled=false; return; }
     const typing = addTyping();
     const r = await AI.send(hist);
     if(typing) typing.remove();
@@ -3489,7 +3518,7 @@ const Chat = (() => {
   }
   function sug(btn) { const inp=document.getElementById('chat-in'); if(inp){inp.value=btn.textContent.trim();send();} }
   function clear() { hist=[]; const log=document.getElementById('chat-log'); if(log) log.innerHTML='<div class="chat-msg"><div class="chat-ico" style="background:var(--ad)"><i class="ti ti-compass" style="color:var(--acc)"></i></div><div class="bub ai">Conversa reiniciada. Como posso ajudar?</div></div>'; }
-  return { send, sug, clear };
+  return { send, sug, clear, render };
 })();
 </script>
 
@@ -3531,7 +3560,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   // Welcome toast
   setTimeout(() => {
-    if(!Store.getKey()) T.show('💡 Configure sua API Key em Configurações para habilitar a IA', 5000);
+    if(!Store.hasKeyOrCloud()) T.show('💡 Configure sua API Key em Configurações para habilitar a IA', 5000);
     else T.show('✅ PMO Compass v2 — pressione ? para ver atalhos de teclado', 4000);
   }, 800);
   console.log('%cPMO Compass v1.0.0\n%c18 módulos carregados\nArquitetura: cada <style/script data-module="..."> é um módulo independente','color:#4d8ef0;font-size:14px;font-weight:700','color:#8b949e;font-size:12px'); console.log('%c  41 módulos CSS/JS · 18 páginas · WBS + Loop + Stakeholders + Scope + Estimates + Repository\n  Atalhos de teclado: pressione ? para ver todos','color:#3fb950;font-size:11px');
@@ -4970,7 +4999,7 @@ const Report = (() => {
 
   async function regenerate() {
     renderTemplate(); // sempre recalcula do zero com os dados mais recentes primeiro
-    if(!Store.getKey()) { T.show('✅ Relatório recalculado a partir dos dados atuais.'); return; }
+    if(!Store.hasKeyOrCloud()) { T.show('✅ Relatório recalculado a partir dos dados atuais.'); return; }
 
     const root = document.getElementById('report-root');
     T.show('✨ Refinando redação com IA…');
