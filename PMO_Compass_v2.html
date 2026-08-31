@@ -1579,7 +1579,13 @@ const Auth = (() => {
     setDisplay('auth-cloud-signedin-box', signedIn);
     setDisplay('auth-cloud-login-box', configured && !signedIn);
     setDisplay('auth-cloud-connect-box', !configured);
-    setDisplay('auth-local-box', !signedIn);
+    // Com Supabase conectado, o perfil local começa escondido atrás de um link — mostrar os
+    // dois formulários empilhados de cara ficava longo e confuso. Sem Supabase, o perfil local
+    // já é o único caminho, então aparece direto (sem precisar de toggle).
+    setDisplay('auth-local-toggle-wrap', configured && !signedIn);
+    setDisplay('auth-local-box', !signedIn && !configured);
+    const toggleIco = document.getElementById('auth-local-toggle-ico');
+    if(toggleIco) toggleIco.className = 'ti ti-chevron-down';
 
     const titleEl = document.getElementById('auth-modal-title');
     const subEl = document.getElementById('auth-modal-sub');
@@ -1601,6 +1607,20 @@ const Auth = (() => {
     document.getElementById('modal-auth').classList.remove('hidden');
   }
   function closeModal() { document.getElementById('modal-auth').classList.add('hidden'); }
+
+  function toggleLocalBox() {
+    const box = document.getElementById('auth-local-box');
+    const ico = document.getElementById('auth-local-toggle-ico');
+    if(!box) return;
+    const show = box.style.display === 'none';
+    box.style.display = show ? '' : 'none';
+    if(ico) ico.className = show ? 'ti ti-chevron-up' : 'ti ti-chevron-down';
+    if(show) {
+      pendingRole = state.role;
+      document.getElementById('auth-f-name').value = state.name;
+      document.querySelectorAll('.auth-role-opt').forEach(el => el.classList.toggle('sel', el.dataset.role === state.role));
+    }
+  }
 
   // Login/logout reais, chamados direto daqui — não precisa mais ir em Configurações pra isso
   async function doSignIn() {
@@ -1639,7 +1659,7 @@ const Auth = (() => {
     return false;
   }
 
-  return { load, getRole, getName, label, can, guard, openModal, closeModal, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, doSignIn, doSignUp, doSignOut, updateCloudBadge };
+  return { load, getRole, getName, label, can, guard, openModal, closeModal, toggleLocalBox, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, doSignIn, doSignUp, doSignOut, updateCloudBadge };
 })();
 </script>
 
@@ -5934,13 +5954,20 @@ const WBS = (() => {
       <div style="font-size:11px;color:var(--t3);margin-top:6px">Toda conta nova nasce com perfil "Consulta" — peça a um administrador para promovê-la.</div>
     </div>
 
+    <!-- Só aparece quando o Supabase está conectado mas sem login — evita empilhar o formulário de
+         login em cima do seletor de perfil local inteiro (ficava longo demais e confuso na tela) -->
+    <div id="auth-local-toggle-wrap" style="display:none;margin-bottom:12px">
+      <button class="btn btn-sm" style="width:100%;justify-content:center" onclick="Auth.toggleLocalBox()"><i class="ti ti-chevron-down" id="auth-local-toggle-ico"></i> Usar perfil local em vez disso</button>
+    </div>
+
     <!-- Nenhum Supabase configurado ainda: aponta pra Configurações, sem duplicar o formulário técnico de URL/chave aqui -->
     <div id="auth-cloud-connect-box" style="display:none;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--b1)">
       <div style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:8px">Sem backend em nuvem conectado — os dados ficam só neste navegador.</div>
       <button class="btn btn-sm" onclick="Auth.closeModal();R.go('settings');SettingsTabs.show('cloud')"><i class="ti ti-cloud"></i>Conectar Supabase</button>
     </div>
 
-    <!-- Perfil local — some inteiro quando há login real via Supabase, pra não sugerir que os dois coexistem -->
+    <!-- Perfil local — some inteiro quando há login real via Supabase, pra não sugerir que os dois coexistem.
+         Quando o Supabase está conectado mas sem login, começa escondido (ver auth-local-toggle-wrap acima). -->
     <div id="auth-local-box">
       <div>
         <div class="field-label" style="margin-bottom:6px">Seu nome (modo local)</div>
