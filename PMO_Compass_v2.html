@@ -2469,20 +2469,23 @@ const Nav = (() => {
     portfolio:'sbg-projetos'
   };
 
+  // Comportamento sanfona: só um menu fica aberto por vez — todo menu sem
+  // subopção selecionada permanece fechado para não poluir a visão do app.
   function toggleGroup(groupId) {
     const el = document.getElementById(groupId);
-    if(el) el.classList.toggle('open');
+    if(!el) return;
+    const willOpen = !el.classList.contains('open');
+    document.querySelectorAll('.sb-group').forEach(g => g.classList.remove('open'));
+    if(willOpen) el.classList.add('open');
   }
 
   function expandGroupFor(pageId) {
     const groupId = GROUP_OF[pageId];
     document.querySelectorAll('.sb-group').forEach(g => {
-      g.classList.toggle('has-active', g.id === groupId);
+      const isTarget = g.id === groupId;
+      g.classList.toggle('has-active', isTarget);
+      g.classList.toggle('open', isTarget);
     });
-    if(groupId) {
-      const el = document.getElementById(groupId);
-      if(el && !el.classList.contains('open')) el.classList.add('open');
-    }
   }
 
   // Todos os grupos começam fechados a cada novo login/sessão (sem lembrar estado anterior)
