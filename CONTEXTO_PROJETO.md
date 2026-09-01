@@ -86,6 +86,8 @@ Os 2 itens P0 que restavam foram resolvidos em 31/08/2026:
 
 Não há mais pendências P0 conhecidas nesta rodada.
 
+**Adicionado em 01/09/2026** — reset de dados para preparar o app antes de convidar usuários reais: `Cloud.resetForNewUsers()` (visível só pra Administrador logado) apaga os dados compartilhados no Supabase (`wbs_modules`/`wbs_tasks`/`decisions`/`documents`/`budget_lines`/`cost_actuals` — lidos por QUALQUER conta autenticada, não só quem editou) e `DB.factoryReset()` apaga todos os projetos deste navegador (inclusive os de demonstração — Portal Nexus, Valdori, Beltrano) e recria um único projeto em branco. Contas de usuário e chaves de IA por conta não são afetadas. Card em Configurações → Nuvem & Automação, com dupla confirmação e oferta de backup antes de apagar.
+
 **Resolvidos em 28-31/08/2026** (não confiar em versões antigas de outras conversas que digam o contrário):
 - ~~Orçamento/custos ilustrativo~~ → módulo `Budget` real, CPI/EAC/Consumo/Reserva calculados.
 - ~~Contexto da IA fixo/fictício~~ → `ContextBuilder` monta contexto real do projeto ativo.
@@ -97,6 +99,10 @@ Não há mais pendências P0 conhecidas nesta rodada.
 - ~~Login local e login Supabase sem relação visível, sem indicador de sessão~~ → modal único + badge na barra superior (ver seção 7).
 - ~~Chave de IA exposta no navegador~~ → vinculada à conta, nunca relida pelo cliente (ver acima).
 - ~~Promoção de admin via SQL manual~~ → tela "Usuários" em Configurações → Nuvem (ver acima).
+
+**Resolvidos em 01/09/2026** (correções de UX encontradas em teste real do app publicado):
+- ~~Menu lateral: dois ou mais grupos podiam ficar abertos ao mesmo tempo, e navegar não fechava os que sobravam~~ → agora é sanfona (`Nav.toggleGroup`/`Nav.expandGroupFor`): só fica aberto o grupo com a página ativa.
+- ~~Botão "Salvar" do nome no modal de conta não fechava a tela e permitia cliques duplicados (múltiplos toasts)~~ → botão desabilita durante o salvamento e o modal fecha sozinho ao concluir.
 
 A página **Ajuda** dentro do próprio app (`R.go('help')`) tem a lista completa do que está "Pronto" vs "Em desenvolvimento", mas **pode estar desatualizada** em relação aos itens resolvidos acima — ainda não foi revisada após esta rodada. Vale atualizar antes de confiar nela cegamente.
 
