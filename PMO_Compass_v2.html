@@ -1020,6 +1020,15 @@ body.icons-failed i[data-fb]::before{
     <button class="btn btn-sm" style="margin-top:8px" onclick="Users.refresh()"><i class="ti ti-refresh"></i>Atualizar lista</button>
   </div>
 
+  <!-- Só aparece para Administrador logado — apaga os dados COMPARTILHADOS na nuvem (visíveis pra
+       qualquer pessoa que logar) e os dados de demonstração deste navegador, pra preparar o app
+       antes de convidar usuários reais. -->
+  <div class="card" id="reset-shared-card" style="display:none">
+    <div class="lbl"><i class="ti ti-alert-triangle" style="color:var(--red)"></i>Zona de risco — resetar para novos usuários</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Apaga <strong style="color:var(--t1)">todos</strong> os dados compartilhados na nuvem (WBS, decisões, documentos, orçamento e custos — visíveis pra qualquer pessoa que fizer login, não só você) e os dados de demonstração salvos neste navegador. Contas de usuário e chaves de IA de cada pessoa não são afetadas. Use antes de convidar novos usuários reais, pra que ninguém veja dado de teste.</p>
+    <button class="btn btn-sm btn-red" onclick="Cloud.resetForNewUsers()"><i class="ti ti-eraser"></i>Resetar dados para novos usuários</button>
+  </div>
+
   <div class="card">
     <div class="lbl"><i class="ti ti-brain"></i>IA e análise</div>
     <div class="set-row"><div><div class="set-lbl">Sugestões automáticas de decisão</div><div class="set-sub">A IA analisa o repositório e sugere decisões proativamente</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
@@ -1929,11 +1938,36 @@ const Cloud = (() => {
   }
   function deleteCostActual(id) { if(client && session) client.from('cost_actuals').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
 
+  // Apaga TODOS os dados compartilhados na nuvem (visíveis pra qualquer pessoa que fizer login,
+  // não só quem clicou) + os dados de demonstração salvos neste navegador. Restrito a admin —
+  // serve pra preparar o projeto antes de convidar usuários reais, sem levar o "lixo" de teste.
+  async function resetForNewUsers() {
+    if(!client || !session) { T.show('⚠️ Faça login no Supabase primeiro.'); return; }
+    if(typeof Auth === 'undefined' || Auth.getRole() !== 'admin') { T.show('⚠️ Só um Administrador pode resetar os dados compartilhados.'); return; }
+    const wantsBackup = confirm('Recomendado: baixar um backup dos dados atuais antes de apagar tudo.\n\nClique OK para baixar agora, ou Cancelar para pular esta etapa.');
+    if(wantsBackup && typeof DB !== 'undefined') DB.exportBackup();
+    const sure = confirm('⚠️ ATENÇÃO — isso apaga:\n\n• Todos os dados compartilhados na nuvem (WBS, decisões, documentos, orçamento e custos) — para TODAS as pessoas que fizerem login, não só você\n• Os dados de demonstração e projetos salvos neste navegador\n\nContas de usuário e chaves de IA de cada pessoa NÃO são apagadas.\n\nEssa ação não pode ser desfeita. Confirma o reset?');
+    if(!sure) { T.show('Reset cancelado — nenhum dado foi apagado.'); return; }
+    T.show('🗑️ Apagando dados compartilhados na nuvem…');
+    try {
+      // tasks/actuals antes de módulos/linhas por causa das foreign keys
+      await client.from('wbs_tasks').delete().not('id', 'is', null);
+      await client.from('wbs_modules').delete().not('id', 'is', null);
+      await client.from('decisions').delete().not('id', 'is', null);
+      await client.from('documents').delete().not('id', 'is', null);
+      await client.from('cost_actuals').delete().not('id', 'is', null);
+      await client.from('budget_lines').delete().not('id', 'is', null);
+    } catch(e) { T.show('❌ Falha ao apagar dados da nuvem: ' + (e.message || e)); return; }
+    if(typeof DB !== 'undefined' && DB.factoryReset) DB.factoryReset();
+    T.show('✅ Reset completo! Recarregando…');
+    setTimeout(() => location.reload(), 900);
+  }
+
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole,
     saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignUp, signOut, pullAll,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushDecision, deleteDecision, pushDocument, deleteDocument,
-    pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual };
+    pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual, resetForNewUsers };
 })();
 </script>
 
@@ -1943,13 +1977,13 @@ const Users = (() => {
   const ROLE_LABEL = { admin:'Administrador', gerente:'Gerente', consulta:'Consulta', manutencao:'Manutenção' };
   function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-  // Mostra/esconde o card inteiro — só faz sentido pra quem está logado de verdade como admin
+  // Mostra/esconde os cards de admin — só fazem sentido pra quem está logado de verdade como admin
   function render() {
     const card = document.getElementById('users-card');
-    if(!card) return;
+    const resetCard = document.getElementById('reset-shared-card');
     const show = (typeof Cloud !== 'undefined') && Cloud.isSignedIn() && Auth.getRole() === 'admin';
-    card.style.display = show ? '' : 'none';
-    if(show) refresh();
+    if(card) { card.style.display = show ? '' : 'none'; if(show) refresh(); }
+    if(resetCard) resetCard.style.display = show ? '' : 'none';
   }
 
   async function refresh() {
@@ -2280,7 +2314,34 @@ const DB = (() => {
     setTimeout(() => location.reload(), 900);
   }
 
-  return { get, set, getForProject, exportBackup, importBackup, clearAll, listProjects, getActiveProjectId, switchProject, createProject };
+  // Apaga TUDO que está salvo neste navegador (todos os projetos, inclusive os de demonstração
+  // como "Portal Nexus", chaves de IA locais e perfil local) e deixa só um projeto em branco no
+  // lugar — chamado pelo reset "para novos usuários" depois de limpar a nuvem. Não recarrega a
+  // página sozinho: quem chama decide quando (Cloud.resetForNewUsers já agenda o reload).
+  function factoryReset() {
+    try {
+      const toRemove = [];
+      for(let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if(k === 'pmo_db_v1' || (k && k.indexOf('pmo_db_v1__') === 0)) toRemove.push(k);
+      }
+      toRemove.forEach(k => { try { localStorage.removeItem(k); } catch(e){} });
+      localStorage.removeItem(PROJECTS_KEY);
+      localStorage.removeItem(ACTIVE_KEY);
+      localStorage.removeItem('pmo_v1');        // chaves de IA salvas localmente
+      localStorage.removeItem('pmo_auth_v1');   // perfil local (nome/perfil escolhido no navegador)
+      localStorage.removeItem('pmo_onboarded_v1');
+    } catch(e){}
+    const blankId = 'p' + Date.now().toString(36);
+    try {
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify([{ id:blankId, name:'Meu projeto', client:'', icon:'compass' }]));
+      localStorage.setItem(ACTIVE_KEY, blankId);
+      localStorage.setItem(storageKeyFor(blankId), JSON.stringify(seedEmpty()));
+    } catch(e){}
+    projects = null; activeProjectId = null; cache = null;
+  }
+
+  return { get, set, getForProject, exportBackup, importBackup, clearAll, factoryReset, listProjects, getActiveProjectId, switchProject, createProject };
 })();
 </script>
 
