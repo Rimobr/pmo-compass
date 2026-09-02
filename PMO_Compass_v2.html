@@ -2749,12 +2749,18 @@ const Onboarding = (() => {
 <!-- ■ MODULE: ui/toast ─ Notificações não-bloqueantes -->
 <script data-module="ui/toast">
 const T = (() => {
-  function show(msg, ms=3000) {
+  // onClick opcional: torna o toast clicável (cursor + callback) — usado por quem manda uma
+  // mensagem tipo "clique aqui" e precisa que o clique realmente dispare uma ação.
+  function show(msg, ms=3000, onClick) {
     const wrap = document.getElementById('toast-wrap');
     if(!wrap) return;
     const el = document.createElement('div');
     el.className = 'toast';
     el.innerHTML = `<i class="ti ti-check-circle" style="color:var(--grn);font-size:16px"></i>${msg}`;
+    if(onClick) {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', () => { onClick(); el.remove(); });
+    }
     wrap.appendChild(el);
     setTimeout(() => { el.style.transition='all .25s'; el.style.opacity='0'; el.style.transform='translateY(8px)'; setTimeout(()=>el.remove(),250); }, ms);
   }
@@ -5866,7 +5872,12 @@ const WBS = (() => {
     e.preventDefault();
     deferredInstall = e;
     setTimeout(() => {
-      T.show('💾 Instalar PMO Compass como app? Clique aqui!', 8000);
+      T.show('💾 Instalar PMO Compass como app? Clique aqui!', 8000, async () => {
+        if(!deferredInstall) return;
+        deferredInstall.prompt();
+        try { await deferredInstall.userChoice; } catch(e){}
+        deferredInstall = null; // o prompt nativo só pode ser usado uma vez
+      });
     }, 3000);
   });
 })();
