@@ -777,27 +777,17 @@ body.icons-failed i[data-fb]::before{
   <div class="kg" id="kg-team">
     <div class="kg-hdr" onclick="KG.tog('kg-team')">
       <div class="kg-l"><div class="kg-ico" style="background:var(--rd)"><i class="ti ti-heartbeat" style="color:var(--red)"></i></div><span class="kg-title">Saúde da equipe</span><span class="kg-n">4 KPIs</span></div>
-      <div class="kg-r"><span class="kg-st c-dn"><span class="sdot sdot-red"></span>1 em alerta</span><i class="ti ti-chevron-down kg-chev"></i></div>
+      <div class="kg-r"><span class="kg-st" id="dash-team-status"><span class="sdot sdot-acc"></span>—</span><i class="ti ti-chevron-down kg-chev"></i></div>
     </div>
-    <div class="kg-body cl">
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-red"></span>Risco burnout</div><div class="kpi-val">1</div><div class="kpi-delta c-dn">Bruno M. — 89%</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-amb"></span>Sobrecarga média</div><div class="kpi-val">74<span class="kpi-unit">%</span></div><div class="kpi-delta c-wa">Meta: 70%</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Reuniões/semana</div><div class="kpi-val">6</div><div class="kpi-delta c-up">-2 vs mês ant.</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-amb"></span>Conflito de recursos</div><div class="kpi-val">2</div><div class="kpi-delta c-wa">Alocação dupla</div></div>
-    </div>
+    <div class="kg-body cl" id="dash-team-body"></div>
   </div>
 
   <div class="kg" id="kg-learn">
     <div class="kg-hdr" onclick="KG.tog('kg-learn')">
       <div class="kg-l"><div class="kg-ico" style="background:var(--pd)"><i class="ti ti-books" style="color:var(--pur)"></i></div><span class="kg-title">Aprendizado e maturidade</span><span class="kg-n">4 KPIs</span></div>
-      <div class="kg-r"><span class="kg-st c-up"><span class="sdot sdot-grn"></span>Crescendo</span><i class="ti ti-chevron-down kg-chev"></i></div>
+      <div class="kg-r"><span class="kg-st" id="dash-learn-status"><span class="sdot sdot-acc"></span>—</span><i class="ti ti-chevron-down kg-chev"></i></div>
     </div>
-    <div class="kg-body cl">
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Lições registradas</div><div class="kpi-val">14</div><div class="kpi-delta c-up">+3 esta sprint</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Aplicadas</div><div class="kpi-val">9</div><div class="kpi-delta c-up">64% aproveit.</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-amb"></span>Padrões IA</div><div class="kpi-val">3</div><div class="kpi-delta c-wa">detectados</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Atas processadas</div><div class="kpi-val">11</div><div class="kpi-delta c-up">38 ações extraídas</div></div>
-    </div>
+    <div class="kg-body cl" id="dash-learn-body"></div>
   </div>
 
   <div class="g2">
@@ -823,19 +813,13 @@ body.icons-failed i[data-fb]::before{
     </div>
     <div class="card">
       <div class="lbl"><i class="ti ti-sparkles"></i>Alertas da IA — agora</div>
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--b1)"><span class="badge b-red" style="margin-top:1px;flex-shrink:0">Crítico</span><div><div style="font-size:12.5px;font-weight:500">Bruno M. — burnout iminente (89%)</div><div style="font-size:11px;color:var(--t3)">14 dias sem folga · +3h extras/dia</div><button class="link-a" onclick="R.go('burnout')"><i class="ti ti-arrow-right"></i>Ver Burnout Radar</button></div></div>
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--b1)"><span class="badge b-red" style="margin-top:1px;flex-shrink:0">Crítico</span><div><div style="font-size:12.5px;font-weight:500">Integração ERP — cascata em 10 dias</div><div style="font-size:11px;color:var(--t3)">Padrão idêntico ao PRJ-67 (18 dias atraso)</div><button class="link-a" onclick="R.go('decisions')"><i class="ti ti-arrow-right"></i>Ver decisão</button></div></div>
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--b1)"><span class="badge b-amb" style="margin-top:1px;flex-shrink:0">Alto</span><div><div style="font-size:12.5px;font-weight:500">Rafael D. — 110% de alocação</div><div style="font-size:11px;color:var(--t3)">Portal Nexus 40% + Valdori 70%</div><button class="link-a" onclick="R.go('resources')"><i class="ti ti-arrow-right"></i>Gerenciar</button></div></div>
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0"><span class="badge b-acc" style="margin-top:1px;flex-shrink:0">Médio</span><div><div style="font-size:12.5px;font-weight:500">3 atas sem ações formalizadas</div><div style="font-size:11px;color:var(--t3)">7 ações implícitas identificadas</div><button class="link-a" onclick="R.go('meetings')"><i class="ti ti-arrow-right"></i>Processar</button></div></div>
+      <div id="dash-alerts-root"></div>
     </div>
   </div>
 
-  <div class="card card-accent">
+  <div class="card card-accent" id="dash-priority-card" style="display:none">
     <div class="lbl" style="color:var(--acc)"><i class="ti ti-sparkles"></i>Decisão prioritária — IA recomenda agora</div>
-    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px"><span class="badge b-grn" style="font-size:11px;padding:3px 10px;flex-shrink:0">92% confiança</span><span style="font-size:14px;font-weight:600;line-height:1.4">Escalar risco da integração ERP ao comitê executivo até 20/06</span></div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Padrão idêntico ao PRJ-67 — sem decisão esta semana, risco de cascata de 18 dias. Histórico: ocorreu em 2 de 3 projetos com ERP externo sem dono técnico definido.</p>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"><span class="chip"><i class="ti ti-file-text"></i>Ata 14/06</span><span class="chip"><i class="ti ti-books"></i>Lição PRJ-67</span><span class="chip"><i class="ti ti-git-branch"></i>RF-ERP-008</span></div>
-    <div class="btn-row"><button class="btn btn-grn" onclick="T.show('✅ Decisão aceita e registrada na trilha!')"><i class="ti ti-check"></i>Aceitar e registrar</button><button class="btn btn-acc" onclick="R.go('decisions')"><i class="ti ti-list"></i>Ver todas as decisões</button></div>
+    <div id="dash-priority-root"></div>
   </div>
 </section>
 
@@ -854,7 +838,7 @@ body.icons-failed i[data-fb]::before{
   <div class="pg-hdr"><div><div class="pg-title">Burnout Radar — Saúde da equipe</div><div class="pg-sub">IA detecta padrões de sobrecarga antes que virem queda de produtividade.</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Burnout.openAdd()"><i class="ti ti-plus"></i>Adicionar membro</button></div></div>
   <div id="burnout-alert-root"></div>
   <div id="burnout-list-root"></div>
-  <div class="btn-row"><button class="btn btn-grn" onclick="Burnout.applyRecommendations()"><i class="ti ti-check"></i>Aplicar recomendações</button><button class="btn" onclick="R.go('resources')"><i class="ti ti-users-group"></i>Ver recursos</button></div>
+  <div class="btn-row"><button class="btn btn-grn" data-perm="business" onclick="Burnout.applyRecommendations()"><i class="ti ti-check"></i>Aplicar recomendações</button><button class="btn" onclick="R.go('resources')"><i class="ti ti-users-group"></i>Ver recursos</button></div>
 </section>
 
 <!-- ■ MODULE: pages/resources -->
@@ -1180,7 +1164,7 @@ body.icons-failed i[data-fb]::before{
         <div style="background:var(--rd);border:1px solid var(--rb);border-radius:var(--r8);padding:10px 12px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><span style="font-size:12.5px;font-weight:500;color:var(--t1)">Diretor de TI</span><span class="badge b-red">Urgente — hoje</span></div>
           <div style="font-size:12px;color:var(--t2);line-height:1.55;font-style:italic;margin-bottom:8px">"Precisamos confirmar a arquitetura de integração (API REST vs CSV) até 20/06. Sem esta decisão, a Fase 2 não pode iniciar. Posso agendar 30min esta semana?"</div>
-          <button class="btn btn-sm btn-red" onclick="T.show('✅ Mensagem enviada via e-mail!')"><i class="ti ti-send"></i>Enviar e-mail</button>
+          <button class="btn btn-sm btn-red" data-perm="business" onclick="Auth.guard('business')&&T.show('✅ Mensagem enviada via e-mail!')"><i class="ti ti-send"></i>Enviar e-mail</button>
         </div>
         <div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><span style="font-size:12.5px;font-weight:500;color:var(--t1)">Patrocinador</span><span class="badge b-amb">Esta semana</span></div>
@@ -1318,7 +1302,7 @@ body.icons-failed i[data-fb]::before{
           <div style="font-size:11.5px;color:var(--t2)"><strong style="color:var(--grn)">12/08</strong> (com buffer reduzido) ou manter 30/07 com scope reduzido</div>
         </div>
       </div>
-      <div class="btn-row" style="margin-top:12px"><button class="btn btn-grn" onclick="T.show('✅ Ajuste de cronograma aprovado!')"><i class="ti ti-check"></i>Aprovar ajuste</button><button class="btn" onclick="T.show('Editor de datas aberto…')"><i class="ti ti-edit"></i>Editar datas</button></div>
+      <div class="btn-row" style="margin-top:12px"><button class="btn btn-grn" data-perm="business" onclick="Auth.guard('business')&&T.show('✅ Ajuste de cronograma aprovado!')"><i class="ti ti-check"></i>Aprovar ajuste</button><button class="btn" data-perm="business" onclick="Auth.guard('business')&&T.show('Editor de datas aberto…')"><i class="ti ti-edit"></i>Editar datas</button></div>
     </div>
 
     <div class="card">
@@ -1327,17 +1311,17 @@ body.icons-failed i[data-fb]::before{
         <div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
           <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px"><span class="badge b-red">Patrocinador / CEO</span><span style="font-size:11px;color:var(--t3)">Tom: executivo, direto</span></div>
           <div style="font-size:12px;color:var(--t2);line-height:1.55;font-style:italic;margin-bottom:8px">"O projeto possui risco crítico de atraso de 13 dias na Fase 2 por validação técnica pendente do ERP. Solicito decisão até 20/06 para preservar a data de entrega e manter orçamento dentro da reserva."</div>
-          <button class="btn btn-sm" onclick="T.show('✅ E-mail enviado ao patrocinador!')"><i class="ti ti-send"></i>Enviar e-mail</button>
+          <button class="btn btn-sm" data-perm="business" onclick="Auth.guard('business')&&T.show('✅ E-mail enviado ao patrocinador!')"><i class="ti ti-send"></i>Enviar e-mail</button>
         </div>
         <div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
           <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px"><span class="badge b-acc">Equipe técnica — TI</span><span style="font-size:11px;color:var(--t3)">Tom: técnico, detalhado</span></div>
           <div style="font-size:12px;color:var(--t2);line-height:1.55;font-style:italic;margin-bottom:8px">"RF-ERP-008 permanece como [DISCOVERY]. Necessário confirmar até 20/06: tipo de integração (API REST vs CSV), credenciais de homologação e janela de testes disponível."</div>
-          <button class="btn btn-sm" onclick="T.show('✅ Mensagem enviada via Teams!')"><i class="ti ti-brand-teams"></i>Enviar via Teams</button>
+          <button class="btn btn-sm" data-perm="business" onclick="Auth.guard('business')&&T.show('✅ Mensagem enviada via Teams!')"><i class="ti ti-brand-teams"></i>Enviar via Teams</button>
         </div>
         <div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
           <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px"><span class="badge b-grn">Cliente / Usuário-chave</span><span style="font-size:11px;color:var(--t3)">Tom: parceiro, positivo</span></div>
           <div style="font-size:12px;color:var(--t2);line-height:1.55;font-style:italic;margin-bottom:8px">"Identificamos um ponto de validação técnica que, resolvido esta semana, mantém nossa entrega em 30/07. Sua equipe de TI precisa confirmar os acessos de homologação."</div>
-          <button class="btn btn-sm" onclick="T.show('✅ E-mail enviado ao cliente!')"><i class="ti ti-send"></i>Enviar e-mail</button>
+          <button class="btn btn-sm" data-perm="business" onclick="Auth.guard('business')&&T.show('✅ E-mail enviado ao cliente!')"><i class="ti ti-send"></i>Enviar e-mail</button>
         </div>
       </div>
     </div>
@@ -1391,18 +1375,12 @@ body.icons-failed i[data-fb]::before{
   <div class="g2">
     <div class="card">
       <div class="lbl"><i class="ti ti-chart-pie"></i>Progresso por módulo</div>
-      <div class="hbar"><span class="hbar-lbl">Rastreabilidade</span><div class="hbar-track"><div class="hbar-fill" style="width:78%;background:var(--grn)"></div></div><span class="hbar-pct">78%</span></div>
-      <div class="hbar"><span class="hbar-lbl">Integração ERP</span><div class="hbar-track"><div class="hbar-fill" style="width:12%;background:var(--red)"></div></div><span class="hbar-pct c-dn">12%</span></div>
-      <div class="hbar"><span class="hbar-lbl">Transferências</span><div class="hbar-track"><div class="hbar-fill" style="width:45%;background:var(--amb)"></div></div><span class="hbar-pct c-wa">45%</span></div>
-      <div class="hbar"><span class="hbar-lbl">Inventário</span><div class="hbar-track"><div class="hbar-fill" style="width:30%;background:var(--amb)"></div></div><span class="hbar-pct c-wa">30%</span></div>
-      <div class="hbar"><span class="hbar-lbl">Governança</span><div class="hbar-track"><div class="hbar-fill" style="width:60%;background:var(--grn)"></div></div><span class="hbar-pct">60%</span></div>
+      <div id="wbs-progress-root"></div>
     </div>
     <div class="card">
       <div class="lbl"><i class="ti ti-brain"></i>Análise IA da WBS</div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <div style="background:var(--rd);border:1px solid var(--rb);border-radius:var(--r8);padding:10px 12px;font-size:12.5px;color:var(--t2)"><i class="ti ti-alert-triangle" style="color:var(--red)"></i> <strong style="color:var(--t1)">Gargalo crítico:</strong> Módulo 2 (Integração ERP) em 12% está bloqueando 3 outros itens (2.2, 2.3 e reconciliação de inventário). Resolução do RF-ERP-008 desbloqueia 40% do backlog restante.</div>
+      <div style="display:flex;flex-direction:column;gap:8px" id="wbs-insights-root">
         <div style="background:var(--amd);border:1px solid var(--ambb);border-radius:var(--r8);padding:10px 12px;font-size:12.5px;color:var(--t2)" id="wbs-cpm-line"><i class="ti ti-clock" style="color:var(--amb)"></i> <strong style="color:var(--t1)">Caminho crítico:</strong> calculando…</div>
-        <div style="background:var(--gd);border:1px solid var(--gb);border-radius:var(--r8);padding:10px 12px;font-size:12.5px;color:var(--t2)"><i class="ti ti-check-circle" style="color:var(--grn)"></i> <strong style="color:var(--t1)">Em dia:</strong> Módulos 1 e 5 estão no ritmo correto. Governança pode ser completada em paralelo enquanto ERP é resolvido.</div>
       </div>
     </div>
   </div>
@@ -3978,6 +3956,7 @@ const Stakeholders = (() => {
 <script data-module="pages/dashboard-js">
 const Dashboard = (() => {
   function setText(id, val) { const el = document.getElementById(id); if(el) el.textContent = val; }
+  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   function render() {
     const wbs = DB.get('wbs') || [];
@@ -4021,6 +4000,118 @@ const Dashboard = (() => {
 
     renderBudgetKpis();
     renderHealthScore();
+    renderTeamHealth();
+    renderLearning();
+    renderAlerts();
+    renderPriorityDecision();
+  }
+
+  // "Alertas da IA" e "Decisão prioritária" eram texto fixo (Bruno M. 89%, Rafael D. 110%,
+  // "Escalar risco da integração ERP"...) — apareciam mesmo num projeto sem equipe, decisões
+  // ou atas cadastradas. Agora derivados de team/decisions/meetings reais; cada card vira um
+  // estado neutro (ou some, no caso da decisão prioritária) quando não há nada a mostrar.
+  function renderAlerts() {
+    const root = document.getElementById('dash-alerts-root');
+    if(!root) return;
+    const team = DB.get('team') || [];
+    const decisions = DB.get('decisions') || [];
+    const meetings = DB.get('meetings') || [];
+    const alerts = [];
+
+    team.filter(m => (m.workloadPct||0) >= 80).forEach(m => {
+      alerts.push({ sev: m.workloadPct>=90?'Crítico':'Alto', cls: m.workloadPct>=90?'b-red':'b-amb',
+        title: `${m.name} — burnout iminente (${m.workloadPct}%)`,
+        sub: (m.signals||[]).join(' · ') || 'Sobrecarga acima do limite saudável',
+        page:'burnout', label:'Ver Burnout Radar' });
+    });
+    team.filter(m => (m.otherAllocationPct||0) > 0).forEach(m => {
+      alerts.push({ sev:'Alto', cls:'b-amb', title: `${m.name} — ${(m.workloadPct||0)+(m.otherAllocationPct||0)}% de alocação total`,
+        sub: `Alocado também em ${m.otherAllocationLabel||'outro projeto'}`, page:'resources', label:'Gerenciar' });
+    });
+    decisions.filter(d => d.status==='pending' && d.severity==='crit').forEach(d => {
+      alerts.push({ sev:'Crítico', cls:'b-red', title: d.title, sub:'Decisão crítica pendente', page:'decisions', label:'Ver decisão' });
+    });
+    const acoesPendentes = meetings.reduce((s,m) => s + (m.actions||[]).filter(a=>!a.done).length, 0);
+    const atasComPendencia = meetings.filter(m => (m.actions||[]).some(a=>!a.done)).length;
+    if(atasComPendencia) alerts.push({ sev:'Médio', cls:'b-acc', title:`${atasComPendencia} ata(s) com ações não formalizadas`, sub:`${acoesPendentes} ação(ões) pendente(s)`, page:'meetings', label:'Processar' });
+
+    const sevOrder = { 'Crítico':0, 'Alto':1, 'Médio':2 };
+    alerts.sort((a,b) => sevOrder[a.sev] - sevOrder[b.sev]);
+    const top = alerts.slice(0,4);
+
+    if(!top.length) { root.innerHTML = '<div style="padding:12px 0;color:var(--t3);font-size:12.5px">Nenhum alerta crítico no momento.</div>'; return; }
+    root.innerHTML = top.map((a,i) => `<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;${i<top.length-1?'border-bottom:1px solid var(--b1)':''}"><span class="badge ${a.cls}" style="margin-top:1px;flex-shrink:0">${a.sev}</span><div><div style="font-size:12.5px;font-weight:500">${escapeHtml(a.title)}</div><div style="font-size:11px;color:var(--t3)">${escapeHtml(a.sub)}</div><button class="link-a" onclick="R.go('${a.page}')"><i class="ti ti-arrow-right"></i>${escapeHtml(a.label)}</button></div></div>`).join('');
+  }
+
+  function renderPriorityDecision() {
+    const card = document.getElementById('dash-priority-card');
+    const root = document.getElementById('dash-priority-root');
+    if(!card || !root) return;
+    const pending = (DB.get('decisions')||[]).filter(d => d.status==='pending').sort((a,b) => (b.pct||0)-(a.pct||0));
+    const top = pending[0];
+    if(!top) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    const chips = (top.sources||[]).map(s => `<span class="chip"><i class="ti ti-${s.ico||'file-text'}"></i>${escapeHtml(s.label)}</span>`).join('');
+    root.innerHTML = `
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px"><span class="badge b-grn" style="font-size:11px;padding:3px 10px;flex-shrink:0">${top.pct||0}% confiança</span><span style="font-size:14px;font-weight:600;line-height:1.4">${escapeHtml(top.title)}</span></div>
+      <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">${escapeHtml(top.body||'')}</p>
+      ${chips ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${chips}</div>` : ''}
+      <div class="btn-row"><button class="btn btn-grn" data-perm="business" onclick="Decisions.resolve('${top.id}','accepted');Dashboard.render()"><i class="ti ti-check"></i>Aceitar e registrar</button><button class="btn btn-acc" onclick="R.go('decisions')"><i class="ti ti-list"></i>Ver todas as decisões</button></div>`;
+  }
+
+  // Antes eram 4 números fixos no HTML (nunca lidos de nenhuma tabela) — apareciam mesmo
+  // em projeto sem nenhum membro de equipe cadastrado. Agora vêm de DB.get('team') e viram
+  // um estado neutro explícito quando a lista está vazia, em vez de manter dado de exemplo.
+  function renderTeamHealth() {
+    const team = DB.get('team') || [];
+    const statusEl = document.getElementById('dash-team-status');
+    const bodyEl = document.getElementById('dash-team-body');
+    if(!bodyEl) return;
+    if(!team.length) {
+      if(statusEl) statusEl.innerHTML = '<span class="sdot sdot-acc"></span>Sem dados';
+      bodyEl.innerHTML = '<div class="kpi" style="grid-column:1/-1"><div class="kpi-lbl">Nenhum membro de equipe cadastrado ainda</div></div>';
+      return;
+    }
+    const emRisco = team.filter(m => (m.workloadPct||0) >= 80);
+    const mediaCarga = Math.round(team.reduce((s,m) => s + (m.workloadPct||0), 0) / team.length);
+    const conflitos = team.filter(m => (m.otherAllocationPct||0) > 0).length;
+    const today = new Date(2026, 5, 20);
+    const seteDiasAtras = new Date(today); seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
+    const reunioes7d = (DB.get('meetings')||[]).filter(mt => { const d = mt.date ? new Date(mt.date) : null; return d && d >= seteDiasAtras && d <= today; }).length;
+
+    if(statusEl) statusEl.innerHTML = emRisco.length ? `<span class="sdot sdot-red"></span>${emRisco.length} em alerta` : '<span class="sdot sdot-grn"></span>Sob controle';
+    bodyEl.innerHTML = `
+      <div class="kpi"><div class="kpi-lbl"><span class="sdot ${emRisco.length?'sdot-red':'sdot-grn'}"></span>Risco burnout</div><div class="kpi-val">${emRisco.length}</div><div class="kpi-delta ${emRisco.length?'c-dn':'c-ne'}">${emRisco.length ? emRisco.map(m=>m.name+' — '+m.workloadPct+'%').join(', ') : 'Nenhum'}</div></div>
+      <div class="kpi"><div class="kpi-lbl"><span class="sdot ${mediaCarga>=70?'sdot-amb':'sdot-grn'}"></span>Sobrecarga média</div><div class="kpi-val">${mediaCarga}<span class="kpi-unit">%</span></div><div class="kpi-delta c-ne">Meta: 70%</div></div>
+      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Reuniões (7 dias)</div><div class="kpi-val">${reunioes7d}</div><div class="kpi-delta c-ne">registradas em Atas e Ações</div></div>
+      <div class="kpi"><div class="kpi-lbl"><span class="sdot ${conflitos?'sdot-amb':'sdot-grn'}"></span>Conflito de recursos</div><div class="kpi-val">${conflitos}</div><div class="kpi-delta ${conflitos?'c-wa':'c-ne'}">${conflitos ? 'Alocação dupla' : 'Nenhum'}</div></div>`;
+  }
+
+  // Idem — "Padrões IA: 3 detectados" e "+3 esta sprint" eram texto fixo sem tabela nenhuma
+  // por trás. Agora "padrões IA" conta lições com similaridade calculada (sourceProject +
+  // similarity, vindas de comparação com projetos históricos), não um número inventado.
+  function renderLearning() {
+    const lessons = DB.get('lessons') || [];
+    const meetings = DB.get('meetings') || [];
+    const statusEl = document.getElementById('dash-learn-status');
+    const bodyEl = document.getElementById('dash-learn-body');
+    if(!bodyEl) return;
+    if(!lessons.length && !meetings.length) {
+      if(statusEl) statusEl.innerHTML = '<span class="sdot sdot-acc"></span>Sem dados';
+      bodyEl.innerHTML = '<div class="kpi" style="grid-column:1/-1"><div class="kpi-lbl">Nenhuma lição ou ata registrada ainda</div></div>';
+      return;
+    }
+    const aplicadas = lessons.filter(l => l.applied).length;
+    const aproveitPct = lessons.length ? Math.round(aplicadas / lessons.length * 100) : 0;
+    const padroesIA = lessons.filter(l => l.similarity != null).length;
+    const totalAcoes = meetings.reduce((s,m) => s + (m.actions||[]).length, 0);
+
+    if(statusEl) statusEl.innerHTML = lessons.length ? '<span class="sdot sdot-grn"></span>Crescendo' : '<span class="sdot sdot-acc"></span>Sem lições ainda';
+    bodyEl.innerHTML = `
+      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Lições registradas</div><div class="kpi-val">${lessons.length}</div><div class="kpi-delta c-ne">total no projeto</div></div>
+      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Aplicadas</div><div class="kpi-val">${aplicadas}</div><div class="kpi-delta c-ne">${aproveitPct}% aproveit.</div></div>
+      <div class="kpi"><div class="kpi-lbl"><span class="sdot ${padroesIA?'sdot-amb':'sdot-grn'}"></span>Padrões IA</div><div class="kpi-val">${padroesIA}</div><div class="kpi-delta c-ne">com similaridade calculada</div></div>
+      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Atas processadas</div><div class="kpi-val">${meetings.length}</div><div class="kpi-delta c-ne">${totalAcoes} ações extraídas</div></div>`;
   }
 
   function renderHealthScore() {
@@ -5547,6 +5638,57 @@ const WBS = (() => {
     el.innerHTML = `<i class="ti ti-clock" style="color:var(--amb)"></i> <strong style="color:var(--t1)">Caminho crítico (calculado):</strong> ${chain}. Duração total: ${totalDays} dias.`;
   }
 
+  // "Progresso por módulo", "Gargalo crítico" e "Em dia" eram 5 barras e 2 frases fixas no
+  // HTML (nunca lidas de tabela nenhuma) — apareciam iguais mesmo numa WBS vazia. Agora vêm
+  // de DB.get('wbs'); os dois cards de insight só aparecem quando há algo real para mostrar.
+  function renderProgress() {
+    const root = document.getElementById('wbs-progress-root');
+    if(!root) return;
+    ensureLoaded();
+    if(!data.length) { root.innerHTML = '<div style="font-size:12.5px;color:var(--t3);padding:6px 0">Nenhuma entrega cadastrada ainda.</div>'; return; }
+    root.innerHTML = data.map(m => `<div class="hbar"><span class="hbar-lbl">${escapeHtml(m.label)}</span><div class="hbar-track"><div class="hbar-fill" style="width:${m.pct}%;background:${STATUS_COLOR[m.status]}"></div></div><span class="hbar-pct ${pctClass(m.pct)}">${m.pct}%</span></div>`).join('');
+  }
+
+  function renderBottleneck() {
+    const wrap = document.getElementById('wbs-insights-root');
+    const cpmLine = document.getElementById('wbs-cpm-line');
+    if(!wrap) return;
+    document.getElementById('wbs-gargalo-line')?.remove();
+    document.getElementById('wbs-emdia-line')?.remove();
+    ensureLoaded();
+    const items = buildFlatItems();
+    const byId = new Map(items.map(it => [it.id, it]));
+    const fullItems = [];
+    data.forEach(m => { fullItems.push({ id:m.id, label:m.label, status:m.status, pct:m.pct }); (m.children||[]).forEach(t => fullItems.push({ id:t.id, label:t.label, status:t.status, pct:null })); });
+    const fullById = new Map(fullItems.map(it => [it.id, it]));
+
+    // Gargalo: item bloqueado (status red) com mais outros itens dependendo dele (predecessors)
+    let worst = null, worstCount = 0;
+    items.forEach(it => {
+      const full = fullById.get(it.id);
+      if(!full || full.status !== 'red') return;
+      const blocking = items.filter(other => (other.predecessors||[]).includes(it.id)).length;
+      if(blocking > worstCount) { worstCount = blocking; worst = full; }
+    });
+    if(worst && worstCount > 0) {
+      const div = document.createElement('div');
+      div.id = 'wbs-gargalo-line';
+      div.style.cssText = 'background:var(--rd);border:1px solid var(--rb);border-radius:var(--r8);padding:10px 12px;font-size:12.5px;color:var(--t2)';
+      div.innerHTML = `<i class="ti ti-alert-triangle" style="color:var(--red)"></i> <strong style="color:var(--t1)">Gargalo crítico:</strong> ${escapeHtml(worst.label)}${worst.pct!=null?' em '+worst.pct+'%':''} está bloqueando ${worstCount} outro${worstCount>1?'s':''} item${worstCount>1?'s':''} (via predecessoras cadastradas).`;
+      wrap.insertBefore(div, cpmLine);
+    }
+
+    // Em dia: módulos concluídos (status grn)
+    const emDia = data.filter(m => m.status === 'grn');
+    if(emDia.length) {
+      const div = document.createElement('div');
+      div.id = 'wbs-emdia-line';
+      div.style.cssText = 'background:var(--gd);border:1px solid var(--gb);border-radius:var(--r8);padding:10px 12px;font-size:12.5px;color:var(--t2)';
+      div.innerHTML = `<i class="ti ti-check-circle" style="color:var(--grn)"></i> <strong style="color:var(--t1)">Em dia:</strong> ${emDia.map(m=>escapeHtml(m.label)).join(', ')}.`;
+      wrap.appendChild(div);
+    }
+  }
+
   function toggle(id) {
     expand[id] = expand[id] === undefined ? false : !expand[id];
     renderTree();
@@ -5557,6 +5699,8 @@ const WBS = (() => {
     if(!root) return;
     ensureLoaded();
     computeCpm();
+    renderProgress();
+    renderBottleneck();
     let html = '';
     data.forEach((m, i) => {
       const open = expand[m.id] === undefined ? (i < 2) : expand[m.id];
