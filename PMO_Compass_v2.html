@@ -33,12 +33,46 @@
   --font-mono:'JetBrains Mono','Fira Code',monospace;
   --shadow-md:0 4px 16px rgba(0,0,0,0.5);
 }
+/* Temas alternativos — mesmas variáveis do :root (escuro, o padrão), valores diferentes.
+   Aplicado via [data-theme] no <html>; escuro é a ausência do atributo (compatibilidade). */
+html[data-theme="light"] {
+  --bg:#f6f7f9; --s1:#ffffff; --s2:#f1f3f6; --s3:#e6e9ee;
+  --b1:rgba(15,23,42,0.08); --b2:rgba(15,23,42,0.14); --b3:rgba(15,23,42,0.24);
+  --t1:#0f172a; --t2:#55606e; --t3:#94a0ac;
+  --acc:#2f6fe0; --ad:rgba(47,111,224,0.08); --ab:rgba(47,111,224,0.28);
+  --grn:#1a9e52; --gd:rgba(26,158,82,0.08); --gb:rgba(26,158,82,0.28);
+  --amb:#b3790f; --amd:rgba(179,121,15,0.10); --ambb:rgba(179,121,15,0.28);
+  --red:#d9362b; --rd:rgba(217,54,43,0.08); --rb:rgba(217,54,43,0.28);
+  --pur:#7c3aed; --pd:rgba(124,58,237,0.08); --pb:rgba(124,58,237,0.28);
+  --shadow-md:0 4px 16px rgba(15,23,42,0.12);
+}
+html[data-theme="gray"] {
+  --bg:#1e2530; --s1:#26303d; --s2:#2d3846; --s3:#374254;
+  --b1:rgba(255,255,255,0.07); --b2:rgba(255,255,255,0.13); --b3:rgba(255,255,255,0.22);
+  --t1:#eef1f5; --t2:#a3adb8; --t3:#6b7684;
+  --acc:#5b9bf7; --ad:rgba(91,155,247,0.12); --ab:rgba(91,155,247,0.30);
+  --grn:#4bc767; --gd:rgba(75,199,103,0.11); --gb:rgba(75,199,103,0.30);
+  --amb:#e0ab3f; --amd:rgba(224,171,63,0.11); --ambb:rgba(224,171,63,0.30);
+  --red:#f16a63; --rd:rgba(241,106,99,0.11); --rb:rgba(241,106,99,0.30);
+  --pur:#a680fa; --pd:rgba(166,128,250,0.11); --pb:rgba(166,128,250,0.30);
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--t1);font-family:var(--font-sans);font-size:13px;line-height:1.5}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-thumb{background:var(--s3);border-radius:4px}
 button,input,select,textarea{font-family:inherit;font-size:inherit}
 </style>
+
+<!-- Aplica o tema salvo ANTES do resto da página renderizar — script síncrono e inline de
+     propósito, pra não piscar tema errado por uma fração de segundo (FOUC) na primeira pintura. -->
+<script>
+(function(){
+  try {
+    var t = localStorage.getItem('pmo_theme_v1');
+    if(t === 'light' || t === 'gray') document.documentElement.setAttribute('data-theme', t);
+  } catch(e) {}
+})();
+</script>
 
 <!-- ■ MODULE: ui/primitives ─ Reutilizáveis -->
 <style data-module="ui/primitives">
@@ -667,6 +701,7 @@ body.icons-failed i[data-fb]::before{
     </div>
   </nav>
   <div class="tb-actions">
+    <button class="ico-btn" onclick="Theme.set(Theme.get()==='dark'?'light':(Theme.get()==='light'?'gray':'dark'))" title="Trocar tema (Escuro/Claro/Cinza)"><i class="ti ti-contrast-2"></i></button>
     <button class="ico-btn" onclick="CmdK.open()" title="Busca rápida (Ctrl/Cmd+K)"><i class="ti ti-search"></i></button>
     <button class="ico-btn" onclick="R.go('decisions')" title="Notificações"><i class="ti ti-bell"></i><span class="bdot"></span></button>
     <button class="ico-btn" data-perm="business" onclick="Wizard.open()" title="Novo projeto"><i class="ti ti-plus"></i></button>
@@ -925,6 +960,12 @@ body.icons-failed i[data-fb]::before{
 <!-- ■ MODULE: pages/settings -->
 <section class="page" id="p-settings" data-module="pages/settings">
   <div class="pg-hdr"><div><div class="pg-title">Configurações</div><div class="pg-sub">API Key, preferências de IA, notificações e integrações</div></div></div>
+
+  <div class="card">
+    <div class="lbl"><i class="ti ti-contrast-2"></i>Aparência</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Escolha o tema de cores do app — a preferência fica salva neste navegador.</p>
+    <div class="btn-row" id="theme-switch-root"></div>
+  </div>
 
   <div class="settings-tabs">
     <button class="settings-tab on" id="stab-ia" onclick="SettingsTabs.show('ia')"><i class="ti ti-cpu"></i>Provedor de IA</button>
@@ -2389,6 +2430,46 @@ const DB = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: core/theme ─ Claro / Escuro / Cinza. A aplicação em si já acontece cedo, inline
+     no <head> (evita flash) — este módulo só cuida de persistir a escolha e desenhar o seletor. -->
+<script data-module="core/theme">
+const Theme = (() => {
+  const KEY = 'pmo_theme_v1';
+  const OPTIONS = [
+    { id:'dark',  label:'Escuro', icon:'moon' },
+    { id:'light', label:'Claro',  icon:'sun' },
+    { id:'gray',  label:'Cinza',  icon:'contrast-2' }
+  ];
+
+  function get() { try { return localStorage.getItem(KEY) || 'dark'; } catch(e) { return 'dark'; } }
+
+  function apply(theme) {
+    if(theme === 'light' || theme === 'gray') document.documentElement.setAttribute('data-theme', theme);
+    else document.documentElement.removeAttribute('data-theme');
+  }
+
+  function set(theme) {
+    if(!OPTIONS.some(o => o.id === theme)) return;
+    try { localStorage.setItem(KEY, theme); } catch(e){}
+    apply(theme);
+    render();
+  }
+
+  // Chamado no boot (core/init) — a aplicação visual já rolou pelo script inline no <head>;
+  // isto só garante que o estado interno bate com o que já está na tela.
+  function load() { apply(get()); }
+
+  function render() {
+    const root = document.getElementById('theme-switch-root');
+    if(!root) return;
+    const current = get();
+    root.innerHTML = OPTIONS.map(o => `<button class="btn btn-sm ${current===o.id?'btn-acc':''}" onclick="Theme.set('${o.id}')" title="Tema ${o.label}"><i class="ti ti-${o.icon}"></i>${o.label}</button>`).join('');
+  }
+
+  return { load, get, set, render };
+})();
+</script>
+
 <script data-module="core/store">
 const Store = (() => {
   const KEY = 'pmo_v1';
@@ -3788,6 +3869,8 @@ function renderAllModules() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  Theme.load();
+  Theme.render();
   Auth.load();
   Cloud.load();
   Store.load();
