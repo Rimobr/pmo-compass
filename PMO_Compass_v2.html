@@ -737,6 +737,7 @@ body.icons-failed i[data-fb]::before{
   <div class="sb-div"></div>
   <button class="si" data-p="settings" onclick="R.go('settings')"><i class="ti ti-settings"></i>Configurações</button>
   <button class="si" data-p="help" onclick="R.go('help')"><i class="ti ti-help-circle"></i>Ajuda</button>
+  <button class="si" onclick="Privacy.open()"><i class="ti ti-shield-lock"></i>Privacidade &amp; dados</button>
 </aside>
 
 <main class="content" id="content">
@@ -906,7 +907,7 @@ body.icons-failed i[data-fb]::before{
       <button class="chat-sug" onclick="Chat.sug(this)">Quais padrões de risco se repetem?</button>
       <button class="chat-sug" onclick="Chat.sug(this)">Como comunicar o atraso ao patrocinador?</button>
       <button class="chat-sug" onclick="Chat.sug(this)">Qual a probabilidade de entregar no prazo?</button>
-      <button class="chat-sug" onclick="Chat.sug(this)">Compare com Valdori Distribuidora</button>
+      <button class="chat-sug" onclick="Chat.sug(this)">Que padrões de outros projetos se aplicam aqui?</button>
     </div>
     <div class="ci-row">
       <input class="input" id="chat-in" type="text" placeholder="Pergunte sobre qualquer aspecto do projeto…" onkeydown="if(event.key==='Enter')Chat.send()">
@@ -1038,9 +1039,9 @@ body.icons-failed i[data-fb]::before{
   <div class="card">
     <div class="lbl"><i class="ti ti-info-circle"></i>Sobre o PMO Compass</div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:12px"><strong style="color:var(--t1)">PMO Compass v2.0.0</strong><br>
-      Aplicação HTML standalone · 147 KB · 100% offline · 18 páginas · 52 módulos<br><br>
-      Compartilhe o arquivo <code style="font-family:var(--font-mono);font-size:11px;background:var(--s2);padding:1px 5px;border-radius:3px">.html</code> com qualquer pessoa — zero instalação.<br>
-      Cada <code style="font-family:var(--font-mono);font-size:11px;background:var(--s2);padding:1px 5px;border-radius:3px">data-module</code> é um bloco independente evoluível.
+      Aplicação HTML standalone · 147 KB · 18 páginas · 52 módulos. Funciona 100% localmente sem nenhuma configuração — nuvem (Supabase) e IA são opcionais e só trocam dados pela rede quando você conecta um provedor.<br><br>
+      Compartilhe o arquivo <code style="font-family:var(--font-mono);font-size:11px;background:var(--s2);padding:1px 5px;border-radius:3px">.html</code> em branco com qualquer pessoa — zero instalação, zero dado seu junto (dados ficam no navegador de quem abre, não no arquivo).<br>
+      Cada <code style="font-family:var(--font-mono);font-size:11px;background:var(--s2);padding:1px 5px;border-radius:3px">data-module</code> é um bloco independente evoluível. Veja <a href="#" onclick="Privacy.open();return false" style="color:var(--acc)">Privacidade &amp; dados</a> para detalhes de como cada dado é tratado.
     </p>
     <div class="btn-row">
       <button class="btn btn-sm btn-acc" onclick="window.print()"><i class="ti ti-file-type-pdf"></i>Exportar PDF</button>
@@ -1052,7 +1053,7 @@ body.icons-failed i[data-fb]::before{
       <button class="btn btn-sm btn-red" data-perm="settings" onclick="DB.clearAll()"><i class="ti ti-trash"></i>Limpar dados</button>
     </div>
     <div style="margin-top:10px;padding:10px 12px;background:var(--s2);border-radius:var(--r8);font-size:11.5px;color:var(--t3)">
-      <i class="ti ti-info-circle" style="font-size:13px"></i> <strong style="color:var(--t2)">Backup:</strong> o arquivo baixado contém WBS, decisões e repositório. Por segurança, chaves de IA não são incluídas — configure-as de novo após restaurar em outro navegador.
+      <i class="ti ti-info-circle" style="font-size:13px"></i> <strong style="color:var(--t2)">Backup:</strong> o arquivo baixado contém WBS, decisões, repositório, equipe e stakeholders — inclusive nomes e indicadores de burnout. Recomendamos proteger com senha ao exportar. Por segurança, chaves de IA não são incluídas — configure-as de novo após restaurar em outro navegador.
     </div>
     <div style="margin-top:12px;padding:10px 12px;background:var(--s2);border-radius:var(--r8);font-size:11.5px;color:var(--t3)">
       <i class="ti ti-keyboard" style="font-size:13px"></i> <strong style="color:var(--t2)">Atalhos:</strong>
@@ -1834,13 +1835,22 @@ const Cloud = (() => {
     T.show('Sessão encerrada.');
   }
 
+  // Roda a cada login E a cada reload com sessão já ativa (chamado por initClient) — é o que
+  // sobrescreve um "role" adulterado manualmente no localStorage pelo valor real do banco.
+  // Nunca confiar no que já está em Auth antes desta chamada: em caso de falha, cai no perfil
+  // mais restrito (consulta) em vez de manter o que estava em cache — a mutação em si já é
+  // protegida pelo RLS do Supabase de qualquer forma, isto é só a interface acompanhar certo.
   async function afterSignIn() {
     if(!client || !session) return;
     try {
-      const { data: profile } = await client.from('profiles').select('name,role').eq('id', session.user.id).single();
+      const { data: profile, error } = await client.from('profiles').select('name,role').eq('id', session.user.id).single();
+      if(error) throw error;
       Auth.setFromCloud((profile && profile.name) || session.user.email, (profile && profile.role) || 'consulta');
       await pullAll();
-    } catch(e) { console.warn('Supabase: falha ao ler perfil', e); }
+    } catch(e) {
+      console.warn('Supabase: falha ao ler perfil — caindo para o perfil mais restrito', e);
+      Auth.setFromCloud(session.user.email, 'consulta');
+    }
   }
 
   async function pullAll() {
@@ -2249,26 +2259,74 @@ const DB = (() => {
     return id;
   }
 
-  function exportBackup() {
+  // ── Backup protegido por senha (AES-GCM + PBKDF2, tudo client-side via Web Crypto) ──
+  // O backup inclui WBS, decisões, repositório, equipe e stakeholders (nomes, % de burnout,
+  // contatos) — dado pessoal de verdade. Antes saía sempre em JSON aberto anunciado como
+  // "compartilhe com qualquer pessoa"; agora tem senha opcional (fortemente recomendada) e o
+  // aviso deixa claro o que está incluído quando a pessoa opta por exportar sem proteção.
+  async function deriveKey(password, saltBytes) {
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey(
+      { name:'PBKDF2', salt: saltBytes, iterations: 150000, hash:'SHA-256' },
+      keyMaterial, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']
+    );
+  }
+  function toB64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+  function fromB64(b64) { return Uint8Array.from(atob(b64), c => c.charCodeAt(0)); }
+  async function encryptPayload(obj, password) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await deriveKey(password, salt);
+    const cipherBuf = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(obj)));
+    return { pmoEncrypted:true, v:1, salt:toB64(salt), iv:toB64(iv), data:toB64(cipherBuf) };
+  }
+  async function decryptPayload(wrapper, password) {
+    const key = await deriveKey(password, fromB64(wrapper.salt));
+    const plainBuf = await crypto.subtle.decrypt({ name:'AES-GCM', iv:fromB64(wrapper.iv) }, key, fromB64(wrapper.data));
+    return JSON.parse(new TextDecoder().decode(plainBuf));
+  }
+
+  async function exportBackup() {
     load();
     const activeName = (loadProjects().find(p => p.id === getActiveProjectId()) || {}).name || getActiveProjectId();
     const payload = { app:'PMO Compass', version:'2.0.0', project: activeName, exportedAt: new Date().toISOString(), data: cache };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+    const pwd = prompt('Proteja este backup com uma senha (recomendado — o arquivo pode conter nomes de equipe e stakeholders, e indicadores de burnout).\n\nDeixe em branco para exportar sem senha.');
+    let blob, suffix;
+    if(pwd) {
+      const wrapper = await encryptPayload(payload, pwd);
+      blob = new Blob([JSON.stringify(wrapper)], { type:'application/json' });
+      suffix = '-protegido';
+    } else {
+      if(!confirm('Exportar SEM senha? Qualquer pessoa que abrir este arquivo vai ver nomes, indicadores de burnout e dados de stakeholders em texto aberto.\n\nClique Cancelar para voltar e definir uma senha.')) { T.show('Exportação cancelada.'); return; }
+      blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+      suffix = '';
+    }
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'pmo-compass-backup-' + activeName.toLowerCase().replace(/\s+/g,'-') + '-' + new Date().toISOString().slice(0,10) + '.json';
+    a.download = 'pmo-compass-backup-' + activeName.toLowerCase().replace(/\s+/g,'-') + suffix + '-' + new Date().toISOString().slice(0,10) + '.json';
     document.body.appendChild(a); a.click(); a.remove();
-    T.show(`✅ Backup do projeto "${activeName}" baixado. Chaves de IA não são exportadas por segurança.`);
+    T.show(pwd ? '✅ Backup protegido por senha baixado. Guarde a senha — sem ela, ninguém consegue restaurar o arquivo.' : '⚠️ Backup baixado sem proteção — contém dados de equipe e stakeholders em texto aberto. Chaves de IA não são exportadas.');
   }
 
   function importBackup(file) {
     if(!Auth.guard('settings')) return;
     if(!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const parsed = JSON.parse(reader.result);
-        const data = parsed && parsed.data ? parsed.data : parsed;
+        let data;
+        if(parsed && parsed.pmoEncrypted) {
+          const pwd = prompt('Este backup está protegido por senha. Digite a senha para restaurar:');
+          if(!pwd) { T.show('Restauração cancelada.'); return; }
+          let decrypted;
+          try { decrypted = await decryptPayload(parsed, pwd); }
+          catch(e) { T.show('❌ Senha incorreta ou arquivo corrompido.'); return; }
+          data = decrypted && decrypted.data ? decrypted.data : decrypted;
+        } else {
+          data = parsed && parsed.data ? parsed.data : parsed;
+        }
         if(!raw_ok(data)) { T.show('❌ Arquivo de backup inválido ou incompleto.'); return; }
         cache = data;
         persist();
@@ -3561,7 +3619,9 @@ const Chat = (() => {
     const div = document.createElement('div');
     div.className = 'chat-msg'+(role==='user'?' u':'');
     const ico = role==='assistant' ? `<div class="chat-ico" style="background:var(--ad)"><i class="ti ti-compass" style="color:var(--acc)"></i></div>` : '';
-    const fmt = text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+    // Escapa ANTES de aplicar o "markdown" leve — sem isso, texto digitado (ou vindo da IA)
+    // contendo HTML/script era inserido direto via innerHTML e executava (XSS).
+    const fmt = escapeHtml(text).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
     div.innerHTML = `${ico}<div class="bub ${role==='user'?'usr':'ai'}">${fmt}</div>`;
     log.appendChild(div);
     log.scrollTop = log.scrollHeight;
@@ -6589,6 +6649,33 @@ const WBS = (() => {
     </div>
   </div>
 </div>
+
+<!-- ■ MODULE: ui/privacy-modal — nota de privacidade/dados, sempre acessível pela sidebar e por Configurações -->
+<div class="modal-ov hidden" id="modal-privacy" onclick="if(event.target===this)Privacy.close()">
+  <div class="modal-box" style="width:520px;max-width:96vw">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" style="display:flex;align-items:center;gap:8px"><i class="ti ti-shield-lock" style="color:var(--acc)"></i>Privacidade &amp; dados</div>
+      <button class="btn btn-sm" onclick="Privacy.close()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-sub">O que fica salvo, onde, e quem processa o quê — em linguagem direta.</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;font-size:12.5px;color:var(--t2);line-height:1.6;max-height:60vh;overflow-y:auto">
+      <div><strong style="color:var(--t1)">Neste navegador:</strong> perfil local, projetos e todos os dados de negócio (WBS, decisões, orçamento, equipe, stakeholders etc.) ficam em <code style="font-family:var(--font-mono);font-size:11px;background:var(--s2);padding:1px 5px;border-radius:3px">localStorage</code>, isolado por projeto.</div>
+      <div><strong style="color:var(--t1)">Se um backend Supabase estiver conectado:</strong> os mesmos dados são sincronizados com o banco desse projeto Supabase, sob controle de quem administra essa instância — normalmente quem te convidou a usar o app.</div>
+      <div><strong style="color:var(--t1)">Chat e recursos de IA:</strong> o texto que você envia — incluindo trechos de documentos do Repositório usados como contexto — é processado pelo provedor de IA escolhido em Configurações (Anthropic, OpenAI ou Google), sujeito aos termos de uso e política de privacidade de cada um.</div>
+      <div><strong style="color:var(--t1)">Backup exportável:</strong> pode conter dados pessoais de equipe e stakeholders (nomes, indicadores de burnout, contatos). Recomendamos sempre proteger com senha ao exportar — a opção aparece na hora de baixar.</div>
+      <div><strong style="color:var(--t1)">Chaves de IA:</strong> quando vinculadas à sua conta, ficam guardadas no servidor sem nenhuma forma de releitura pelo navegador — nem por você, nem por um administrador.</div>
+      <div style="padding:10px 12px;background:var(--s2);border-radius:var(--r8);color:var(--t3)"><i class="ti ti-info-circle"></i> Este é um resumo técnico de como os dados fluem no aplicativo, não um documento jurídico. Para uma Política de Privacidade formal (base legal, retenção, DPO) válida para sua organização, procure quem administra esta instância do PMO Compass.</div>
+    </div>
+  </div>
+</div>
+
+<script data-module="ui/privacy-modal">
+const Privacy = (() => {
+  function open() { const m = document.getElementById('modal-privacy'); if(m) m.classList.remove('hidden'); }
+  function close() { const m = document.getElementById('modal-privacy'); if(m) m.classList.add('hidden'); }
+  return { open, close };
+})();
+</script>
 
 <!-- ■ MODULE: ui/wizard-js -->
 <script data-module="ui/wizard-js">
