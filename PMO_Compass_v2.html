@@ -229,6 +229,13 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 .sb-group.has-active .sb-group-hdr i.sb-gico{color:var(--acc)}
 .si.proj-active{color:var(--acc);background:var(--ad)}
 .si.proj-active i{color:var(--acc)}
+/* Botão de destaque — a "segunda frente" do app (diagnóstico por documento) precisa se
+   distinguir visualmente do resto da navegação, não parecer só mais um item de menu. */
+.sb-xray-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;margin-bottom:4px;border-radius:var(--r8);border:1px solid var(--ab);background:var(--ad);color:var(--acc);font-size:12.5px;font-weight:600;cursor:pointer;text-align:left}
+.sb-xray-btn i{font-size:15px;flex-shrink:0}
+.sb-xray-btn:hover{background:rgba(77,142,240,.18)}
+.sb-xray-btn.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.sb-xray-btn.on i{color:inherit}
 </style>
 <style>.page{padding:20px;display:none;flex-direction:column;gap:14px;animation:pgIn .15s ease}
 .page.on{display:flex}
@@ -716,6 +723,10 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: ui/sidebar -->
 <aside class="sidebar" data-module="ui/sidebar">
+  <button class="sb-xray-btn" data-p="xray" onclick="R.go('xray')"><i class="ti ti-report-medical"></i>Raio-X do Projeto</button>
+
+  <div class="sb-div"></div>
+  <div class="sb-sec">Gestão de Projeto</div>
   <button class="si on" data-p="dashboard" onclick="R.go('dashboard')"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
 
   <div class="sb-group" id="sbg-decisao">
@@ -885,6 +896,27 @@ body.icons-failed i[data-fb]::before{
     <div id="res-list-root"></div>
   </div>
   <div id="res-redist-root"></div>
+</section>
+
+<!-- ■ MODULE: pages/project-xray ─ Segunda frente do app: diagnóstico por documento,
+     separado da gestão manual, pensado para convencer rápido antes de pedir cadastro. -->
+<section class="page" id="p-xray" data-module="pages/project-xray">
+  <div class="pg-hdr">
+    <div><div class="pg-title"><i class="ti ti-report-medical" style="color:var(--acc)"></i> Raio-X do Projeto</div><div class="pg-sub">Aponte os documentos do projeto — a IA lê, identifica saúde, caminho crítico e riscos, e devolve um diagnóstico em minutos. Depois, se fizer sentido, os achados viram registros reais em Gestão de Projeto.</div></div>
+  </div>
+
+  <div class="card card-accent">
+    <div class="lbl" style="color:var(--acc)"><i class="ti ti-folder-plus"></i>Envie os documentos do projeto</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:2px">Termo de projeto, propostas, contratos, atas, cronogramas, planilhas de orçamento — quanto mais completo, mais preciso o diagnóstico. Dados sensíveis (CPF, CNPJ, e-mail, telefone, CEP) são descaracterizados automaticamente, conforme a LGPD, antes de qualquer análise.</p>
+
+    <div class="fi-drop" id="xray-drop" data-perm="business" onclick="document.getElementById('xray-files-inp').click()" ondragover="ProjectXray.dragOver(event)" ondragleave="ProjectXray.dragLeave(event)" ondrop="ProjectXray.drop(event)">
+      <i class="ti ti-cloud-upload"></i>
+      <div style="font-size:12.5px;color:var(--t1);font-weight:500;margin-bottom:3px">Arraste os arquivos aqui, ou clique para selecionar</div>
+      <div style="font-size:11px;color:var(--t3)">PDF, DOCX, XLSX, CSV ou TXT · vários arquivos de uma vez</div>
+    </div>
+    <input type="file" id="xray-files-inp" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.rtf" style="display:none" onchange="ProjectXray.handleFiles(this.files)">
+    <div id="xray-results"></div>
+  </div>
 </section>
 
 <!-- ■ MODULE: pages/whatif -->
@@ -2614,14 +2646,14 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','help'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','help','xray'];
   function go(id) {
     pages.forEach(p => {
       const el = document.getElementById('p-'+p);
       if(el) el.classList.toggle('on', p===id);
     });
     document.querySelectorAll('.ntab[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===id));
-    document.querySelectorAll('.si[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===id));
+    document.querySelectorAll('.si[data-p], .sb-xray-btn[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===id));
     const c = document.getElementById('content');
     if(c) c.scrollTop = 0;
     history.replaceState(null,'','#'+id);
@@ -2728,7 +2760,7 @@ const Nav = (() => {
     wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos',
     burnout:'Burnout Radar', resources:'Recursos', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
-    portfolio:'Portfólio', settings:'Configurações', help:'Ajuda'
+    portfolio:'Portfólio', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
   };
 
   function renderBreadcrumb(pageId) {
@@ -2770,6 +2802,7 @@ const CmdK = (() => {
   let currentResults = [];
 
   const PAGES = [
+    { label:'Raio-X do Projeto', page:'xray', icon:'report-medical', group:'' },
     { label:'Dashboard', page:'dashboard', icon:'layout-dashboard', group:'' },
     { label:'Decisões IA', page:'decisions', icon:'brain', group:'Decisão & Acompanhamento' },
     { label:'Loop de Ação', page:'loop', icon:'refresh-alert', group:'Decisão & Acompanhamento' },
@@ -3692,10 +3725,13 @@ const FileIntake = (() => {
 
   const MAX_CONTENT_CHARS = 20000; // limite de texto persistido por documento — localStorage tem espaço finito
 
-  async function handleFiles(fileList) {
-    if(!Auth.guard('business')) return;
+  // Lê, mascara PII e indexa no Repositório — núcleo compartilhado entre o upload comum
+  // (Repositório) e o Raio-X do Projeto (services/project-xray), que só muda o que faz DEPOIS
+  // de ter os itens em mãos (avaliação estruturada de item único vs. diagnóstico de saúde).
+  async function ingestFiles(fileList) {
+    if(!Auth.guard('business')) return [];
     const files = Array.from(fileList || []);
-    if(!files.length) return;
+    if(!files.length) return [];
     T.show('📂 Lendo ' + files.length + ' arquivo(s) localmente…');
 
     const items = [];
@@ -3741,22 +3777,31 @@ const FileIntake = (() => {
     let msg = `✅ ${items.length} arquivo(s) processado(s) localmente${totalRedactions ? ' · ' + totalRedactions + ' dado(s) sensível(is) descaracterizado(s)' : ''}`;
     if(extractionFailures) msg += ` · ⚠️ ${extractionFailures} arquivo(s) indexado(s) só por nome (sem conexão para ler o conteúdo)`;
     T.show(msg);
-    requestStructuredEvaluation(items);
+    return items;
+  }
 
-    document.getElementById('fi-files-inp').value = '';
-    document.getElementById('fi-folder-inp').value = '';
+  async function handleFiles(fileList) {
+    const items = await ingestFiles(fileList);
+    if(!items.length) return;
+    requestStructuredEvaluation(items, 'fi-results');
+    const fi = document.getElementById('fi-files-inp'); if(fi) fi.value = '';
+    const fo = document.getElementById('fi-folder-inp'); if(fo) fo.value = '';
   }
 
   // ── Avaliação estruturada: a IA lê o conteúdo real dos documentos e propõe entregas,
   // riscos/decisões, linhas de orçamento e stakeholders — mas nada vira dado real do projeto
   // sem o usuário revisar e marcar o que aceita. Essa é a segunda "frente" do app (a primeira
   // é o cadastro manual): documento entra, IA sugere, usuário confirma o que vira registro.
-  const EXTRACTION_SYSTEM = `Você é a IA do PMO Compass. Vai receber o conteúdo real de um ou mais documentos de projeto (já com dados pessoais mascarados). Sua tarefa é EXTRAIR informação estruturada, não conversar.
+  const EXTRACTION_SYSTEM = `Você é a IA do PMO Compass. Vai receber o conteúdo real de um ou mais documentos de projeto (já com dados pessoais mascarados). Sua tarefa é EXTRAIR informação estruturada e fazer uma leitura preliminar de saúde do projeto — não conversar.
 
 Responda APENAS com um objeto JSON válido, sem markdown, sem texto antes ou depois, neste formato exato:
 {
+  "saudeGeral": "grn|amb|red",
+  "saudeJustificativa": "1-2 frases justificando essa leitura de saúde com base no que os documentos mostram",
+  "caminhoCritico": "leitura preliminar (1-3 frases) de qual entrega/etapa parece mais bloqueante ou mais arriscada para o prazo, com base na sequência descrita nos documentos — ou string vazia se não for possível inferir",
+  "problemas": ["problema já em curso segundo o documento 1", "problema já em curso 2"],
   "resumo": "resumo executivo em 2-4 frases do que os documentos revelam sobre o projeto",
-  "riscos": ["frase curta de risco 1", "frase curta de risco 2"],
+  "riscos": ["frase curta de risco futuro 1", "frase curta de risco futuro 2"],
   "proximosPassos": ["sugestão 1", "sugestão 2"],
   "wbs": [{"label":"nome da entrega","status":"grn|amb|red|neu","pct":0,"start":"YYYY-MM-DD ou null","end":"YYYY-MM-DD ou null"}],
   "decisions": [{"severity":"crit|alto|medio","title":"título curto","body":"contexto em 1-2 frases"}],
@@ -3764,12 +3809,14 @@ Responda APENAS com um objeto JSON válido, sem markdown, sem texto antes ou dep
   "stakeholders": [{"name":"nome","role":"papel/cargo","influence":"alta|media|baixa","engagement":"critico|atencao|saudavel","notes":"observação curta"}]
 }
 
-Regras: só inclua o que estiver realmente sustentado pelo texto — nunca invente nomes, valores ou datas. Se uma categoria inteira não tiver base nos documentos, retorne um array vazio para ela. "pct" é 0 a 100 (progresso conhecido, ou 0 se não houver indicação). Datas só se aparecerem explicitamente no texto.`;
+Regras: só inclua o que estiver realmente sustentado pelo texto — nunca invente nomes, valores ou datas. "problemas" são questões que os documentos indicam já estar acontecendo agora; "riscos" são possibilidades futuras — não confunda as duas categorias. Se uma categoria inteira não tiver base nos documentos, retorne um array vazio (ou string vazia) para ela. "pct" é 0 a 100 (progresso conhecido, ou 0 se não houver indicação). Datas só se aparecerem explicitamente no texto. "caminhoCritico" é uma leitura preliminar da IA, não um cálculo formal — deixe isso implícito no tom, sem alegar certeza.`;
 
   let currentProposal = null;
+  let currentBoxId = null;
 
-  async function requestStructuredEvaluation(items) {
-    const box = document.getElementById('fi-results');
+  async function requestStructuredEvaluation(items, boxId) {
+    currentBoxId = boxId || 'fi-results';
+    const box = document.getElementById(currentBoxId);
     if(!box) return;
 
     if(!Store.hasKeyOrCloud()) {
@@ -3810,7 +3857,12 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
       if(match) obj = tryParse(match[0]);
     }
     if(!obj || typeof obj !== 'object') return null;
+    const SAUDE_VALID = ['grn','amb','red'];
     return {
+      saudeGeral: SAUDE_VALID.includes(obj.saudeGeral) ? obj.saudeGeral : null,
+      saudeJustificativa: typeof obj.saudeJustificativa === 'string' ? obj.saudeJustificativa : '',
+      caminhoCritico: typeof obj.caminhoCritico === 'string' ? obj.caminhoCritico : '',
+      problemas: Array.isArray(obj.problemas) ? obj.problemas.filter(x => typeof x === 'string') : [],
       resumo: typeof obj.resumo === 'string' ? obj.resumo : '',
       riscos: Array.isArray(obj.riscos) ? obj.riscos.filter(x => typeof x === 'string') : [],
       proximosPassos: Array.isArray(obj.proximosPassos) ? obj.proximosPassos.filter(x => typeof x === 'string') : [],
@@ -3820,6 +3872,8 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
       stakeholders: Array.isArray(obj.stakeholders) ? obj.stakeholders.filter(x => x && x.name) : []
     };
   }
+
+  const SAUDE_LABEL = { grn:{txt:'Saudável', cls:'b-grn'}, amb:{txt:'Atenção', cls:'b-amb'}, red:{txt:'Crítico', cls:'b-red'} };
 
   function renderProposal(box) {
     const p = currentProposal;
@@ -3831,23 +3885,27 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
     };
     const textList = (arr) => arr.length ? `<ul style="margin:4px 0 0 18px;padding:0;font-size:12.5px;color:var(--t2);line-height:1.6">${arr.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>` : '';
     const totalSelectable = p.wbs.length + p.decisions.length + p.budgetLines.length + p.stakeholders.length;
+    const sv = SAUDE_LABEL[p.saudeGeral];
 
     box.innerHTML = `<div class="card-accent" style="border-radius:var(--r8);padding:14px;margin-top:12px">
       <div class="lbl" style="color:var(--acc);margin-bottom:6px"><i class="ti ti-brain"></i>Avaliação da IA sobre os documentos enviados</div>
-      ${p.resumo ? `<p style="font-size:12.5px;color:var(--t1);line-height:1.65">${escapeHtml(p.resumo)}</p>` : ''}
-      ${p.riscos.length ? `<div style="margin-top:8px"><strong style="font-size:11.5px;color:var(--t1)">Riscos identificados:</strong>${textList(p.riscos)}</div>` : ''}
+      ${sv ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="badge ${sv.cls}" style="font-size:11px">${sv.txt}</span>${p.saudeJustificativa?`<span style="font-size:12px;color:var(--t2)">${escapeHtml(p.saudeJustificativa)}</span>`:''}</div>` : ''}
+      ${p.caminhoCritico ? `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;margin-bottom:8px;display:flex;gap:8px;align-items:flex-start"><i class="ti ti-clock" style="color:var(--amb);font-size:15px;flex-shrink:0;margin-top:1px"></i><div><strong style="font-size:11.5px;color:var(--t1)">Caminho crítico (leitura preliminar):</strong> <span style="font-size:12.5px;color:var(--t2)">${escapeHtml(p.caminhoCritico)}</span></div></div>` : ''}
+      ${p.problemas.length ? `<div style="margin-top:8px"><strong style="font-size:11.5px;color:var(--red)">Problemas já em curso:</strong>${textList(p.problemas)}</div>` : ''}
+      ${p.resumo ? `<p style="font-size:12.5px;color:var(--t1);line-height:1.65;margin-top:8px">${escapeHtml(p.resumo)}</p>` : ''}
+      ${p.riscos.length ? `<div style="margin-top:8px"><strong style="font-size:11.5px;color:var(--t1)">Riscos futuros:</strong>${textList(p.riscos)}</div>` : ''}
       ${p.proximosPassos.length ? `<div style="margin-top:8px"><strong style="font-size:11.5px;color:var(--t1)">Próximos passos sugeridos:</strong>${textList(p.proximosPassos)}</div>` : ''}
       ${totalSelectable ? `
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--ab)">
-        <div style="font-size:11.5px;color:var(--t2);margin-bottom:4px">Marque o que quer adicionar como dado real do projeto — nada abaixo foi salvo ainda:</div>
+        <div style="font-size:11.5px;color:var(--t2);margin-bottom:4px">Gostou do diagnóstico? Marque o que quer adicionar como dado real do projeto — nada abaixo foi salvo ainda:</div>
         ${listSection('Entregas (WBS)', 'sitemap', 'wbs', p.wbs, it => `${it.label}${it.pct?' — '+it.pct+'%':''}`)}
         ${listSection('Decisões / riscos', 'brain', 'decisions', p.decisions, it => `[${it.severity}] ${it.title}`)}
         ${listSection('Linhas de orçamento', 'wallet', 'budgetLines', p.budgetLines, it => `${it.label} — R$${Math.round(it.plannedValue||0).toLocaleString('pt-BR')}`)}
         ${listSection('Stakeholders', 'users', 'stakeholders', p.stakeholders, it => `${it.name} (${it.role||'—'})`)}
         <div class="btn-row" style="margin-top:12px" data-perm="business">
-          <button class="btn btn-sm btn-acc" onclick="FileIntake.commitProposal()"><i class="ti ti-check"></i>Adicionar selecionados ao projeto</button>
+          <button class="btn btn-sm btn-acc" onclick="FileIntake.commitProposal()"><i class="ti ti-check"></i>Adicionar selecionados e começar a gerenciar</button>
         </div>
-      </div>` : `<div style="margin-top:10px;font-size:11.5px;color:var(--t3)"><i class="ti ti-info-circle"></i> Os documentos não trouxeram entregas, orçamento ou stakeholders identificáveis — só o resumo acima.</div>`}
+      </div>` : `<div style="margin-top:10px;font-size:11.5px;color:var(--t3)"><i class="ti ti-info-circle"></i> Os documentos não trouxeram entregas, orçamento ou stakeholders identificáveis — só o diagnóstico acima.</div>`}
       <div style="font-size:11px;color:var(--t3);margin-top:10px"><i class="ti ti-info-circle"></i> Sugestão automática — nada é criado sem você marcar e confirmar.</div>
     </div>`;
   }
@@ -3856,7 +3914,7 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
     if(!Auth.guard('business')) return;
     const p = currentProposal;
     if(!p) return;
-    const box = document.getElementById('fi-results');
+    const box = document.getElementById(currentBoxId || 'fi-results');
     const checked = (cat) => [...(box?.querySelectorAll(`input[data-cat="${cat}"]:checked`) || [])].map(el => Number(el.dataset.idx));
     const today = new Date().toISOString().slice(0,10);
     const docNames = (p.sourceItems || []).map(it => it.name).join(', ');
@@ -3924,12 +3982,34 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
 
     if(typeof Dashboard !== 'undefined') Dashboard.render();
     currentProposal = null;
-    const box2 = document.getElementById('fi-results');
-    if(box2) box2.innerHTML = `<div class="card-success" style="border-radius:var(--r8);padding:12px;margin-top:12px;font-size:12.5px;color:var(--t1)"><i class="ti ti-check-circle"></i> ${added} item(ns) adicionado(s) ao projeto a partir dos documentos.</div>`;
+    const box2 = document.getElementById(currentBoxId || 'fi-results');
+    if(box2) box2.innerHTML = `<div class="card-success" style="border-radius:var(--r8);padding:12px;margin-top:12px;font-size:12.5px;color:var(--t1)"><i class="ti ti-check-circle"></i> ${added} item(ns) adicionado(s) ao projeto a partir dos documentos. Vá em <strong>Gestão de Projeto</strong> pra continuar de lá.</div>`;
     T.show(`✅ ${added} item(ns) adicionado(s) ao projeto.`);
   }
 
-  return { handleFiles, dragOver, dragLeave, drop, commitProposal };
+  return { handleFiles, ingestFiles, requestStructuredEvaluation, dragOver, dragLeave, drop, commitProposal };
+})();
+</script>
+
+<!-- ■ MODULE: pages/project-xray-js ─ Upload dedicado do Raio-X; a leitura/diagnóstico em si
+     é toda de services/file-intake (FileIntake.ingestFiles + requestStructuredEvaluation) —
+     aqui só existe pra ter seu próprio dropzone/resultado, separado do Repositório. -->
+<script data-module="pages/project-xray-js">
+const ProjectXray = (() => {
+  function dragOver(e) { e.preventDefault(); const d = document.getElementById('xray-drop'); if(d) d.style.borderColor = 'var(--ab)'; }
+  function dragLeave() { const d = document.getElementById('xray-drop'); if(d) d.style.borderColor = ''; }
+  function drop(e) {
+    e.preventDefault();
+    const d = document.getElementById('xray-drop'); if(d) d.style.borderColor = '';
+    if(e.dataTransfer && e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+  }
+  async function handleFiles(fileList) {
+    const items = await FileIntake.ingestFiles(fileList);
+    if(!items.length) return;
+    FileIntake.requestStructuredEvaluation(items, 'xray-results');
+    const inp = document.getElementById('xray-files-inp'); if(inp) inp.value = '';
+  }
+  return { dragOver, dragLeave, drop, handleFiles };
 })();
 </script>
 
