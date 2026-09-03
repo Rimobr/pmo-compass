@@ -3131,10 +3131,13 @@ const PmoProfiles = (() => {
     root.innerHTML = ORDER.map(key => {
       const d = DEFS[key];
       const sel = current && current.type === key;
-      return `<div class="prov-row">
+      // A linha inteira destaca quando selecionada (fundo + borda) — só o pontinho do rádio
+      // era fácil demais de não notar no meio de tantos outros badges (Baixo/Médio/Alto).
+      const rowStyle = sel ? 'background:var(--ad);border:1px solid var(--ab);border-radius:var(--r8);padding:12px 14px;margin:6px 0' : 'padding:12px 0;border-bottom:1px solid var(--b1)';
+      return `<div class="prov-row" style="${rowStyle}">
         <div class="prov-radio ${sel?'sel':''}" data-perm="settings" onclick="PmoProfiles.set('${key}')" title="Definir como ${escapeHtml(d.label)}"></div>
         <div class="prov-body">
-          <div class="prov-name"><i class="ti ti-${d.icon}"></i>${escapeHtml(d.label)}${sel?'<span class="badge b-acc">Ativo</span>':''}<span class="badge" style="background:var(--s2);color:var(--t3)">${escapeHtml(d.controlLevel)}</span></div>
+          <div class="prov-name"><i class="ti ti-${d.icon}"></i>${escapeHtml(d.label)}${sel?'<span class="badge b-acc"><i class="ti ti-check"></i> Perfil ativo</span>':''}<span class="badge" style="background:var(--s2);color:var(--t3)">${escapeHtml(d.controlLevel)}</span></div>
           <div class="prov-desc">${escapeHtml(d.resumo)}</div>
         </div>
       </div>`;
