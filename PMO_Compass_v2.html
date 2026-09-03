@@ -965,6 +965,7 @@ body.icons-failed i[data-fb]::before{
 
   <div class="settings-tabs">
     <button class="settings-tab on" id="stab-ia" onclick="SettingsTabs.show('ia')"><i class="ti ti-cpu"></i>Provedor de IA</button>
+    <button class="settings-tab" id="stab-pmo" onclick="SettingsTabs.show('pmo')"><i class="ti ti-sitemap"></i>Perfil de PMO</button>
     <button class="settings-tab" id="stab-cloud" onclick="SettingsTabs.show('cloud')"><i class="ti ti-cloud"></i>Nuvem &amp; Automação</button>
     <button class="settings-tab" id="stab-notif" onclick="SettingsTabs.show('notif')"><i class="ti ti-bell"></i>Notificações &amp; Dados</button>
   </div>
@@ -1006,12 +1007,15 @@ body.icons-failed i[data-fb]::before{
     </div>
   </div>
 
+  </div><!-- /settings-panel-ia -->
+
+  <div id="settings-panel-pmo" style="display:none">
   <div class="card">
     <div class="lbl"><i class="ti ti-sitemap"></i>Perfil de PMO deste projeto</div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px">Muda o <strong style="color:var(--t1)">tom</strong> das recomendações da IA (Chat, Decisões, Relatório) — mais consultivo, mais rigoroso ou mais prescritivo, conforme o papel real do seu PMO. A IA também ajusta o tom sozinha com base na taxa de aceitação das próprias recomendações neste projeto.</p>
     <div id="pmo-profile-root"></div>
   </div>
-  </div><!-- /settings-panel-ia -->
+  </div><!-- /settings-panel-pmo -->
 
   <div id="settings-panel-cloud" style="display:none">
   <div class="card" data-perm="settings">
@@ -2749,7 +2753,7 @@ const Nav = (() => {
 })();
 
 const SettingsTabs = (() => {
-  const TABS = ['ia','cloud','notif'];
+  const TABS = ['ia','pmo','cloud','notif'];
   function show(tab) {
     TABS.forEach(t => {
       const panel = document.getElementById('settings-panel-' + t);
