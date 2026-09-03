@@ -1850,7 +1850,15 @@ const Cloud = (() => {
     if(!client || !session) return { error:'Não conectado ao Supabase.' };
     try {
       const { data, error } = await client.functions.invoke('ai-proxy', { body:{ action:'send', provider, messages, system } });
-      if(error) return { error: error.message || 'Falha ao chamar a IA pelo servidor.' };
+      if(error) {
+        // Em erro HTTP (ex: 400 "chave não configurada"), a mensagem de verdade que a
+        // ai-proxy devolveu vem no corpo da resposta (error.context), não em error.message —
+        // sem isso, todo erro do servidor aparecia só como "non-2xx status code" pro usuário.
+        let detail = '';
+        try { if(error.context && typeof error.context.json === 'function') { const body = await error.context.json(); detail = (body && body.error) || ''; } } catch(e2) {}
+        return { error: detail || error.message || 'Falha ao chamar a IA pelo servidor.' };
+      }
+      if(data && data.error) return { error: data.error };
       return data || { error:'Resposta vazia do servidor.' };
     } catch(e) { return { error: e.message || 'Falha ao chamar a IA pelo servidor.' }; }
   }
