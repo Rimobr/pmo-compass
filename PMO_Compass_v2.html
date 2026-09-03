@@ -896,14 +896,10 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: pages/lessons -->
 <section class="page" id="p-lessons" data-module="pages/lessons">
-  <div class="pg-hdr"><div><div class="pg-title">Lições Aprendidas — Inteligência acumulada</div><div class="pg-sub">"Conhecimento sai quando o GP sai." A IA indexa, cruza e aplica lições entre projetos.</div></div><div class="btn-row"><input class="input" style="width:180px" placeholder="Buscar lições…" oninput="Search.filterLessons(this.value)"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Lessons.openAdd()"><i class="ti ti-plus"></i>Registrar</button><button class="btn btn-sm" onclick="T.show('IA detectando padrões…')"><i class="ti ti-brain"></i>Detectar padrões</button></div></div>
-  <div class="card card-accent">
-    <div class="lbl" style="color:var(--acc)"><i class="ti ti-sparkles"></i>3 padrões recorrentes detectados pela IA</div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;display:flex;align-items:flex-start;gap:10px"><i class="ti ti-alert-triangle" style="color:var(--red);font-size:16px;flex-shrink:0;margin-top:1px"></i><div><div style="font-size:12.5px;font-weight:600">Integração ERP sem dono técnico = atraso médio de 18 dias (PRJ-67 e PRJ-44)</div><div style="font-size:12px;color:var(--t2)">Em 2 de 3 projetos, a validação técnica atrasou a Fase 2 por indefinição de responsável.</div></div></div>
-      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;display:flex;align-items:flex-start;gap:10px"><i class="ti ti-git-diff" style="color:var(--amb);font-size:16px;flex-shrink:0;margin-top:1px"></i><div><div style="font-size:12.5px;font-weight:600">3+ mudanças abertas sem aprovação = atraso em 100% dos casos históricos</div><div style="font-size:12px;color:var(--t2)">PRJ-44: 5 mudanças abertas geraram conflito por 4 sprints.</div></div></div>
-      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;display:flex;align-items:flex-start;gap:10px"><i class="ti ti-heartbeat" style="color:var(--pur);font-size:16px;flex-shrink:0;margin-top:1px"></i><div><div style="font-size:12.5px;font-weight:600">Carga acima de 85% por 12+ dias = burnout e queda de 40% de produtividade</div><div style="font-size:12px;color:var(--t2)">Custo real: +2 semanas de projeto. Bruno M. está neste ponto agora.</div></div></div>
-    </div>
+  <div class="pg-hdr"><div><div class="pg-title">Lições Aprendidas — Inteligência acumulada</div><div class="pg-sub">"Conhecimento sai quando o GP sai." A IA indexa, cruza e aplica lições entre projetos.</div></div><div class="btn-row"><input class="input" style="width:180px" placeholder="Buscar lições…" oninput="Search.filterLessons(this.value)"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Lessons.openAdd()"><i class="ti ti-plus"></i>Registrar</button><button class="btn btn-sm" onclick="Lessons.render();T.show('🔄 Padrões recalculados a partir das lições cadastradas.')"><i class="ti ti-brain"></i>Detectar padrões</button></div></div>
+  <div class="card card-accent" id="lessons-patterns-card" style="display:none">
+    <div class="lbl" style="color:var(--acc)"><i class="ti ti-sparkles"></i><span id="lessons-patterns-count"></span></div>
+    <div style="display:flex;flex-direction:column;gap:8px" id="lessons-patterns-root"></div>
   </div>
   <div id="lessons-list-root"></div>
 </section>
@@ -4467,8 +4463,31 @@ const Lessons = (() => {
   function resetCache() { data = null; }
   function persist() { DB.set('lessons', data); }
 
+  // "3 padrões recorrentes detectados pela IA" era texto fixo (Integração ERP/PRJ-67, Bruno M.
+  // 89%...) — aparecia igual mesmo com 0 lições cadastradas. Um "padrão" real, neste modelo de
+  // dados, é uma lição com `similarity` calculada (a IA já a associou a um histórico de outro
+  // projeto) — o card some quando não há nenhuma.
+  function renderPatterns() {
+    const card = document.getElementById('lessons-patterns-card');
+    const countEl = document.getElementById('lessons-patterns-count');
+    const root = document.getElementById('lessons-patterns-root');
+    if(!card || !root) return;
+    ensureLoaded();
+    const patterns = data.filter(l => l.similarity != null).sort((a,b) => (b.similarity||0) - (a.similarity||0));
+    if(!patterns.length) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    const plural = patterns.length > 1;
+    countEl.textContent = `${patterns.length} ${plural?'padrões recorrentes detectados':'padrão recorrente detectado'} pela IA`;
+    root.innerHTML = patterns.map(l => {
+      const iconColor = l.severity === 'crit' ? 'var(--red)' : (l.severity === 'amb' ? 'var(--amb)' : 'var(--pur)');
+      const origem = l.sourceProject ? `${escapeHtml(l.sourceProject)}${l.sourceDate ? ', ' + escapeHtml(l.sourceDate) : ''} — ` : '';
+      return `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;display:flex;align-items:flex-start;gap:10px"><i class="ti ti-sparkles" style="color:${iconColor};font-size:16px;flex-shrink:0;margin-top:1px"></i><div><div style="font-size:12.5px;font-weight:600">${escapeHtml(l.title)}</div><div style="font-size:12px;color:var(--t2)">${origem}similaridade ${l.similarity}% com este projeto</div></div></div>`;
+    }).join('');
+  }
+
   function render() {
     ensureLoaded();
+    renderPatterns();
     const root = document.getElementById('lessons-list-root');
     if(!root) return;
     if(!data.length) {
