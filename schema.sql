@@ -164,6 +164,49 @@ create policy "user_ai_keys_delete_own" on public.user_ai_keys
 -- Sem policy de SELECT para authenticated/anon — de propósito. Só a Edge Function
 -- (com a service_role key, que ignora RLS) consegue ler o valor da chave.
 
+-- O app grava/apaga a própria chave via estas duas funções RPC (SECURITY DEFINER),
+-- não com INSERT/DELETE direto na tabela. Motivo: em pelo menos um projeto Supabase
+-- de produção, um INSERT direto contra user_ai_keys foi rejeitado pela RLS mesmo com
+-- auth.uid() confirmado correto (via uma função de diagnóstico chamada no mesmo
+-- instante) — uma inconsistência da infraestrutura do Supabase (suspeita: pooler de
+-- conexão), não do schema. Uma função RPC com o mesmo auth.uid() funciona normalmente,
+-- então o app passou a usar esse caminho. Se você nunca teve esse problema, este
+-- caminho funciona do mesmo jeito — não tem downside em usá-lo por padrão.
+create or replace function public.save_own_ai_key(p_provider text, p_api_key text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+  if p_provider not in ('anthropic','openai','google') then
+    raise exception 'invalid provider';
+  end if;
+  insert into public.user_ai_keys (user_id, provider, api_key, updated_at)
+  values (auth.uid(), p_provider, p_api_key, now())
+  on conflict (user_id, provider) do update set api_key = excluded.api_key, updated_at = now();
+end;
+$$;
+grant execute on function public.save_own_ai_key(text, text) to authenticated;
+
+create or replace function public.delete_own_ai_key(p_provider text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+  delete from public.user_ai_keys where user_id = auth.uid() and provider = p_provider;
+end;
+$$;
+grant execute on function public.delete_own_ai_key(text) to authenticated;
+
 -- 7) ROW LEVEL SECURITY — espelha os 4 perfis já usados no app -------------
 alter table public.wbs_modules  enable row level security;
 alter table public.wbs_tasks    enable row level security;

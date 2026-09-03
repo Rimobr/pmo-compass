@@ -1823,15 +1823,21 @@ const Cloud = (() => {
   function getUserId() { return session ? session.user.id : null; }
 
   // ── Chaves de IA vinculadas à conta (nunca voltam pro navegador depois de salvas) ──
+  // Passa por RPC (save_own_ai_key/delete_own_ai_key, SECURITY DEFINER) em vez de escrever
+  // direto na tabela: um INSERT/UPSERT direto contra user_ai_keys esbarrava numa inconsistência
+  // da própria infraestrutura do Supabase (auth.uid() confirmado correto via RPC no mesmo
+  // instante, mas rejeitado pela RLS num INSERT direto na tabela — reproduzido e diagnosticado
+  // em produção; ver SETUP.md). A função RPC roda com o mesmo auth.uid(), mas nesse caminho
+  // funciona de verdade.
   async function saveAiKey(provider, apiKey) {
     if(!client || !session) return false;
-    const { error } = await client.from('user_ai_keys').upsert({ user_id: session.user.id, provider, api_key: apiKey });
+    const { error } = await client.rpc('save_own_ai_key', { p_provider: provider, p_api_key: apiKey });
     if(error) { T.show('❌ ' + error.message); return false; }
     return true;
   }
   async function deleteAiKey(provider) {
     if(!client || !session) return false;
-    const { error } = await client.from('user_ai_keys').delete().eq('user_id', session.user.id).eq('provider', provider);
+    const { error } = await client.rpc('delete_own_ai_key', { p_provider: provider });
     if(error) { T.show('❌ ' + error.message); return false; }
     return true;
   }
