@@ -968,6 +968,12 @@ body.icons-failed i[data-fb]::before{
       </div>
     </div>
   </div>
+
+  <div class="card">
+    <div class="lbl"><i class="ti ti-sitemap"></i>Perfil de PMO deste projeto</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px">Muda o <strong style="color:var(--t1)">tom</strong> das recomendações da IA (Chat, Decisões, Relatório) — mais consultivo, mais rigoroso ou mais prescritivo, conforme o papel real do seu PMO. A IA também ajusta o tom sozinha com base na taxa de aceitação das próprias recomendações neste projeto.</p>
+    <div id="pmo-profile-root"></div>
+  </div>
   </div><!-- /settings-panel-ia -->
 
   <div id="settings-panel-cloud" style="display:none">
@@ -2050,7 +2056,7 @@ const DB = (() => {
   function storageKeyFor(projectId) { return projectId === 'nexus' ? 'pmo_db_v1' : ('pmo_db_v1__' + projectId); }
 
   function seedEmpty() {
-    return { version:1, wbs:[], decisions:[], repository:[], stakeholders:[], trail:[], lessons:[], scopeChanges:[], team:[], meetings:[], estimateHistory:[], scenarios:[], budgetLines:[], costActuals:[] };
+    return { version:1, wbs:[], decisions:[], repository:[], stakeholders:[], trail:[], lessons:[], scopeChanges:[], team:[], meetings:[], estimateHistory:[], scenarios:[], budgetLines:[], costActuals:[], pmoProfile:null };
   }
 
   function seed() {
@@ -2193,7 +2199,8 @@ const DB = (() => {
         { id:'ca5', label:'Desenvolvimento — transferências entre filiais', amount:26000, date:'2026-06-05', budgetLineId:'bl3', kind:'real' },
         { id:'ca6', label:'Inventário e trilha de auditoria — sprint 1', amount:15000, date:'2026-06-08', budgetLineId:'bl4', kind:'real' },
         { id:'ca7', label:'Perfis de acesso e logs — implementação', amount:16000, date:'2026-05-25', budgetLineId:'bl5', kind:'real' }
-      ]
+      ],
+      pmoProfile: { type:'controle', setAt:'2026-06-01T00:00:00.000Z' }
     };
   }
 
@@ -2215,6 +2222,7 @@ const DB = (() => {
     if(!Array.isArray(c.scenarios)) c.scenarios = defaults.scenarios;
     if(!Array.isArray(c.budgetLines)) c.budgetLines = defaults.budgetLines;
     if(!Array.isArray(c.costActuals)) c.costActuals = defaults.costActuals;
+    if(c.pmoProfile === undefined) c.pmoProfile = defaults.pmoProfile;
     return c;
   }
 
@@ -2543,6 +2551,7 @@ const R = (() => {
     if(id === 'resources' && typeof Resources !== 'undefined') Resources.render();
     if(id === 'budget' && typeof Budget !== 'undefined') Budget.render();
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
+    if(id === 'settings' && typeof PmoProfiles !== 'undefined') PmoProfiles.render();
     if(typeof Nav !== 'undefined') { Nav.expandGroupFor(id); Nav.renderBreadcrumb(id); }
   }
   function init() {
@@ -3040,6 +3049,102 @@ const CPM = (() => {
 </script>
 
 <!-- ■ MODULE: services/context-builder ─ Monta o contexto real do projeto ativo para a IA -->
+<!-- ■ MODULE: core/pmo-profiles ─ Perfil de PMO (PMBOK + extensões modernas) + sinal de
+     adaptação real por taxa de aceitação — muda o TOM das recomendações da IA por projeto. -->
+<script data-module="core/pmo-profiles">
+const PmoProfiles = (() => {
+  const DEFS = {
+    suporte:       { label:'PMO de Suporte',      icon:'life-buoy',    controlLevel:'Baixo',
+      resumo:'Papel consultivo — fornece modelos, templates, treinamentos e boas práticas. Funciona como repositório de conhecimento, sem exigir conformidade.',
+      guidance:'Atue como facilitador consultivo: ofereça modelos, boas práticas e opções — nunca imponha. Deixe a decisão final explicitamente com quem pergunta.' },
+    controle:      { label:'PMO de Controle',     icon:'shield-check', controlLevel:'Médio',
+      resumo:'Exige conformidade com metodologias, ferramentas e padrões definidos, monitorando de perto o andamento dos trabalhos.',
+      guidance:'Seja rigoroso sobre aderência a processo, prazos e padrões. Aponte desvios de forma direta e sugira medidas corretivas concretas e mensuráveis.' },
+    diretivo:      { label:'PMO Diretivo',        icon:'gavel',        controlLevel:'Alto',
+      resumo:'Assume o gerenciamento direto — designa gerentes de projeto, controla recursos ativamente e decide sobre o portfólio.',
+      guidance:'Seja assertivo e prescritivo: recomende decisões de alocação, cronograma e prioridade com autoridade, como quem decide pelo portfólio, não apenas sugere.' },
+    estrategico:   { label:'PMO Estratégico',     icon:'target',       controlLevel:'Alto (foco corporativo)',
+      resumo:'Alinha o portfólio de projetos aos objetivos de longo prazo e à alta gestão da empresa.',
+      guidance:'Conecte toda recomendação ao impacto nos objetivos estratégicos e no portfólio como um todo — fale a língua de liderança executiva, não só do projeto isolado.' },
+    agil:          { label:'PMO Ágil',            icon:'refresh',      controlLevel:'Baixo (facilitador)',
+      resumo:'Remove impedimentos, apoia squads e dissemina cultura ágil (Scrum/Kanban) em vez de impor burocracia.',
+      guidance:'Priorize remover bloqueios e apoiar a squad. Fale em termos de sprints, impedimentos e entrega incremental — evite linguagem de comando-e-controle ou processo pesado.' },
+    departamental: { label:'PMO Departamental',   icon:'building',     controlLevel:'Variável',
+      resumo:'Atende às demandas e especificidades de uma área específica da empresa (TI, Engenharia, Marketing etc.).',
+      guidance:'Contextualize recomendações às particularidades da área/departamento, priorizando o impacto operacional imediato da equipe sobre o portfólio corporativo inteiro.' }
+  };
+  const ORDER = ['suporte','controle','diretivo','estrategico','agil','departamental'];
+
+  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function get() { return (typeof DB !== 'undefined') ? DB.get('pmoProfile') : null; }
+
+  function set(type) {
+    if(!Auth.guard('settings')) return;
+    if(!DEFS[type]) return;
+    DB.set('pmoProfile', { type, setAt: new Date().toISOString() });
+    if(typeof Trail !== 'undefined') Trail.log(`Perfil de PMO definido como "${DEFS[type].label}"`, Auth.getName(), '', 'b-acc');
+    render();
+    T.show(`✅ Perfil de PMO definido: ${DEFS[type].label}`);
+  }
+
+  // Sinal de adaptação real — não é machine learning, é estatística direta sobre dados que já
+  // existem (Decisions.resolve grava status accepted/rejected/postponed; Lessons.applied idem).
+  // É o que faz a IA "aprender com o uso" sem inventar uma camada de tracking nova.
+  function adaptationSignal() {
+    if(typeof DB === 'undefined') return null;
+    const decisions = (DB.get('decisions') || []).filter(d => d.status !== 'pending');
+    const lessons = DB.get('lessons') || [];
+    if(!decisions.length && !lessons.length) return null;
+    const accepted = decisions.filter(d => d.status === 'accepted').length;
+    const rejected = decisions.filter(d => d.status === 'rejected').length;
+    const postponed = decisions.filter(d => d.status === 'postponed').length;
+    const total = decisions.length;
+    const acceptRate = total ? Math.round(accepted/total*100) : null;
+    const lessonsApplied = lessons.filter(l => l.applied).length;
+    let tone = '';
+    if(acceptRate != null) {
+      if(acceptRate < 40) tone = 'A taxa de aceitação está baixa — explique melhor o raciocínio por trás de cada recomendação antes de sugerir a ação, e ofereça alternativas.';
+      else if(acceptRate >= 80) tone = 'A taxa de aceitação está alta — pode ser mais direto e objetivo nas recomendações.';
+    }
+    const lessonsNote = lessons.length ? `${lessonsApplied} de ${lessons.length} lições aprendidas foram aplicadas.` : '';
+    return `Histórico real de uso neste projeto: de ${total} decisão(ões) da IA já resolvida(s), ${accepted} aceita(s), ${postponed} adiada(s), ${rejected} rejeitada(s)${acceptRate!=null?` (${acceptRate}% de aceitação)`:''}. ${lessonsNote} ${tone}`.trim();
+  }
+
+  // Chamado por AI.buildSystem() — junta o "como se comportar" (perfil) com o "o que já
+  // funcionou" (sinal de adaptação) num bloco só, adicionado ao system prompt.
+  function systemGuidance() {
+    const parts = [];
+    const profile = get();
+    if(profile && DEFS[profile.type]) {
+      const d = DEFS[profile.type];
+      parts.push(`Perfil de PMO deste projeto: ${d.label} (nível de controle: ${d.controlLevel}). ${d.guidance}`);
+    }
+    const signal = adaptationSignal();
+    if(signal) parts.push(signal);
+    return parts.join('\n');
+  }
+
+  function render() {
+    const root = document.getElementById('pmo-profile-root');
+    if(!root) return;
+    const current = get();
+    root.innerHTML = ORDER.map(key => {
+      const d = DEFS[key];
+      const sel = current && current.type === key;
+      return `<div class="prov-row">
+        <div class="prov-radio ${sel?'sel':''}" data-perm="settings" onclick="PmoProfiles.set('${key}')" title="Definir como ${escapeHtml(d.label)}"></div>
+        <div class="prov-body">
+          <div class="prov-name"><i class="ti ti-${d.icon}"></i>${escapeHtml(d.label)}${sel?'<span class="badge b-acc">Ativo</span>':''}<span class="badge" style="background:var(--s2);color:var(--t3)">${escapeHtml(d.controlLevel)}</span></div>
+          <div class="prov-desc">${escapeHtml(d.resumo)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  return { get, set, render, systemGuidance, DEFS, ORDER };
+})();
+</script>
+
 <script data-module="services/context-builder">
 const ContextBuilder = (() => {
   function fmtMoney(v) { return 'R$' + Math.round(v||0).toLocaleString('pt-BR'); }
@@ -3142,7 +3247,9 @@ Regras obrigatórias:
   function buildSystem() {
     let context = '(não foi possível carregar o contexto do projeto)';
     try { context = ContextBuilder.build(); } catch(e) { console.warn('ContextBuilder falhou', e); }
-    return `${SYSTEM_RULES}\n\nContexto real do projeto ativo:\n${context}`;
+    let profileBlock = '';
+    try { if(typeof PmoProfiles !== 'undefined') profileBlock = PmoProfiles.systemGuidance(); } catch(e) { console.warn('PmoProfiles falhou', e); }
+    return `${SYSTEM_RULES}${profileBlock ? '\n\n' + profileBlock : ''}\n\nContexto real do projeto ativo:\n${context}`;
   }
 
   async function send(messages, opts) {
