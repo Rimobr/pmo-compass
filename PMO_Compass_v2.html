@@ -3714,6 +3714,12 @@ const FileIntake = (() => {
     return window.mammoth;
   }
 
+  async function loadXlsx() {
+    if(window.XLSX) return window.XLSX;
+    await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+    return window.XLSX;
+  }
+
   // Extrai texto real de PDF (até 15 páginas, para não travar em arquivos enormes)
   async function extractPdfText(file) {
     const pdfjsLib = await loadPdfJs();
@@ -3735,6 +3741,16 @@ const FileIntake = (() => {
     const buf = await file.arrayBuffer();
     const result = await mammoth.extractRawText({ arrayBuffer: buf });
     return result.value;
+  }
+
+  // Extrai texto real de XLS/XLSX (todas as abas, convertidas para CSV) — a tela de upload
+  // sempre prometeu aceitar planilhas, mas até aqui nenhum código de fato lia o conteúdo:
+  // o arquivo era indexado com content vazio, e a IA não tinha nada real pra avaliar.
+  async function extractXlsxText(file) {
+    const XLSX = await loadXlsx();
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type:'array' });
+    return wb.SheetNames.map(name => `--- Planilha: ${name} ---\n${XLSX.utils.sheet_to_csv(wb.Sheets[name])}`).join('\n\n');
   }
 
   const MAX_CONTENT_CHARS = 20000; // limite de texto persistido por documento — localStorage tem espaço finito
@@ -3775,6 +3791,14 @@ const FileIntake = (() => {
       } else if(ext === 'docx') {
         try {
           const raw = await extractDocxText(f);
+          const { text, redactions } = anonymize(raw);
+          content = text.slice(0, MAX_CONTENT_CHARS);
+          preview = text.slice(0, 600);
+          totalRedactions += redactions;
+        } catch(e) { extractionFailures++; }
+      } else if(ext === 'xls' || ext === 'xlsx') {
+        try {
+          const raw = await extractXlsxText(f);
           const { text, redactions } = anonymize(raw);
           content = text.slice(0, MAX_CONTENT_CHARS);
           preview = text.slice(0, 600);
@@ -3838,13 +3862,19 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
       return;
     }
 
-    box.innerHTML = `<div style="margin-top:12px;font-size:12px;color:var(--t3);display:flex;align-items:center;gap:6px"><i class="ti ti-loader-2" style="animation:fi-spin 1s linear infinite"></i>Lendo o conteúdo dos arquivos e avaliando o projeto…</div>`;
-
     const MAX_CHARS_PER_DOC = 4000;
     const withContent = items.filter(it => it.content);
-    const docsListing = withContent.length
-      ? withContent.map(it => `### ${it.name} (${it.ext.toUpperCase()})\n${it.content.slice(0, MAX_CHARS_PER_DOC)}`).join('\n\n')
-      : items.map(it => `### ${it.name} (${it.ext.toUpperCase()}) — sem conteúdo legível`).join('\n');
+    // Sem conteúdo real extraído de NENHUM arquivo, não chama a IA — ela só teria o nome dos
+    // arquivos pra "adivinhar" o diagnóstico, exatamente o tipo de invenção que este app já
+    // corrigiu em outros lugares. Melhor avisar claramente do que devolver um palpite plausível.
+    if(!withContent.length) {
+      box.innerHTML = `<div class="card-danger" style="border-radius:var(--r8);padding:12px;margin-top:12px;font-size:12px;color:var(--t1)"><i class="ti ti-alert-triangle"></i> Não consegui extrair texto de nenhum dos arquivos enviados (${items.map(it=>escapeHtml(it.name)).join(', ')}) — formato pode não ser suportado ou o arquivo está vazio/protegido. Sem conteúdo real, não gero avaliação.</div>`;
+      return;
+    }
+
+    box.innerHTML = `<div style="margin-top:12px;font-size:12px;color:var(--t3);display:flex;align-items:center;gap:6px"><i class="ti ti-loader-2" style="animation:fi-spin 1s linear infinite"></i>Lendo o conteúdo dos arquivos e avaliando o projeto…</div>`;
+
+    const docsListing = withContent.map(it => `### ${it.name} (${it.ext.toUpperCase()})\n${it.content.slice(0, MAX_CHARS_PER_DOC)}`).join('\n\n');
 
     const r = await AI.send([{ role:'user', content: docsListing }], { system: EXTRACTION_SYSTEM });
     if(r.error) {
