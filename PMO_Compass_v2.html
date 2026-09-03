@@ -1034,7 +1034,7 @@ body.icons-failed i[data-fb]::before{
         <div class="prov-name"><i class="ti ti-brand-google" style="color:var(--pur)"></i>Gemini (Google)<span class="badge b-acc" id="prov-badge-google" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-google" style="display:none">Configurada</span></div>
         <div class="prov-desc">Alternativa do Google — boa opção se você já usa o ecossistema Google Workspace.</div>
         <div class="prov-inp-row"><input class="input" id="api-inp-google" type="password" placeholder="AIza..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('google')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-google" style="display:none" onclick="Store.removeKey('google')"><i class="ti ti-trash"></i></button></div>
-        <div style="font-size:11px;color:var(--t3);margin-top:5px">Obtenha em <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--acc)">aistudio.google.com</a> · gemini-2.0-flash</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:5px">Obtenha em <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--acc)">aistudio.google.com</a> · gemini-3.6-flash</div>
       </div>
     </div>
   </div>
@@ -3362,7 +3362,7 @@ const AI = (() => {
   const CONFIG = {
     anthropic: { model:'claude-sonnet-4-6', label:'Claude (Anthropic)' },
     openai: { model:'gpt-4o', label:'ChatGPT (OpenAI)' },
-    google: { model:'gemini-2.0-flash', label:'Gemini (Google)' }
+    google: { model:'gemini-3.6-flash', label:'Gemini (Google)' }
   };
   const SYSTEM_RULES = `Você é a IA do PMO Compass, sistema de apoio à decisão para gerentes de projetos.
 

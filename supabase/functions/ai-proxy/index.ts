@@ -22,7 +22,7 @@ const CORS_HEADERS = {
 const PROVIDER_MODEL: Record<string, string> = {
   anthropic: "claude-sonnet-4-6",
   openai: "gpt-4o",
-  google: "gemini-2.0-flash",
+  google: "gemini-3.6-flash",
 };
 
 function json(body: unknown, status = 200) {
