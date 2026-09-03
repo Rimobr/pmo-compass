@@ -3728,52 +3728,204 @@ const FileIntake = (() => {
         } catch(e) { extractionFailures++; }
       }
       const kb = (f.size / 1024).toFixed(0);
-      const repoItem = { id:genId(), name:f.name, ext, meta:`${kb} KB · local`, addedAt:today, tags:['Novo','Descaracterizado (LGPD)'], indexPct:100, content };
+      const repoId = genId();
+      const repoItem = { id:repoId, name:f.name, ext, meta:`${kb} KB · local`, addedAt:today, tags:['Novo','Descaracterizado (LGPD)'], indexPct:100, content };
       Repo.add(repoItem);
-      items.push({ name:f.name, size:f.size, ext, preview });
+      items.push({ id:repoId, name:f.name, size:f.size, ext, preview, content });
     }
 
     let msg = `✅ ${items.length} arquivo(s) processado(s) localmente${totalRedactions ? ' · ' + totalRedactions + ' dado(s) sensível(is) descaracterizado(s)' : ''}`;
     if(extractionFailures) msg += ` · ⚠️ ${extractionFailures} arquivo(s) indexado(s) só por nome (sem conexão para ler o conteúdo)`;
     T.show(msg);
-    requestFirstAssessment(items);
+    requestStructuredEvaluation(items);
 
     document.getElementById('fi-files-inp').value = '';
     document.getElementById('fi-folder-inp').value = '';
   }
 
-  async function requestFirstAssessment(items) {
+  // ── Avaliação estruturada: a IA lê o conteúdo real dos documentos e propõe entregas,
+  // riscos/decisões, linhas de orçamento e stakeholders — mas nada vira dado real do projeto
+  // sem o usuário revisar e marcar o que aceita. Essa é a segunda "frente" do app (a primeira
+  // é o cadastro manual): documento entra, IA sugere, usuário confirma o que vira registro.
+  const EXTRACTION_SYSTEM = `Você é a IA do PMO Compass. Vai receber o conteúdo real de um ou mais documentos de projeto (já com dados pessoais mascarados). Sua tarefa é EXTRAIR informação estruturada, não conversar.
+
+Responda APENAS com um objeto JSON válido, sem markdown, sem texto antes ou depois, neste formato exato:
+{
+  "resumo": "resumo executivo em 2-4 frases do que os documentos revelam sobre o projeto",
+  "riscos": ["frase curta de risco 1", "frase curta de risco 2"],
+  "proximosPassos": ["sugestão 1", "sugestão 2"],
+  "wbs": [{"label":"nome da entrega","status":"grn|amb|red|neu","pct":0,"start":"YYYY-MM-DD ou null","end":"YYYY-MM-DD ou null"}],
+  "decisions": [{"severity":"crit|alto|medio","title":"título curto","body":"contexto em 1-2 frases"}],
+  "budgetLines": [{"label":"nome da linha","plannedValue":0}],
+  "stakeholders": [{"name":"nome","role":"papel/cargo","influence":"alta|media|baixa","engagement":"critico|atencao|saudavel","notes":"observação curta"}]
+}
+
+Regras: só inclua o que estiver realmente sustentado pelo texto — nunca invente nomes, valores ou datas. Se uma categoria inteira não tiver base nos documentos, retorne um array vazio para ela. "pct" é 0 a 100 (progresso conhecido, ou 0 se não houver indicação). Datas só se aparecerem explicitamente no texto.`;
+
+  let currentProposal = null;
+
+  async function requestStructuredEvaluation(items) {
     const box = document.getElementById('fi-results');
     if(!box) return;
 
     if(!Store.hasKeyOrCloud()) {
-      box.innerHTML = `<div class="card-accent" style="border-radius:var(--r8);padding:12px;margin-top:12px;font-size:12px;color:var(--t2)"><i class="ti ti-info-circle"></i> Arquivos indexados localmente. Configure uma chave de IA em <strong style="color:var(--t1)">Configurações → Provedor de IA</strong> para receber a primeira avaliação automática.</div>`;
+      box.innerHTML = `<div class="card-accent" style="border-radius:var(--r8);padding:12px;margin-top:12px;font-size:12px;color:var(--t2)"><i class="ti ti-info-circle"></i> Arquivos indexados localmente. Configure uma chave de IA em <strong style="color:var(--t1)">Configurações → Provedor de IA</strong> para receber a avaliação automática.</div>`;
       return;
     }
 
-    box.innerHTML = `<div style="margin-top:12px;font-size:12px;color:var(--t3);display:flex;align-items:center;gap:6px"><i class="ti ti-loader-2" style="animation:fi-spin 1s linear infinite"></i>Gerando primeira avaliação com base nos arquivos enviados…</div>`;
+    box.innerHTML = `<div style="margin-top:12px;font-size:12px;color:var(--t3);display:flex;align-items:center;gap:6px"><i class="ti ti-loader-2" style="animation:fi-spin 1s linear infinite"></i>Lendo o conteúdo dos arquivos e avaliando o projeto…</div>`;
 
-    const listing = items.map(it => {
-      const trecho = it.preview ? `\n  Trecho (já descaracterizado): "${it.preview.slice(0,300).replace(/"/g,"'")}"` : '';
-      return `- ${it.name} (${it.ext.toUpperCase()})${trecho}`;
-    }).join('\n');
+    const MAX_CHARS_PER_DOC = 4000;
+    const withContent = items.filter(it => it.content);
+    const docsListing = withContent.length
+      ? withContent.map(it => `### ${it.name} (${it.ext.toUpperCase()})\n${it.content.slice(0, MAX_CHARS_PER_DOC)}`).join('\n\n')
+      : items.map(it => `### ${it.name} (${it.ext.toUpperCase()}) — sem conteúdo legível`).join('\n');
 
-    const prompt = `Acabei de indexar ${items.length} novo(s) arquivo(s) no repositório do projeto:\n${listing}\n\nCom base apenas nos nomes, tipos e trechos acima, me dê uma primeira avaliação: (1) que tipo de informação esses arquivos provavelmente trazem para o projeto, (2) que riscos ou decisões podem estar relacionados, (3) uma sugestão de próximo passo. Deixe claro que é uma avaliação preliminar e que quem decide seguir a sugestão ou não é o usuário.`;
-
-    const r = await AI.send([{ role:'user', content:prompt }]);
+    const r = await AI.send([{ role:'user', content: docsListing }], { system: EXTRACTION_SYSTEM });
     if(r.error) {
       box.innerHTML = `<div class="card-danger" style="border-radius:var(--r8);padding:12px;margin-top:12px;font-size:12px;color:var(--t1)"><i class="ti ti-alert-triangle"></i> Não consegui gerar a avaliação: ${escapeHtml(r.error)}</div>`;
       return;
     }
-    const fmt = (r.text || '').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+
+    const parsed = parseProposal(r.text || '');
+    if(!parsed) {
+      box.innerHTML = `<div class="card-danger" style="border-radius:var(--r8);padding:12px;margin-top:12px;font-size:12px;color:var(--t1)"><i class="ti ti-alert-triangle"></i> A IA respondeu, mas não em um formato que consegui interpretar. Tente novamente ou avalie manualmente pelo Chat contextual.</div>`;
+      return;
+    }
+    currentProposal = { ...parsed, sourceItems: items };
+    renderProposal(box);
+  }
+
+  // Aceita cercas de markdown (```json ... ```) ou texto extra ao redor — pega o primeiro
+  // bloco {...} balanceado e tenta parsear; nunca confia cegamente no formato da IA.
+  function parseProposal(text) {
+    const tryParse = (s) => { try { return JSON.parse(s); } catch(e) { return null; } };
+    let obj = tryParse(text.trim());
+    if(!obj) {
+      const match = text.match(/\{[\s\S]*\}/);
+      if(match) obj = tryParse(match[0]);
+    }
+    if(!obj || typeof obj !== 'object') return null;
+    return {
+      resumo: typeof obj.resumo === 'string' ? obj.resumo : '',
+      riscos: Array.isArray(obj.riscos) ? obj.riscos.filter(x => typeof x === 'string') : [],
+      proximosPassos: Array.isArray(obj.proximosPassos) ? obj.proximosPassos.filter(x => typeof x === 'string') : [],
+      wbs: Array.isArray(obj.wbs) ? obj.wbs.filter(x => x && x.label) : [],
+      decisions: Array.isArray(obj.decisions) ? obj.decisions.filter(x => x && x.title) : [],
+      budgetLines: Array.isArray(obj.budgetLines) ? obj.budgetLines.filter(x => x && x.label) : [],
+      stakeholders: Array.isArray(obj.stakeholders) ? obj.stakeholders.filter(x => x && x.name) : []
+    };
+  }
+
+  function renderProposal(box) {
+    const p = currentProposal;
+    if(!p) { box.innerHTML = ''; return; }
+    const listSection = (title, icon, cat, arr, itemLabel) => {
+      if(!arr.length) return '';
+      const rows = arr.map((it, i) => `<label style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;font-size:12.5px;color:var(--t1);cursor:pointer"><input type="checkbox" checked data-cat="${cat}" data-idx="${i}" style="margin-top:3px"><span>${escapeHtml(itemLabel(it))}</span></label>`).join('');
+      return `<div style="margin-top:10px"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--t3);margin-bottom:4px">${title} (${arr.length})</div>${rows}</div>`;
+    };
+    const textList = (arr) => arr.length ? `<ul style="margin:4px 0 0 18px;padding:0;font-size:12.5px;color:var(--t2);line-height:1.6">${arr.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>` : '';
+    const totalSelectable = p.wbs.length + p.decisions.length + p.budgetLines.length + p.stakeholders.length;
+
     box.innerHTML = `<div class="card-accent" style="border-radius:var(--r8);padding:14px;margin-top:12px">
-      <div class="lbl" style="color:var(--acc);margin-bottom:8px"><i class="ti ti-brain"></i>Primeira avaliação da IA</div>
-      <div style="font-size:12.5px;color:var(--t1);line-height:1.65">${fmt}</div>
-      <div style="font-size:11px;color:var(--t3);margin-top:10px"><i class="ti ti-info-circle"></i> Sugestão automática — você decide se quer seguir este caminho.</div>
+      <div class="lbl" style="color:var(--acc);margin-bottom:6px"><i class="ti ti-brain"></i>Avaliação da IA sobre os documentos enviados</div>
+      ${p.resumo ? `<p style="font-size:12.5px;color:var(--t1);line-height:1.65">${escapeHtml(p.resumo)}</p>` : ''}
+      ${p.riscos.length ? `<div style="margin-top:8px"><strong style="font-size:11.5px;color:var(--t1)">Riscos identificados:</strong>${textList(p.riscos)}</div>` : ''}
+      ${p.proximosPassos.length ? `<div style="margin-top:8px"><strong style="font-size:11.5px;color:var(--t1)">Próximos passos sugeridos:</strong>${textList(p.proximosPassos)}</div>` : ''}
+      ${totalSelectable ? `
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--ab)">
+        <div style="font-size:11.5px;color:var(--t2);margin-bottom:4px">Marque o que quer adicionar como dado real do projeto — nada abaixo foi salvo ainda:</div>
+        ${listSection('Entregas (WBS)', 'sitemap', 'wbs', p.wbs, it => `${it.label}${it.pct?' — '+it.pct+'%':''}`)}
+        ${listSection('Decisões / riscos', 'brain', 'decisions', p.decisions, it => `[${it.severity}] ${it.title}`)}
+        ${listSection('Linhas de orçamento', 'wallet', 'budgetLines', p.budgetLines, it => `${it.label} — R$${Math.round(it.plannedValue||0).toLocaleString('pt-BR')}`)}
+        ${listSection('Stakeholders', 'users', 'stakeholders', p.stakeholders, it => `${it.name} (${it.role||'—'})`)}
+        <div class="btn-row" style="margin-top:12px" data-perm="business">
+          <button class="btn btn-sm btn-acc" onclick="FileIntake.commitProposal()"><i class="ti ti-check"></i>Adicionar selecionados ao projeto</button>
+        </div>
+      </div>` : `<div style="margin-top:10px;font-size:11.5px;color:var(--t3)"><i class="ti ti-info-circle"></i> Os documentos não trouxeram entregas, orçamento ou stakeholders identificáveis — só o resumo acima.</div>`}
+      <div style="font-size:11px;color:var(--t3);margin-top:10px"><i class="ti ti-info-circle"></i> Sugestão automática — nada é criado sem você marcar e confirmar.</div>
     </div>`;
   }
 
-  return { handleFiles, dragOver, dragLeave, drop };
+  function commitProposal() {
+    if(!Auth.guard('business')) return;
+    const p = currentProposal;
+    if(!p) return;
+    const box = document.getElementById('fi-results');
+    const checked = (cat) => [...(box?.querySelectorAll(`input[data-cat="${cat}"]:checked`) || [])].map(el => Number(el.dataset.idx));
+    const today = new Date().toISOString().slice(0,10);
+    const docNames = (p.sourceItems || []).map(it => it.name).join(', ');
+    const srcChip = (p.sourceItems && p.sourceItems[0]) ? [{ ico:'file-text', label:p.sourceItems[0].name, repoId:p.sourceItems[0].id }] : [];
+    let added = 0;
+
+    const idxWbs = checked('wbs');
+    if(idxWbs.length) {
+      const wbs = DB.get('wbs') || [];
+      idxWbs.forEach(i => {
+        const it = p.wbs[i]; if(!it) return;
+        const m = { id:'ev'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), label:it.label, status:it.status||'neu', pct:Number(it.pct)||0, start:it.start||undefined, end:it.end||undefined, critical:false, predecessors:[], children:[] };
+        wbs.push(m);
+        if(typeof Cloud !== 'undefined') Cloud.pushWbsModule(m);
+        Trail.log(`Entrega criada a partir de documento (IA): ${m.label}`, Auth.getName(), docNames, 'b-acc');
+        added++;
+      });
+      DB.set('wbs', wbs);
+      if(typeof WBS !== 'undefined') { WBS.resetCache(); WBS.render(); }
+    }
+
+    const idxDec = checked('decisions');
+    if(idxDec.length) {
+      const decisions = DB.get('decisions') || [];
+      idxDec.forEach(i => {
+        const it = p.decisions[i]; if(!it) return;
+        const d = { id:'ev'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), severity:it.severity||'medio', pct:70, title:it.title, body:it.body||'', sources:srcChip, status:'pending', actions:['accept','postpone7','reject'] };
+        decisions.push(d);
+        if(typeof Cloud !== 'undefined') Cloud.pushDecision(d);
+        Trail.log(`Decisão criada a partir de documento (IA): ${d.title}`, Auth.getName(), docNames, 'b-acc');
+        added++;
+      });
+      DB.set('decisions', decisions);
+      if(typeof Decisions !== 'undefined') { Decisions.resetCache(); Decisions.render(); }
+    }
+
+    const idxBud = checked('budgetLines');
+    if(idxBud.length) {
+      const lines = DB.get('budgetLines') || [];
+      idxBud.forEach(i => {
+        const it = p.budgetLines[i]; if(!it) return;
+        const l = { id:'ev'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), label:it.label, plannedValue:Number(it.plannedValue)||0, wbsModuleId:'', isReserve:false };
+        lines.push(l);
+        if(typeof Cloud !== 'undefined') Cloud.pushBudgetLine(l);
+        Trail.log(`Linha de orçamento criada a partir de documento (IA): ${l.label}`, Auth.getName(), docNames, 'b-acc');
+        added++;
+      });
+      DB.set('budgetLines', lines);
+      if(typeof Budget !== 'undefined') { Budget.resetCache(); Budget.render(); }
+    }
+
+    const idxSh = checked('stakeholders');
+    if(idxSh.length) {
+      const shs = DB.get('stakeholders') || [];
+      idxSh.forEach(i => {
+        const it = p.stakeholders[i]; if(!it) return;
+        const s = { id:'ev'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), name:it.name, role:it.role||'', influence:it.influence||'media', engagement:it.engagement||'atencao', lastContact:today, notes:it.notes||'' };
+        shs.push(s);
+        Trail.log(`Stakeholder mapeado a partir de documento (IA): ${s.name}`, Auth.getName(), docNames, 'b-acc');
+        added++;
+      });
+      DB.set('stakeholders', shs);
+      if(typeof Stakeholders !== 'undefined') { Stakeholders.resetCache(); Stakeholders.render(); }
+    }
+
+    if(typeof Dashboard !== 'undefined') Dashboard.render();
+    currentProposal = null;
+    const box2 = document.getElementById('fi-results');
+    if(box2) box2.innerHTML = `<div class="card-success" style="border-radius:var(--r8);padding:12px;margin-top:12px;font-size:12.5px;color:var(--t1)"><i class="ti ti-check-circle"></i> ${added} item(ns) adicionado(s) ao projeto a partir dos documentos.</div>`;
+    T.show(`✅ ${added} item(ns) adicionado(s) ao projeto.`);
+  }
+
+  return { handleFiles, dragOver, dragLeave, drop, commitProposal };
 })();
 </script>
 
