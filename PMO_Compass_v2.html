@@ -3421,7 +3421,7 @@ Regras obrigatórias:
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method:'POST',
       headers:{ 'Content-Type':'application/json','Authorization':'Bearer '+key },
-      body: JSON.stringify({ model:CONFIG.openai.model, max_tokens:4096, messages:oaMessages })
+      body: JSON.stringify({ model:CONFIG.openai.model, max_tokens:8192, messages:oaMessages })
     });
     if(!res.ok) { const e = await res.json().catch(()=>({})); return { error: e?.error?.message||`HTTP ${res.status}` }; }
     const data = await res.json();
@@ -3435,7 +3435,7 @@ Regras obrigatórias:
     const res = await fetch(url, {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({ systemInstruction:{ parts:[{ text:system }] }, contents })
+      body: JSON.stringify({ systemInstruction:{ parts:[{ text:system }] }, contents, generationConfig:{ maxOutputTokens:8192 } })
     });
     if(!res.ok) { const e = await res.json().catch(()=>({})); return { error: e?.error?.message||`HTTP ${res.status}` }; }
     const data = await res.json();
@@ -3841,13 +3841,13 @@ Responda APENAS com um objeto JSON válido, sem markdown, sem texto antes ou dep
   "resumo": "resumo executivo em 2-4 frases do que os documentos revelam sobre o projeto",
   "riscos": ["frase curta de risco futuro 1", "frase curta de risco futuro 2"],
   "proximosPassos": ["sugestão 1", "sugestão 2"],
-  "wbs": [{"label":"nome da entrega","status":"grn|amb|red|neu","pct":0,"start":"YYYY-MM-DD ou null","end":"YYYY-MM-DD ou null"}],
+  "wbs": [{"label":"nome da entrega","status":"grn|amb|red|neu","pct":0,"start":"YYYY-MM-DD ou null","end":"YYYY-MM-DD ou null","dependsOnLabel":"label EXATO de outra entrega deste mesmo array que bloqueia esta, segundo o texto ou a ordem/hierarquia em que aparecem no documento — ou null se não houver dependência clara"}],
   "decisions": [{"severity":"crit|alto|medio","title":"título curto","body":"contexto em 1-2 frases"}],
   "budgetLines": [{"label":"nome da linha","plannedValue":0}],
   "stakeholders": [{"name":"nome","role":"papel/cargo","influence":"alta|media|baixa","engagement":"critico|atencao|saudavel","notes":"observação curta"}]
 }
 
-Regras: só inclua o que estiver realmente sustentado pelo texto — nunca invente nomes, valores ou datas. "problemas" são questões que os documentos indicam já estar acontecendo agora; "riscos" são possibilidades futuras — não confunda as duas categorias. Se uma categoria inteira não tiver base nos documentos, retorne um array vazio (ou string vazia) para ela. "pct" é 0 a 100 (progresso conhecido, ou 0 se não houver indicação). Datas só se aparecerem explicitamente no texto. "caminhoCritico" é uma leitura preliminar da IA, não um cálculo formal — deixe isso implícito no tom, sem alegar certeza.`;
+Regras: só inclua o que estiver realmente sustentado pelo texto — nunca invente nomes, valores ou datas. "problemas" são questões que os documentos indicam já estar acontecendo agora; "riscos" são possibilidades futuras — não confunda as duas categorias. Se uma categoria inteira não tiver base nos documentos, retorne um array vazio (ou string vazia) para ela. "pct" é 0 a 100 (progresso conhecido, ou 0 se não houver indicação). Datas só se aparecerem explicitamente no texto. "caminhoCritico" é uma leitura preliminar da IA, não um cálculo formal — deixe isso implícito no tom, sem alegar certeza. "dependsOnLabel" existe pra permitir recalcular o caminho crítico de verdade depois — preencha sempre que a ordem do documento (fases sequenciais, "após X", numeração hierárquica) deixar clara qual entrega bloqueia qual; use exatamente o mesmo texto do "label" da entrega predecessora, sem inventar uma dependência que o texto não sustente.`;
 
   let currentProposal = null;
   let currentBoxId = null;
@@ -3862,7 +3862,7 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
       return;
     }
 
-    const MAX_CHARS_PER_DOC = 4000;
+    const MAX_CHARS_PER_DOC = 20000;
     const withContent = items.filter(it => it.content);
     // Sem conteúdo real extraído de NENHUM arquivo, não chama a IA — ela só teria o nome dos
     // arquivos pra "adivinhar" o diagnóstico, exatamente o tipo de invenção que este app já
@@ -3874,7 +3874,16 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
 
     box.innerHTML = `<div style="margin-top:12px;font-size:12px;color:var(--t3);display:flex;align-items:center;gap:6px"><i class="ti ti-loader-2" style="animation:fi-spin 1s linear infinite"></i>Lendo o conteúdo dos arquivos e avaliando o projeto…</div>`;
 
-    const docsListing = withContent.map(it => `### ${it.name} (${it.ext.toUpperCase()})\n${it.content.slice(0, MAX_CHARS_PER_DOC)}`).join('\n\n');
+    // Documento maior que o limite é cortado — mas diferente de antes, isso agora é sinalizado
+    // tanto pra IA (que recebe um aviso explícito no fim do trecho) quanto pro usuário na tela,
+    // em vez de sumir em silêncio. Um diagnóstico baseado em leitura parcial precisa dizer isso.
+    const truncatedNames = [];
+    const docsListing = withContent.map(it => {
+      const wasTruncated = it.content.length > MAX_CHARS_PER_DOC;
+      if(wasTruncated) truncatedNames.push(it.name);
+      const body = it.content.slice(0, MAX_CHARS_PER_DOC);
+      return `### ${it.name} (${it.ext.toUpperCase()})\n${body}${wasTruncated ? `\n[AVISO: documento truncado em ${MAX_CHARS_PER_DOC} caracteres — o restante do conteúdo não foi lido. Considere isso ao avaliar; não presuma que o que vem depois deste ponto está ausente do projeto.]` : ''}`;
+    }).join('\n\n');
 
     const r = await AI.send([{ role:'user', content: docsListing }], { system: EXTRACTION_SYSTEM });
     if(r.error) {
@@ -3887,7 +3896,7 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
       box.innerHTML = `<div class="card-danger" style="border-radius:var(--r8);padding:12px;margin-top:12px;font-size:12px;color:var(--t1)"><i class="ti ti-alert-triangle"></i> A IA respondeu, mas não em um formato que consegui interpretar. Tente novamente ou avalie manualmente pelo Chat contextual.</div>`;
       return;
     }
-    currentProposal = { ...parsed, sourceItems: items };
+    currentProposal = { ...parsed, sourceItems: items, truncatedNames };
     renderProposal(box);
   }
 
@@ -3910,7 +3919,7 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
       resumo: typeof obj.resumo === 'string' ? obj.resumo : '',
       riscos: Array.isArray(obj.riscos) ? obj.riscos.filter(x => typeof x === 'string') : [],
       proximosPassos: Array.isArray(obj.proximosPassos) ? obj.proximosPassos.filter(x => typeof x === 'string') : [],
-      wbs: Array.isArray(obj.wbs) ? obj.wbs.filter(x => x && x.label) : [],
+      wbs: Array.isArray(obj.wbs) ? obj.wbs.filter(x => x && x.label).map(x => ({ ...x, dependsOnLabel: typeof x.dependsOnLabel === 'string' ? x.dependsOnLabel : null })) : [],
       decisions: Array.isArray(obj.decisions) ? obj.decisions.filter(x => x && x.title) : [],
       budgetLines: Array.isArray(obj.budgetLines) ? obj.budgetLines.filter(x => x && x.label) : [],
       stakeholders: Array.isArray(obj.stakeholders) ? obj.stakeholders.filter(x => x && x.name) : []
@@ -3931,8 +3940,12 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
     const totalSelectable = p.wbs.length + p.decisions.length + p.budgetLines.length + p.stakeholders.length;
     const sv = SAUDE_LABEL[p.saudeGeral];
 
+    const truncWarning = (p.truncatedNames && p.truncatedNames.length)
+      ? `<div style="background:var(--s1);border:1px solid var(--amb);border-radius:var(--r8);padding:8px 12px;margin-bottom:8px;display:flex;gap:8px;align-items:flex-start"><i class="ti ti-scissors" style="color:var(--amb);font-size:14px;flex-shrink:0;margin-top:1px"></i><span style="font-size:12px;color:var(--t2)"><strong style="color:var(--t1)">Leitura parcial:</strong> ${p.truncatedNames.length===1?'o documento':'os documentos'} ${p.truncatedNames.map(n=>escapeHtml(n)).join(', ')} ${p.truncatedNames.length===1?'era':'eram'} grande${p.truncatedNames.length===1?'':'s'} demais e só teve${p.truncatedNames.length===1?'':'ram'} o início lido — pode haver risco, custo ou entrega além do que aparece abaixo.</span></div>`
+      : '';
     box.innerHTML = `<div class="card-accent" style="border-radius:var(--r8);padding:14px;margin-top:12px">
       <div class="lbl" style="color:var(--acc);margin-bottom:6px"><i class="ti ti-brain"></i>Avaliação da IA sobre os documentos enviados</div>
+      ${truncWarning}
       ${sv ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="badge ${sv.cls}" style="font-size:11px">${sv.txt}</span>${p.saudeJustificativa?`<span style="font-size:12px;color:var(--t2)">${escapeHtml(p.saudeJustificativa)}</span>`:''}</div>` : ''}
       ${p.caminhoCritico ? `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;margin-bottom:8px;display:flex;gap:8px;align-items:flex-start"><i class="ti ti-clock" style="color:var(--amb);font-size:15px;flex-shrink:0;margin-top:1px"></i><div><strong style="font-size:11.5px;color:var(--t1)">Caminho crítico (leitura preliminar):</strong> <span style="font-size:12.5px;color:var(--t2)">${escapeHtml(p.caminhoCritico)}</span></div></div>` : ''}
       ${p.problemas.length ? `<div style="margin-top:8px"><strong style="font-size:11.5px;color:var(--red)">Problemas já em curso:</strong>${textList(p.problemas)}</div>` : ''}
@@ -3968,10 +3981,24 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
     const idxWbs = checked('wbs');
     if(idxWbs.length) {
       const wbs = DB.get('wbs') || [];
+      // Duas passadas: primeiro cria todas as entregas marcadas (com id definitivo), depois
+      // resolve "dependsOnLabel" pra um predecessors[] real — só assim dá pra apontar pro id
+      // gerado agora, e não pro texto solto que a IA devolveu. É isso que alimenta o CPM de
+      // verdade (services/cpm) com dados vindos de documento, em vez de nascer sempre vazio.
+      const created = [];
       idxWbs.forEach(i => {
         const it = p.wbs[i]; if(!it) return;
-        const m = { id:'ev'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), label:it.label, status:it.status||'neu', pct:Number(it.pct)||0, start:it.start||undefined, end:it.end||undefined, critical:false, predecessors:[], children:[] };
+        const m = { id:'ev'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)+i, label:it.label, status:it.status||'neu', pct:Number(it.pct)||0, start:it.start||undefined, end:it.end||undefined, critical:false, predecessors:[], children:[] };
+        created.push({ m, dependsOnLabel:it.dependsOnLabel||null });
         wbs.push(m);
+      });
+      const labelToId = new Map(created.map(({m}) => [m.label, m.id]));
+      created.forEach(({m, dependsOnLabel}) => {
+        if(dependsOnLabel && labelToId.has(dependsOnLabel) && labelToId.get(dependsOnLabel) !== m.id) {
+          m.predecessors = [labelToId.get(dependsOnLabel)];
+        }
+      });
+      created.forEach(({m}) => {
         if(typeof Cloud !== 'undefined') Cloud.pushWbsModule(m);
         Trail.log(`Entrega criada a partir de documento (IA): ${m.label}`, Auth.getName(), docNames, 'b-acc');
         added++;

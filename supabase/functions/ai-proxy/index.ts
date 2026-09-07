@@ -55,7 +55,7 @@ async function callOpenAI(apiKey: string, messages: any[], system: string) {
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
-    body: JSON.stringify({ model: PROVIDER_MODEL.openai, max_tokens: 4096, messages: oaMessages }),
+    body: JSON.stringify({ model: PROVIDER_MODEL.openai, max_tokens: 8192, messages: oaMessages }),
   });
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
@@ -71,7 +71,7 @@ async function callGoogle(apiKey: string, messages: any[], system: string) {
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents }),
+    body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents, generationConfig: { maxOutputTokens: 8192 } }),
   });
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
