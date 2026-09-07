@@ -1948,14 +1948,18 @@ const Cloud = (() => {
 
   async function pullAll() {
     if(!client || !session) return;
+    // Cada linha carrega o project_id do projeto ativo no momento em que foi salva (ver
+    // push* abaixo) — o pull sempre filtra pelo projeto ativo AGORA, pra não misturar dado
+    // de um projeto na tela de outro. Antes disso não existia esse filtro: era um pool só.
+    const pid = DB.getActiveProjectId();
     try {
       const [mods, tasks, decs, docs, budLines, costActs] = await Promise.all([
-        client.from('wbs_modules').select('*'),
-        client.from('wbs_tasks').select('*'),
-        client.from('decisions').select('*'),
-        client.from('documents').select('*'),
-        client.from('budget_lines').select('*'),
-        client.from('cost_actuals').select('*')
+        client.from('wbs_modules').select('*').eq('project_id', pid),
+        client.from('wbs_tasks').select('*').eq('project_id', pid),
+        client.from('decisions').select('*').eq('project_id', pid),
+        client.from('documents').select('*').eq('project_id', pid),
+        client.from('budget_lines').select('*').eq('project_id', pid),
+        client.from('cost_actuals').select('*').eq('project_id', pid)
       ]);
       if(mods.data) {
         const wbs = mods.data.map(m => ({
@@ -1985,39 +1989,57 @@ const Cloud = (() => {
   }
 
   // ── Push best-effort: nunca bloqueia a UI local, só tenta manter o servidor ao dia ──
+  // Toda linha grava o project_id do projeto ativo NESTE momento — é o que permite o pullAll()
+  // acima (e o clearProjectData abaixo) filtrar por projeto depois.
   function pushWbsModule(m) {
     if(!client || !session) return;
-    client.from('wbs_modules').upsert({ id:m.id, label:m.label, status:m.status, pct:m.pct, start_date:m.start, end_date:m.end, critical:m.critical, predecessors:m.predecessors||[] }).then(()=>{}).catch(()=>{});
+    client.from('wbs_modules').upsert({ id:m.id, label:m.label, status:m.status, pct:m.pct, start_date:m.start, end_date:m.end, critical:m.critical, predecessors:m.predecessors||[], project_id:DB.getActiveProjectId() }).then(()=>{}).catch(()=>{});
   }
   function pushWbsTask(moduleId, t) {
     if(!client || !session) return;
-    client.from('wbs_tasks').upsert({ id:t.id, module_id:moduleId, label:t.label, status:t.status, start_date:t.start, end_date:t.end, predecessors:t.predecessors||[] }).then(()=>{}).catch(()=>{});
+    client.from('wbs_tasks').upsert({ id:t.id, module_id:moduleId, label:t.label, status:t.status, start_date:t.start, end_date:t.end, predecessors:t.predecessors||[], project_id:DB.getActiveProjectId() }).then(()=>{}).catch(()=>{});
   }
   function deleteWbsModule(id) { if(client && session) client.from('wbs_modules').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
   function deleteWbsTask(id) { if(client && session) client.from('wbs_tasks').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
 
   function pushDecision(d) {
     if(!client || !session) return;
-    client.from('decisions').upsert({ id:d.id, severity:d.severity, pct:d.pct, title:d.title, body:d.body, sources:d.sources, status:d.status, actions:d.actions, resolved_at:d.resolvedAt||null }).then(()=>{}).catch(()=>{});
+    client.from('decisions').upsert({ id:d.id, severity:d.severity, pct:d.pct, title:d.title, body:d.body, sources:d.sources, status:d.status, actions:d.actions, resolved_at:d.resolvedAt||null, project_id:DB.getActiveProjectId() }).then(()=>{}).catch(()=>{});
   }
   function deleteDecision(id) { if(client && session) client.from('decisions').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
 
   function pushDocument(it) {
     if(!client || !session) return;
-    client.from('documents').upsert({ id:it.id, name:it.name, ext:it.ext, meta:it.meta, added_at:it.addedAt, tags:it.tags, index_pct:it.indexPct, content:it.content||'' }).then(()=>{}).catch(()=>{});
+    client.from('documents').upsert({ id:it.id, name:it.name, ext:it.ext, meta:it.meta, added_at:it.addedAt, tags:it.tags, index_pct:it.indexPct, content:it.content||'', project_id:DB.getActiveProjectId() }).then(()=>{}).catch(()=>{});
   }
   function deleteDocument(id) { if(client && session) client.from('documents').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
 
   function pushBudgetLine(l) {
     if(!client || !session) return;
-    client.from('budget_lines').upsert({ id:l.id, label:l.label, planned_value:l.plannedValue, wbs_module_id:l.wbsModuleId||null, is_reserve:!!l.isReserve }).then(()=>{}).catch(()=>{});
+    client.from('budget_lines').upsert({ id:l.id, label:l.label, planned_value:l.plannedValue, wbs_module_id:l.wbsModuleId||null, is_reserve:!!l.isReserve, project_id:DB.getActiveProjectId() }).then(()=>{}).catch(()=>{});
   }
   function deleteBudgetLine(id) { if(client && session) client.from('budget_lines').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
   function pushCostActual(a) {
     if(!client || !session) return;
-    client.from('cost_actuals').upsert({ id:a.id, label:a.label, amount:a.amount, entry_date:a.date, budget_line_id:a.budgetLineId||null, kind:a.kind }).then(()=>{}).catch(()=>{});
+    client.from('cost_actuals').upsert({ id:a.id, label:a.label, amount:a.amount, entry_date:a.date, budget_line_id:a.budgetLineId||null, kind:a.kind, project_id:DB.getActiveProjectId() }).then(()=>{}).catch(()=>{});
   }
   function deleteCostActual(id) { if(client && session) client.from('cost_actuals').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
+
+  // Apaga da nuvem só o que pertence a UM projeto (project_id) — usado por DB.clearAll(),
+  // que antes só limpava o localStorage e deixava a cópia na nuvem intacta (o próximo login
+  // trazia tudo de volta). Diferente de resetForNewUsers(): não exige admin nem apaga outros
+  // projetos, porque agora cada linha sabe a qual projeto pertence.
+  async function clearProjectData(projectId) {
+    if(!client || !session || !projectId) return;
+    try {
+      await client.from('wbs_tasks').delete().eq('project_id', projectId);
+      await client.from('wbs_modules').delete().eq('project_id', projectId);
+      await client.from('decisions').delete().eq('project_id', projectId);
+      await client.from('documents').delete().eq('project_id', projectId);
+      await client.from('cost_actuals').delete().eq('project_id', projectId);
+      await client.from('budget_lines').delete().eq('project_id', projectId);
+    } catch(e) { console.warn('Falha ao limpar dados do projeto na nuvem', e); }
+  }
 
   // Apaga TODOS os dados compartilhados na nuvem (visíveis pra qualquer pessoa que fizer login,
   // não só quem clicou) + os dados de demonstração salvos neste navegador. Restrito a admin —
@@ -2048,7 +2070,7 @@ const Cloud = (() => {
     saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignUp, signOut, pullAll,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushDecision, deleteDecision, pushDocument, deleteDocument,
-    pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual, resetForNewUsers };
+    pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual, resetForNewUsers, clearProjectData };
 })();
 </script>
 
@@ -2343,6 +2365,12 @@ const DB = (() => {
     if(typeof Nav !== 'undefined') { Nav.collapseAll(); Nav.renderProjects(); }
     const p = loadProjects().find(x => x.id === projectId);
     T.show('📁 Projeto ativo: ' + (p ? p.name : projectId));
+    // Logado na nuvem: cada projeto tem sua própria fatia lá (project_id) — trocar de projeto
+    // aqui também precisa buscar a fatia certa, senão a tela mostraria o cache local antigo
+    // (ou vazio) até a próxima ação forçar um pullAll().
+    if(typeof Cloud !== 'undefined' && Cloud.isSignedIn()) {
+      Cloud.pullAll().then(() => { if(typeof renderAllModules === 'function') renderAllModules(); });
+    }
   }
 
   function createProject(name, client) {
@@ -2432,15 +2460,25 @@ const DB = (() => {
     reader.readAsText(file);
   }
 
-  function clearAll() {
+  async function clearAll() {
     if(!Auth.guard('settings')) return;
-    const activeName = (loadProjects().find(p => p.id === getActiveProjectId()) || {}).name || getActiveProjectId();
+    const pid = getActiveProjectId();
+    const activeName = (loadProjects().find(p => p.id === pid) || {}).name || pid;
+    const signedIn = typeof Cloud !== 'undefined' && Cloud.isSignedIn();
     const wantsBackup = confirm(`Recomendado: baixar um backup do projeto "${activeName}" antes de apagar.\n\nClique OK para baixar o backup agora, ou Cancelar para pular esta etapa.`);
     if(wantsBackup) exportBackup();
-    const sure = confirm(`Tem certeza que deseja apagar TODOS os dados locais do projeto "${activeName}" (WBS, decisões, documentos e chaves de IA)?\n\nEssa ação não pode ser desfeita. Outros projetos não são afetados.`);
+    // Antes só apagava o localStorage — se a conta estivesse logada na nuvem, o próximo login
+    // trazia tudo de volta via pullAll(), porque a cópia na nuvem nunca era tocada. Agora que
+    // cada linha carrega project_id, dá pra apagar exatamente a fatia deste projeto lá também.
+    const cloudNote = signedIn ? ' e também os dados deste projeto salvos na nuvem' : '';
+    const sure = confirm(`Tem certeza que deseja apagar TODOS os dados locais do projeto "${activeName}"${cloudNote} (WBS, decisões, documentos e orçamento)?\n\nEssa ação não pode ser desfeita. Outros projetos não são afetados.`);
     if(!sure) { T.show('Limpeza cancelada — nenhum dado foi apagado.'); return; }
-    try { localStorage.removeItem(storageKeyFor(getActiveProjectId())); } catch(e){}
-    if(getActiveProjectId() === 'nexus') { try { localStorage.removeItem('pmo_v1'); } catch(e){} } // chaves de IA (Store) — só limpa junto se for o projeto principal
+    if(signedIn) {
+      T.show('🗑️ Apagando dados deste projeto na nuvem…');
+      await Cloud.clearProjectData(pid);
+    }
+    try { localStorage.removeItem(storageKeyFor(pid)); } catch(e){}
+    if(pid === 'nexus') { try { localStorage.removeItem('pmo_v1'); } catch(e){} } // chaves de IA (Store) — só limpa junto se for o projeto principal
     T.show('🗑️ Dados do projeto atual foram apagados. Recarregando…');
     setTimeout(() => location.reload(), 900);
   }

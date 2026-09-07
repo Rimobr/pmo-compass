@@ -248,6 +248,46 @@ create policy "cost_actuals_write" on public.cost_actuals for all
   using (public.current_role() in ('admin','gerente'))
   with check (public.current_role() in ('admin','gerente'));
 
+-- 8) ISOLAMENTO POR PROJETO ---------------------------------------------------
+-- Até aqui, wbs_modules/wbs_tasks/decisions/documents/budget_lines/cost_actuals
+-- eram um pool único por conta — todo mundo logado via a mesma organização
+-- compartilhava as MESMAS linhas, não importa qual "projeto" (Portal Nexus,
+-- Valdori, etc.) estivesse ativo no seletor do app. Isso não é um problema de
+-- segurança entre contas diferentes (RLS acima já cobre isso por role), mas
+-- impedia usar o produto como ferramenta de portfólio: WBS de um projeto
+-- aparecia junto com a de outro, e "Limpar dados" de um projeto não conseguia
+-- alcançar o que estava salvo na nuvem daquele projeto especificamente.
+--
+-- project_id é só uma coluna de partição de dado (o id local do projeto no
+-- seletor do app, ex.: 'nexus', 'valdori') — não cria usuário novo nem exige
+-- policy nova, porque a leitura/escrita continua controlada por role, igual
+-- antes. O cliente passa a sempre gravar e filtrar por este valor.
+alter table public.wbs_modules  add column if not exists project_id text not null default 'nexus';
+alter table public.wbs_tasks    add column if not exists project_id text not null default 'nexus';
+alter table public.decisions    add column if not exists project_id text not null default 'nexus';
+alter table public.documents    add column if not exists project_id text not null default 'nexus';
+alter table public.budget_lines add column if not exists project_id text not null default 'nexus';
+alter table public.cost_actuals add column if not exists project_id text not null default 'nexus';
+
+create index if not exists wbs_modules_project_id_idx  on public.wbs_modules(project_id);
+create index if not exists wbs_tasks_project_id_idx    on public.wbs_tasks(project_id);
+create index if not exists decisions_project_id_idx    on public.decisions(project_id);
+create index if not exists documents_project_id_idx    on public.documents(project_id);
+create index if not exists budget_lines_project_id_idx on public.budget_lines(project_id);
+create index if not exists cost_actuals_project_id_idx on public.cost_actuals(project_id);
+
+-- IMPORTANTE (rodar só uma vez, depois do ALTER acima): toda linha já existente
+-- na nuvem recebeu o padrão 'nexus', mesmo a que foi criada com outro projeto
+-- ativo no seletor — o banco nunca soube disso antes de existir esta coluna.
+-- Se você tinha dado real em outro projeto (ex.: 'valdori'), rode manualmente:
+--   update public.wbs_modules  set project_id = 'valdori' where project_id = 'nexus';
+--   update public.wbs_tasks    set project_id = 'valdori' where project_id = 'nexus';
+--   update public.decisions    set project_id = 'valdori' where project_id = 'nexus';
+--   update public.documents    set project_id = 'valdori' where project_id = 'nexus';
+--   update public.budget_lines set project_id = 'valdori' where project_id = 'nexus';
+--   update public.cost_actuals set project_id = 'valdori' where project_id = 'nexus';
+-- (troque 'valdori' pelo id do projeto certo — veja em DB.listProjects() no console)
+
 -- =========================================================================
 -- PRONTO. Depois de rodar este script:
 -- 1. Vá em Authentication → Users e crie seu primeiro usuário (ou cadastre pelo
