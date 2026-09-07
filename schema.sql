@@ -288,6 +288,16 @@ create index if not exists cost_actuals_project_id_idx on public.cost_actuals(pr
 --   update public.cost_actuals set project_id = 'valdori' where project_id = 'nexus';
 -- (troque 'valdori' pelo id do projeto certo — veja em DB.listProjects() no console)
 
+-- 9) PROVENIÊNCIA DO DADO (IA vs. manual) --------------------------------------
+-- Até aqui, um item criado a partir do Raio-X do Projeto (extração de documento por IA) ficava
+-- indistinguível de um item cadastrado manualmente assim que virava registro — só sobrava um
+-- log na Trilha, que rola pra fora da vista. Pra uso como ferramenta de auditoria/governança,
+-- precisa dar pra ver PERMANENTEMENTE, no próprio item, que ele veio de IA. origin é nullable
+-- (item manual não tem valor aqui) e só grava 'ia' quando o commitProposal() do Raio-X cria o item.
+alter table public.wbs_modules  add column if not exists origin text;
+alter table public.decisions    add column if not exists origin text;
+alter table public.budget_lines add column if not exists origin text;
+
 -- =========================================================================
 -- PRONTO. Depois de rodar este script:
 -- 1. Vá em Authentication → Users e crie seu primeiro usuário (ou cadastre pelo
