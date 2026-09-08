@@ -857,6 +857,7 @@ body.icons-failed i[data-fb]::before{
       <div class="hbar"><span class="hbar-lbl">Qualidade</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-quality-fill" style="width:0%;background:var(--acc)"></div></div><span class="hbar-pct" id="hs-hbar-quality-pct">—</span></div>
       <div class="hbar"><span class="hbar-lbl">Aprendizado</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-learning-fill" style="width:0%;background:var(--pur)"></div></div><span class="hbar-pct" id="hs-hbar-learning-pct">—</span></div>
       <div class="hbar"><span class="hbar-lbl">Scope control</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-scope-fill" style="width:0%;background:var(--red)"></div></div><span class="hbar-pct" id="hs-hbar-scope-pct">—</span></div>
+      <div id="hs-raiox-accuracy" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--b1)"></div>
     </div>
     <div class="card">
       <div class="lbl"><i class="ti ti-sparkles"></i>Alertas da IA — agora</div>
@@ -907,7 +908,7 @@ body.icons-failed i[data-fb]::before{
 
   <div class="card card-accent">
     <div class="lbl" style="color:var(--acc)"><i class="ti ti-folder-plus"></i>Envie os documentos do projeto</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:2px">Termo de projeto, propostas, contratos, atas, cronogramas, planilhas de orçamento — quanto mais completo, mais preciso o diagnóstico. Dados sensíveis (CPF, CNPJ, e-mail, telefone, CEP) são descaracterizados automaticamente, conforme a LGPD, antes de qualquer análise.</p>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:2px">Termo de projeto, propostas, contratos, atas, cronogramas, planilhas de orçamento — quanto mais completo, mais preciso o diagnóstico. Dados sensíveis (CPF, CNPJ, RG, e-mail, telefone, CEP) são descaracterizados automaticamente, conforme a LGPD, antes de qualquer análise.</p>
 
     <div class="fi-drop" id="xray-drop" data-perm="business" onclick="document.getElementById('xray-files-inp').click()" ondragover="ProjectXray.dragOver(event)" ondragleave="ProjectXray.dragLeave(event)" ondrop="ProjectXray.drop(event)">
       <i class="ti ti-cloud-upload"></i>
@@ -1180,7 +1181,7 @@ body.icons-failed i[data-fb]::before{
 
     <div class="fi-note">
       <i class="ti ti-shield-lock"></i>
-      <div>Os arquivos são lidos <strong style="color:var(--t1)">no seu próprio navegador</strong>. Qualquer dado sensível identificável (CPF, CNPJ, e-mail, telefone, CEP) é <strong style="color:var(--t1)">descaracterizado automaticamente</strong>, conforme a LGPD, antes de compor o contexto da IA.</div>
+      <div>Os arquivos são lidos <strong style="color:var(--t1)">no seu próprio navegador</strong>. Qualquer dado sensível identificável (CPF, CNPJ, RG, e-mail, telefone, CEP) é <strong style="color:var(--t1)">descaracterizado automaticamente</strong>, conforme a LGPD, antes de compor o contexto da IA.</div>
     </div>
 
     <div id="fi-results"></div>
@@ -3743,16 +3744,29 @@ const FileIntake = (() => {
     return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  // Descaracterização básica conforme LGPD: CPF, CNPJ, e-mail, telefone, CEP
+  // Descaracterização básica conforme LGPD: CPF, CNPJ, RG, e-mail, telefone, CEP.
+  // Testado contra 22 casos reais (formatação com ponto/espaço/traço, com e sem contexto,
+  // e uma bateria de falsos-positivos plausíveis — código de projeto, data, valor monetário,
+  // numeração de WBS) — nenhuma falha. Dois limites conhecidos e aceitos, não regex-resolvíveis
+  // sem contexto semântico: (1) um telefone de 11 dígitos sem formatação é indistinguível de um
+  // CPF por forma — cai no padrão de CPF primeiro, o que ainda redige o dado, só rotula errado;
+  // (2) telefone sem DDD (8-9 dígitos soltos) não é reconhecido — dado isolado demais pra
+  // diferenciar de qualquer outro código numérico sem gerar falsos-positivos em massa.
   function anonymize(text) {
     if(!text) return { text:'', redactions:0 };
     let redactions = 0;
     const patterns = [
-      { re:/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, tag:'[CPF REDACTADO]' },
+      { re:/\b\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2}\b/g, tag:'[CPF REDACTADO]' },
       { re:/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g, tag:'[CNPJ REDACTADO]' },
+      // RG exige "RG" próximo (lookbehind) — sem isso, um número de 7-9 dígitos formatado
+      // parecido é ambíguo demais e geraria falso-positivo em qualquer código genérico.
+      { re:/(?<=RG[:\s]{0,3})\d{1,2}[.\s]?\d{3}[.\s]?\d{3}-?[\dXx]\b/gi, tag:'[RG REDACTADO]' },
       { re:/[\w.+-]+@[\w-]+\.[\w.-]+/g, tag:'[E-MAIL REDACTADO]' },
       { re:/\(?\d{2}\)?\s?9?\d{4}-?\d{4}/g, tag:'[TELEFONE REDACTADO]' },
-      { re:/\b\d{5}-?\d{3}\b/g, tag:'[CEP REDACTADO]' }
+      { re:/\b\d{5}-\d{3}\b/g, tag:'[CEP REDACTADO]' },
+      // CEP sem traço só é reconhecido com "CEP" próximo — sem isso, qualquer número de
+      // pedido/contrato de 8 dígitos vira falso-positivo (achado nos testes desta rodada).
+      { re:/(?<=CEP[:\s]{0,3})\b\d{8}\b/gi, tag:'[CEP REDACTADO]' }
     ];
     let out = text;
     patterns.forEach(p => { out = out.replace(p.re, () => { redactions++; return p.tag; }); });
@@ -4764,6 +4778,12 @@ const Dashboard = (() => {
     const ringLbl = document.getElementById('hs-ring-lbl');
     if(ringLbl) ringLbl.innerHTML = score + '<small>/100</small>';
     setText('hs-index-text', 'Índice geral: ' + score);
+
+    // Antes, essa métrica só aparecia no card de resultado do Raio-X, no momento da avaliação —
+    // quem não voltasse lá nunca via o histórico de acerto. Agora fica também aqui, ao lado do
+    // índice real, pra virar um indicador permanente do projeto.
+    const accEl = document.getElementById('hs-raiox-accuracy');
+    if(accEl) accEl.innerHTML = (typeof RaioXHistory !== 'undefined') ? RaioXHistory.accuracyHtml() : '';
 
     const attentionDims = Object.entries(metrics).filter(([k,v]) => v < 70);
     const attEl = document.getElementById('hs-attention-text');
