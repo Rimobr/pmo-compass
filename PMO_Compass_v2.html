@@ -23,10 +23,10 @@
   --bg:#0d1117; --s1:#161b22; --s2:#1c2230; --s3:#21293f;
   --b1:rgba(255,255,255,0.06); --b2:rgba(255,255,255,0.11); --b3:rgba(255,255,255,0.20);
   --t1:#e6edf3; --t2:#8b949e; --t3:#484f58;
-  --acc:#4d8ef0; --ad:rgba(77,142,240,0.10); --ab:rgba(77,142,240,0.28);
+  --acc:#5995f1; --ad:rgba(77,142,240,0.10); --ab:rgba(77,142,240,0.28);
   --grn:#3fb950; --gd:rgba(63,185,80,0.09); --gb:rgba(63,185,80,0.28);
   --amb:#d29922; --amd:rgba(210,153,34,0.09); --ambb:rgba(210,153,34,0.28);
-  --red:#f85149; --rd:rgba(248,81,73,0.09); --rb:rgba(248,81,73,0.28);
+  --red:#f85c55; --rd:rgba(248,81,73,0.09); --rb:rgba(248,81,73,0.28);
   --pur:#8b5cf6; --pd:rgba(139,92,246,0.09); --pb:rgba(139,92,246,0.28);
   --r4:4px; --r6:6px; --r8:8px; --r10:10px; --r12:12px;
   --font-sans:'Inter',system-ui,sans-serif;
@@ -39,10 +39,10 @@ html[data-theme="light"] {
   --bg:#f6f7f9; --s1:#ffffff; --s2:#f1f3f6; --s3:#e6e9ee;
   --b1:rgba(15,23,42,0.08); --b2:rgba(15,23,42,0.14); --b3:rgba(15,23,42,0.24);
   --t1:#0f172a; --t2:#55606e; --t3:#94a0ac;
-  --acc:#2f6fe0; --ad:rgba(47,111,224,0.08); --ab:rgba(47,111,224,0.28);
-  --grn:#1a9e52; --gd:rgba(26,158,82,0.08); --gb:rgba(26,158,82,0.28);
-  --amb:#b3790f; --amd:rgba(179,121,15,0.10); --ambb:rgba(179,121,15,0.28);
-  --red:#d9362b; --rd:rgba(217,54,43,0.08); --rb:rgba(217,54,43,0.28);
+  --acc:#2a63c7; --ad:rgba(47,111,224,0.08); --ab:rgba(47,111,224,0.28);
+  --grn:#13763d; --gd:rgba(26,158,82,0.08); --gb:rgba(26,158,82,0.28);
+  --amb:#895d0b; --amd:rgba(179,121,15,0.10); --ambb:rgba(179,121,15,0.28);
+  --red:#bf3026; --rd:rgba(217,54,43,0.08); --rb:rgba(217,54,43,0.28);
   --pur:#7c3aed; --pd:rgba(124,58,237,0.08); --pb:rgba(124,58,237,0.28);
   --shadow-md:0 4px 16px rgba(15,23,42,0.12);
 }
@@ -50,10 +50,10 @@ html[data-theme="gray"] {
   --bg:#1e2530; --s1:#26303d; --s2:#2d3846; --s3:#374254;
   --b1:rgba(255,255,255,0.07); --b2:rgba(255,255,255,0.13); --b3:rgba(255,255,255,0.22);
   --t1:#eef1f5; --t2:#a3adb8; --t3:#6b7684;
-  --acc:#5b9bf7; --ad:rgba(91,155,247,0.12); --ab:rgba(91,155,247,0.30);
+  --acc:#88b7f9; --ad:rgba(91,155,247,0.12); --ab:rgba(91,155,247,0.30);
   --grn:#4bc767; --gd:rgba(75,199,103,0.11); --gb:rgba(75,199,103,0.30);
   --amb:#e0ab3f; --amd:rgba(224,171,63,0.11); --ambb:rgba(224,171,63,0.30);
-  --red:#f16a63; --rd:rgba(241,106,99,0.11); --rb:rgba(241,106,99,0.30);
+  --red:#f59793; --rd:rgba(241,106,99,0.11); --rb:rgba(241,106,99,0.30);
   --pur:#a680fa; --pd:rgba(166,128,250,0.11); --pb:rgba(166,128,250,0.30);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -138,6 +138,7 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 .input:focus{border-color:var(--ab)}
 .input::placeholder{color:var(--t3)}
 .toggle{width:38px;height:21px;border-radius:21px;background:var(--s3);border:1px solid var(--b2);cursor:pointer;position:relative;transition:background .15s;flex-shrink:0;margin-top:2px}
+.toggle:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .toggle.on{background:var(--acc);border-color:var(--ab)}
 .toggle::after{content:'';width:15px;height:15px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .15s}
 .toggle.on::after{left:20px}
@@ -250,6 +251,7 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 <style data-module="ui/kg">
 .kg{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r10);overflow:hidden}
 .kg-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;cursor:pointer;user-select:none}
+.kg-hdr:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
 .kg-hdr:hover{background:var(--s2)}
 .kg-l{display:flex;align-items:center;gap:10px}
 .kg-ico{width:28px;height:28px;border-radius:var(--r6);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
@@ -383,6 +385,7 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 .prov-row{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--b1)}
 .prov-row:last-child{border-bottom:none;padding-bottom:0}
 .prov-radio{width:16px;height:16px;border-radius:50%;border:2px solid var(--b3);flex-shrink:0;margin-top:3px;cursor:pointer;position:relative;transition:border-color .14s}
+.prov-radio:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .prov-radio:hover{border-color:var(--ab)}
 .prov-radio.sel{border-color:var(--acc)}
 .prov-radio.sel::after{content:'';position:absolute;inset:2px;border-radius:50%;background:var(--acc)}
@@ -791,12 +794,12 @@ body.icons-failed i[data-fb]::before{
 <!-- ■ MODULE: pages/dashboard -->
 <section class="page on" id="p-dashboard" data-module="pages/dashboard">
   <div class="pg-hdr">
-    <div><div class="pg-title">Portal Nexus — Controle de Estoque</div><div class="pg-sub">Atualizado <span id="dash-updated">há 8 min</span> · <span id="dash-doc-count">12</span> documentos indexados · <span id="dash-dec-count">4</span> decisões pendentes · <span id="dash-alert-count">1</span> membro em alerta</div></div>
+    <div><div class="pg-title">Portal Nexus — Controle de Estoque</div><div class="pg-sub">Atualizado <span id="dash-updated">—</span> · <span id="dash-doc-count">12</span> documentos indexados · <span id="dash-dec-count">4</span> decisões pendentes · <span id="dash-alert-count">1</span> membro em alerta</div></div>
     <div class="flex-r"><button class="btn btn-sm btn-acc" onclick="R.go('report')"><i class="ti ti-file-report"></i>Status Report</button></div>
   </div>
 
   <div class="kg" id="kg-sch">
-    <div class="kg-hdr" onclick="KG.tog('kg-sch')">
+    <div class="kg-hdr" role="button" tabindex="0" aria-expanded="true" aria-label="Expandir/recolher Prazo e cronograma" onclick="KG.tog('kg-sch')" onkeydown="KG.key(event,'kg-sch')">
       <div class="kg-l"><div class="kg-ico" style="background:var(--ad)"><i class="ti ti-clock" style="color:var(--acc)"></i></div><span class="kg-title">Prazo e cronograma</span><span class="kg-n">4 KPIs</span></div>
       <div class="kg-r"><span class="kg-st c-up" id="dash-sch-status"><span class="sdot sdot-grn"></span>No prazo</span><i class="ti ti-chevron-down kg-chev op"></i></div>
     </div>
@@ -809,20 +812,20 @@ body.icons-failed i[data-fb]::before{
   </div>
 
   <div class="kg" id="kg-bud">
-    <div class="kg-hdr" onclick="KG.tog('kg-bud')">
+    <div class="kg-hdr" role="button" tabindex="0" aria-expanded="true" aria-label="Expandir/recolher Orçamento e custo" onclick="KG.tog('kg-bud')" onkeydown="KG.key(event,'kg-bud')">
       <div class="kg-l"><div class="kg-ico" style="background:var(--amd)"><i class="ti ti-coin" style="color:var(--amb)"></i></div><span class="kg-title">Orçamento e custo</span><span class="kg-n">4 KPIs</span></div>
       <div class="kg-r"><span class="kg-st c-wa" id="dash-bud-status"><span class="sdot sdot-amb"></span>Atenção</span><i class="ti ti-chevron-down kg-chev op"></i></div>
     </div>
     <div class="kg-body">
       <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-consumo-dot"></span>Consumo</div><div class="kpi-val" id="dash-kpi-consumo">—<span class="kpi-unit">%</span></div><div class="kpi-delta" id="dash-kpi-consumo-sub"></div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-cpi-dot"></span>CPI</div><div class="kpi-val" id="dash-kpi-cpi">—</div><div class="kpi-delta" id="dash-kpi-cpi-sub"></div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-reserva-dot"></span>Reserva</div><div class="kpi-val" style="font-size:17px" id="dash-kpi-reserva">—</div><div class="kpi-delta" id="dash-kpi-reserva-sub"></div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-eac-dot"></span>EAC</div><div class="kpi-val" style="font-size:17px" id="dash-kpi-eac">—</div><div class="kpi-delta" id="dash-kpi-eac-sub"></div></div>
+      <div class="kpi"><div class="kpi-lbl" style="cursor:help;border-bottom:1px dotted var(--t3);display:inline-flex" title="Índice de Desempenho de Custo (CPI) = Valor Agregado ÷ Custo Real. Acima de 1,0 = gastando menos do que o planejado para o trabalho entregue."><span class="sdot" id="dash-kpi-cpi-dot"></span>CPI</div><div class="kpi-val" id="dash-kpi-cpi">—</div><div class="kpi-delta" id="dash-kpi-cpi-sub"></div></div>
+      <div class="kpi"><div class="kpi-lbl" style="cursor:help;border-bottom:1px dotted var(--t3);display:inline-flex" title="Reserva de contingência — valor separado para cobrir riscos conhecidos, fora do orçamento base (BAC) do projeto."><span class="sdot" id="dash-kpi-reserva-dot"></span>Reserva</div><div class="kpi-val" style="font-size:17px" id="dash-kpi-reserva">—</div><div class="kpi-delta" id="dash-kpi-reserva-sub"></div></div>
+      <div class="kpi"><div class="kpi-lbl" style="cursor:help;border-bottom:1px dotted var(--t3);display:inline-flex" title="Estimativa no Término (EAC) — previsão de custo total do projeto ao final, com base no ritmo de gasto atual."><span class="sdot" id="dash-kpi-eac-dot"></span>EAC</div><div class="kpi-val" style="font-size:17px" id="dash-kpi-eac">—</div><div class="kpi-delta" id="dash-kpi-eac-sub"></div></div>
     </div>
   </div>
 
   <div class="kg" id="kg-team">
-    <div class="kg-hdr" onclick="KG.tog('kg-team')">
+    <div class="kg-hdr" role="button" tabindex="0" aria-expanded="false" aria-label="Expandir/recolher Saúde da equipe" onclick="KG.tog('kg-team')" onkeydown="KG.key(event,'kg-team')">
       <div class="kg-l"><div class="kg-ico" style="background:var(--rd)"><i class="ti ti-heartbeat" style="color:var(--red)"></i></div><span class="kg-title">Saúde da equipe</span><span class="kg-n">4 KPIs</span></div>
       <div class="kg-r"><span class="kg-st" id="dash-team-status"><span class="sdot sdot-acc"></span>—</span><i class="ti ti-chevron-down kg-chev"></i></div>
     </div>
@@ -830,7 +833,7 @@ body.icons-failed i[data-fb]::before{
   </div>
 
   <div class="kg" id="kg-learn">
-    <div class="kg-hdr" onclick="KG.tog('kg-learn')">
+    <div class="kg-hdr" role="button" tabindex="0" aria-expanded="false" aria-label="Expandir/recolher Aprendizado e maturidade" onclick="KG.tog('kg-learn')" onkeydown="KG.key(event,'kg-learn')">
       <div class="kg-l"><div class="kg-ico" style="background:var(--pd)"><i class="ti ti-books" style="color:var(--pur)"></i></div><span class="kg-title">Aprendizado e maturidade</span><span class="kg-n">4 KPIs</span></div>
       <div class="kg-r"><span class="kg-st" id="dash-learn-status"><span class="sdot sdot-acc"></span>—</span><i class="ti ti-chevron-down kg-chev"></i></div>
     </div>
@@ -884,6 +887,10 @@ body.icons-failed i[data-fb]::before{
 <!-- ■ MODULE: pages/burnout -->
 <section class="page" id="p-burnout" data-module="pages/burnout">
   <div class="pg-hdr"><div><div class="pg-title">Burnout Radar — Saúde da equipe</div><div class="pg-sub">IA detecta padrões de sobrecarga antes que virem queda de produtividade.</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Burnout.openAdd()"><i class="ti ti-plus"></i>Adicionar membro</button></div></div>
+  <div class="fi-note" style="margin-bottom:14px">
+    <i class="ti ti-shield-lock"></i>
+    <div>Este painel <strong style="color:var(--t1)">não monitora atividade, tela ou comunicação</strong> de ninguém automaticamente — os percentuais de carga são lançados manualmente pelo gestor do projeto (alocação/horas por pessoa). Base legal: legítimo interesse do controlador na gestão de carga de trabalho (LGPD art. 7º, IX). Cada colaborador cadastrado tem o direito de saber que está sendo monitorado aqui e de solicitar a exclusão do próprio registro.</div>
+  </div>
   <div id="burnout-alert-root"></div>
   <div id="burnout-list-root"></div>
   <div class="btn-row"><button class="btn btn-grn" data-perm="business" onclick="Burnout.applyRecommendations()"><i class="ti ti-check"></i>Aplicar recomendações</button><button class="btn" onclick="R.go('resources')"><i class="ti ti-users-group"></i>Ver recursos</button></div>
@@ -1010,7 +1017,7 @@ body.icons-failed i[data-fb]::before{
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px" id="prov-mode-note"><strong style="color:var(--t1)">Modo local:</strong> cada chave fica salva só neste navegador.</p>
 
     <div class="prov-row" id="prov-anthropic">
-      <div class="prov-radio" data-perm="settings" onclick="Store.setProvider('anthropic')" title="Usar Claude (Anthropic)"></div>
+      <div class="prov-radio" data-perm="settings" role="radio" tabindex="0" aria-label="Usar Claude (Anthropic)" onclick="Store.setProvider('anthropic')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="Usar Claude (Anthropic)"></div>
       <div class="prov-body">
         <div class="prov-name"><i class="ti ti-brain" style="color:var(--acc)"></i>Claude (Anthropic)<span class="badge b-acc" id="prov-badge-anthropic" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-anthropic" style="display:none">Configurada</span></div>
         <div class="prov-desc">Padrão do PMO Compass — forte em analisar documentos longos e avaliar risco de projetos.</div>
@@ -1020,7 +1027,7 @@ body.icons-failed i[data-fb]::before{
     </div>
 
     <div class="prov-row" id="prov-openai">
-      <div class="prov-radio" data-perm="settings" onclick="Store.setProvider('openai')" title="Usar ChatGPT (OpenAI)"></div>
+      <div class="prov-radio" data-perm="settings" role="radio" tabindex="0" aria-label="Usar ChatGPT (OpenAI)" onclick="Store.setProvider('openai')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="Usar ChatGPT (OpenAI)"></div>
       <div class="prov-body">
         <div class="prov-name"><i class="ti ti-sparkles" style="color:var(--grn)"></i>ChatGPT (OpenAI)<span class="badge b-acc" id="prov-badge-openai" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-openai" style="display:none">Configurada</span></div>
         <div class="prov-desc">Alternativa da OpenAI — bom custo-benefício para chat e resumos rápidos.</div>
@@ -1030,7 +1037,7 @@ body.icons-failed i[data-fb]::before{
     </div>
 
     <div class="prov-row" id="prov-google">
-      <div class="prov-radio" data-perm="settings" onclick="Store.setProvider('google')" title="Usar Gemini (Google)"></div>
+      <div class="prov-radio" data-perm="settings" role="radio" tabindex="0" aria-label="Usar Gemini (Google)" onclick="Store.setProvider('google')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="Usar Gemini (Google)"></div>
       <div class="prov-body">
         <div class="prov-name"><i class="ti ti-brand-google" style="color:var(--pur)"></i>Gemini (Google)<span class="badge b-acc" id="prov-badge-google" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-google" style="display:none">Configurada</span></div>
         <div class="prov-desc">Alternativa do Google — boa opção se você já usa o ecossistema Google Workspace.</div>
@@ -1096,19 +1103,19 @@ body.icons-failed i[data-fb]::before{
 
   <div class="card">
     <div class="lbl"><i class="ti ti-brain"></i>IA e análise</div>
-    <div class="set-row"><div><div class="set-lbl">Sugestões automáticas de decisão</div><div class="set-sub">A IA analisa o repositório e sugere decisões proativamente</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
-    <div class="set-row"><div><div class="set-lbl">Detecção de riscos em novos documentos</div><div class="set-sub">Ao indexar um doc, a IA verifica novos riscos automaticamente</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
-    <div class="set-row"><div><div class="set-lbl">Comparação com projetos históricos</div><div class="set-sub">Usa projetos anteriores para fundamentar recomendações</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
-    <div class="set-row"><div><div class="set-lbl">Burnout Radar automático</div><div class="set-sub">Monitora carga da equipe e alerta quando algum membro atinge 80%+</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Sugestões automáticas de decisão</div><div class="set-sub">A IA analisa o repositório e sugere decisões proativamente</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Sugestões automáticas de decisão" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Detecção de riscos em novos documentos</div><div class="set-sub">Ao indexar um doc, a IA verifica novos riscos automaticamente</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Detecção de riscos em novos documentos" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Comparação com projetos históricos</div><div class="set-sub">Usa projetos anteriores para fundamentar recomendações</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Comparação com projetos históricos" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Burnout Radar automático</div><div class="set-sub">Monitora carga da equipe e alerta quando algum membro atinge 80%+</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Burnout Radar automático" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
   </div>
   </div><!-- /settings-panel-cloud -->
 
   <div id="settings-panel-notif" style="display:none">
   <div class="card">
     <div class="lbl"><i class="ti ti-bell"></i>Notificações</div>
-    <div class="set-row"><div><div class="set-lbl">Alertas de risco crítico</div><div class="set-sub">Notificação imediata quando a IA detectar risco de impacto alto</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
-    <div class="set-row"><div><div class="set-lbl">Status report semanal automático</div><div class="set-sub">Gerado toda segunda-feira às 08h com o repositório atualizado</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
-    <div class="set-row"><div><div class="set-lbl">Lembrete de decisões pendentes</div><div class="set-sub">Alerta quando decisões ficam mais de 5 dias sem ação</div></div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Alertas de risco crítico</div><div class="set-sub">Notificação imediata quando a IA detectar risco de impacto alto</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Alertas de risco crítico" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Status report semanal automático</div><div class="set-sub">Gerado toda segunda-feira às 08h com o repositório atualizado</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Status report semanal automático" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Lembrete de decisões pendentes</div><div class="set-sub">Alerta quando decisões ficam mais de 5 dias sem ação</div></div><div class="toggle" role="switch" aria-checked="false" tabindex="0" aria-label="Lembrete de decisões pendentes" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
   </div>
   <div class="card">
     <div class="lbl"><i class="ti ti-plug"></i>Integrações</div>
@@ -1192,7 +1199,7 @@ body.icons-failed i[data-fb]::before{
     <div class="g3">
       <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:12px"><div style="font-size:11px;color:var(--t3);margin-bottom:4px">Documentos indexados</div><div style="font-size:22px;font-weight:700;color:var(--t1)" id="repo-kpi-count">12</div><div style="font-size:11.5px;color:var(--t3);margin-top:3px" id="repo-kpi-count-sub">—</div></div>
       <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:12px"><div style="font-size:11px;color:var(--t3);margin-bottom:4px">Confiança contextual</div><div style="font-size:22px;font-weight:700;color:var(--t1)" id="repo-kpi-confidence">—</div><div style="font-size:11.5px;color:var(--t3);margin-top:3px" id="repo-kpi-confidence-sub">—</div></div>
-      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:12px"><div style="font-size:11px;color:var(--t3);margin-bottom:4px">Última atualização</div><div style="font-size:22px;font-weight:700;color:var(--t1)" id="repo-kpi-updated">8<span style="font-size:14px;font-weight:400;color:var(--t2)">min</span></div><div style="font-size:11.5px;color:var(--t3);margin-top:3px">ago</div></div>
+      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:12px"><div style="font-size:11px;color:var(--t3);margin-bottom:4px">Última atualização</div><div style="font-size:22px;font-weight:700;color:var(--t1)" id="repo-kpi-updated">—</div><div style="font-size:11.5px;color:var(--t3);margin-top:3px" id="repo-kpi-updated-sub"></div></div>
     </div>
   </div>
 
@@ -1274,9 +1281,9 @@ body.icons-failed i[data-fb]::before{
 
   <div class="g4">
     <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="bud-kpi-consumo-dot"></span>Consumo</div><div class="kpi-val" id="bud-kpi-consumo">—</div><div class="kpi-delta" id="bud-kpi-consumo-sub"></div></div>
-    <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="bud-kpi-cpi-dot"></span>CPI</div><div class="kpi-val" id="bud-kpi-cpi">—</div><div class="kpi-delta" id="bud-kpi-cpi-sub"></div></div>
-    <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="bud-kpi-reserva-dot"></span>Reserva</div><div class="kpi-val" style="font-size:17px" id="bud-kpi-reserva">—</div><div class="kpi-delta" id="bud-kpi-reserva-sub"></div></div>
-    <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="bud-kpi-eac-dot"></span>EAC</div><div class="kpi-val" style="font-size:17px" id="bud-kpi-eac">—</div><div class="kpi-delta" id="bud-kpi-eac-sub"></div></div>
+    <div class="kpi"><div class="kpi-lbl" style="cursor:help;border-bottom:1px dotted var(--t3);display:inline-flex" title="Índice de Desempenho de Custo (CPI) = Valor Agregado ÷ Custo Real. Acima de 1,0 = gastando menos do que o planejado para o trabalho entregue."><span class="sdot" id="bud-kpi-cpi-dot"></span>CPI</div><div class="kpi-val" id="bud-kpi-cpi">—</div><div class="kpi-delta" id="bud-kpi-cpi-sub"></div></div>
+    <div class="kpi"><div class="kpi-lbl" style="cursor:help;border-bottom:1px dotted var(--t3);display:inline-flex" title="Reserva de contingência — valor separado para cobrir riscos conhecidos, fora do orçamento base (BAC) do projeto."><span class="sdot" id="bud-kpi-reserva-dot"></span>Reserva</div><div class="kpi-val" style="font-size:17px" id="bud-kpi-reserva">—</div><div class="kpi-delta" id="bud-kpi-reserva-sub"></div></div>
+    <div class="kpi"><div class="kpi-lbl" style="cursor:help;border-bottom:1px dotted var(--t3);display:inline-flex" title="Estimativa no Término (EAC) — previsão de custo total do projeto ao final, com base no ritmo de gasto atual."><span class="sdot" id="bud-kpi-eac-dot"></span>EAC</div><div class="kpi-val" style="font-size:17px" id="bud-kpi-eac">—</div><div class="kpi-delta" id="bud-kpi-eac-sub"></div></div>
   </div>
   <div id="bud-note-root" style="font-size:11.5px;color:var(--t3);margin:8px 0 14px"></div>
 
@@ -1572,6 +1579,20 @@ const Auth = (() => {
   let state = { name:'Marcos R.', role:'admin' };
   let pendingRole = null;
   let cloudManaged = false;
+  // Fecha a janela em que um papel adulterado no localStorage (DevTools, XSS) ficaria
+  // visível/permissivo por alguns instantes até a confirmação real do Supabase chegar.
+  // Se este navegador já tem config de nuvem salva (pmo_cloud_v1), o papel lido do
+  // localStorage é tratado como NÃO CONFIRMADO — can() nega tudo e a UI mostra "Confirmando
+  // perfil…" até Cloud.initClient() resolver a sessão (setFromCloud, ou confirmNoCloudSession
+  // se não houver sessão ativa de fato). Só escreve de verdade contra o Supabase de qualquer
+  // forma é bloqueado por RLS server-side — isto fecha a lacuna de a UI *parecer* permissiva
+  // nesse intervalo, que era o achado real do red team.
+  let pendingCloudConfirm = false;
+  try {
+    const cloudRaw = localStorage.getItem('pmo_cloud_v1');
+    const cloudCfg = cloudRaw ? JSON.parse(cloudRaw) : null;
+    pendingCloudConfirm = !!(cloudCfg && cloudCfg.url && cloudCfg.anonKey);
+  } catch(e) {}
 
   function load() {
     try { const raw = localStorage.getItem(KEY); if(raw) state = { ...state, ...JSON.parse(raw) }; } catch(e){}
@@ -1582,8 +1603,12 @@ const Auth = (() => {
 
   function getRole() { return state.role; }
   function getName() { return state.name; }
-  function label(role) { return LABEL[role || state.role] || role; }
-  function can(scope) { const p = PERMS[state.role]; return !!(p && p[scope]); }
+  function label(role) { return pendingCloudConfirm ? 'Confirmando perfil…' : (LABEL[role || state.role] || role); }
+  function can(scope) { if(pendingCloudConfirm) return false; const p = PERMS[state.role]; return !!(p && p[scope]); }
+  // Chamado pelo Cloud quando initClient() resolve e NÃO há sessão ativa (usuário nunca
+  // logou, ou sessão expirou) — libera o papel local, já que não existe confirmação de
+  // servidor pra esperar nesse caso.
+  function confirmNoCloudSession() { pendingCloudConfirm = false; apply(); }
 
   function initialsFor(name, role) {
     const clean = (name||'').trim();
@@ -1629,6 +1654,7 @@ const Auth = (() => {
   // Chamado pelo módulo Cloud após um login real no Supabase — o perfil passa a vir do banco
   function setFromCloud(name, role) {
     cloudManaged = true;
+    pendingCloudConfirm = false;
     state = { name: name || state.name, role: ROLES.includes(role) ? role : 'consulta' };
     persist();
     apply();
@@ -1725,12 +1751,15 @@ const Auth = (() => {
     document.querySelectorAll('.auth-role-opt').forEach(el => el.classList.toggle('sel', el.dataset.role === role));
   }
   function save() {
-    const name = document.getElementById('auth-f-name').value.trim() || state.name;
-    state = { name, role: pendingRole || state.role };
+    const typed = document.getElementById('auth-f-name').value.trim();
+    // Antes, campo vazio só herdava o nome anterior em silêncio — sem mensagem nenhuma, o
+    // usuário não tinha como saber se o clique em branco "funcionou" ou não fez nada.
+    if(!typed) { T.show('⚠️ Digite um nome antes de salvar — mantive o anterior.'); return; }
+    state = { name: typed, role: pendingRole || state.role };
     persist();
     apply();
     closeModal();
-    T.show(`✅ Perfil ativo: ${name} — ${label()}`);
+    T.show(`✅ Perfil ativo: ${typed} — ${label()}`);
   }
 
   // Bloqueio client-side (reforço de UX — não substitui autenticação real de servidor)
@@ -1740,7 +1769,7 @@ const Auth = (() => {
     return false;
   }
 
-  return { load, getRole, getName, label, can, guard, openModal, closeModal, toggleLocalBox, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, doSignIn, doSignUp, doSignOut, saveCloudName, updateCloudBadge };
+  return { load, getRole, getName, label, can, guard, openModal, closeModal, toggleLocalBox, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, confirmNoCloudSession, doSignIn, doSignUp, doSignOut, saveCloudName, updateCloudBadge };
 })();
 </script>
 
@@ -1751,6 +1780,19 @@ const Cloud = (() => {
   let cfg = { url:'', anonKey:'' };
   let client = null;
   let session = null;
+
+  // Todo push/delete é "best-effort" — falha de rede nunca bloqueia a UI porque o dado já foi
+  // salvo localmente antes (DB.set roda primeiro). Mas antes disso o catch(()=>{}) engolia o
+  // erro por completo: se a rede caísse no meio de uma sequência de saves, nada avisava que a
+  // cópia na nuvem ficou desatualizada. Debounced pra não empilhar um toast por item numa
+  // instabilidade de rede que afeta vários saves em sequência.
+  let syncFailToastAt = 0;
+  function cloudSyncFailed() {
+    const now = Date.now();
+    if(now - syncFailToastAt < 8000) return;
+    syncFailToastAt = now;
+    T.show('⚠️ Falha ao sincronizar com a nuvem — seus dados continuam salvos neste navegador, tentaremos de novo na próxima ação.');
+  }
 
   function load() {
     try { const raw = localStorage.getItem(KEY); if(raw) cfg = { ...cfg, ...JSON.parse(raw) }; } catch(e){}
@@ -1796,7 +1838,14 @@ const Cloud = (() => {
       session = data.session;
       reflectUi();
       if(session) await afterSignIn();
-    } catch(e) { console.warn('Supabase: falha ao iniciar', e); T.show('⚠️ Não consegui conectar ao Supabase — confira a URL e a chave.'); }
+      // Config de nuvem existe mas não há sessão ativa (nunca logou, ou expirou) — nada a
+      // confirmar do servidor, libera o papel local pra não ficar "Confirmando perfil…" pra sempre.
+      else if(typeof Auth !== 'undefined' && Auth.confirmNoCloudSession) Auth.confirmNoCloudSession();
+    } catch(e) {
+      console.warn('Supabase: falha ao iniciar', e);
+      T.show('⚠️ Não consegui conectar ao Supabase — confira a URL e a chave.');
+      if(typeof Auth !== 'undefined' && Auth.confirmNoCloudSession) Auth.confirmNoCloudSession();
+    }
   }
 
   async function configure() {
@@ -1986,7 +2035,7 @@ const Cloud = (() => {
       }
       if((budLines.data || costActs.data) && typeof Budget !== 'undefined') { Budget.resetCache(); Budget.render(); }
       T.show('☁️ Dados sincronizados do Supabase.');
-    } catch(e) { console.warn('Supabase: falha ao sincronizar', e); }
+    } catch(e) { console.warn('Supabase: falha ao sincronizar', e); T.show('⚠️ Não consegui buscar os dados mais recentes da nuvem — mostrando o que já estava salvo neste navegador.'); }
   }
 
   // ── Push best-effort: nunca bloqueia a UI local, só tenta manter o servidor ao dia ──
@@ -1994,37 +2043,37 @@ const Cloud = (() => {
   // acima (e o clearProjectData abaixo) filtrar por projeto depois.
   function pushWbsModule(m) {
     if(!client || !session) return;
-    client.from('wbs_modules').upsert({ id:m.id, label:m.label, status:m.status, pct:m.pct, start_date:m.start, end_date:m.end, critical:m.critical, predecessors:m.predecessors||[], project_id:DB.getActiveProjectId(), origin:m.origin||null }).then(()=>{}).catch(()=>{});
+    client.from('wbs_modules').upsert({ id:m.id, label:m.label, status:m.status, pct:m.pct, start_date:m.start, end_date:m.end, critical:m.critical, predecessors:m.predecessors||[], project_id:DB.getActiveProjectId(), origin:m.origin||null }).then(()=>{}).catch(cloudSyncFailed);
   }
   function pushWbsTask(moduleId, t) {
     if(!client || !session) return;
-    client.from('wbs_tasks').upsert({ id:t.id, module_id:moduleId, label:t.label, status:t.status, start_date:t.start, end_date:t.end, predecessors:t.predecessors||[], project_id:DB.getActiveProjectId() }).then(()=>{}).catch(()=>{});
+    client.from('wbs_tasks').upsert({ id:t.id, module_id:moduleId, label:t.label, status:t.status, start_date:t.start, end_date:t.end, predecessors:t.predecessors||[], project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed);
   }
-  function deleteWbsModule(id) { if(client && session) client.from('wbs_modules').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
-  function deleteWbsTask(id) { if(client && session) client.from('wbs_tasks').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
+  function deleteWbsModule(id) { if(client && session) client.from('wbs_modules').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed); }
+  function deleteWbsTask(id) { if(client && session) client.from('wbs_tasks').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed); }
 
   function pushDecision(d) {
     if(!client || !session) return;
-    client.from('decisions').upsert({ id:d.id, severity:d.severity, pct:d.pct, title:d.title, body:d.body, sources:d.sources, status:d.status, actions:d.actions, resolved_at:d.resolvedAt||null, project_id:DB.getActiveProjectId(), origin:d.origin||null }).then(()=>{}).catch(()=>{});
+    client.from('decisions').upsert({ id:d.id, severity:d.severity, pct:d.pct, title:d.title, body:d.body, sources:d.sources, status:d.status, actions:d.actions, resolved_at:d.resolvedAt||null, project_id:DB.getActiveProjectId(), origin:d.origin||null }).then(()=>{}).catch(cloudSyncFailed);
   }
-  function deleteDecision(id) { if(client && session) client.from('decisions').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
+  function deleteDecision(id) { if(client && session) client.from('decisions').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed); }
 
   function pushDocument(it) {
     if(!client || !session) return;
-    client.from('documents').upsert({ id:it.id, name:it.name, ext:it.ext, meta:it.meta, added_at:it.addedAt, tags:it.tags, index_pct:it.indexPct, content:it.content||'', project_id:DB.getActiveProjectId() }).then(()=>{}).catch(()=>{});
+    client.from('documents').upsert({ id:it.id, name:it.name, ext:it.ext, meta:it.meta, added_at:it.addedAt, tags:it.tags, index_pct:it.indexPct, content:it.content||'', project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed);
   }
-  function deleteDocument(id) { if(client && session) client.from('documents').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
+  function deleteDocument(id) { if(client && session) client.from('documents').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed); }
 
   function pushBudgetLine(l) {
     if(!client || !session) return;
-    client.from('budget_lines').upsert({ id:l.id, label:l.label, planned_value:l.plannedValue, wbs_module_id:l.wbsModuleId||null, is_reserve:!!l.isReserve, project_id:DB.getActiveProjectId(), origin:l.origin||null }).then(()=>{}).catch(()=>{});
+    client.from('budget_lines').upsert({ id:l.id, label:l.label, planned_value:l.plannedValue, wbs_module_id:l.wbsModuleId||null, is_reserve:!!l.isReserve, project_id:DB.getActiveProjectId(), origin:l.origin||null }).then(()=>{}).catch(cloudSyncFailed);
   }
-  function deleteBudgetLine(id) { if(client && session) client.from('budget_lines').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
+  function deleteBudgetLine(id) { if(client && session) client.from('budget_lines').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed); }
   function pushCostActual(a) {
     if(!client || !session) return;
-    client.from('cost_actuals').upsert({ id:a.id, label:a.label, amount:a.amount, entry_date:a.date, budget_line_id:a.budgetLineId||null, kind:a.kind, project_id:DB.getActiveProjectId() }).then(()=>{}).catch(()=>{});
+    client.from('cost_actuals').upsert({ id:a.id, label:a.label, amount:a.amount, entry_date:a.date, budget_line_id:a.budgetLineId||null, kind:a.kind, project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed);
   }
-  function deleteCostActual(id) { if(client && session) client.from('cost_actuals').delete().eq('id', id).then(()=>{}).catch(()=>{}); }
+  function deleteCostActual(id) { if(client && session) client.from('cost_actuals').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed); }
 
   // Apaga da nuvem só o que pertence a UM projeto (project_id) — usado por DB.clearAll(),
   // que antes só limpava o localStorage e deixava a cópia na nuvem intacta (o próximo login
@@ -2517,6 +2566,21 @@ const DB = (() => {
 
 <!-- ■ MODULE: core/theme ─ Claro / Escuro / Cinza. A aplicação em si já acontece cedo, inline
      no <head> (evita flash) — este módulo só cuida de persistir a escolha e desenhar o seletor. -->
+<!-- ■ MODULE: core/a11y-toggle ─ Os toggles de Configurações eram <div onclick> puros — sem
+     tabindex, role ou handler de teclado, inacessíveis via Tab/Enter/Espaço (achado CT17). -->
+<script data-module="core/a11y-toggle">
+const ToggleSwitch = (() => {
+  function flip(el) {
+    el.classList.toggle('on');
+    el.setAttribute('aria-checked', el.classList.contains('on') ? 'true' : 'false');
+  }
+  function key(e, el) {
+    if(e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); flip(el); }
+  }
+  return { flip, key };
+})();
+</script>
+
 <script data-module="core/theme">
 const Theme = (() => {
   const KEY = 'pmo_theme_v1';
@@ -2992,8 +3056,14 @@ const KG = (() => {
     const open = !body.classList.contains('cl');
     body.classList.toggle('cl', open);
     chev.classList.toggle('op', !open);
+    const hdr = kg.querySelector('.kg-hdr');
+    if(hdr) hdr.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
-  return { tog };
+  // .kg-hdr era um <div onclick> sem tabindex/role — inalcançável via teclado (achado CT17).
+  function key(e, id) {
+    if(e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); tog(id); }
+  }
+  return { tog, key };
 })();
 </script>
 
@@ -3302,7 +3372,7 @@ const PmoProfiles = (() => {
       // era fácil demais de não notar no meio de tantos outros badges (Baixo/Médio/Alto).
       const rowStyle = sel ? 'background:var(--ad);border:1px solid var(--ab);border-radius:var(--r8);padding:12px 14px;margin:6px 0' : 'padding:12px 0;border-bottom:1px solid var(--b1)';
       return `<div class="prov-row" style="${rowStyle}">
-        <div class="prov-radio ${sel?'sel':''}" data-perm="settings" onclick="PmoProfiles.set('${key}')" title="Definir como ${escapeHtml(d.label)}"></div>
+        <div class="prov-radio ${sel?'sel':''}" data-perm="settings" role="radio" aria-checked="${sel}" tabindex="0" aria-label="Definir como ${escapeHtml(d.label)}" onclick="PmoProfiles.set('${key}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="Definir como ${escapeHtml(d.label)}"></div>
         <div class="prov-body">
           <div class="prov-name"><i class="ti ti-${d.icon}"></i>${escapeHtml(d.label)}${sel?'<span class="badge b-acc"><i class="ti ti-check"></i> Perfil ativo</span>':''}<span class="badge" style="background:var(--s2);color:var(--t3)">${escapeHtml(d.controlLevel)}</span></div>
           <div class="prov-desc">${escapeHtml(d.resumo)}</div>
@@ -3673,7 +3743,21 @@ const Repo = (() => {
     }
     const sub = document.getElementById('repo-doc-count'); if(sub) sub.textContent = data.length;
     const kpi = document.getElementById('repo-kpi-count'); if(kpi) kpi.textContent = data.length;
-    if(justChanged) { const upd = document.getElementById('repo-kpi-updated'); if(upd) upd.innerHTML = 'agora'; }
+    // "8min atrás" era texto fixo no HTML, mesmo num repositório vazio recém-criado — agora
+    // deriva do addedAt real mais recente entre os documentos, ou soma "agora" só quando algo
+    // de fato acabou de mudar nesta chamada (upload/remoção).
+    const updEl = document.getElementById('repo-kpi-updated');
+    const updSubEl = document.getElementById('repo-kpi-updated-sub');
+    if(updEl) {
+      if(justChanged) { updEl.textContent = 'agora'; if(updSubEl) updSubEl.textContent = ''; }
+      else if(!data.length) { updEl.textContent = '—'; if(updSubEl) updSubEl.textContent = 'nenhum documento ainda'; }
+      else {
+        const lastDate = data.reduce((max, d) => (d.addedAt && d.addedAt > max) ? d.addedAt : max, data[0].addedAt || '');
+        const days = Math.max(0, Math.round((Date.now() - new Date(lastDate + 'T00:00:00').getTime()) / 86400000));
+        updEl.textContent = days === 0 ? 'hoje' : days;
+        if(updSubEl) updSubEl.textContent = days === 0 ? '' : (days === 1 ? 'dia atrás' : 'dias atrás');
+      }
+    }
 
     // "Confiança contextual" real: % de documentos com texto extraído persistido (não só nome) —
     // é exatamente o que ContextBuilder consegue de fato citar pra IA. Antes era um "94%" fixo.
@@ -4625,6 +4709,20 @@ const Dashboard = (() => {
     setText('dash-dec-count', pendentes.length);
     const criticosStakeholder = stakeholders.filter(s => s.engagement === 'critico').length;
     setText('dash-alert-count', criticosStakeholder);
+
+    // "Atualizado há 8 min" era texto fixo no HTML — aparecia igual num projeto recém-criado
+    // sem nenhum evento real, sugerindo atividade que nunca aconteceu. Agora deriva da Trilha
+    // (todo módulo relevante já registra lá), a mesma fonte real usada em services/trail.
+    const updEl = document.getElementById('dash-updated');
+    if(updEl) {
+      const trail = (typeof DB !== 'undefined') ? (DB.get('trail') || []) : [];
+      if(!trail.length) { updEl.textContent = 'nenhuma atividade registrada ainda'; }
+      else {
+        const lastDate = trail.reduce((max, t) => (t.date && t.date > max) ? t.date : max, trail[0].date || '');
+        const days = Math.max(0, Math.round((Date.now() - new Date(lastDate + 'T00:00:00').getTime()) / 86400000));
+        updEl.textContent = days === 0 ? 'hoje' : (days === 1 ? 'há 1 dia' : `há ${days} dias`);
+      }
+    }
 
     // Aderência = média do % de conclusão de todos os módulos da WBS
     const aderencia = wbs.length ? Math.round(wbs.reduce((sum,m) => sum + (m.pct||0), 0) / wbs.length) : 0;
