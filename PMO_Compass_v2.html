@@ -778,6 +778,7 @@ body.icons-failed i[data-fb]::before{
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-projetos')"><i class="ti ti-layout-grid sb-gico"></i>Projetos<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body" id="sbg-projetos-list">
       <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
+      <button class="si" data-p="prioritization" onclick="R.go('prioritization')"><i class="ti ti-sort-descending-2"></i>Priorização</button>
       <div id="sb-projects-root"></div>
       <button class="si" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
     </div>
@@ -991,6 +992,32 @@ body.icons-failed i[data-fb]::before{
 <section class="page" id="p-portfolio" data-module="pages/portfolio">
   <div class="pg-hdr"><div><div class="pg-title">Portfólio de projetos</div><div class="pg-sub"><span id="pf-count">3</span> projetos ativos · Clique em um projeto para torná-lo o projeto ativo</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button></div></div>
   <div class="g3" id="pf-cards-root"></div>
+</section>
+
+<!-- ■ MODULE: pages/prioritization -->
+<section class="page" id="p-prioritization" data-module="pages/prioritization">
+  <div class="pg-hdr"><div><div class="pg-title">Priorização de Projetos</div><div class="pg-sub">Critérios explícitos e parametrizáveis — a IA não decide nada aqui, cada nota é lançada por quem entende do projeto.</div></div></div>
+
+  <div class="card" data-perm="settings">
+    <div class="lbl"><i class="ti ti-adjustments"></i>Método de priorização</div>
+    <p style="font-size:12px;color:var(--t2);margin-bottom:10px">Baseado em modelos reconhecidos de gestão de portfólio (Weighted Scoring Model / PMI, e WSJF do SAFe) — escolha o que fizer mais sentido pro seu comitê. Pesos abaixo são totalmente ajustáveis.</p>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer"><input type="radio" name="prio-method" id="prio-method-weighted" onchange="Prioritization.setMethod('weighted')"> <strong>Pontuação Ponderada</strong> — soma dos critérios × peso</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer"><input type="radio" name="prio-method" id="prio-method-wsjf" onchange="Prioritization.setMethod('wsjf')"> <strong>WSJF adaptado</strong> — (benefício+diretoria+risco) ÷ esforço</label>
+    </div>
+    <div id="prio-weights-root"></div>
+  </div>
+
+  <div class="card">
+    <div class="lbl"><i class="ti ti-chart-bubble"></i>Quadrante Valor × Esforço</div>
+    <p style="font-size:11.5px;color:var(--t3);margin-bottom:8px">Tamanho da bolha = risco de não fazer. Canto superior-esquerdo (alto valor, baixo esforço) = prioridade natural.</p>
+    <div id="prio-quadrant-root" style="overflow-x:auto"></div>
+  </div>
+
+  <div class="card">
+    <div class="lbl"><i class="ti ti-list-numbers"></i>Ranking do portfólio</div>
+    <div id="prio-table-root"></div>
+  </div>
 </section>
 
 <!-- ■ MODULE: pages/settings -->
@@ -2400,6 +2427,16 @@ const DB = (() => {
   // Lê os dados de OUTRO projeto sem trocar o projeto ativo — usado pelo Portfólio para mostrar todos de uma vez
   function getForProject(projectId, table) { return loadCacheFor(projectId)[table] || []; }
 
+  // Grava num projeto SEM trocar o ativo — usado pela Priorização, que edita o portfólio
+  // inteiro de uma tela só. Se for o próprio projeto ativo, atualiza também o cache em
+  // memória (senão a escrita em disco ficaria invisível pro resto do app até o próximo reload).
+  function setForProject(projectId, table, value) {
+    if(projectId === getActiveProjectId()) { set(table, value); return; }
+    const c = loadCacheFor(projectId);
+    c[table] = value;
+    try { localStorage.setItem(storageKeyFor(projectId), JSON.stringify(c)); } catch(e){ T.show('⚠️ Não foi possível salvar — armazenamento local cheio ou indisponível.'); }
+  }
+
   function switchProject(projectId) {
     if(!loadProjects().some(p => p.id === projectId)) return;
     if(projectId === getActiveProjectId()) return;
@@ -2560,7 +2597,7 @@ const DB = (() => {
     projects = null; activeProjectId = null; cache = null;
   }
 
-  return { get, set, getForProject, exportBackup, importBackup, clearAll, factoryReset, listProjects, getActiveProjectId, switchProject, createProject };
+  return { get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, factoryReset, listProjects, getActiveProjectId, switchProject, createProject };
 })();
 </script>
 
@@ -2763,7 +2800,7 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','help','xray'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','help','xray'];
   function go(id) {
     pages.forEach(p => {
       const el = document.getElementById('p-'+p);
@@ -2778,6 +2815,7 @@ const R = (() => {
     if(id === 'report' && typeof Report !== 'undefined') Report.render();
     if(id === 'loop' && typeof Loop !== 'undefined') Loop.render();
     if(id === 'portfolio' && typeof Portfolio !== 'undefined') Portfolio.render();
+    if(id === 'prioritization' && typeof Prioritization !== 'undefined') Prioritization.render();
     if(id === 'resources' && typeof Resources !== 'undefined') Resources.render();
     if(id === 'budget' && typeof Budget !== 'undefined') Budget.render();
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
@@ -2802,7 +2840,7 @@ const Nav = (() => {
     wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento',
     burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe',
     lessons:'sbg-conhecimento', meetings:'sbg-conhecimento', repository:'sbg-conhecimento', chat:'sbg-conhecimento',
-    portfolio:'sbg-projetos'
+    portfolio:'sbg-projetos', prioritization:'sbg-projetos'
   };
 
   // Comportamento sanfona: só um menu fica aberto por vez — todo menu sem
@@ -2877,7 +2915,7 @@ const Nav = (() => {
     wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos',
     burnout:'Burnout Radar', resources:'Recursos', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
-    portfolio:'Portfólio', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
+    portfolio:'Portfólio', prioritization:'Priorização', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
   };
 
   function renderBreadcrumb(pageId) {
@@ -2937,6 +2975,7 @@ const CmdK = (() => {
     { label:'Repositório', page:'repository', icon:'files', group:'Conhecimento' },
     { label:'Chat contextual', page:'chat', icon:'message-2', group:'Conhecimento' },
     { label:'Portfólio', page:'portfolio', icon:'layout-grid', group:'Projetos' },
+    { label:'Priorização', page:'prioritization', icon:'sort-descending-2', group:'Projetos' },
     { label:'Configurações', page:'settings', icon:'settings', group:'' },
     { label:'Ajuda', page:'help', icon:'help-circle', group:'' }
   ];
@@ -6128,6 +6167,247 @@ const Portfolio = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: core/prioritization ─ Priorização de portfólio: critérios explícitos e
+     parametrizáveis (Weighted Scoring Model / PMI, ou WSJF adaptado do SAFe) — a IA não decide
+     nada aqui, cada nota é lançada por quem entende do projeto, com justificativa obrigatória. -->
+<script data-module="core/prioritization">
+const Prioritization = (() => {
+  const CFG_KEY = 'pmo_priority_config_v1';
+  const DEFAULT_WEIGHTS = { benefit:0.30, directive:0.25, process:0.20, risk:0.15 };
+  const CRITERIA = [
+    { key:'benefit',   label:'Benefício financeiro',    icon:'coin' },
+    { key:'directive', label:'Solicitação da diretoria', icon:'building-bank' },
+    { key:'process',   label:'Melhoria de processo',    icon:'settings-automation' },
+    { key:'risk',      label:'Risco de não fazer',       icon:'alert-triangle' }
+  ];
+  const EFFORT = { key:'effort', label:'Esforço / complexidade', icon:'weight' };
+
+  let modalCtx = { projectId:null };
+
+  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmtMoney(v) { return 'R$' + Math.round(v||0).toLocaleString('pt-BR'); }
+
+  function getConfig() {
+    let cfg = { method:'weighted', weights:{ ...DEFAULT_WEIGHTS } };
+    try {
+      const raw = localStorage.getItem(CFG_KEY);
+      if(raw) { const parsed = JSON.parse(raw); cfg = { method: parsed.method === 'wsjf' ? 'wsjf' : 'weighted', weights: { ...DEFAULT_WEIGHTS, ...(parsed.weights||{}) } }; }
+    } catch(e){}
+    return cfg;
+  }
+  function setConfig(cfg) { try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch(e){} }
+
+  function setMethod(method) {
+    if(!Auth.guard('settings')) return;
+    const cfg = getConfig();
+    cfg.method = method;
+    setConfig(cfg);
+    render();
+  }
+
+  function setWeight(key, value) {
+    if(!Auth.guard('settings')) return;
+    const cfg = getConfig();
+    cfg.weights[key] = Math.max(0, Math.min(1, Number(value)||0));
+    setConfig(cfg);
+    render();
+  }
+
+  // prioritization é um objeto único por projeto (como pmoProfile), não uma lista — as tabelas
+  // do DB.getForProject devolvem [] por padrão quando nunca usadas, então isso é tratado como
+  // "sem dado ainda" em vez de erro.
+  function getScores(projectId) {
+    if(typeof DB === 'undefined') return {};
+    const d = DB.getForProject(projectId, 'prioritization');
+    return (d && typeof d === 'object' && !Array.isArray(d)) ? d : {};
+  }
+  function saveScores(projectId, scores) {
+    if(typeof DB === 'undefined') return;
+    DB.setForProject(projectId, 'prioritization', scores);
+  }
+
+  function normalize5to100(score) { return (typeof score !== 'number') ? null : Math.max(0, Math.min(100, ((score-1)/4)*100)); }
+
+  // Índice de valor — método escolhido em Configurações (parametrizável, não fixo). "weighted" é o
+  // Weighted Scoring Model (PMI): soma ponderada, 0-100. "wsjf" é o WSJF adaptado do SAFe:
+  // (benefício+diretoria+risco) ÷ esforço — quanto maior, mais deveria furar a fila.
+  function computeValue(scores, cfg) {
+    cfg = cfg || getConfig();
+    const has = (k) => typeof scores[k+'Score'] === 'number';
+    if(cfg.method === 'wsjf') {
+      if(!has('benefit') && !has('directive') && !has('risk')) return null;
+      const b = scores.benefitScore||0, d = scores.directiveScore||0, r = scores.riskScore||0;
+      const e = Math.max(1, scores.effortScore||1);
+      return Math.round(((b+d+r)/e) * 100) / 100;
+    }
+    const present = CRITERIA.map(c=>c.key).filter(has);
+    if(!present.length) return null;
+    const totalW = present.reduce((s,k)=>s+(cfg.weights[k]||0),0) || 1;
+    const sum = present.reduce((s,k)=> s + normalize5to100(scores[k+'Score']) * (cfg.weights[k]||0), 0);
+    return Math.round(sum / totalW);
+  }
+
+  // Rigor financeiro: se benefício anual e custo estimado forem preenchidos, calcula payback e
+  // ROI simples de verdade — em vez de só uma nota 1-5 "no olho". A nota final continua manual
+  // (o usuário confirma), mas ganha uma sugestão objetiva baseada no payback.
+  function computeFinancials(scores) {
+    const val = Number(scores.benefitValueAnnual), cost = Number(scores.benefitCostEstimate);
+    if(!val || !cost) return null;
+    const paybackMonths = cost / (val/12);
+    const roiSimple = (val - cost) / cost;
+    return { paybackMonths: Math.round(paybackMonths*10)/10, roiSimple: Math.round(roiSimple*1000)/1000 };
+  }
+  function suggestBenefitScore(paybackMonths) {
+    if(paybackMonths == null) return null;
+    if(paybackMonths <= 6) return 5;
+    if(paybackMonths <= 12) return 4;
+    if(paybackMonths <= 24) return 3;
+    if(paybackMonths <= 36) return 2;
+    return 1;
+  }
+
+  function renderWeightsEditor() {
+    const root = document.getElementById('prio-weights-root');
+    if(!root) return;
+    const cfg = getConfig();
+    const wEl = document.getElementById('prio-method-weighted'); if(wEl) wEl.checked = cfg.method === 'weighted';
+    const jEl = document.getElementById('prio-method-wsjf'); if(jEl) jEl.checked = cfg.method === 'wsjf';
+    if(cfg.method === 'wsjf') {
+      root.innerHTML = `<div style="font-size:11.5px;color:var(--t3)"><i class="ti ti-info-circle"></i> WSJF não usa pesos — cada critério vale o mesmo, dividido pelo esforço. Fórmula fixa: (Benefício + Diretoria + Risco) ÷ Esforço.</div>`;
+      return;
+    }
+    const totalW = Object.values(cfg.weights).reduce((s,w)=>s+w,0);
+    root.innerHTML = CRITERIA.map(c => `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="font-size:12px;color:var(--t1);width:180px;flex-shrink:0"><i class="ti ti-${c.icon}"></i> ${escapeHtml(c.label)}</span>
+        <input type="range" min="0" max="1" step="0.05" value="${cfg.weights[c.key]||0}" oninput="Prioritization.setWeight('${c.key}', this.value); document.getElementById('prio-w-${c.key}-val').textContent = Math.round(this.value*100)+'%'" style="flex:1">
+        <span style="font-size:12px;color:var(--t2);width:36px;text-align:right" id="prio-w-${c.key}-val">${Math.round((cfg.weights[c.key]||0)*100)}%</span>
+      </div>`).join('') +
+      `<div style="font-size:11px;color:${Math.abs(totalW-1)<0.02?'var(--t3)':'var(--amb)'};margin-top:4px"><i class="ti ti-${Math.abs(totalW-1)<0.02?'check':'alert-triangle'}"></i> Soma dos pesos: ${Math.round(totalW*100)}%${Math.abs(totalW-1)<0.02?'':' — ajuste pra somar 100% (o cálculo normaliza sozinho, mas fica mais fácil de explicar em 100%)'}</div>`;
+  }
+
+  function renderQuadrant(rows) {
+    const root = document.getElementById('prio-quadrant-root');
+    if(!root) return;
+    const plottable = rows.filter(r => r.value != null && typeof r.scores.effortScore === 'number');
+    if(!plottable.length) { root.innerHTML = `<div style="font-size:12px;color:var(--t3);padding:20px 0;text-align:center">Nenhum projeto pontuado ainda — clique em "Pontuar" na tabela abaixo pra aparecer aqui.</div>`; return; }
+    const maxVal = Math.max(...plottable.map(r=>r.value), 1);
+    const W = 560, H = 300, PAD = 40;
+    const px = (effort) => PAD + ((effort-1)/4) * (W - PAD*2);
+    const py = (val) => (H-PAD) - (Math.max(0,val)/maxVal) * (H - PAD*2);
+    const bubbles = plottable.map(r => {
+      const x = px(r.scores.effortScore), y = py(r.value);
+      const risk = r.scores.riskScore || 1;
+      const rad = 8 + risk*2.5;
+      return `<g>
+        <circle cx="${x}" cy="${y}" r="${rad}" fill="var(--ad)" stroke="var(--acc)" stroke-width="1.5"></circle>
+        <text x="${x}" y="${y-rad-5}" text-anchor="middle" font-size="10.5" fill="var(--t1)">${escapeHtml(r.project.name)}</text>
+      </g>`;
+    }).join('');
+    root.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:640px;height:auto">
+      <line x1="${PAD}" y1="${H-PAD}" x2="${W-PAD}" y2="${H-PAD}" stroke="var(--b2)" stroke-width="1"></line>
+      <line x1="${PAD}" y1="${PAD}" x2="${PAD}" y2="${H-PAD}" stroke="var(--b2)" stroke-width="1"></line>
+      <text x="${(W)/2}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--t3)">Esforço / complexidade →</text>
+      <text x="12" y="${H/2}" text-anchor="middle" font-size="11" fill="var(--t3)" transform="rotate(-90 12 ${H/2})">Valor →</text>
+      ${bubbles}
+    </svg>`;
+  }
+
+  function renderTable(rows) {
+    const root = document.getElementById('prio-table-root');
+    if(!root) return;
+    if(!rows.length) { root.innerHTML = `<div style="text-align:center;padding:20px 10px;color:var(--t3);font-size:12.5px">Nenhum projeto no portfólio ainda.</div>`; return; }
+    const sorted = [...rows].sort((a,b) => (b.value ?? -Infinity) - (a.value ?? -Infinity));
+    root.innerHTML = sorted.map((r, i) => {
+      const fin = computeFinancials(r.scores);
+      return `<div class="set-row" style="align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono)">#${i+1}</span>
+            <div class="set-lbl">${escapeHtml(r.project.name)}</div>
+            ${r.value!=null ? `<span class="badge b-acc">Valor: ${r.value}</span>` : `<span class="badge b-neu">Sem pontuação</span>`}
+          </div>
+          <div class="set-sub">${r.scores.sponsor ? 'Patrocinador: '+escapeHtml(r.scores.sponsor)+' · ' : ''}${fin ? `Payback ${fin.paybackMonths} meses · ROI ${Math.round(fin.roiSimple*100)}%` : 'Sem dado financeiro lançado'}</div>
+        </div>
+        <button class="btn btn-sm" data-perm="business" onclick="Prioritization.openEdit('${r.project.id}')"><i class="ti ti-edit"></i>Pontuar</button>
+      </div>`;
+    }).join('');
+  }
+
+  function render() {
+    if(typeof DB === 'undefined') return;
+    renderWeightsEditor();
+    const cfg = getConfig();
+    const rows = DB.listProjects().map(p => {
+      const scores = getScores(p.id);
+      return { project:p, scores, value: computeValue(scores, cfg) };
+    });
+    renderQuadrant(rows);
+    renderTable(rows);
+  }
+
+  function openEdit(projectId) {
+    if(!Auth.guard('business')) return;
+    const projects = DB.listProjects();
+    const p = projects.find(x => x.id === projectId);
+    if(!p) return;
+    modalCtx = { projectId };
+    const scores = getScores(projectId);
+    document.getElementById('prio-modal-title').textContent = 'Priorizar — ' + p.name;
+    document.getElementById('prio-f-sponsor').value = scores.sponsor || '';
+    document.getElementById('prio-f-benefit-value').value = scores.benefitValueAnnual || '';
+    document.getElementById('prio-f-benefit-cost').value = scores.benefitCostEstimate || '';
+
+    const allCriteria = [...CRITERIA, EFFORT];
+    const root = document.getElementById('prio-criteria-root');
+    if(root) {
+      root.innerHTML = allCriteria.map(c => `
+        <div style="border-top:1px solid var(--b1);padding-top:10px">
+          <div class="field-label"><i class="ti ti-${c.icon}"></i> ${escapeHtml(c.label)} — nota <span id="prio-f-${c.key}-val">${scores[c.key+'Score']||3}</span>/5</div>
+          <input type="range" min="1" max="5" step="1" id="prio-f-${c.key}-score" value="${scores[c.key+'Score']||3}" style="width:100%" oninput="document.getElementById('prio-f-${c.key}-val').textContent=this.value">
+          <textarea class="input" id="prio-f-${c.key}-note" rows="2" placeholder="Justificativa (obrigatória pra virar prioridade defensável)" style="margin-top:4px">${escapeHtml(scores[c.key+'Note']||'')}</textarea>
+        </div>`).join('');
+    }
+    updateFinancialPreview();
+    document.getElementById('modal-prioritization').classList.remove('hidden');
+  }
+  function closeModal() { document.getElementById('modal-prioritization').classList.add('hidden'); }
+
+  function updateFinancialPreview() {
+    const val = Number(document.getElementById('prio-f-benefit-value').value);
+    const cost = Number(document.getElementById('prio-f-benefit-cost').value);
+    const el = document.getElementById('prio-financial-preview');
+    if(!el) return;
+    if(!val || !cost) { el.innerHTML = ''; return; }
+    const fin = computeFinancials({ benefitValueAnnual:val, benefitCostEstimate:cost });
+    const suggestion = suggestBenefitScore(fin.paybackMonths);
+    el.innerHTML = `<i class="ti ti-calculator"></i> Payback: <strong style="color:var(--t1)">${fin.paybackMonths} meses</strong> · ROI simples (1º ano): <strong style="color:var(--t1)">${Math.round(fin.roiSimple*100)}%</strong> · sugestão de nota de benefício: <strong style="color:var(--t1)">${suggestion}/5</strong> <button class="btn btn-sm" style="padding:2px 8px;font-size:11px" onclick="document.getElementById('prio-f-benefit-score').value=${suggestion};document.getElementById('prio-f-benefit-val').textContent=${suggestion}">Usar sugestão</button>`;
+  }
+
+  function save() {
+    if(!Auth.guard('business')) return;
+    const { projectId } = modalCtx;
+    if(!projectId) return;
+    const allCriteria = [...CRITERIA, EFFORT];
+    const scores = {
+      sponsor: document.getElementById('prio-f-sponsor').value.trim(),
+      benefitValueAnnual: Number(document.getElementById('prio-f-benefit-value').value) || null,
+      benefitCostEstimate: Number(document.getElementById('prio-f-benefit-cost').value) || null
+    };
+    allCriteria.forEach(c => {
+      scores[c.key+'Score'] = Number(document.getElementById('prio-f-'+c.key+'-score').value) || 3;
+      scores[c.key+'Note'] = document.getElementById('prio-f-'+c.key+'-note').value.trim();
+    });
+    saveScores(projectId, scores);
+    closeModal();
+    render();
+    T.show('✅ Priorização salva.');
+  }
+
+  return { render, setMethod, setWeight, openEdit, closeModal, updateFinancialPreview, save };
+})();
+</script>
+
 <!-- ■ MODULE: pages/estimates-js -->
 <script data-module="pages/estimates-js">
 const Estimates = (() => {
@@ -7132,6 +7412,28 @@ const WBS = (() => {
 </div>
 
 <!-- ■ MODULE: ui/lesson-modal -->
+<div class="modal-ov hidden" id="modal-prioritization" onclick="if(event.target===this)Prioritization.closeModal()">
+  <div class="modal-box" style="width:560px;max-width:96vw">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" id="prio-modal-title">Priorizar projeto</div>
+      <button class="btn btn-sm" onclick="Prioritization.closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-sub">Cada nota precisa de uma justificativa curta — é isso que dá pra defender numa reunião de comitê</div>
+    <div style="display:flex;flex-direction:column;gap:12px;max-height:65vh;overflow-y:auto;padding-right:4px;margin-top:8px">
+      <div><div class="field-label">Patrocinador / quem solicitou</div><input class="input" id="prio-f-sponsor" placeholder="Ex: Diretoria Financeira, Ricardo Moreto..."></div>
+      <div class="g2" style="gap:10px">
+        <div><div class="field-label">Benefício financeiro anual (R$, opcional)</div><input class="input" id="prio-f-benefit-value" type="number" min="0" step="1000" oninput="Prioritization.updateFinancialPreview()"></div>
+        <div><div class="field-label">Custo estimado do projeto (R$, opcional)</div><input class="input" id="prio-f-benefit-cost" type="number" min="0" step="1000" oninput="Prioritization.updateFinancialPreview()"></div>
+      </div>
+      <div id="prio-financial-preview" style="font-size:11.5px;color:var(--t2)"></div>
+      <div id="prio-criteria-root" style="display:flex;flex-direction:column;gap:12px"></div>
+    </div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-acc btn-sm" onclick="Prioritization.save()"><i class="ti ti-check"></i>Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-ov hidden" id="modal-lesson" onclick="if(event.target===this)Lessons.closeModal()">
   <div class="modal-box" style="width:480px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
