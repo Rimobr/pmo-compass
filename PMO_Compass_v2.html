@@ -4531,6 +4531,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // PWA: só registra o service worker se o app estiver hospedado (http/https), não quando aberto como arquivo local
   if('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
+    // Limpeza de uma vez: quem visitou o app antes desta correção pode ter o SW inline (blob,
+    // cache-first, sem versão) do módulo core/pwa ainda ativo, competindo com o sw.js real e
+    // travando a página numa versão antiga do HTML indefinidamente. Remove qualquer registro
+    // cujo script não seja o sw.js de verdade, forçando a assumir o controle correto.
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(reg => {
+        const src = (reg.active && reg.active.scriptURL) || (reg.installing && reg.installing.scriptURL) || (reg.waiting && reg.waiting.scriptURL) || '';
+        if(src && !src.endsWith('/sw.js') && !src.endsWith('sw.js')) reg.unregister().catch(()=>{});
+      });
+    }).catch(()=>{});
   }
   // Welcome toast
   setTimeout(() => {
@@ -7265,9 +7275,16 @@ const WBS = (() => {
 <!-- ■ MODULE: core/pwa ─ Progressive Web App -->
 <script data-module="core/pwa">
 (function(){
-  // Register service worker for offline use
-  if('serviceWorker' in navigator) {
-    // SW is inline to keep single-file architecture
+  // Registrava um Service Worker inline (blob, cache-first, cache SEM versão) em TODA carga de
+  // página — inclusive em produção (pmo-compass.vercel.app), onde o bootstrap principal já
+  // registra o sw.js de verdade (network-first, com cache versionado que se limpa sozinho a
+  // cada deploy — ver sw.js). Os dois competindo pelo mesmo escopo é exatamente a causa raiz de
+  // um bug achado ao vivo numa rodada de teste: depois de um deploy, a página continuava
+  // rodando JS antigo mesmo após F5, porque esse SW cache-first vencia a corrida e nunca
+  // buscava a rede de novo. Este SW inline só faz sentido no cenário pra que foi escrito —
+  // o arquivo .html compartilhado standalone, aberto via file:// sem nenhum servidor por trás
+  // — onde não existe um sw.js de verdade pra registrar.
+  if('serviceWorker' in navigator && !location.protocol.startsWith('http')) {
     const swCode = `
       const CACHE = 'pmo-compass-v2';
       self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll([location.href]))));
