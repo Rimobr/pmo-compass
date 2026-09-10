@@ -6061,6 +6061,11 @@ const Loop = (() => {
 const Portfolio = (() => {
   function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+  // O selo de saúde do Portfólio usava uma fórmula própria (só prazo+escopo) que divergia do
+  // índice de 6 dimensões (services/health-score) já usado no Dashboard — o mesmo projeto podia
+  // aparecer "Saudável" aqui e "Em risco" lá. Agora usa exatamente o mesmo HealthScore.calculate(),
+  // só que lido pro projeto da vez (sem trocar o ativo), pra garantir que o número seja o mesmo
+  // em qualquer tela que o mostre.
   function computeStats(projectId) {
     const wbs = DB.getForProject(projectId, 'wbs') || [];
     const decisions = DB.getForProject(projectId, 'decisions') || [];
@@ -6073,11 +6078,15 @@ const Portfolio = (() => {
     const scopeAbertos = scope.filter(s => s.status === 'pending' || s.status === 'analysis').length;
     const escopoScore = Math.max(0, 100 - Math.min(scopeAbertos * 15, 100));
 
-    let status = 'b-amb', statusLabel = 'Atenção';
-    if(aderencia >= 70 && scopeAbertos === 0) { status = 'b-grn'; statusLabel = 'Saudável'; }
-    else if(aderencia < 40 || scopeAbertos >= 3) { status = 'b-red'; statusLabel = 'Em risco'; }
+    let healthScoreValue = null, status = 'b-amb', statusLabel = 'Atenção';
+    if(typeof HealthScore !== 'undefined') {
+      healthScoreValue = HealthScore.calculate(HealthScore.computeMetrics(projectId));
+      const st = HealthScore.getStatus(healthScoreValue);
+      statusLabel = st.label;
+      status = st.badge;
+    }
 
-    return { aderencia, pendentes, scopeAbertos, escopoScore, status, statusLabel, docs: repository.length, hasData: wbs.length > 0 || decisions.length > 0 || repository.length > 0, budget };
+    return { aderencia, pendentes, scopeAbertos, escopoScore, status, statusLabel, healthScoreValue, docs: repository.length, hasData: wbs.length > 0 || decisions.length > 0 || repository.length > 0, budget };
   }
 
   function barColor(pct) { return pct >= 70 ? 'var(--grn)' : (pct >= 40 ? 'var(--amb)' : 'var(--red)'); }
@@ -6104,7 +6113,7 @@ const Portfolio = (() => {
       return `<div class="pc-card${isActive?' sel':''}" onclick="DB.switchProject('${p.id}');R.go('dashboard')">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
           <div><div class="pc-name">${escapeHtml(p.name)}${isActive?' <span style=\"font-size:10px;color:var(--acc);font-weight:400\">· ativo</span>':''}</div><div class="pc-client">${escapeHtml(p.client||'')}</div></div>
-          <span class="badge ${s.status}">${s.statusLabel}</span>
+          <span class="badge ${s.status}" title="Índice de saúde multidimensional — mesmo cálculo do Dashboard">${s.statusLabel}${s.healthScoreValue!=null?' · '+s.healthScoreValue:''}</span>
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">${badges}</div>
         <div class="pb-row"><span class="pb-lbl">Prazo (WBS)</span><div class="pb-track"><div class="pb-fill" style="width:${s.aderencia}%;background:${barColor(s.aderencia)}"></div></div><span class="pb-pct">${s.aderencia}%</span></div>
@@ -7718,12 +7727,17 @@ const HealthScore = (() => {
   // (neutro/sem problema detectado) em vez de inventar um número.
   const DIM_LABEL = { schedule:'Cronograma', budget:'Orçamento', team:'Equipe', quality:'Qualidade', learning:'Aprendizado', scope:'Scope creep' };
 
-  function computeMetrics() {
-    const wbs = DB.get('wbs') || [];
-    const scope = DB.get('scopeChanges') || [];
-    const team = DB.get('team') || [];
-    const lessons = DB.get('lessons') || [];
-    const meetings = DB.get('meetings') || [];
+  // Sem projectId, calcula pro projeto ativo — com projectId, lê o outro projeto sem trocar o
+  // ativo (DB.getForProject), do mesmo jeito que Budget.computeMetrics já fazia. É o que permite
+  // o Portfólio usar o índice completo de 6 dimensões em vez de uma fórmula própria mais pobre.
+  function computeMetrics(projectId) {
+    const pid = projectId || (typeof DB !== 'undefined' ? DB.getActiveProjectId() : null);
+    const getTable = (table) => (pid && typeof DB !== 'undefined') ? (DB.getForProject(pid, table) || []) : [];
+    const wbs = getTable('wbs');
+    const scope = getTable('scopeChanges');
+    const team = getTable('team');
+    const lessons = getTable('lessons');
+    const meetings = getTable('meetings');
 
     // Cronograma: aderência média da WBS (mesma base usada no Dashboard e no Relatório)
     const schedule = wbs.length ? Math.round(wbs.reduce((s,m) => s + (m.pct||0), 0) / wbs.length) : 100;
@@ -7737,7 +7751,7 @@ const HealthScore = (() => {
     const teamScore = Math.max(0, 100 - Math.min(membrosCriticos.length * 30, 100));
 
     // Orçamento: CPI real (services/budget-js) — sem custo real lançado ainda, considera neutro
-    const bm = (typeof Budget !== 'undefined') ? Budget.computeMetrics() : { CPI:null };
+    const bm = (typeof Budget !== 'undefined') ? Budget.computeMetrics(pid) : { CPI:null };
     const budgetScore = bm.CPI != null ? Math.max(0, Math.min(100, Math.round(bm.CPI * 100))) : 100;
 
     // Qualidade: proxy real — % de ações de reunião já concluídas (execução do que foi combinado)
