@@ -914,6 +914,28 @@ body.icons-failed i[data-fb]::before{
     <div><div class="pg-title"><i class="ti ti-report-medical" style="color:var(--acc)"></i> Raio-X do Projeto</div><div class="pg-sub">Aponte os documentos do projeto — a IA lê, identifica saúde, caminho crítico e riscos, e devolve um diagnóstico em minutos. Depois, se fizer sentido, os achados viram registros reais em Gestão de Projeto.</div></div>
   </div>
 
+  <div class="card" id="batchxray-idle-card" data-perm="business">
+    <div class="lbl"><i class="ti ti-stack-2"></i>Raio-X em lote — vários projetos de uma vez</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:8px">Pra estruturar um departamento: escolha os projetos do portfólio e suba um documento de cada, um de cada vez — no fim, um resumo consolidado de todos.</p>
+    <button class="btn btn-sm btn-acc" onclick="BatchXray.openPicker()"><i class="ti ti-list-check"></i>Escolher projetos e iniciar</button>
+    <div id="batchxray-picker-root" style="margin-top:12px;display:none"></div>
+  </div>
+
+  <div class="card card-accent" id="batchxray-progress-card" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div class="lbl" style="color:var(--acc)"><i class="ti ti-list-numbers"></i><span id="batchxray-progress-label">Projeto 1 de 1</span></div>
+      <div class="btn-row">
+        <button class="btn btn-sm" onclick="BatchXray.cancel()"><i class="ti ti-x"></i>Cancelar lote</button>
+        <button class="btn btn-sm" onclick="BatchXray.next()"><i class="ti ti-arrow-right"></i><span id="batchxray-next-label">Próximo projeto</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="batchxray-summary-card" style="display:none">
+    <div class="lbl"><i class="ti ti-report-analytics"></i>Resumo consolidado do lote</div>
+    <div id="batchxray-summary-root"></div>
+  </div>
+
   <div class="card card-accent">
     <div class="lbl" style="color:var(--acc)"><i class="ti ti-folder-plus"></i>Envie os documentos do projeto</div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:2px">Termo de projeto, propostas, contratos, atas, cronogramas, planilhas de orçamento — quanto mais completo, mais preciso o diagnóstico. Dados sensíveis (CPF, CNPJ, RG, e-mail, telefone, CEP) são descaracterizados automaticamente, conforme a LGPD, antes de qualquer análise.</p>
@@ -991,6 +1013,14 @@ body.icons-failed i[data-fb]::before{
 <!-- ■ MODULE: pages/portfolio -->
 <section class="page" id="p-portfolio" data-module="pages/portfolio">
   <div class="pg-hdr"><div><div class="pg-title">Portfólio de projetos</div><div class="pg-sub"><span id="pf-count">3</span> projetos ativos · Clique em um projeto para torná-lo o projeto ativo</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button></div></div>
+
+  <div class="card card-accent">
+    <div class="lbl" style="color:var(--acc)"><i class="ti ti-brain"></i>Diagnóstico do portfólio pela IA</div>
+    <p style="font-size:12px;color:var(--t2);margin-bottom:8px">Lê o status real (o mesmo índice de cada card abaixo) e a priorização já lançada de todos os projetos, e devolve uma leitura cruzada — temas de risco recorrentes, projetos parados e sugestão de sequenciamento. Não inventa projeto nem número que não esteja nos dados reais.</p>
+    <button class="btn btn-sm btn-acc" data-perm="business" onclick="PortfolioDiagnosis.generate()"><i class="ti ti-sparkles"></i>Gerar diagnóstico do portfólio</button>
+    <div id="pf-diagnosis-root" style="margin-top:10px"></div>
+  </div>
+
   <div class="g3" id="pf-cards-root"></div>
 </section>
 
@@ -4306,6 +4336,99 @@ const ProjectXray = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: core/batch-xray ─ Raio-X em vários projetos em sequência: reaproveita 100% do
+     FileIntake/ProjectXray já existente (mesmo dropzone, mesma revisão antes de confirmar) — só
+     guia a troca de projeto ativo entre um upload e outro. Não commita nada sozinho: quem decide
+     o que vira registro real, em cada projeto, continua sendo o botão de confirmação normal do
+     Raio-X, exatamente como no fluxo de um projeto só. -->
+<script data-module="core/batch-xray">
+const BatchXray = (() => {
+  let queue = [];
+  let index = 0;
+
+  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function openPicker() {
+    if(!Auth.guard('business')) return;
+    const root = document.getElementById('batchxray-picker-root');
+    if(!root || typeof DB === 'undefined') return;
+    const projects = DB.listProjects();
+    root.innerHTML = projects.map(p => `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12.5px;cursor:pointer"><input type="checkbox" checked class="batchxray-pick" value="${p.id}"> ${escapeHtml(p.name)}${p.client?' <span style="color:var(--t3)">— '+escapeHtml(p.client)+'</span>':''}</label>`).join('') +
+      `<button class="btn btn-sm btn-acc" style="margin-top:8px" onclick="BatchXray.start()"><i class="ti ti-player-play"></i>Iniciar lote</button>`;
+    root.style.display = '';
+  }
+
+  function start() {
+    if(!Auth.guard('business')) return;
+    const checked = [...document.querySelectorAll('.batchxray-pick:checked')].map(el => el.value);
+    if(!checked.length) { T.show('⚠️ Marque pelo menos um projeto.'); return; }
+    queue = checked;
+    index = 0;
+    document.getElementById('batchxray-idle-card').style.display = 'none';
+    document.getElementById('batchxray-summary-card').style.display = 'none';
+    document.getElementById('batchxray-progress-card').style.display = '';
+    goToCurrent();
+  }
+
+  function goToCurrent() {
+    const pid = queue[index];
+    if(typeof DB !== 'undefined') DB.switchProject(pid);
+    const projects = DB.listProjects();
+    const p = projects.find(x => x.id === pid);
+    const label = document.getElementById('batchxray-progress-label');
+    if(label) label.textContent = `Projeto ${index+1} de ${queue.length}: ${p ? p.name : pid}`;
+    const nextLabel = document.getElementById('batchxray-next-label');
+    if(nextLabel) nextLabel.textContent = (index === queue.length-1) ? 'Concluir e ver resumo' : 'Próximo projeto';
+    const results = document.getElementById('xray-results');
+    if(results) results.innerHTML = '';
+  }
+
+  function next() {
+    index++;
+    if(index < queue.length) goToCurrent();
+    else finish();
+  }
+
+  function cancel() {
+    queue = []; index = 0;
+    document.getElementById('batchxray-progress-card').style.display = 'none';
+    document.getElementById('batchxray-summary-card').style.display = 'none';
+    document.getElementById('batchxray-idle-card').style.display = '';
+    const picker = document.getElementById('batchxray-picker-root'); if(picker) picker.style.display = 'none';
+  }
+
+  const SAUDE_LABEL = { grn:{txt:'Saudável', cls:'b-grn'}, amb:{txt:'Atenção', cls:'b-amb'}, red:{txt:'Crítico', cls:'b-red'} };
+
+  // O resumo final não pede nada novo à IA — só relê o que o próprio Raio-X já gravou em
+  // RaioXHistory pra cada projeto do lote (mesmo dado, sem custo extra de chamada).
+  function finish() {
+    document.getElementById('batchxray-progress-card').style.display = 'none';
+    const root = document.getElementById('batchxray-summary-root');
+    if(!root || typeof DB === 'undefined') return;
+    const projects = DB.listProjects();
+    const rows = queue.map(pid => {
+      const p = projects.find(x => x.id === pid);
+      const hist = (DB.getForProject(pid, 'raioXHistory') || []);
+      const last = hist.length ? hist[hist.length-1] : null;
+      return { project:p, last };
+    });
+    root.innerHTML = rows.map(r => {
+      const sv = r.last ? SAUDE_LABEL[r.last.saudeGeral] : null;
+      return `<div class="set-row" style="align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px"><div class="set-lbl">${escapeHtml(r.project ? r.project.name : pid)}</div>${sv ? `<span class="badge ${sv.cls}">${sv.txt}</span>` : '<span class="badge b-neu">Sem diagnóstico</span>'}</div>
+          <div class="set-sub">${r.last ? escapeHtml(r.last.saudeJustificativa||'') : 'Nenhum documento foi avaliado pra este projeto no lote.'}</div>
+        </div>
+      </div>`;
+    }).join('');
+    document.getElementById('batchxray-summary-card').style.display = '';
+    T.show('✅ Lote concluído — resumo abaixo.');
+  }
+
+  return { openPicker, start, next, cancel };
+})();
+</script>
+
 <!-- ■ MODULE: pages/chat-js ─ Lógica do chat -->
 <script data-module="pages/chat-js">
 const Chat = (() => {
@@ -6404,7 +6527,70 @@ const Prioritization = (() => {
     T.show('✅ Priorização salva.');
   }
 
-  return { render, setMethod, setWeight, openEdit, closeModal, updateFinancialPreview, save };
+  return { render, setMethod, setWeight, openEdit, closeModal, updateFinancialPreview, save, getConfig, getScores, computeValue };
+})();
+</script>
+
+<!-- ■ MODULE: core/portfolio-diagnosis ─ Síntese cruzada do portfólio pela IA — lê o status real
+     (HealthScore) e a priorização já lançada de cada projeto, pede pra IA achar padrão entre eles;
+     nunca inventa projeto/número que não esteja no rollup que montamos aqui. -->
+<script data-module="core/portfolio-diagnosis">
+const PortfolioDiagnosis = (() => {
+  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  const SYSTEM = `Você é a IA do PMO Compass, atuando como consultor de PMO sênior olhando o PORTFÓLIO inteiro de projetos de um departamento — não um projeto isolado.
+
+Você vai receber uma lista real de projetos, cada um com: saúde calculada por regra (0-100, não é opinião sua), índice de prioridade já pontuado por um comitê (quando existir), e decisões críticas pendentes.
+
+Responda em texto corrido, direto, em português, com estas seções (use os títulos exatamente assim):
+RESUMO: 2-3 frases sobre o estado geral do portfólio.
+PADRÕES: temas de risco ou problema que se repetem em mais de um projeto — só cite se realmente aparecer em 2+ projetos nos dados recebidos.
+ATENÇÃO IMEDIATA: quais projetos merecem olhar primeiro e por quê, citando o dado real que embasa (saúde baixa, decisão crítica parada, alta prioridade).
+SEQUENCIAMENTO SUGERIDO: ordem sugerida de atenção entre os projetos recebidos, com 1 frase de justificativa por posição.
+
+Regra inegociável: cite APENAS projetos, números e decisões que estejam literalmente nos dados recebidos. Nunca invente nome de projeto, percentual ou risco que não tenha sido informado.`;
+
+  function buildRollup() {
+    const projects = DB.listProjects();
+    const cfg = Prioritization.getConfig();
+    return projects.map(p => {
+      const health = (typeof HealthScore !== 'undefined') ? HealthScore.calculate(HealthScore.computeMetrics(p.id)) : null;
+      const statusLabel = health != null ? HealthScore.getStatus(health).label : 'sem dado';
+      const decisions = DB.getForProject(p.id, 'decisions') || [];
+      const criticas = decisions.filter(d => d.status === 'pending' && d.severity === 'crit').map(d => d.title);
+      const scores = Prioritization.getScores(p.id);
+      const value = Prioritization.computeValue(scores, cfg);
+      const docs = (DB.getForProject(p.id, 'repository') || []).length;
+      return `Projeto "${p.name}"${p.client ? ' (cliente: '+p.client+')' : ''}: saúde ${health != null ? health+'/100' : 'sem dado'} (${statusLabel}). ` +
+        `${value != null ? 'Índice de prioridade: '+value+' (método '+cfg.method+'). ' : 'Sem priorização pontuada ainda. '}` +
+        `Decisões críticas pendentes: ${criticas.length ? criticas.join('; ') : 'nenhuma'}. Documentos indexados: ${docs}.`;
+    }).join('\n');
+  }
+
+  async function generate() {
+    const root = document.getElementById('pf-diagnosis-root');
+    if(!root) return;
+    if(!Store.hasKeyOrCloud()) {
+      root.innerHTML = `<div class="card-accent" style="border-radius:var(--r8);padding:12px;font-size:12px;color:var(--t2)"><i class="ti ti-info-circle"></i> Configure uma chave de IA em <strong style="color:var(--t1)">Configurações → Provedor de IA</strong> para gerar o diagnóstico.</div>`;
+      return;
+    }
+    const projects = DB.listProjects();
+    if(!projects.length) { root.innerHTML = `<div style="font-size:12px;color:var(--t3)">Nenhum projeto no portfólio ainda.</div>`; return; }
+
+    root.innerHTML = `<div style="font-size:12px;color:var(--t3);display:flex;align-items:center;gap:6px"><i class="ti ti-loader-2" style="animation:fi-spin 1s linear infinite"></i>Lendo o status real dos ${projects.length} projeto(s) e cruzando os dados…</div>`;
+
+    const rollup = buildRollup();
+    const r = await AI.send([{ role:'user', content: rollup }], { system: SYSTEM });
+    if(r.error) {
+      root.innerHTML = `<div class="card-danger" style="border-radius:var(--r8);padding:12px;font-size:12px;color:var(--t1)"><i class="ti ti-alert-triangle"></i> Não consegui gerar o diagnóstico: ${escapeHtml(r.error)}</div>`;
+      return;
+    }
+    const text = (r.text || '').trim();
+    root.innerHTML = `<div class="card-accent" style="border-radius:var(--r8);padding:14px;white-space:pre-wrap;font-size:12.5px;color:var(--t1);line-height:1.65">${escapeHtml(text)}</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:8px"><i class="ti ti-info-circle"></i> Gerado a partir do status real calculado acima — não é uma nova avaliação de documento, é leitura cruzada do que já está cadastrado.</div>`;
+  }
+
+  return { generate };
 })();
 </script>
 
