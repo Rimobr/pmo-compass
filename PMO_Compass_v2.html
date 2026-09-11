@@ -920,8 +920,13 @@ body.icons-failed i[data-fb]::before{
 <!-- ■ MODULE: pages/resources -->
 <section class="page" id="p-resources" data-module="pages/resources">
   <div class="pg-hdr"><div><div class="pg-title">Gestão de recursos e capacidade</div><div class="pg-sub">Conflitos em múltiplos projetos causam mais atrasos que falta de pessoas (PMI 2025).</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" onclick="R.go('whatif')"><i class="ti ti-arrows-split"></i>What-If IA</button></div></div>
+  <div class="card" id="res-portfolio-card">
+    <div class="lbl"><i class="ti ti-affiliate"></i>Alocação real entre projetos</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Soma a alocação (%) de cada pessoa em todos os projetos do portfólio, casando por nome — só aparece quem está em mais de um projeto. <strong style="color:var(--t1)">Limitação:</strong> só enxerga projetos já abertos neste navegador (a Equipe não sincroniza com a nuvem ainda).</p>
+    <div id="res-portfolio-root"></div>
+  </div>
   <div class="card">
-    <div class="lbl"><i class="ti ti-users-group"></i>Alocação — todos os projetos</div>
+    <div class="lbl"><i class="ti ti-users-group"></i>Equipe deste projeto</div>
     <div id="res-list-root"></div>
   </div>
   <div id="res-redist-root"></div>
@@ -2489,7 +2494,7 @@ const DB = (() => {
       ],
       decisions: [
         { id:'d1', severity:'crit', pct:92, title:'Escalar integração ERP ao comitê executivo até 20/06', body:'Padrão idêntico ao PRJ-67. Sem decisão esta semana, risco de cascata de 18 dias. Ocorreu em 2 de 3 projetos similares com ERP externo.', sources:[{ico:'file-text',label:'Ata 14/06',repoId:'r2'},{ico:'books',label:'Lição PRJ-67'}], status:'pending', actions:['accept','postpone3','reject'] },
-        { id:'d2', severity:'crit', pct:88, title:'Redistribuir SC-005 de Bruno M. para Ana P. — burnout iminente', body:'Bruno M. em 89% de carga há 14 dias. Histórico: após 85% por 12+ dias, produtividade cai 40% por 3 semanas — custo real de +2 semanas de projeto.', sources:[{ico:'heartbeat',label:'Burnout Radar'},{ico:'books',label:'Padrão: 3 projetos'}], status:'pending', actions:['accept','postpone2'] },
+        { id:'d2', severity:'crit', pct:88, title:'Redistribuir SC-005 de Marina Costa para Diego Almeida — burnout iminente', body:'Marina Costa em 89% de carga há 14 dias. Histórico: após 85% por 12+ dias, produtividade cai 40% por 3 semanas — custo real de +2 semanas de projeto.', sources:[{ico:'heartbeat',label:'Burnout Radar'},{ico:'books',label:'Padrão: 3 projetos'}], status:'pending', actions:['accept','postpone2'] },
         { id:'d3', severity:'alto', pct:84, title:'Congelar novas mudanças de escopo — 5 abertas, +R$22k em risco', body:'Projetos com 3+ mudanças abertas sem aprovação atrasaram em 100% dos casos históricos. SC-003 a SC-007 aguardam há média de 8 dias.', sources:[{ico:'git-diff',label:'SC-003 a SC-007'},{ico:'books',label:'Padrão PRJ-44'}], status:'pending', actions:['accept','postpone7','reject'] },
         { id:'d4', severity:'medio', pct:71, title:'Formalizar 7 ações das atas — responsáveis sem ciência formal', body:'IA processou 3 atas e identificou 7 ações implícitas. Sem formalização, risco de não execução e retrabalho futuro.', sources:[{ico:'notes',label:'Ata 14/06',repoId:'r2'}], status:'pending', actions:['gotomeetings'] }
       ],
@@ -2510,7 +2515,7 @@ const DB = (() => {
       ],
       trail: [
         { id:'tl4', date:'2026-06-16', text:'HU-019/020 mantidas no MVP após revisão do comitê técnico', by:'Marcos R. · steering committee', outcome:'Aguardando sprint 4', cls:'b-acc' },
-        { id:'tl3', date:'2026-06-14', text:'Integração ERP adiada — aguarda validação técnica do cliente', by:'Rafael D. · via ata de reunião', outcome:'Risco ativo — sem retorno', cls:'b-amb' },
+        { id:'tl3', date:'2026-06-14', text:'Integração ERP adiada — aguarda validação técnica do cliente', by:'Rafael Duarte · via ata de reunião', outcome:'Risco ativo — sem retorno', cls:'b-amb' },
         { id:'tl2', date:'2026-06-10', text:'Escopo MVP aprovado — foco em rastreabilidade por identificador', by:'Marcos R. · comitê executivo', outcome:'Sprints 1 e 2 entregues', cls:'b-grn' },
         { id:'tl1', date:'2026-05-28', text:'Discovery v0.1 aprovado — início do mapeamento com equipe PMO', by:'Equipe PMO', outcome:'50 requisitos em 3 semanas', cls:'b-grn' }
       ],
@@ -2525,16 +2530,16 @@ const DB = (() => {
         { id:'SC-003', status:'approved', title:'Integração com notificações via Teams', body:'Aprovado pelo comitê em 10/06. Alertas de transferência pendente e risco crítico enviados automaticamente via canal Teams da equipe.', impactDays:2, impactCost:1200, riskNote:'', createdAt:'2026-06-10' }
       ],
       team: [
-        { id:'tm1', name:'Bruno M.', role:'Desenvolvedor Sênior', workloadPct:89, signals:['14 dias sem folga','+3h extras/dia','3 tarefas críticas'], recommendation:'Redistribuir SC-005 para Ana P. e garantir 2 dias sem reuniões obrigatórias esta semana.', actionPage:'resources', otherAllocationPct:0, otherAllocationLabel:'' },
-        { id:'tm2', name:'Ana P.', role:'Analista de Requisitos', workloadPct:67, signals:['6 reuniões/semana','Relatórios pendentes'], recommendation:'Pode absorver SC-005. Capacidade disponível: 33%.', actionPage:'', otherAllocationPct:0, otherAllocationLabel:'' },
-        { id:'tm3', name:'Rafael D.', role:'Arquiteto', workloadPct:110, signals:['110% de alocação total'], recommendation:'Conflito de alocação entre Portal Nexus (40%) e Valdori (70%). Requer negociação com GP Valdori.', actionPage:'resources', otherAllocationPct:70, otherAllocationLabel:'Valdori Dist.' },
-        { id:'tm4', name:'Carla N.', role:'Gestora de Projeto', workloadPct:52, signals:['Carga equilibrada','Folga planejada'], recommendation:'', actionPage:'', otherAllocationPct:0, otherAllocationLabel:'' }
+        { id:'tm1', name:'Marina Costa', role:'Desenvolvedora Sênior', allocationPct:100, workloadPct:89, signals:['14 dias sem folga','+3h extras/dia','3 tarefas críticas'], recommendation:'Redistribuir SC-005 para Diego A. e garantir 2 dias sem reuniões obrigatórias esta semana.', actionPage:'resources' },
+        { id:'tm2', name:'Diego Almeida', role:'Analista de Requisitos', allocationPct:100, workloadPct:67, signals:['6 reuniões/semana','Relatórios pendentes'], recommendation:'Pode absorver SC-005. Capacidade disponível: 33%.', actionPage:'' },
+        { id:'tm3', name:'Rafael Duarte', role:'Arquiteto', allocationPct:100, workloadPct:58, signals:['Carga equilibrada'], recommendation:'', actionPage:'' },
+        { id:'tm4', name:'Carla Nogueira', role:'Gestora de Projeto', allocationPct:80, workloadPct:52, signals:['Carga equilibrada','Folga planejada'], recommendation:'', actionPage:'' }
       ],
       estimateHistory: [
-        { id:'e1', member:'Rafael D.', planned:5, actual:5 },
-        { id:'e2', member:'Carla N.', planned:5, actual:5.5 },
-        { id:'e3', member:'Bruno M.', planned:4, actual:7.5 },
-        { id:'e4', member:'Ana P.', planned:4.5, actual:6 }
+        { id:'e1', member:'Rafael Duarte', planned:5, actual:5 },
+        { id:'e2', member:'Carla Nogueira', planned:5, actual:5.5 },
+        { id:'e3', member:'Marina Costa', planned:4, actual:7.5 },
+        { id:'e4', member:'Diego Almeida', planned:4.5, actual:6 }
       ],
       scenarios: [
         { id:'wa', title:'Cenário A — Manter escopo, aceitar atraso de 13 dias', badge:'IA recomenda', badgeClass:'b-amb', recommended:true,
@@ -2554,18 +2559,18 @@ const DB = (() => {
           newDate:'30/07', newDateNote:'Prazo mantido (se onboarding OK)', budgetImpact:'+R$18k', budgetNote:'Acima da reserva', satisfaction:'Baixa', satisfactionNote:'Risco de execução' }
       ],
       meetings: [
-        { id:'mt2', title:'Reunião de alinhamento — ERP e Fase 2', date:'2026-06-14', time:'14h–15h30', attendees:'Marcos R., Rafael D., Carla N., TI cliente',
-          summary:'Validação técnica da integração ERP (RF-ERP-008). TI apresentou limitações na API atual. Rafael D. propôs abordagem alternativa via CSV + reconciliação. Sem decisão formal — pendente de aprovação do Diretor de TI.',
+        { id:'mt2', title:'Reunião de alinhamento — ERP e Fase 2', date:'2026-06-14', time:'14h–15h30', attendees:'Marcos R., Rafael Duarte, Carla Nogueira, TI cliente',
+          summary:'Validação técnica da integração ERP (RF-ERP-008). TI apresentou limitações na API atual. Rafael Duarte propôs abordagem alternativa via CSV + reconciliação. Sem decisão formal — pendente de aprovação do Diretor de TI.',
           actions:[
-            { id:'a1', who:'Rafael D.', text:'Elaborar proposta técnica — CSV + reconciliação', due:'2026-06-18', done:false },
+            { id:'a1', who:'Rafael Duarte', text:'Elaborar proposta técnica — CSV + reconciliação', due:'2026-06-18', done:false },
             { id:'a2', who:'Marcos R.', text:'Escalar decisão ao Diretor de TI do cliente', due:'2026-06-17', done:false },
-            { id:'a3', who:'Carla N.', text:'Atualizar risco RF-ERP-008 no repositório', due:'2026-06-16', done:false }
+            { id:'a3', who:'Carla Nogueira', text:'Atualizar risco RF-ERP-008 no repositório', due:'2026-06-16', done:false }
           ]
         },
-        { id:'mt1', title:'Steering Committee — Sprint 2 Review', date:'2026-06-10', time:'09h–10h', attendees:'Marcos R., Carla N., Patrocinador, Usuário-chave',
+        { id:'mt1', title:'Steering Committee — Sprint 2 Review', date:'2026-06-10', time:'09h–10h', attendees:'Marcos R., Carla Nogueira, Patrocinador, Usuário-chave',
           summary:'Sprint 2 aprovado. HU-001 e HU-002 entregues e aceitas. Escopo MVP mantido. Benchmarking com fornecedor de identificação aprovado.',
           actions:[
-            { id:'a4', who:'Carla N.', text:'Registrar decisão de escopo na trilha', due:'2026-06-10', done:true },
+            { id:'a4', who:'Carla Nogueira', text:'Registrar decisão de escopo na trilha', due:'2026-06-10', done:true },
             { id:'a5', who:'Marcos R.', text:'Iniciar contato com fornecedor de identificação', due:'2026-06-10', done:true }
           ]
         }
@@ -2801,7 +2806,32 @@ const DB = (() => {
     projects = null; activeProjectId = null; cache = null;
   }
 
-  return { get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, factoryReset, listProjects, getActiveProjectId, switchProject, createProject };
+  // Aloca uma pessoa entre projetos de verdade, lendo o 'team' de CADA projeto do portfólio
+  // (via getForProject) e casando por nome — substitui o antigo otherAllocationPct/Label, que
+  // nunca tinha um campo de formulário pra preencher (só existia na semente de demonstração;
+  // qualquer membro real cadastrado por um usuário de verdade ficava invisível pra essa conta).
+  // Limitação conhecida: 'team' é só local (não sincroniza com o Supabase como WBS/orçamento),
+  // então isso só enxerga os projetos que já foram abertos NESTE navegador.
+  function computePortfolioAllocation() {
+    const byName = new Map();
+    listProjects().forEach(p => {
+      const team = getForProject(p.id, 'team') || [];
+      team.forEach(m => {
+        if(!m || !m.name) return;
+        const key = m.name.trim().toLowerCase();
+        if(!key) return;
+        if(!byName.has(key)) byName.set(key, { name:m.name, role:m.role||'', rows:[] });
+        byName.get(key).rows.push({ projectId:p.id, projectName:p.name, pct:(m.allocationPct!=null ? m.allocationPct : 100) });
+      });
+    });
+    return [...byName.values()].map(person => ({
+      ...person,
+      total: person.rows.reduce((s,r) => s + (r.pct||0), 0),
+      overallocated: person.rows.reduce((s,r) => s + (r.pct||0), 0) > 100
+    })).sort((a,b) => b.total - a.total);
+  }
+
+  return { get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, factoryReset, listProjects, getActiveProjectId, switchProject, createProject, computePortfolioAllocation };
 })();
 </script>
 
@@ -5141,9 +5171,13 @@ const Dashboard = (() => {
         sub: (m.signals||[]).join(' · ') || 'Sobrecarga acima do limite saudável',
         page:'burnout', label:'Ver Burnout Radar' });
     });
-    team.filter(m => (m.otherAllocationPct||0) > 0).forEach(m => {
-      alerts.push({ sev:'Alto', cls:'b-amb', title: `${m.name} — ${(m.workloadPct||0)+(m.otherAllocationPct||0)}% de alocação total`,
-        sub: `Alocado também em ${m.otherAllocationLabel||'outro projeto'}`, page:'resources', label:'Gerenciar' });
+    // Alocação real entre projetos (casada por nome via DB.computePortfolioAllocation) —
+    // substitui o antigo otherAllocationPct/Label, que nunca tinha campo de formulário pra
+    // preencher e por isso nunca disparava pra nenhum membro cadastrado de verdade.
+    DB.computePortfolioAllocation().filter(p => p.overallocated && p.rows.some(r => r.projectId === DB.getActiveProjectId())).forEach(p => {
+      const others = p.rows.filter(r => r.projectId !== DB.getActiveProjectId()).map(r => `${r.projectName} ${r.pct}%`).join(', ');
+      alerts.push({ sev:'Alto', cls:'b-amb', title: `${p.name} — ${p.total}% de alocação total no portfólio`,
+        sub: others ? `Também alocado em ${others}` : 'Alocação combinada acima de 100%', page:'resources', label:'Gerenciar' });
     });
     decisions.filter(d => d.status==='pending' && d.severity==='crit').forEach(d => {
       alerts.push({ sev:'Crítico', cls:'b-red', title: d.title, sub:'Decisão crítica pendente', page:'decisions', label:'Ver decisão' });
@@ -5198,7 +5232,8 @@ const Dashboard = (() => {
     }
     const emRisco = team.filter(m => (m.workloadPct||0) >= 80);
     const mediaCarga = Math.round(team.reduce((s,m) => s + (m.workloadPct||0), 0) / team.length);
-    const conflitos = team.filter(m => (m.otherAllocationPct||0) > 0).length;
+    const teamNames = new Set(team.map(m => (m.name||'').trim().toLowerCase()).filter(Boolean));
+    const conflitos = DB.computePortfolioAllocation().filter(p => p.overallocated && teamNames.has(p.name.trim().toLowerCase())).length;
     const today = new Date(2026, 5, 20);
     const seteDiasAtras = new Date(today); seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
     const reunioes7d = (DB.get('meetings')||[]).filter(mt => { const d = mt.date ? new Date(mt.date) : null; return d && d >= seteDiasAtras && d <= today; }).length;
@@ -5995,9 +6030,10 @@ const Burnout = (() => {
 
   function openModal() { document.getElementById('modal-burnout').classList.remove('hidden'); }
   function closeModal() { document.getElementById('modal-burnout').classList.add('hidden'); }
-  function fill(name, role, pct, signals, rec) {
+  function fill(name, role, alloc, pct, signals, rec) {
     document.getElementById('burnout-f-name').value = name || '';
     document.getElementById('burnout-f-role').value = role || '';
+    document.getElementById('burnout-f-alloc').value = (alloc===undefined||alloc===null) ? '' : alloc;
     document.getElementById('burnout-f-pct').value = (pct===undefined||pct===null) ? '' : pct;
     document.getElementById('burnout-f-signals').value = (signals||[]).join(', ');
     document.getElementById('burnout-f-rec').value = rec || '';
@@ -6008,7 +6044,7 @@ const Burnout = (() => {
     modalCtx = { mode:'add', id:null };
     document.getElementById('burnout-modal-title').textContent = 'Novo membro';
     document.getElementById('burnout-f-delete-btn').style.display = 'none';
-    fill('', '', '', [], '');
+    fill('', '', 100, '', [], '');
     openModal();
   }
 
@@ -6020,7 +6056,7 @@ const Burnout = (() => {
     modalCtx = { mode:'edit', id };
     document.getElementById('burnout-modal-title').textContent = 'Editar membro';
     document.getElementById('burnout-f-delete-btn').style.display = '';
-    fill(m.name, m.role, m.workloadPct, m.signals, m.recommendation);
+    fill(m.name, m.role, m.allocationPct, m.workloadPct, m.signals, m.recommendation);
     openModal();
   }
 
@@ -6029,17 +6065,18 @@ const Burnout = (() => {
     ensureLoaded();
     const name = document.getElementById('burnout-f-name').value.trim();
     const role = document.getElementById('burnout-f-role').value.trim();
+    const alloc = Math.max(0, parseInt(document.getElementById('burnout-f-alloc').value, 10) || 0);
     const pct = Math.max(0, parseInt(document.getElementById('burnout-f-pct').value, 10) || 0);
     const signals = document.getElementById('burnout-f-signals').value.split(',').map(s=>s.trim()).filter(Boolean);
     const rec = document.getElementById('burnout-f-rec').value.trim();
     if(!name) { T.show('⚠️ Dê um nome para o membro.'); return; }
 
     if(modalCtx.mode === 'add') {
-      data.push({ id:genId(), name, role, workloadPct:pct, signals, recommendation:rec, actionPage:'' });
+      data.push({ id:genId(), name, role, allocationPct:alloc, workloadPct:pct, signals, recommendation:rec, actionPage:'' });
       T.show('✅ Membro adicionado!');
     } else {
       const m = data.find(x => x.id === modalCtx.id);
-      if(m) { m.name=name; m.role=role; m.workloadPct=pct; m.signals=signals; m.recommendation=rec; }
+      if(m) { m.name=name; m.role=role; m.allocationPct=alloc; m.workloadPct=pct; m.signals=signals; m.recommendation=rec; }
       T.show('✅ Atualizado!');
       if(statusOf(pct) === 'critico') Trail.log(`${name} entrou em zona crítica de sobrecarga (${pct}%)`, Auth.getName(), 'Atenção necessária', 'b-red');
     }
@@ -6949,6 +6986,39 @@ const Resources = (() => {
   function colorOf(s) { return { critico:'var(--red)', atencao:'var(--amb)', saudavel:'var(--grn)' }[s]; }
   function bgOf(s) { return { critico:'var(--rd)', atencao:'var(--amd)', saudavel:'var(--gd)' }[s]; }
   function diffClassOf(s) { return { critico:'c-dn', atencao:'c-wa', saudavel:'c-up' }[s]; }
+  const PROJECT_COLORS = ['var(--acc)','var(--pur)','var(--amb)','var(--grn)','var(--red)'];
+
+  // Alocação real entre projetos — casada por nome via DB.computePortfolioAllocation(). Só
+  // mostra quem aparece em MAIS DE UM projeto (é o dado que não existia antes: o mecanismo
+  // antigo, otherAllocationPct/Label, nunca tinha campo de formulário e só existia na semente
+  // de demonstração — invisível pra qualquer pessoa cadastrada de verdade).
+  function renderPortfolio() {
+    const root = document.getElementById('res-portfolio-root');
+    if(!root) return;
+    const people = DB.computePortfolioAllocation().filter(p => p.rows.length > 1);
+    if(!people.length) {
+      root.innerHTML = `<div style="text-align:center;padding:14px 10px;color:var(--t3);font-size:12.5px">Ninguém do portfólio aparece em mais de um projeto ainda (comparando pelo nome cadastrado em Burnout Radar de cada projeto).</div>`;
+      return;
+    }
+    root.innerHTML = people.map(p => {
+      const over = p.overallocated;
+      let acc = 0;
+      const segs = p.rows.map((r,i) => {
+        const w = Math.min(r.pct, 100 - acc < 0 ? 0 : 100); acc += r.pct;
+        return `<div title="${escapeHtml(r.projectName)}: ${r.pct}%" style="width:${Math.min(r.pct,100)}%;height:100%;background:${PROJECT_COLORS[i%PROJECT_COLORS.length]}"></div>`;
+      }).join('');
+      const legend = p.rows.map((r,i) => `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--t3)"><span style="width:8px;height:8px;border-radius:2px;background:${PROJECT_COLORS[i%PROJECT_COLORS.length]}"></span>${escapeHtml(r.projectName)} ${r.pct}%</span>`).join('');
+      return `<div class="res-row" style="align-items:flex-start">
+        <div class="res-ava" style="background:${over?'var(--rd)':'var(--gd)'};color:${over?'var(--red)':'var(--grn)'}">${initials(p.name)}</div>
+        <div style="flex:1;min-width:60px">
+          <div style="font-size:12.5px;font-weight:500">${escapeHtml(p.name)}</div>
+          <div style="width:100%;height:8px;background:var(--s3);border-radius:3px;overflow:hidden;display:flex;margin-top:5px">${segs}</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">${legend}</div>
+        </div>
+        <span class="res-pct ${over?'c-dn':'c-ne'}" title="${over?'Acima de 100% — sobrealocado no portfólio':'Dentro da capacidade'}">${p.total}%</span>
+      </div>`;
+    }).join('');
+  }
 
   function render() {
     const team = DB.get('team') || [];
@@ -6958,82 +7028,67 @@ const Resources = (() => {
         root.innerHTML = `<div style="text-align:center;padding:20px 10px;color:var(--t3);font-size:12.5px">Nenhum membro cadastrado ainda — adicione pelo Burnout Radar.</div>`;
       } else {
         root.innerHTML = team.map(m => {
-          const status = statusOf(m.workloadPct);
+          const status = statusOf(m.workloadPct||0);
           const color = colorOf(status);
-          let barInner, label;
-          if(m.otherAllocationPct > 0) {
-            const thisPct = Math.max(m.workloadPct - m.otherAllocationPct, 0);
-            const thisShare = m.workloadPct > 0 ? Math.min((thisPct / m.workloadPct) * 100, 100) : 0;
-            barInner = `<div style="width:100%;height:100%;background:linear-gradient(90deg,var(--acc) ${thisShare}%,var(--red) ${thisShare}%);border-radius:3px"></div>`;
-            label = `Portal ${thisPct}% + ${escapeHtml(m.otherAllocationLabel)} ${m.otherAllocationPct}% = <strong>${m.workloadPct}%</strong>`;
-          } else {
-            barInner = `<div style="width:${Math.min(m.workloadPct,100)}%;height:100%;background:${color};border-radius:3px"></div>`;
-            const txt = status==='critico' ? `${m.workloadPct}% — sobrecarga crítica` : (status==='atencao' ? `${m.workloadPct}% — acima do ideal` : `${m.workloadPct}% — com capacidade disponível`);
-            label = txt;
-          }
+          const alloc = m.allocationPct!=null ? m.allocationPct : 100;
+          const barInner = `<div style="width:${Math.min(alloc,100)}%;height:100%;background:${alloc>100?'var(--red)':'var(--acc)'};border-radius:3px"></div>`;
+          const label = `${alloc}% alocado neste projeto · carga/burnout ${m.workloadPct||0}%`;
           return `<div class="res-row">
             <div class="res-ava" style="background:${bgOf(status)};color:${color}">${initials(m.name)}</div>
             <div style="flex:1;min-width:60px"><div style="font-size:12.5px;font-weight:500">${escapeHtml(m.name)}</div><div style="font-size:11px;color:var(--t3)">${escapeHtml(m.role)}</div></div>
-            <div class="res-bar"><div style="width:100%;height:6px;background:var(--s3);border-radius:3px;overflow:hidden">${barInner}</div><div style="font-size:11px;color:${status==='critico'||m.otherAllocationPct>0?'var(--red)':'var(--t3)'};margin-top:2px">${label}</div></div>
-            <span class="res-pct ${diffClassOf(status)}">${m.workloadPct}%</span>
+            <div class="res-bar"><div style="width:100%;height:6px;background:var(--s3);border-radius:3px;overflow:hidden">${barInner}</div><div style="font-size:11px;color:${status==='critico'?'var(--red)':'var(--t3)'};margin-top:2px">${label}</div></div>
+            <span class="res-pct ${diffClassOf(status)}">${m.workloadPct||0}%</span>
           </div>`;
         }).join('');
       }
     }
-    renderRedistribution(team);
+    renderPortfolio();
+    renderRedistribution();
   }
 
-  function computeSuggestions(team) {
-    const suggestions = [];
-    const critical = team.filter(m => statusOf(m.workloadPct) === 'critico' && !m.otherAllocationPct);
-    const available = team.filter(m => m.workloadPct < 70 && !m.otherAllocationPct).sort((a,b) => a.workloadPct - b.workloadPct);
-    if(critical.length && available.length) suggestions.push({ type:'transfer', from:critical[0], to:available[0] });
-    team.filter(m => m.otherAllocationPct > 0 && m.workloadPct > 100).forEach(m => suggestions.push({ type:'reduce', member:m }));
-    return suggestions;
+  // Sugestão informativa, não mais uma "IA" que aplica números inventados sozinha — pra cada
+  // pessoa sobrealocada (>100% somando projetos reais), aponta qual dos projetos dela tem a
+  // MENOR prioridade (usando o índice real da Priorização, quando existe pontuação pra ele),
+  // como candidato a reduzir. Nunca decide por conta própria — só leva pra revisão manual.
+  function computeSuggestions() {
+    const overallocated = DB.computePortfolioAllocation().filter(p => p.overallocated && p.rows.length > 1);
+    return overallocated.map(p => {
+      const withPriority = p.rows.map(r => {
+        const scores = (typeof Prioritization !== 'undefined') ? Prioritization.getScores(r.projectId) : {};
+        const value = (typeof Prioritization !== 'undefined') ? Prioritization.computeValue(scores) : null;
+        return { ...r, priorityValue: value };
+      });
+      const withScore = withPriority.filter(r => r.priorityValue != null);
+      const suggestedCut = withScore.length ? withScore.sort((a,b) => a.priorityValue - b.priorityValue)[0] : null;
+      return { name:p.name, total:p.total, rows:withPriority, suggestedCut };
+    });
   }
 
-  function renderRedistribution(team) {
+  function renderRedistribution() {
     const root = document.getElementById('res-redist-root');
     if(!root) return;
-    const suggestions = computeSuggestions(team);
+    const suggestions = computeSuggestions();
     if(!suggestions.length) { root.innerHTML = ''; return; }
     const rows = suggestions.map(s => {
-      if(s.type === 'transfer') {
-        return `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:12.5px;font-weight:500">Tarefa crítica</span><div style="display:flex;align-items:center;gap:6px"><span class="badge b-red">${escapeHtml(s.from.name)}</span><i class="ti ti-arrow-right" style="color:var(--t3)"></i><span class="badge b-grn">${escapeHtml(s.to.name)}</span></div><span style="font-size:11.5px;color:var(--t2);margin-left:auto">Reduz sobrecarga · prazo mantido</span></div>`;
-      }
-      return `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:12.5px;font-weight:500">${escapeHtml(s.member.otherAllocationLabel)}</span><div style="display:flex;align-items:center;gap:6px"><span class="badge b-red">${escapeHtml(s.member.name)} ${s.member.otherAllocationPct}%</span><i class="ti ti-arrow-right" style="color:var(--t3)"></i><span class="badge b-amb">${escapeHtml(s.member.name)} ${Math.max(s.member.otherAllocationPct-20,0)}%</span></div><span style="font-size:11.5px;color:var(--t2);margin-left:auto">Requer negociação com GP ${escapeHtml(s.member.otherAllocationLabel)}</span></div>`;
+      const breakdown = s.rows.map(r => `<span class="badge ${s.suggestedCut && r.projectId===s.suggestedCut.projectId ? 'b-red' : 'b-neu'}">${escapeHtml(r.projectName)} ${r.pct}%${r.priorityValue!=null?' · prioridade '+r.priorityValue:''}</span>`).join(' ');
+      const note = s.suggestedCut
+        ? `Menor prioridade no portfólio: <strong>${escapeHtml(s.suggestedCut.projectName)}</strong> — candidato a reduzir a alocação de ${escapeHtml(s.name)} lá primeiro.`
+        : `Cadastre a Priorização dos projetos envolvidos pra saber qual reduzir primeiro.`;
+      return `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px"><span style="font-size:12.5px;font-weight:600">${escapeHtml(s.name)} — ${s.total}% no portfólio</span></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${breakdown}</div>
+        <div style="font-size:11.5px;color:var(--t2)">${note}</div>
+      </div>`;
     }).join('');
     root.innerHTML = `<div class="card card-accent">
-      <div class="lbl" style="color:var(--acc)"><i class="ti ti-brain"></i>Redistribuição recomendada pela IA</div>
+      <div class="lbl" style="color:var(--acc)"><i class="ti ti-brain"></i>Sobrealocação real no portfólio</div>
+      <p style="font-size:11.5px;color:var(--t2);margin-bottom:10px">Leitura de apoio, não uma decisão automática — a redistribuição de verdade é feita editando a alocação da pessoa em Burnout Radar do projeto correspondente.</p>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">${rows}</div>
-      <div class="btn-row" data-perm="business"><button class="btn btn-grn" onclick="Resources.applyRedistribution()"><i class="ti ti-check"></i>Aplicar redistribuição</button><button class="btn" onclick="R.go('whatif')"><i class="ti ti-arrows-split"></i>Simular cenários</button></div>
+      <div class="btn-row"><button class="btn" onclick="R.go('whatif')"><i class="ti ti-arrows-split"></i>Simular cenários</button></div>
     </div>`;
   }
 
-  function applyRedistribution() {
-    if(!Auth.guard('business')) return;
-    const team = DB.get('team') || [];
-    const suggestions = computeSuggestions(team);
-    if(!suggestions.length) { T.show('Nenhuma redistribuição pendente no momento.'); return; }
-    suggestions.forEach(s => {
-      if(s.type === 'transfer') {
-        const delta = Math.min(23, Math.max(s.from.workloadPct - 60, 0));
-        s.from.workloadPct = Math.max(s.from.workloadPct - delta, 0);
-        s.to.workloadPct = Math.min(s.to.workloadPct + Math.round(delta * 0.45), 100);
-        Trail.log(`Redistribuição aplicada: carga de ${s.from.name} reduzida, tarefa transferida para ${s.to.name}`, Auth.getName(), 'Equipe notificada', 'b-grn');
-      } else {
-        s.member.otherAllocationPct = Math.max(s.member.otherAllocationPct - 20, 0);
-        s.member.workloadPct = Math.max(s.member.workloadPct - 20, 0);
-        Trail.log(`Alocação de ${s.member.name} em ${s.member.otherAllocationLabel} reduzida em 20%`, Auth.getName(), 'Conflito de projetos atenuado', 'b-grn');
-      }
-    });
-    DB.set('team', team);
-    render();
-    if(typeof Burnout !== 'undefined') Burnout.render();
-    T.show('✅ Redistribuição aplicada! Equipe notificada.');
-  }
-
-  return { render, applyRedistribution };
+  return { render };
 })();
 </script>
 
@@ -7958,9 +8013,10 @@ const WBS = (() => {
     </div>
     <div class="modal-sub">Carga de trabalho e sinais de sobrecarga</div>
     <div style="display:flex;flex-direction:column;gap:12px">
-      <div><div class="field-label">Nome</div><input class="input" id="burnout-f-name" placeholder="Ex: Bruno M."></div>
-      <div><div class="field-label">Papel / projeto</div><input class="input" id="burnout-f-role" placeholder="Ex: Desenvolvedor Sênior · Portal Nexus"></div>
-      <div><div class="field-label">Carga de trabalho (%)</div><input class="input" type="number" min="0" max="150" id="burnout-f-pct" placeholder="0-150"></div>
+      <div><div class="field-label">Nome</div><input class="input" id="burnout-f-name" placeholder="Ex: Ana Souza"></div>
+      <div><div class="field-label">Papel</div><input class="input" id="burnout-f-role" placeholder="Ex: Desenvolvedor Sênior"></div>
+      <div><div class="field-label">Alocação neste projeto (%)</div><input class="input" type="number" min="0" max="150" id="burnout-f-alloc" placeholder="Ex: 100 (tempo integral)"><div style="font-size:11px;color:var(--t3);margin-top:4px">Usado para calcular alocação real entre projetos em <a href="#" onclick="R.go('resources');return false" style="color:var(--acc)">Recursos</a> — casa pelo nome em todos os projetos deste navegador.</div></div>
+      <div><div class="field-label">Carga de trabalho / burnout (%)</div><input class="input" type="number" min="0" max="150" id="burnout-f-pct" placeholder="0-150"><div style="font-size:11px;color:var(--t3);margin-top:4px">Indicador subjetivo de esgotamento — pode ser maior ou menor que a alocação (ex: 100% alocado mas trabalhando tranquilo = carga baixa).</div></div>
       <div><div class="field-label">Sinais de alerta (separados por vírgula)</div><input class="input" id="burnout-f-signals" placeholder="Ex: 14 dias sem folga, +3h extras/dia"></div>
       <div><div class="field-label">Recomendação da IA</div><textarea class="input" id="burnout-f-rec" rows="2" style="resize:vertical;font-family:inherit" placeholder="Ex: Redistribuir tarefa X para Y"></textarea></div>
     </div>
