@@ -6,12 +6,32 @@
 <meta name="description" content="PMO Compass — Gestão de projetos com IA para apoio à decisão">
 <meta name="theme-color" content="#0d1117">
 <title>PMO Compass</title>
+<script>
+// ============================================================================
+// MARCA DA INSTÂNCIA — único bloco a editar para dar marca própria a um cliente.
+// Ver SETUP.md, seção "Marca própria (white-label)".
+//
+// accentColor de propósito NÃO está aqui: os temas claro/escuro/cinza têm o
+// contraste de --acc calibrado (WCAG AA, ~4.5:1) contra cada fundo. Trocar a
+// cor de destaque exige recalcular esse contraste por tema — não é troca de
+// string. Ver SETUP.md antes de tentar.
+// ============================================================================
+window.BRAND = {
+  name: 'PMO Compass',
+  shortName: 'PMO Compass',
+  tagline: 'Gestão de projetos com IA para apoio à decisão',
+  version: '2.0.0'
+};
+document.title = BRAND.name;
+document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
+</script>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0d1117">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="PMO Compass">
+<script>document.querySelector('meta[name="apple-mobile-web-app-title"]').setAttribute('content', BRAND.shortName);</script>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -672,7 +692,7 @@ body.icons-failed i[data-fb]::before{
         <path d="M100 55 L142 36 L118 82 Z" fill="url(#tbArrowGrad)"/>
         <circle cx="100" cy="100" r="11" fill="#0f2038" stroke="#e0b854" stroke-width="4"/>
       </svg>
-    </div>PMO Compass
+    </div><span data-brand="name">PMO Compass</span>
   </div>
   <div class="tb-proj-wrap">
     <button class="tb-proj" onclick="Nav.toggleProjDropdown(event)">
@@ -1077,7 +1097,7 @@ body.icons-failed i[data-fb]::before{
       <div class="prov-radio" data-perm="settings" role="radio" tabindex="0" aria-label="Usar Claude (Anthropic)" onclick="Store.setProvider('anthropic')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="Usar Claude (Anthropic)"></div>
       <div class="prov-body">
         <div class="prov-name"><i class="ti ti-brain" style="color:var(--acc)"></i>Claude (Anthropic)<span class="badge b-acc" id="prov-badge-anthropic" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-anthropic" style="display:none">Configurada</span></div>
-        <div class="prov-desc">Padrão do PMO Compass — forte em analisar documentos longos e avaliar risco de projetos.</div>
+        <div class="prov-desc">Padrão do <span data-brand="name">PMO Compass</span> — forte em analisar documentos longos e avaliar risco de projetos.</div>
         <div class="prov-inp-row"><input class="input" id="api-inp-anthropic" type="password" placeholder="sk-ant-api03-..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('anthropic')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-anthropic" style="display:none" onclick="Store.removeKey('anthropic')"><i class="ti ti-trash"></i></button></div>
         <div style="font-size:11px;color:var(--t3);margin-top:5px">Obtenha em <a href="https://console.anthropic.com" target="_blank" rel="noopener" style="color:var(--acc)">console.anthropic.com</a> · claude-sonnet-4-6</div>
       </div>
@@ -1181,8 +1201,8 @@ body.icons-failed i[data-fb]::before{
     <div class="set-row"><div><div class="set-lbl">Slack</div><div class="set-sub">Receber decisões e alertas no canal do Slack</div></div><button class="btn btn-sm" data-perm="settings" onclick="T.show('Em breve — Slack')"><i class="ti ti-plug"></i>Em breve</button></div>
   </div>
   <div class="card">
-    <div class="lbl"><i class="ti ti-info-circle"></i>Sobre o PMO Compass</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:12px"><strong style="color:var(--t1)">PMO Compass v2.0.0</strong><br>
+    <div class="lbl"><i class="ti ti-info-circle"></i>Sobre o <span data-brand="name">PMO Compass</span></div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:12px"><strong style="color:var(--t1)"><span data-brand="name">PMO Compass</span> v<span data-brand="version">2.0.0</span></strong><br>
       Aplicação HTML standalone · 147 KB · 18 páginas · 52 módulos. Funciona 100% localmente sem nenhuma configuração — nuvem (Supabase) e IA são opcionais e só trocam dados pela rede quando você conecta um provedor.<br><br>
       Compartilhe o arquivo <code style="font-family:var(--font-mono);font-size:11px;background:var(--s2);padding:1px 5px;border-radius:3px">.html</code> em branco com qualquer pessoa — zero instalação, zero dado seu junto (dados ficam no navegador de quem abre, não no arquivo).<br>
       Cada <code style="font-family:var(--font-mono);font-size:11px;background:var(--s2);padding:1px 5px;border-radius:3px">data-module</code> é um bloco independente evoluível. Veja <a href="#" onclick="Privacy.open();return false" style="color:var(--acc)">Privacidade &amp; dados</a> para detalhes de como cada dado é tratado.
@@ -1748,7 +1768,7 @@ const Auth = (() => {
       const cloudNameInp = document.getElementById('auth-f-cloud-name'); if(cloudNameInp) cloudNameInp.value = state.name;
     } else {
       if(titleEl) titleEl.textContent = configured ? 'Entrar ou continuar local' : 'Perfil de acesso';
-      if(subEl) subEl.textContent = 'Quem está usando o PMO Compass agora';
+      if(subEl) subEl.textContent = 'Quem está usando o ' + BRAND.name + ' agora';
       pendingRole = state.role;
       document.getElementById('auth-f-name').value = state.name;
       document.querySelectorAll('.auth-role-opt').forEach(el => el.classList.toggle('sel', el.dataset.role === state.role));
@@ -2547,7 +2567,7 @@ const DB = (() => {
   async function exportBackup() {
     load();
     const activeName = (loadProjects().find(p => p.id === getActiveProjectId()) || {}).name || getActiveProjectId();
-    const payload = { app:'PMO Compass', version:'2.0.0', project: activeName, exportedAt: new Date().toISOString(), data: cache };
+    const payload = { app:BRAND.name, version:BRAND.version, project: activeName, exportedAt: new Date().toISOString(), data: cache };
     const pwd = prompt('Proteja este backup com uma senha (recomendado — o arquivo pode conter nomes de equipe e stakeholders, e indicadores de burnout).\n\nDeixe em branco para exportar sem senha.');
     let blob, suffix;
     if(pwd) {
@@ -2561,7 +2581,8 @@ const DB = (() => {
     }
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'pmo-compass-backup-' + activeName.toLowerCase().replace(/\s+/g,'-') + suffix + '-' + new Date().toISOString().slice(0,10) + '.json';
+    const brandSlug = BRAND.shortName.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'-');
+    a.download = brandSlug + '-backup-' + activeName.toLowerCase().replace(/\s+/g,'-') + suffix + '-' + new Date().toISOString().slice(0,10) + '.json';
     document.body.appendChild(a); a.click(); a.remove();
     T.show(pwd ? '✅ Backup protegido por senha baixado. Guarde a senha — sem ela, ninguém consegue restaurar o arquivo.' : '⚠️ Backup baixado sem proteção — contém dados de equipe e stakeholders em texto aberto. Chaves de IA não são exportadas.');
   }
@@ -2589,7 +2610,7 @@ const DB = (() => {
         persist();
         T.show('✅ Backup restaurado no projeto atual! Recarregando…');
         setTimeout(() => location.reload(), 900);
-      } catch(e) { T.show('❌ Não consegui ler esse arquivo — verifique se é um backup do PMO Compass.'); }
+      } catch(e) { T.show(`❌ Não consegui ler esse arquivo — verifique se é um backup do ${BRAND.name}.`); }
     };
     reader.readAsText(file);
   }
@@ -3599,7 +3620,7 @@ const AI = (() => {
     openai: { model:'gpt-4o', label:'ChatGPT (OpenAI)' },
     google: { model:'gemini-3.6-flash', label:'Gemini (Google)' }
   };
-  const SYSTEM_RULES = `Você é a IA do PMO Compass, sistema de apoio à decisão para gerentes de projetos.
+  const SYSTEM_RULES = `Você é a IA do ${BRAND.name}, sistema de apoio à decisão para gerentes de projetos.
 
 Regras obrigatórias:
 1. Cite sempre a fonte no contexto abaixo que embasa cada informação (ex: nome da entrega da WBS, da decisão, da ata ou do documento)
@@ -4092,7 +4113,7 @@ const FileIntake = (() => {
   // riscos/decisões, linhas de orçamento e stakeholders — mas nada vira dado real do projeto
   // sem o usuário revisar e marcar o que aceita. Essa é a segunda "frente" do app (a primeira
   // é o cadastro manual): documento entra, IA sugere, usuário confirma o que vira registro.
-  const EXTRACTION_SYSTEM = `Você é a IA do PMO Compass. Vai receber o conteúdo real de um ou mais documentos de projeto (já com dados pessoais mascarados). Sua tarefa é EXTRAIR informação estruturada e fazer uma leitura preliminar de saúde do projeto — não conversar.
+  const EXTRACTION_SYSTEM = `Você é a IA do ${BRAND.name}. Vai receber o conteúdo real de um ou mais documentos de projeto (já com dados pessoais mascarados). Sua tarefa é EXTRAIR informação estruturada e fazer uma leitura preliminar de saúde do projeto — não conversar.
 
 Responda APENAS com um objeto JSON válido, sem markdown, sem texto antes ou depois, neste formato exato:
 {
@@ -4541,6 +4562,14 @@ function renderAllModules() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Aplica BRAND.* em toda marcação estática marcada com data-brand — ver bloco de
+  // configuração no <head>. Roda antes de qualquer outra coisa pra não haver flash
+  // do nome padrão antes do nome da instância aparecer.
+  document.querySelectorAll('[data-brand="name"]').forEach(el => { el.textContent = BRAND.name; });
+  document.querySelectorAll('[data-brand="shortName"]').forEach(el => { el.textContent = BRAND.shortName; });
+  document.querySelectorAll('[data-brand="tagline"]').forEach(el => { el.textContent = BRAND.tagline; });
+  document.querySelectorAll('[data-brand="version"]').forEach(el => { el.textContent = BRAND.version; });
+
   Theme.load();
   Theme.render();
   Auth.load();
@@ -4569,9 +4598,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Welcome toast
   setTimeout(() => {
     if(!Store.hasKeyOrCloud()) T.show('💡 Configure sua API Key em Configurações para habilitar a IA', 5000);
-    else T.show('✅ PMO Compass v2 — pressione ? para ver atalhos de teclado', 4000);
+    else T.show(`✅ ${BRAND.name} — pressione ? para ver atalhos de teclado`, 4000);
   }, 800);
-  console.log('%cPMO Compass v1.0.0\n%c18 módulos carregados\nArquitetura: cada <style/script data-module="..."> é um módulo independente','color:#4d8ef0;font-size:14px;font-weight:700','color:#8b949e;font-size:12px'); console.log('%c  41 módulos CSS/JS · 18 páginas · WBS + Loop + Stakeholders + Scope + Estimates + Repository\n  Atalhos de teclado: pressione ? para ver todos','color:#3fb950;font-size:11px');
+  console.log(`%c${BRAND.name} v${BRAND.version}\n%c18 módulos carregados\nArquitetura: cada <style/script data-module="..."> é um módulo independente`,'color:#4d8ef0;font-size:14px;font-weight:700','color:#8b949e;font-size:12px'); console.log('%c  41 módulos CSS/JS · 18 páginas · WBS + Loop + Stakeholders + Scope + Estimates + Repository\n  Atalhos de teclado: pressione ? para ver todos','color:#3fb950;font-size:11px');
 });
 </script>
 
@@ -6582,7 +6611,7 @@ const Prioritization = (() => {
 const PortfolioDiagnosis = (() => {
   function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-  const SYSTEM = `Você é a IA do PMO Compass, atuando como consultor de PMO sênior olhando o PORTFÓLIO inteiro de projetos de um departamento — não um projeto isolado.
+  const SYSTEM = `Você é a IA do ${BRAND.name}, atuando como consultor de PMO sênior olhando o PORTFÓLIO inteiro de projetos de um departamento — não um projeto isolado.
 
 Você vai receber uma lista real de projetos, cada um com: saúde calculada por regra (0-100, não é opinião sua), índice de prioridade já pontuado por um comitê (quando existir), e decisões críticas pendentes.
 
@@ -7325,7 +7354,7 @@ const WBS = (() => {
     e.preventDefault();
     deferredInstall = e;
     setTimeout(() => {
-      T.show('💾 Instalar PMO Compass como app? Clique aqui!', 8000, async () => {
+      T.show(`💾 Instalar ${BRAND.name} como app? Clique aqui!`, 8000, async () => {
         if(!deferredInstall) return;
         deferredInstall.prompt();
         try { await deferredInstall.userChoice; } catch(e){}
@@ -7512,7 +7541,7 @@ const WBS = (() => {
       <div class="modal-title" id="auth-modal-title">Sua conta</div>
       <button class="btn btn-sm" onclick="Auth.closeModal()"><i class="ti ti-x"></i></button>
     </div>
-    <div class="modal-sub" id="auth-modal-sub">Quem está usando o PMO Compass agora — ponto único de entrada/saída</div>
+    <div class="modal-sub" id="auth-modal-sub">Quem está usando o <span data-brand="name">PMO Compass</span> agora — ponto único de entrada/saída</div>
 
     <!-- Logado de verdade no Supabase: mostra quem é e o botão de sair de verdade -->
     <div id="auth-cloud-signedin-box" style="display:none;margin-bottom:14px">
@@ -7906,7 +7935,7 @@ const WBS = (() => {
 <!-- ■ MODULE: ui/onboarding -->
 <div class="modal-ov hidden" id="modal-onboarding" onclick="if(event.target===this)Onboarding.dismiss()">
   <div class="modal-box" style="width:460px">
-    <div class="modal-title" style="display:flex;align-items:center;gap:8px"><i class="ti ti-compass" style="color:var(--acc)"></i>Bem-vindo ao PMO Compass</div>
+    <div class="modal-title" style="display:flex;align-items:center;gap:8px"><i class="ti ti-compass" style="color:var(--acc)"></i>Bem-vindo ao <span data-brand="name">PMO Compass</span></div>
     <div class="modal-sub">4 coisas rápidas antes de começar</div>
     <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
       <div style="display:flex;gap:10px;align-items:flex-start"><i class="ti ti-layout-grid" style="color:var(--acc);font-size:17px;margin-top:1px;flex-shrink:0"></i><div><strong style="color:var(--t1);font-size:12.5px">O menu lateral é agrupado por área</strong><div style="font-size:12px;color:var(--t2);margin-top:2px">Decisão, Planejamento, Equipe, Conhecimento e Projetos — clique no grupo para abrir.</div></div></div>
@@ -7936,7 +7965,7 @@ const WBS = (() => {
       <div><strong style="color:var(--t1)">Backup exportável:</strong> pode conter dados pessoais de equipe e stakeholders (nomes, indicadores de burnout, contatos). Recomendamos sempre proteger com senha ao exportar — a opção aparece na hora de baixar.</div>
       <div><strong style="color:var(--t1)">Chaves de IA:</strong> quando vinculadas à sua conta, ficam guardadas no servidor sem nenhuma forma de releitura pelo navegador — nem por você, nem por um administrador.</div>
       <div><strong style="color:var(--t1)">Sessão de login (Supabase):</strong> como o app não tem um servidor próprio por trás do login, o token da sua sessão fica guardado no armazenamento local do navegador — não num cookie protegido. Isso é uma limitação técnica conhecida e aceita, mitigada por: token de curta duração (renovado automaticamente), nenhum ponto conhecido de injeção de script na aplicação, e política de segurança de conteúdo (CSP) restringindo de onde scripts podem ser carregados. Evite usar o app em computadores compartilhados/públicos sem encerrar a sessão ao sair.</div>
-      <div style="padding:10px 12px;background:var(--s2);border-radius:var(--r8);color:var(--t3)"><i class="ti ti-info-circle"></i> Este é um resumo técnico de como os dados fluem no aplicativo, não um documento jurídico. Para uma Política de Privacidade formal (base legal, retenção, DPO) válida para sua organização, procure quem administra esta instância do PMO Compass.</div>
+      <div style="padding:10px 12px;background:var(--s2);border-radius:var(--r8);color:var(--t3)"><i class="ti ti-info-circle"></i> Este é um resumo técnico de como os dados fluem no aplicativo, não um documento jurídico. Para uma Política de Privacidade formal (base legal, retenção, DPO) válida para sua organização, procure quem administra esta instância do <span data-brand="name">PMO Compass</span>.</div>
     </div>
   </div>
 </div>

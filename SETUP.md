@@ -51,7 +51,28 @@ Não precisa configurar nenhum secret manualmente — `SUPABASE_URL` e `SUPABASE
 já vêm injetados automaticamente em toda Edge Function do projeto. O código-fonte é
 `supabase/functions/ai-proxy/index.ts` — não precisa editar nada nele por cliente.
 
-## 4. Publicar o app (Vercel)
+## 4. Marca própria (white-label leve)
+
+Faça isso **antes** de publicar (Passo 5), pra não precisar de um segundo deploy só pra corrigir
+o nome. Três peças, sempre as três juntas:
+
+1. **`PMO_Compass_v2.html`** → abra o bloco `window.BRAND = {...}` bem no início do `<head>`
+   (é o único lugar do arquivo que precisa mudar) e edite `name`, `shortName`, `tagline` e
+   `version`. Todo o resto do app (título da aba, cabeçalho, modais, prompts de IA, nome do
+   arquivo de backup) lê daqui — não precisa caçar mais nenhuma outra ocorrência de texto.
+   *(`accentColor` deliberadamente não está nesse bloco — os temas claro/escuro/cinza têm o
+   contraste calibrado em WCAG AA contra `--acc`. Trocar a cor de destaque é uma tarefa à parte,
+   que exige recalcular esse contraste por tema — não é troca de string. Peça antes de prometer
+   isso a um cliente.)*
+2. **`manifest.json`** → `name`, `short_name` e `description` devem ficar iguais ao `BRAND` do
+   passo 1 (esse arquivo é lido direto pelo navegador na instalação do PWA, não pelo JS do app,
+   então precisa ser editado à parte).
+3. **Ícones** (`icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`) →
+   substitua pelos ícones do cliente, mesmos nomes de arquivo e dimensões. O símbolo de bússola
+   dentro do cabeçalho do app é um SVG desenhado à mão (não um destes arquivos) — trocar a marca
+   *visual* do cabeçalho, e não só o nome ao lado dela, ainda exige editar esse SVG à mão.
+
+## 5. Publicar o app (Vercel)
 
 Duas opções, dependendo de quanto de identidade própria o cliente precisa ter na URL:
 
@@ -59,15 +80,14 @@ Duas opções, dependendo de quanto de identidade própria o cliente precisa ter
   como um **novo projeto Vercel**, aponte um domínio/subdomínio do próprio cliente (ex:
   `pmo.clientenome.com.br`) nas configurações de domínio do projeto. Não precisa de nenhuma
   variável de ambiente — a conexão com o Supabase é feita **em runtime, pela tela do app**
-  (Passo 5), não por env var de build. `vercel.json` já libera CSP para `https://*.supabase.co`
+  (Passo 6), não por env var de build. `vercel.json` já libera CSP para `https://*.supabase.co`
   (qualquer projeto Supabase, não um específico), então nenhum arquivo de config muda por cliente.
 - **Reaproveitar um deploy existente**: se o cliente só precisa testar rápido, ele pode logar no
   mesmo `pmo-compass.vercel.app` e conectar ao Supabase dele pela tela de Configurações — os dados
   ficam isolados normalmente porque cada usuário conecta ao *seu próprio* Supabase. Não recomendo
-  isso além de uma demonstração: o cliente pagante deve ter marca e URL próprias (ver observação
-  de white-label no final).
+  isso além de uma demonstração: o cliente pagante deve ter marca e URL próprias (Passo 4).
 
-## 5. Conectar o app ao Supabase do cliente
+## 6. Conectar o app ao Supabase do cliente
 
 1. Abra o deploy do cliente → **Configurações → Backend em nuvem (Supabase)**.
 2. Cole a **Project URL** e a chave **anon public** (Project Settings → API no Supabase — nunca a
@@ -75,12 +95,12 @@ Duas opções, dependendo de quanto de identidade própria o cliente precisa ter
 3. Clique em **Criar conta**, informe e-mail e senha da primeira pessoa (normalmente você mesmo,
    pra validar, ou o responsável do lado do cliente).
 
-## 6. Promover o primeiro administrador
+## 7. Promover o primeiro administrador
 
 Toda conta nova nasce como **Consulta** (mais seguro por padrão — ninguém se autopromove, isso é
 bloqueado pelo próprio Postgres, não só pela tela).
 
-1. No Supabase → **Authentication → Users**, copie o **UID** da conta criada no Passo 5.
+1. No Supabase → **Authentication → Users**, copie o **UID** da conta criada no Passo 6.
 2. **SQL Editor**, rode (trocando o UID):
    ```sql
    update public.profiles set role = 'admin' where id = 'COLE_O_UID_AQUI';
@@ -88,15 +108,17 @@ bloqueado pelo próprio Postgres, não só pela tela).
 3. No app, **Sair da conta** → login de novo. Agora como Administrador, dá pra promover as
    próximas pessoas direto pela tela (**Configurações → Usuários**), sem precisar mais de SQL.
 
-## 7. Se estiver reaproveitando uma instância (não aplicável a projeto Supabase 100% novo)
+## 8. Se estiver reaproveitando uma instância (não aplicável a projeto Supabase 100% novo)
 
 Só relevante se você clonar dados de uma instância de demonstração para começar a de um cliente
 real: rode `Cloud.resetForNewUsers()` (via console do navegador, logado como admin) para apagar
 todo dado de demonstração da nuvem antes de convidar o cliente — essa função já existe no app
 exatamente para isso. Pedirá confirmação e oferece baixar um backup antes de apagar.
 
-## 8. Checklist de validação (smoke test antes de entregar)
+## 9. Checklist de validação (smoke test antes de entregar)
 
+- [ ] Aba do navegador, cabeçalho, modal de boas-vindas e card "Sobre" mostram o nome do
+      `BRAND` do cliente, não "PMO Compass" (confirma que o Passo 4 foi aplicado por inteiro).
 - [ ] Login funciona com e-mail/senha reais do cliente.
 - [ ] Criar um projeto novo no seletor (canto superior esquerdo) e trocar entre projetos.
 - [ ] Cadastrar uma entrega de WBS com predecessora e ver o caminho crítico calcular.
@@ -107,14 +129,14 @@ exatamente para isso. Pedirá confirmação e oferece baixar um backup antes de 
       assíncrona do Cloud foi corrigida, mas vale reconferir por instância nova).
 - [ ] Um usuário com perfil **Consulta** tenta editar algo e é bloqueado — confirma que o RLS do
       banco está mesmo aplicado, não só escondido na interface.
-- [ ] PWA instala (ícone "Adicionar à tela inicial" no navegador) e funciona offline depois de
-      uma primeira visita online.
+- [ ] PWA instala (ícone "Adicionar à tela inicial" no navegador) com o ícone/nome do cliente, e
+      funciona offline depois de uma primeira visita online.
 
 ## O que este playbook NÃO resolve ainda (backlog conhecido)
 
-- **Marca própria (white-label)**: nome "PMO Compass", ícones e cores em `manifest.json` /
-  `PMO_Compass_v2.html` ainda são fixos no código — trocar por cliente hoje exige editar esses
-  arquivos manualmente antes do deploy do Passo 4. Vira configurável no próximo item do roadmap.
+- **Cor de destaque por cliente**: nome/tagline/ícones já são configuráveis (Passo 4), mas a cor
+  de destaque (`--acc`) continua fixa — precisa de contraste recalibrado por tema antes de virar
+  configurável, ver nota no Passo 4.
 - **SSO/SAML**: o Supabase Auth suporta como recurso pago (plano Team+) — ainda não conectado no
   app. Necessário se o cliente exigir login corporativo (Azure AD/Okta) na revisão de segurança.
 - **Log de auditoria formal**: hoje existe `Trail.log()` (histórico simples dentro do app), não um
@@ -125,5 +147,5 @@ exatamente para isso. Pedirá confirmação e oferece baixar um backup antes de 
 ## Testando junto
 
 Depois de provisionar uma instância nova de verdade (não a de demonstração), rode o checklist do
-Passo 8 e me avise o que aconteceu — principalmente qualquer coisa que destoar do que está descrito
+Passo 9 e me avise o que aconteceu — principalmente qualquer coisa que destoar do que está descrito
 aqui, porque este documento deve continuar sendo a fonte única de verdade pra próxima instância.
