@@ -1851,6 +1851,20 @@ const Cloud = (() => {
     T.show('⚠️ Falha ao sincronizar com a nuvem — seus dados continuam salvos neste navegador, tentaremos de novo na próxima ação.');
   }
 
+  // Rastreia todo push/delete "em voo" — sem isso, um pullAll() disparado logo depois (troca de
+  // projeto, ida-e-volta rápida) podia buscar o servidor ANTES de um push anterior terminar de
+  // gravar, e sobrescrever o cache local com um estado incompleto (perda silenciosa de dado —
+  // reproduzido e diagnosticado em produção durante carga de dados em lote). track() registra a
+  // promise e some com ela quando resolve (sucesso ou falha); flush() espera todas as pendentes.
+  const inFlight = new Set();
+  function track(promise) {
+    inFlight.add(promise);
+    const clear = () => inFlight.delete(promise);
+    promise.then(clear, clear);
+    return promise;
+  }
+  async function flush() { await Promise.allSettled([...inFlight]); }
+
   function load() {
     try { const raw = localStorage.getItem(KEY); if(raw) cfg = { ...cfg, ...JSON.parse(raw) }; } catch(e){}
     if(cfg.url && cfg.anonKey) initClient();
@@ -2055,6 +2069,9 @@ const Cloud = (() => {
 
   async function pullAll() {
     if(!client || !session) return;
+    // Espera qualquer push/delete ainda em voo terminar de gravar no servidor ANTES de ler —
+    // fecha a corrida descrita em track()/flush() acima.
+    await flush();
     // Cada linha carrega o project_id do projeto ativo no momento em que foi salva (ver
     // push* abaixo) — o pull sempre filtra pelo projeto ativo AGORA, pra não misturar dado
     // de um projeto na tela de outro. Antes disso não existia esse filtro: era um pool só.
@@ -2100,37 +2117,37 @@ const Cloud = (() => {
   // acima (e o clearProjectData abaixo) filtrar por projeto depois.
   function pushWbsModule(m) {
     if(!client || !session) return;
-    client.from('wbs_modules').upsert({ id:m.id, label:m.label, status:m.status, pct:m.pct, start_date:m.start, end_date:m.end, critical:m.critical, predecessors:m.predecessors||[], project_id:DB.getActiveProjectId(), origin:m.origin||null }).then(()=>{}).catch(cloudSyncFailed);
+    track(client.from('wbs_modules').upsert({ id:m.id, label:m.label, status:m.status, pct:m.pct, start_date:m.start, end_date:m.end, critical:m.critical, predecessors:m.predecessors||[], project_id:DB.getActiveProjectId(), origin:m.origin||null }).then(()=>{}).catch(cloudSyncFailed));
   }
   function pushWbsTask(moduleId, t) {
     if(!client || !session) return;
-    client.from('wbs_tasks').upsert({ id:t.id, module_id:moduleId, label:t.label, status:t.status, start_date:t.start, end_date:t.end, predecessors:t.predecessors||[], project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed);
+    track(client.from('wbs_tasks').upsert({ id:t.id, module_id:moduleId, label:t.label, status:t.status, start_date:t.start, end_date:t.end, predecessors:t.predecessors||[], project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed));
   }
-  function deleteWbsModule(id) { if(client && session) client.from('wbs_modules').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed); }
-  function deleteWbsTask(id) { if(client && session) client.from('wbs_tasks').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed); }
+  function deleteWbsModule(id) { if(client && session) track(client.from('wbs_modules').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
+  function deleteWbsTask(id) { if(client && session) track(client.from('wbs_tasks').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
 
   function pushDecision(d) {
     if(!client || !session) return;
-    client.from('decisions').upsert({ id:d.id, severity:d.severity, pct:d.pct, title:d.title, body:d.body, sources:d.sources, status:d.status, actions:d.actions, resolved_at:d.resolvedAt||null, project_id:DB.getActiveProjectId(), origin:d.origin||null }).then(()=>{}).catch(cloudSyncFailed);
+    track(client.from('decisions').upsert({ id:d.id, severity:d.severity, pct:d.pct, title:d.title, body:d.body, sources:d.sources, status:d.status, actions:d.actions, resolved_at:d.resolvedAt||null, project_id:DB.getActiveProjectId(), origin:d.origin||null }).then(()=>{}).catch(cloudSyncFailed));
   }
-  function deleteDecision(id) { if(client && session) client.from('decisions').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed); }
+  function deleteDecision(id) { if(client && session) track(client.from('decisions').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
 
   function pushDocument(it) {
     if(!client || !session) return;
-    client.from('documents').upsert({ id:it.id, name:it.name, ext:it.ext, meta:it.meta, added_at:it.addedAt, tags:it.tags, index_pct:it.indexPct, content:it.content||'', project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed);
+    track(client.from('documents').upsert({ id:it.id, name:it.name, ext:it.ext, meta:it.meta, added_at:it.addedAt, tags:it.tags, index_pct:it.indexPct, content:it.content||'', project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed));
   }
-  function deleteDocument(id) { if(client && session) client.from('documents').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed); }
+  function deleteDocument(id) { if(client && session) track(client.from('documents').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
 
   function pushBudgetLine(l) {
     if(!client || !session) return;
-    client.from('budget_lines').upsert({ id:l.id, label:l.label, planned_value:l.plannedValue, wbs_module_id:l.wbsModuleId||null, is_reserve:!!l.isReserve, project_id:DB.getActiveProjectId(), origin:l.origin||null }).then(()=>{}).catch(cloudSyncFailed);
+    track(client.from('budget_lines').upsert({ id:l.id, label:l.label, planned_value:l.plannedValue, wbs_module_id:l.wbsModuleId||null, is_reserve:!!l.isReserve, project_id:DB.getActiveProjectId(), origin:l.origin||null }).then(()=>{}).catch(cloudSyncFailed));
   }
-  function deleteBudgetLine(id) { if(client && session) client.from('budget_lines').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed); }
+  function deleteBudgetLine(id) { if(client && session) track(client.from('budget_lines').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
   function pushCostActual(a) {
     if(!client || !session) return;
-    client.from('cost_actuals').upsert({ id:a.id, label:a.label, amount:a.amount, entry_date:a.date, budget_line_id:a.budgetLineId||null, kind:a.kind, project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed);
+    track(client.from('cost_actuals').upsert({ id:a.id, label:a.label, amount:a.amount, entry_date:a.date, budget_line_id:a.budgetLineId||null, kind:a.kind, project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed));
   }
-  function deleteCostActual(id) { if(client && session) client.from('cost_actuals').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed); }
+  function deleteCostActual(id) { if(client && session) track(client.from('cost_actuals').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
 
   // Apaga da nuvem só o que pertence a UM projeto (project_id) — usado por DB.clearAll(),
   // que antes só limpava o localStorage e deixava a cópia na nuvem intacta (o próximo login
@@ -2174,7 +2191,7 @@ const Cloud = (() => {
   }
 
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole,
-    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignUp, signOut, pullAll,
+    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignUp, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushDecision, deleteDecision, pushDocument, deleteDocument,
     pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual, resetForNewUsers, clearProjectData };
@@ -4088,11 +4105,11 @@ Responda APENAS com um objeto JSON válido, sem markdown, sem texto antes ou dep
   "proximosPassos": ["sugestão 1", "sugestão 2"],
   "wbs": [{"label":"nome da entrega","status":"grn|amb|red|neu","pct":0,"start":"YYYY-MM-DD ou null","end":"YYYY-MM-DD ou null","dependsOnLabel":"label EXATO de outra entrega deste mesmo array que bloqueia esta, segundo o texto ou a ordem/hierarquia em que aparecem no documento — ou null se não houver dependência clara"}],
   "decisions": [{"severity":"crit|alto|medio","title":"título curto","body":"contexto em 1-2 frases"}],
-  "budgetLines": [{"label":"nome da linha","plannedValue":0}],
+  "budgetLines": [{"label":"nome da linha","plannedValue":0,"linkedWbsLabel":"label EXATO de uma entrega do array \"wbs\" acima à qual esta linha de orçamento se refere, segundo o texto — ou null se não houver vínculo claro"}],
   "stakeholders": [{"name":"nome","role":"papel/cargo","influence":"alta|media|baixa","engagement":"critico|atencao|saudavel","notes":"observação curta"}]
 }
 
-Regras: só inclua o que estiver realmente sustentado pelo texto — nunca invente nomes, valores ou datas. "problemas" são questões que os documentos indicam já estar acontecendo agora; "riscos" são possibilidades futuras — não confunda as duas categorias. Se uma categoria inteira não tiver base nos documentos, retorne um array vazio (ou string vazia) para ela. "pct" é 0 a 100 (progresso conhecido, ou 0 se não houver indicação). Datas só se aparecerem explicitamente no texto. "caminhoCritico" é uma leitura preliminar da IA, não um cálculo formal — deixe isso implícito no tom, sem alegar certeza. "dependsOnLabel" existe pra permitir recalcular o caminho crítico de verdade depois — preencha sempre que a ordem do documento (fases sequenciais, "após X", numeração hierárquica) deixar clara qual entrega bloqueia qual; use exatamente o mesmo texto do "label" da entrega predecessora, sem inventar uma dependência que o texto não sustente.`;
+Regras: só inclua o que estiver realmente sustentado pelo texto — nunca invente nomes, valores ou datas. "problemas" são questões que os documentos indicam já estar acontecendo agora; "riscos" são possibilidades futuras — não confunda as duas categorias. Se uma categoria inteira não tiver base nos documentos, retorne um array vazio (ou string vazia) para ela. "pct" é 0 a 100 (progresso conhecido, ou 0 se não houver indicação). Datas só se aparecerem explicitamente no texto. "caminhoCritico" é uma leitura preliminar da IA, não um cálculo formal — deixe isso implícito no tom, sem alegar certeza. "dependsOnLabel" existe pra permitir recalcular o caminho crítico de verdade depois — preencha sempre que a ordem do documento (fases sequenciais, "após X", numeração hierárquica) deixar clara qual entrega bloqueia qual; use exatamente o mesmo texto do "label" da entrega predecessora, sem inventar uma dependência que o texto não sustente. "linkedWbsLabel" existe pra permitir calcular o Valor Agregado (EV) e o CPI de verdade depois, ligando o orçamento à entrega correspondente — preencha sempre que o texto associar claramente uma linha de orçamento a uma entrega específica (ex: o valor aparece na mesma seção/fase, ou o nome da linha cita a entrega); use exatamente o mesmo texto do "label" da entrega em "wbs", sem inventar um vínculo que o texto não sustente.`;
 
   let currentProposal = null;
   let currentBoxId = null;
@@ -4172,7 +4189,7 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
       proximosPassos: Array.isArray(obj.proximosPassos) ? obj.proximosPassos.filter(x => typeof x === 'string') : [],
       wbs: Array.isArray(obj.wbs) ? obj.wbs.filter(x => x && x.label).map(x => ({ ...x, dependsOnLabel: typeof x.dependsOnLabel === 'string' ? x.dependsOnLabel : null })) : [],
       decisions: Array.isArray(obj.decisions) ? obj.decisions.filter(x => x && x.title) : [],
-      budgetLines: Array.isArray(obj.budgetLines) ? obj.budgetLines.filter(x => x && x.label) : [],
+      budgetLines: Array.isArray(obj.budgetLines) ? obj.budgetLines.filter(x => x && x.label).map(x => ({ ...x, linkedWbsLabel: typeof x.linkedWbsLabel === 'string' ? x.linkedWbsLabel : null })) : [],
       stakeholders: Array.isArray(obj.stakeholders) ? obj.stakeholders.filter(x => x && x.name) : []
     };
   }
@@ -4209,7 +4226,7 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
         <div style="font-size:11.5px;color:var(--t2);margin-bottom:4px">Gostou do diagnóstico? Marque o que quer adicionar como dado real do projeto — nada abaixo foi salvo ainda:</div>
         ${listSection('Entregas (WBS)', 'sitemap', 'wbs', p.wbs, it => `${it.label}${it.pct?' — '+it.pct+'%':''}`)}
         ${listSection('Decisões / riscos', 'brain', 'decisions', p.decisions, it => `[${it.severity}] ${it.title}`)}
-        ${listSection('Linhas de orçamento', 'wallet', 'budgetLines', p.budgetLines, it => `${it.label} — R$${Math.round(it.plannedValue||0).toLocaleString('pt-BR')}`)}
+        ${listSection('Linhas de orçamento', 'wallet', 'budgetLines', p.budgetLines, it => `${it.label} — R$${Math.round(it.plannedValue||0).toLocaleString('pt-BR')}${it.linkedWbsLabel ? ` <span style="color:var(--t3)">· vinculada a "${escapeHtml(it.linkedWbsLabel)}"</span>` : ''}`)}
         ${listSection('Stakeholders', 'users', 'stakeholders', p.stakeholders, it => `${it.name} (${it.role||'—'})`)}
         <div class="btn-row" style="margin-top:12px" data-perm="business">
           <button class="btn btn-sm btn-acc" onclick="FileIntake.commitProposal()"><i class="ti ti-check"></i>Adicionar selecionados e começar a gerenciar</button>
@@ -4277,9 +4294,16 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
     const idxBud = checked('budgetLines');
     if(idxBud.length) {
       const lines = DB.get('budgetLines') || [];
+      // Resolve "linkedWbsLabel" pro id real do módulo (só existe DEPOIS do bloco idxWbs acima
+      // já ter rodado e gravado, então inclui entregas recém-criadas nesta mesma confirmação) —
+      // sem isso, orçamento vindo do Raio-X nascia sempre solto (wbsModuleId:''), zerando o
+      // Valor Agregado (EV) e o CPI pra todo orçamento extraído por IA.
+      const wbsForLink = DB.get('wbs') || [];
+      const wbsLabelToId = new Map(wbsForLink.map(m => [m.label, m.id]));
       idxBud.forEach(i => {
         const it = p.budgetLines[i]; if(!it) return;
-        const l = { id:'ev'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), label:it.label, plannedValue:Number(it.plannedValue)||0, wbsModuleId:'', isReserve:false, origin:'ia' };
+        const wbsModuleId = (it.linkedWbsLabel && wbsLabelToId.has(it.linkedWbsLabel)) ? wbsLabelToId.get(it.linkedWbsLabel) : '';
+        const l = { id:'ev'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), label:it.label, plannedValue:Number(it.plannedValue)||0, wbsModuleId, isReserve:false, origin:'ia' };
         lines.push(l);
         if(typeof Cloud !== 'undefined') Cloud.pushBudgetLine(l);
         Trail.log(`Linha de orçamento criada a partir de documento (IA): ${l.label}`, Auth.getName(), docNames, 'b-acc');
