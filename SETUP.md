@@ -115,7 +115,24 @@ real: rode `Cloud.resetForNewUsers()` (via console do navegador, logado como adm
 todo dado de demonstração da nuvem antes de convidar o cliente — essa função já existe no app
 exatamente para isso. Pedirá confirmação e oferece baixar um backup antes de apagar.
 
-## 9. Checklist de validação (smoke test antes de entregar)
+## 9. SSO/SAML (opcional — só se o cliente exigir login corporativo)
+
+O código já existe no app (botão "Entrar com SSO" no modal de login, chamando
+`client.auth.signInWithSSO({ domain })`) — mas só funciona depois de duas coisas que este
+playbook não automatiza, porque envolvem custo e um sistema de fora:
+
+1. **Upgrade do projeto Supabase do cliente para o plano Team ou superior** — SSO/SAML é um
+   recurso pago do Supabase Auth, não do PMO Compass. Confirme com o cliente antes de assumir
+   esse custo.
+2. **Configurar o provedor SAML** no painel do Supabase (Authentication → Sign In / Providers →
+   SSO), usando os metadados do IdP corporativo do cliente (Azure AD, Okta, Google Workspace
+   etc.) — o próprio cliente normalmente precisa envolver o time de TI deles pra gerar esses
+   metadados.
+
+Sem essas duas coisas, o botão de SSO simplesmente mostra o erro que o Supabase devolve
+("SSO não configurado") — não quebra nada, só não funciona até serem feitas.
+
+## 10. Checklist de validação (smoke test antes de entregar)
 
 - [ ] Aba do navegador, cabeçalho, modal de boas-vindas e card "Sobre" mostram o nome do
       `BRAND` do cliente, não "PMO Compass" (confirma que o Passo 4 foi aplicado por inteiro).
@@ -131,21 +148,24 @@ exatamente para isso. Pedirá confirmação e oferece baixar um backup antes de 
       banco está mesmo aplicado, não só escondido na interface.
 - [ ] PWA instala (ícone "Adicionar à tela inicial" no navegador) com o ícone/nome do cliente, e
       funciona offline depois de uma primeira visita online.
+- [ ] **Configurações → Nuvem & Automação**, logado como admin: o card "Log de auditoria" aparece
+      e mostra o login que você acabou de fazer — confirma que a tabela `audit_log` do Passo 2
+      está mesmo aplicada nesta instância (é a seção 9 do `schema.sql`).
 
 ## O que este playbook NÃO resolve ainda (backlog conhecido)
 
 - **Cor de destaque por cliente**: nome/tagline/ícones já são configuráveis (Passo 4), mas a cor
   de destaque (`--acc`) continua fixa — precisa de contraste recalibrado por tema antes de virar
   configurável, ver nota no Passo 4.
-- **SSO/SAML**: o Supabase Auth suporta como recurso pago (plano Team+) — ainda não conectado no
-  app. Necessário se o cliente exigir login corporativo (Azure AD/Okta) na revisão de segurança.
-- **Log de auditoria formal**: hoje existe `Trail.log()` (histórico simples dentro do app), não um
-  registro append-only exportável para fins de compliance.
 - **Domínio próprio**: é configuração de DNS no painel do Vercel (fora deste playbook) — direto,
   mas não é automático, precisa ser feito por projeto Vercel.
+- **DPA/LGPD**: `DPA_LGPD.md` (raiz do repositório) é um rascunho de partida para o documento
+  formal de tratamento de dados — precisa de revisão jurídica e dos dados específicos de cada
+  cliente (razão social, DPO, etc.) antes de virar um anexo de contrato de verdade.
 
 ## Testando junto
 
 Depois de provisionar uma instância nova de verdade (não a de demonstração), rode o checklist do
-Passo 9 e me avise o que aconteceu — principalmente qualquer coisa que destoar do que está descrito
-aqui, porque este documento deve continuar sendo a fonte única de verdade pra próxima instância.
+Passo 10 e me avise o que aconteceu — principalmente qualquer coisa que destoar do que está
+descrito aqui, porque este documento deve continuar sendo a fonte única de verdade pra próxima
+instância.

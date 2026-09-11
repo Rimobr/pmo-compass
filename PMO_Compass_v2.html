@@ -1815,6 +1815,12 @@ const Auth = (() => {
     const ok = await Cloud.doSignIn(email, password);
     if(ok) closeModal();
   }
+  async function doSignInSSO() {
+    const domain = document.getElementById('auth-f-sso-domain').value.trim();
+    // Não fecha o modal — signInWithSSO redireciona a página inteira pro IdP corporativo, então
+    // não há "depois" nesta função pra fechar nada (a volta recarrega o app já autenticado).
+    await Cloud.doSignInSSO(domain);
+  }
   async function doSignUp() {
     const email = document.getElementById('auth-f-email').value.trim();
     const password = document.getElementById('auth-f-password').value;
@@ -1860,7 +1866,7 @@ const Auth = (() => {
     return false;
   }
 
-  return { load, getRole, getName, label, can, guard, openModal, closeModal, toggleLocalBox, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, confirmNoCloudSession, doSignIn, doSignUp, doSignOut, saveCloudName, updateCloudBadge };
+  return { load, getRole, getName, label, can, guard, openModal, closeModal, toggleLocalBox, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, confirmNoCloudSession, doSignIn, doSignInSSO, doSignUp, doSignOut, saveCloudName, updateCloudBadge };
 })();
 </script>
 
@@ -2057,6 +2063,23 @@ const Cloud = (() => {
     T.show('✅ Login realizado!');
     return true;
   }
+  // SSO/SAML — depende de um recurso pago do Supabase (plano Team+) e de um IdP corporativo
+  // (Azure AD/Okta etc.) configurado do lado do projeto; ver SETUP.md. O código aqui não custa
+  // nada e fica pronto pra funcionar assim que essas duas coisas existirem — sem elas, o Supabase
+  // simplesmente devolve um erro claro ("SSO não configurado"), tratado abaixo como qualquer
+  // outro erro de login. O retorno do IdP já é processado sozinho pelo SDK do Supabase na volta
+  // (detectSessionInUrl, ligado por padrão) — o mesmo initClient() que já roda no boot pega a
+  // sessão nova em client.auth.getSession(), sem precisar de nenhum código extra pra isso.
+  async function doSignInSSO(domain) {
+    if(!client) { T.show('⚠️ Configure a URL e a chave do Supabase primeiro.'); return false; }
+    if(!domain) { T.show('⚠️ Informe o domínio corporativo (ex: suaempresa.com.br).'); return false; }
+    const { data, error } = await client.auth.signInWithSSO({ domain });
+    if(error) { T.show('❌ ' + error.message); return false; }
+    if(data && data.url) { window.location.href = data.url; return true; }
+    T.show('⚠️ SSO não configurado para este domínio nesta instância.');
+    return false;
+  }
+
   async function doSignUp(email, password, name) {
     if(!client) { T.show('⚠️ Configure a URL e a chave do Supabase primeiro.'); return false; }
     if(!email || !password) { T.show('⚠️ Preencha e-mail e senha.'); return false; }
@@ -2262,7 +2285,7 @@ const Cloud = (() => {
   }
 
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole,
-    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignUp, signOut, pullAll, flush,
+    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, doSignUp, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushDecision, deleteDecision, pushDocument, deleteDocument,
     pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual, resetForNewUsers, clearProjectData,
@@ -7681,6 +7704,13 @@ const WBS = (() => {
         <button class="btn btn-sm" onclick="Auth.doSignUp()"><i class="ti ti-plus"></i>Criar conta</button>
       </div>
       <div style="font-size:11px;color:var(--t3);margin-top:6px">Toda conta nova nasce com perfil "Consulta" — peça a um administrador para promovê-la.</div>
+
+      <!-- SSO/SAML — requer plano Supabase pago + IdP corporativo configurado (ver SETUP.md);
+           sem isso, o botão simplesmente mostra o erro do Supabase, sem quebrar nada. -->
+      <div style="display:flex;align-items:center;gap:8px;margin:12px 0"><div style="flex:1;height:1px;background:var(--b1)"></div><span style="font-size:10.5px;color:var(--t3)">OU</span><div style="flex:1;height:1px;background:var(--b1)"></div></div>
+      <div class="field-label" style="margin-bottom:6px"><i class="ti ti-building"></i> Login corporativo (SSO/SAML)</div>
+      <div class="prov-inp-row"><input class="input" id="auth-f-sso-domain" placeholder="dominio-da-sua-empresa.com.br"><button class="btn btn-sm" onclick="Auth.doSignInSSO()"><i class="ti ti-arrow-right"></i>Entrar com SSO</button></div>
+      <div style="font-size:11px;color:var(--t3);margin-top:6px">Só funciona se o administrador desta instância já configurou SSO no Supabase para o seu domínio corporativo.</div>
     </div>
 
     <!-- Só aparece quando o Supabase está conectado mas sem login — evita empilhar o formulário de
