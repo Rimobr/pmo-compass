@@ -1169,6 +1169,19 @@ body.icons-failed i[data-fb]::before{
     <button class="btn btn-sm" style="margin-top:8px" onclick="Users.refresh()"><i class="ti ti-refresh"></i>Atualizar lista</button>
   </div>
 
+  <!-- Só aparece para Administrador logado — registro append-only de eventos sensíveis (login,
+       promoção de perfil, backup, reset de dados, tentativa bloqueada por permissão). Ver
+       schema.sql seção 9: nem um Administrador consegue editar/apagar uma linha via API. -->
+  <div class="card" id="audit-log-card" style="display:none">
+    <div class="lbl"><i class="ti ti-shield-check"></i>Log de auditoria</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Registro append-only de eventos sensíveis de governança — ninguém, nem Administrador, consegue editar ou apagar uma linha depois de gravada (nem pela tela, nem pela API). Só os últimos 500 eventos são exibidos aqui; exporte em CSV para um histórico maior.</p>
+    <div class="btn-row" style="margin-bottom:10px">
+      <button class="btn btn-sm" onclick="AuditLog.refresh()"><i class="ti ti-refresh"></i>Atualizar</button>
+      <button class="btn btn-sm" onclick="AuditLog.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button>
+    </div>
+    <div id="audit-log-root" style="max-height:340px;overflow-y:auto"></div>
+  </div>
+
   <!-- Só aparece para Administrador logado — apaga os dados COMPARTILHADOS na nuvem (visíveis pra
        qualquer pessoa que logar) e os dados de demonstração deste navegador, pra preparar o app
        antes de convidar usuários reais. -->
@@ -1843,6 +1856,7 @@ const Auth = (() => {
   function guard(scope) {
     if(can(scope)) return true;
     T.show(`🔒 O perfil "${label()}" não tem permissão para esta ação.`);
+    if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('permission_denied', `Ação bloqueada — perfil "${label()}" tentou algo que exige escopo "${scope}"`, { scope });
     return false;
   }
 
@@ -1907,6 +1921,7 @@ const Cloud = (() => {
     if(signedInBox) signedInBox.style.display = isSignedIn() ? '' : 'none';
     if(typeof Auth !== 'undefined' && Auth.updateCloudBadge) Auth.updateCloudBadge();
     if(typeof Users !== 'undefined') Users.render();
+    if(typeof AuditLog !== 'undefined') AuditLog.render();
     if(typeof Store !== 'undefined' && Store.reflectCloudMode) Store.reflectCloudMode();
   }
 
@@ -1952,6 +1967,7 @@ const Cloud = (() => {
 
   function disconnect() {
     if(!confirm('Desconectar do Supabase? O app volta a usar só os dados locais deste navegador.')) return;
+    if(client && session) pushAuditEvent('cloud_disconnect', `${session.user.email} desconectou este navegador do Supabase`, {});
     cfg = { url:'', anonKey:'' };
     persist();
     client = null; session = null;
@@ -2023,6 +2039,7 @@ const Cloud = (() => {
     if(!client || !session) return false;
     const { error } = await client.from('profiles').update({ role }).eq('id', userId);
     if(error) { T.show('❌ ' + error.message); return false; }
+    pushAuditEvent('role_change', `Perfil de ${userId} alterado para "${role}"`, { targetUserId:userId, newRole:role });
     return true;
   }
 
@@ -2036,6 +2053,7 @@ const Cloud = (() => {
     session = data.session;
     reflectUi();
     await afterSignIn();
+    pushAuditEvent('login', `Login de ${email}`, {});
     T.show('✅ Login realizado!');
     return true;
   }
@@ -2062,6 +2080,7 @@ const Cloud = (() => {
   }
 
   async function signOut() {
+    if(client && session) pushAuditEvent('logout', `Logout de ${session.user.email}`, {});
     if(client) await client.auth.signOut();
     session = null;
     Auth.clearCloudManaged();
@@ -2169,6 +2188,29 @@ const Cloud = (() => {
   }
   function deleteCostActual(id) { if(client && session) track(client.from('cost_actuals').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
 
+  // ── Log de auditoria (append-only) — ver schema.sql seção 9 para as garantias de RLS ──
+  // Só grava eventos sensíveis de governança/segurança (login, promoção de perfil, backup,
+  // reset de dados, tentativa bloqueada por permissão) — não o volume operacional do dia a
+  // dia, que já tem a Trilha (Trail.log) pra isso.
+  function pushAuditEvent(action, description, metadata) {
+    if(!client || !session) return;
+    track(client.from('audit_log').insert({
+      project_id: DB.getActiveProjectId(),
+      actor_id: session.user.id,
+      actor_email: session.user.email,
+      actor_role: (typeof Auth !== 'undefined') ? Auth.getRole() : null,
+      action, description, metadata: metadata || {}
+    }).then(()=>{}).catch(cloudSyncFailed));
+  }
+  // SELECT só é permitido a admin pela RLS — quem não for admin recebe lista vazia (ou erro
+  // de permissão, tratado abaixo como lista vazia também, pra não vazar detalhe de RLS na UI).
+  async function fetchAuditLog(limit) {
+    if(!client || !session) return [];
+    const { data, error } = await client.from('audit_log').select('*').order('created_at', { ascending:false }).limit(limit || 500);
+    if(error) { console.warn('Log de auditoria: falha ao buscar (provável falta de permissão de admin)', error); return []; }
+    return data || [];
+  }
+
   // Apaga da nuvem só o que pertence a UM projeto (project_id) — usado por DB.clearAll(),
   // que antes só limpava o localStorage e deixava a cópia na nuvem intacta (o próximo login
   // trazia tudo de volta). Diferente de resetForNewUsers(): não exige admin nem apaga outros
@@ -2182,6 +2224,7 @@ const Cloud = (() => {
       await client.from('documents').delete().eq('project_id', projectId);
       await client.from('cost_actuals').delete().eq('project_id', projectId);
       await client.from('budget_lines').delete().eq('project_id', projectId);
+      pushAuditEvent('project_data_cleared', `Dados do projeto "${projectId}" apagados da nuvem`, { projectId });
     } catch(e) { console.warn('Falha ao limpar dados do projeto na nuvem', e); }
   }
 
@@ -2195,6 +2238,14 @@ const Cloud = (() => {
     if(wantsBackup && typeof DB !== 'undefined') DB.exportBackup();
     const sure = confirm('⚠️ ATENÇÃO — isso apaga:\n\n• Todos os dados compartilhados na nuvem (WBS, decisões, documentos, orçamento e custos) — para TODAS as pessoas que fizerem login, não só você\n• Os dados de demonstração e projetos salvos neste navegador\n\nContas de usuário e chaves de IA de cada pessoa NÃO são apagadas.\n\nEssa ação não pode ser desfeita. Confirma o reset?');
     if(!sure) { T.show('Reset cancelado — nenhum dado foi apagado.'); return; }
+    // Registrado ANTES de apagar (e esperado, não fire-and-forget) — se a página recarregar
+    // logo em seguida, o evento mais crítico deste módulo não pode depender de vencer a corrida
+    // contra o setTimeout do reload. audit_log não está entre as tabelas apagadas abaixo.
+    await client.from('audit_log').insert({
+      project_id: DB.getActiveProjectId(), actor_id: session.user.id, actor_email: session.user.email,
+      actor_role: Auth.getRole(), action:'reset_shared_data',
+      description: `${session.user.email} resetou todos os dados compartilhados da nuvem`, metadata:{}
+    }).then(()=>{}).catch(()=>{});
     T.show('🗑️ Apagando dados compartilhados na nuvem…');
     try {
       // tasks/actuals antes de módulos/linhas por causa das foreign keys
@@ -2214,7 +2265,8 @@ const Cloud = (() => {
     saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignUp, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushDecision, deleteDecision, pushDocument, deleteDocument,
-    pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual, resetForNewUsers, clearProjectData };
+    pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual, resetForNewUsers, clearProjectData,
+    pushAuditEvent, fetchAuditLog };
 })();
 </script>
 
@@ -2268,6 +2320,65 @@ const Users = (() => {
   }
 
   return { render, refresh, changeRole };
+})();
+</script>
+
+<!-- ■ MODULE: ui/audit-log ─ Registro append-only de eventos sensíveis (login, promoção de perfil,
+     backup, reset de dados, permissão negada) — ver schema.sql seção 9 e Cloud.pushAuditEvent -->
+<script data-module="ui/audit-log">
+const AuditLog = (() => {
+  const ACTION_LABEL = {
+    login:'Login', logout:'Logout', role_change:'Troca de perfil', backup_export:'Backup exportado',
+    backup_import:'Backup restaurado', cloud_disconnect:'Desconectou da nuvem',
+    reset_shared_data:'Reset de dados compartilhados', project_data_cleared:'Dados de projeto apagados',
+    permission_denied:'Permissão negada'
+  };
+  const ACTION_CLS = {
+    permission_denied:'b-amb', reset_shared_data:'b-red', project_data_cleared:'b-red',
+    role_change:'b-acc', login:'b-grn', logout:'b-neu'
+  };
+  let rows = [];
+  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmtDateTime(iso) { try { return new Date(iso).toLocaleString('pt-BR'); } catch(e) { return iso || ''; } }
+
+  function render() {
+    const card = document.getElementById('audit-log-card');
+    const show = (typeof Cloud !== 'undefined') && Cloud.isSignedIn() && Auth.getRole() === 'admin';
+    if(card) { card.style.display = show ? '' : 'none'; if(show) refresh(); }
+  }
+
+  async function refresh() {
+    const root = document.getElementById('audit-log-root');
+    if(!root) return;
+    root.innerHTML = `<div style="font-size:12px;color:var(--t3)"><i class="ti ti-loader-2"></i> Carregando…</div>`;
+    rows = await Cloud.fetchAuditLog(500);
+    if(!rows.length) { root.innerHTML = `<div style="font-size:12px;color:var(--t3)">Nenhum evento registrado ainda (ou você não tem permissão de admin para vê-los).</div>`; return; }
+    root.innerHTML = rows.map(r => {
+      const cls = ACTION_CLS[r.action] || 'b-neu';
+      const label = ACTION_LABEL[r.action] || r.action;
+      return `<div class="tl-item" style="align-items:flex-start">
+        <div style="flex:1">
+          <span class="badge ${cls}" style="margin-right:6px">${escapeHtml(label)}</span>
+          <span style="font-size:12.5px;color:var(--t1)">${escapeHtml(r.description)}</span>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px">${escapeHtml(r.actor_email||'—')} · ${fmtDateTime(r.created_at)} · projeto ${escapeHtml(r.project_id||'—')}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function exportCsv() {
+    if(!rows.length) { T.show('⚠️ Nada para exportar — clique em Atualizar primeiro.'); return; }
+    const esc = (v) => `"${String(v==null?'':v).replace(/"/g,'""')}"`;
+    const header = ['created_at','actor_email','actor_role','action','description','project_id','metadata'].join(',');
+    const lines = rows.map(r => [r.created_at, r.actor_email, r.actor_role, r.action, r.description, r.project_id, JSON.stringify(r.metadata||{})].map(esc).join(','));
+    const blob = new Blob([[header, ...lines].join('\n')], { type:'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'log-auditoria-' + new Date().toISOString().slice(0,10) + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  return { render, refresh, exportCsv };
 })();
 </script>
 
@@ -2585,6 +2696,7 @@ const DB = (() => {
     a.download = brandSlug + '-backup-' + activeName.toLowerCase().replace(/\s+/g,'-') + suffix + '-' + new Date().toISOString().slice(0,10) + '.json';
     document.body.appendChild(a); a.click(); a.remove();
     T.show(pwd ? '✅ Backup protegido por senha baixado. Guarde a senha — sem ela, ninguém consegue restaurar o arquivo.' : '⚠️ Backup baixado sem proteção — contém dados de equipe e stakeholders em texto aberto. Chaves de IA não são exportadas.');
+    if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('backup_export', `Backup exportado do projeto "${activeName}"${pwd?' (protegido por senha)':' (sem senha)'}`, { project:activeName, encrypted:!!pwd });
   }
 
   function importBackup(file) {
@@ -2609,6 +2721,7 @@ const DB = (() => {
         cache = data;
         persist();
         T.show('✅ Backup restaurado no projeto atual! Recarregando…');
+        if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('backup_import', `Backup restaurado no projeto "${getActiveProjectId()}"`, {});
         setTimeout(() => location.reload(), 900);
       } catch(e) { T.show(`❌ Não consegui ler esse arquivo — verifique se é um backup do ${BRAND.name}.`); }
     };

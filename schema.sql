@@ -288,7 +288,43 @@ create index if not exists cost_actuals_project_id_idx on public.cost_actuals(pr
 --   update public.cost_actuals set project_id = 'valdori' where project_id = 'nexus';
 -- (troque 'valdori' pelo id do projeto certo — veja em DB.listProjects() no console)
 
--- 9) PROVENIÊNCIA DO DADO (IA vs. manual) --------------------------------------
+-- 9) LOG DE AUDITORIA (append-only) ------------------------------------------
+-- Diferente da Trilha do app (Trail.log — um mural de eventos "bonito" para o time,
+-- limitado a 200 itens, só local, editável de fato porque é só localStorage), este é
+-- o registro pensado pra revisão de segurança/compliance de um cliente: quem fez o
+-- quê, quando, e a partir de qual papel — coisas sensíveis (login, promoção de perfil,
+-- exportação de backup, reset de dados compartilhados, tentativa bloqueada por falta
+-- de permissão), não o volume inteiro de eventos operacionais.
+--
+-- Append-only de verdade: a política abaixo só concede INSERT (da própria linha,
+-- auth.uid() = actor_id — ninguém grava em nome de outra pessoa) e SELECT (só admin).
+-- Não existe NENHUMA policy de UPDATE ou DELETE para nenhum papel — logo, mesmo um
+-- Administrador autenticado normalmente não consegue alterar ou apagar uma linha via
+-- API. Só alguém com acesso direto ao Postgres (fora do app) poderia.
+create table if not exists public.audit_log (
+  id bigint generated always as identity primary key,
+  project_id text not null,
+  actor_id uuid references auth.users(id),
+  actor_email text,
+  actor_role text,
+  action text not null,        -- código curto e estável, ex: 'login', 'role_change', 'backup_export'
+  description text not null,   -- texto legível do que aconteceu
+  metadata jsonb not null default '{}',
+  created_at timestamptz not null default now()
+);
+
+alter table public.audit_log enable row level security;
+
+create policy "audit_log_insert_own" on public.audit_log
+  for insert with check (auth.uid() = actor_id);
+
+create policy "audit_log_admin_select" on public.audit_log
+  for select using (public.current_role() = 'admin');
+
+create index if not exists audit_log_project_id_idx  on public.audit_log(project_id);
+create index if not exists audit_log_created_at_idx  on public.audit_log(created_at desc);
+
+-- 10) PROVENIÊNCIA DO DADO (IA vs. manual) --------------------------------------
 -- Até aqui, um item criado a partir do Raio-X do Projeto (extração de documento por IA) ficava
 -- indistinguível de um item cadastrado manualmente assim que virava registro — só sobrava um
 -- log na Trilha, que rola pra fora da vista. Pra uso como ferramenta de auditoria/governança,
