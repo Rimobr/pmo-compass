@@ -139,6 +139,9 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 .hbar-fill{height:100%;border-radius:3px}
 .hbar-pct{font-size:11px;color:var(--t3);width:30px;text-align:right;flex-shrink:0}
 .kpi{background:var(--s2);border-radius:var(--r8);padding:12px 14px}
+.kpi-link{cursor:pointer;transition:background .12s}
+.kpi-link:hover,.kpi-link:focus-visible{background:var(--s3)}
+.kpi-link:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 .kpi-lbl{font-size:11px;color:var(--t2);margin-bottom:5px;display:flex;align-items:center;gap:4px}
 .kpi-val{font-size:22px;font-weight:600;color:var(--t1);line-height:1}
 .kpi-unit{font-size:13px;font-weight:400;color:var(--t2)}
@@ -825,10 +828,10 @@ body.icons-failed i[data-fb]::before{
       <div class="kg-r"><span class="kg-st c-up" id="dash-sch-status"><span class="sdot sdot-grn"></span>No prazo</span><i class="ti ti-chevron-down kg-chev op"></i></div>
     </div>
     <div class="kg-body">
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Aderência (WBS)</div><div class="kpi-val" id="dash-kpi-aderencia">83<span class="kpi-unit">%</span></div><div class="kpi-delta c-ne" id="dash-kpi-aderencia-sub">média das entregas</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Entregas na WBS</div><div class="kpi-val" id="dash-kpi-total">42</div><div class="kpi-delta c-ne">módulos + subtarefas</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-amb"></span>Entregas atrasadas</div><div class="kpi-val" id="dash-kpi-atrasadas">3</div><div class="kpi-delta c-wa"><i class="ti ti-alert-triangle"></i>prazo vencido, não concluída</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-red"></span>Decisões críticas</div><div class="kpi-val" id="dash-kpi-critdec">2</div><div class="kpi-delta c-wa" id="dash-kpi-critdec-sub">pendentes agora</div></div>
+      <div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver WBS" onclick="R.go('wbs')" onkeydown="R.goKey(event,'wbs')"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Aderência (WBS)</div><div class="kpi-val" id="dash-kpi-aderencia">83<span class="kpi-unit">%</span></div><div class="kpi-delta c-ne" id="dash-kpi-aderencia-sub">média das entregas</div></div>
+      <div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver WBS" onclick="R.go('wbs')" onkeydown="R.goKey(event,'wbs')"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Entregas na WBS</div><div class="kpi-val" id="dash-kpi-total">42</div><div class="kpi-delta c-ne">módulos + subtarefas</div></div>
+      <div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver entregas atrasadas na WBS" onclick="R.go('wbs')" onkeydown="R.goKey(event,'wbs')"><div class="kpi-lbl"><span class="sdot sdot-amb"></span>Entregas atrasadas</div><div class="kpi-val" id="dash-kpi-atrasadas">3</div><div class="kpi-delta c-wa"><i class="ti ti-alert-triangle"></i>prazo vencido, não concluída</div></div>
+      <div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver decisões críticas" onclick="R.go('decisions')" onkeydown="R.goKey(event,'decisions')"><div class="kpi-lbl"><span class="sdot sdot-red"></span>Decisões críticas</div><div class="kpi-val" id="dash-kpi-critdec">2</div><div class="kpi-delta c-wa" id="dash-kpi-critdec-sub">pendentes agora</div></div>
     </div>
   </div>
 
@@ -838,10 +841,10 @@ body.icons-failed i[data-fb]::before{
       <div class="kg-r"><span class="kg-st c-wa" id="dash-bud-status"><span class="sdot sdot-amb"></span>Atenção</span><i class="ti ti-chevron-down kg-chev op"></i></div>
     </div>
     <div class="kg-body">
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-consumo-dot"></span>Consumo</div><div class="kpi-val" id="dash-kpi-consumo">—<span class="kpi-unit">%</span></div><div class="kpi-delta" id="dash-kpi-consumo-sub"></div></div>
-      <div class="kpi"><div class="kpi-lbl" style="cursor:help;border-bottom:1px dotted var(--t3);display:inline-flex" title="Índice de Desempenho de Custo (CPI) = Valor Agregado ÷ Custo Real. Acima de 1,0 = gastando menos do que o planejado para o trabalho entregue."><span class="sdot" id="dash-kpi-cpi-dot"></span>CPI</div><div class="kpi-val" id="dash-kpi-cpi">—</div><div class="kpi-delta" id="dash-kpi-cpi-sub"></div></div>
-      <div class="kpi"><div class="kpi-lbl" style="cursor:help;border-bottom:1px dotted var(--t3);display:inline-flex" title="Reserva de contingência — valor separado para cobrir riscos conhecidos, fora do orçamento base (BAC) do projeto."><span class="sdot" id="dash-kpi-reserva-dot"></span>Reserva</div><div class="kpi-val" style="font-size:17px" id="dash-kpi-reserva">—</div><div class="kpi-delta" id="dash-kpi-reserva-sub"></div></div>
-      <div class="kpi"><div class="kpi-lbl" style="cursor:help;border-bottom:1px dotted var(--t3);display:inline-flex" title="Estimativa no Término (EAC) — previsão de custo total do projeto ao final, com base no ritmo de gasto atual."><span class="sdot" id="dash-kpi-eac-dot"></span>EAC</div><div class="kpi-val" style="font-size:17px" id="dash-kpi-eac">—</div><div class="kpi-delta" id="dash-kpi-eac-sub"></div></div>
+      <div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver orçamento e custos" onclick="R.go('budget')" onkeydown="R.goKey(event,'budget')"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-consumo-dot"></span>Consumo</div><div class="kpi-val" id="dash-kpi-consumo">—<span class="kpi-unit">%</span></div><div class="kpi-delta" id="dash-kpi-consumo-sub"></div></div>
+      <div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver orçamento e custos" onclick="R.go('budget')" onkeydown="R.goKey(event,'budget')"><div class="kpi-lbl" style="cursor:help;border-bottom:1px dotted var(--t3);display:inline-flex" title="Índice de Desempenho de Custo (CPI) = Valor Agregado ÷ Custo Real. Acima de 1,0 = gastando menos do que o planejado para o trabalho entregue."><span class="sdot" id="dash-kpi-cpi-dot"></span>CPI</div><div class="kpi-val" id="dash-kpi-cpi">—</div><div class="kpi-delta" id="dash-kpi-cpi-sub"></div></div>
+      <div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver orçamento e custos" onclick="R.go('budget')" onkeydown="R.goKey(event,'budget')"><div class="kpi-lbl" style="cursor:help;border-bottom:1px dotted var(--t3);display:inline-flex" title="Reserva de contingência — valor separado para cobrir riscos conhecidos, fora do orçamento base (BAC) do projeto."><span class="sdot" id="dash-kpi-reserva-dot"></span>Reserva</div><div class="kpi-val" style="font-size:17px" id="dash-kpi-reserva">—</div><div class="kpi-delta" id="dash-kpi-reserva-sub"></div></div>
+      <div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver orçamento e custos" onclick="R.go('budget')" onkeydown="R.goKey(event,'budget')"><div class="kpi-lbl" style="cursor:help;border-bottom:1px dotted var(--t3);display:inline-flex" title="Estimativa no Término (EAC) — previsão de custo total do projeto ao final, com base no ritmo de gasto atual."><span class="sdot" id="dash-kpi-eac-dot"></span>EAC</div><div class="kpi-val" style="font-size:17px" id="dash-kpi-eac">—</div><div class="kpi-delta" id="dash-kpi-eac-sub"></div></div>
     </div>
   </div>
 
@@ -3305,7 +3308,10 @@ const R = (() => {
     if(h && pages.includes(h)) go(h);
     window.addEventListener('hashchange', () => { const h2 = location.hash.replace('#',''); if(pages.includes(h2)) go(h2); });
   }
-  return { go, init };
+  // Ativa por teclado (Enter/Espaço) um elemento clicável que não é <button>/<a> nativo —
+  // usado pelos KPIs do Dashboard, que agora navegam pra tela de detalhe (ver pages/dashboard).
+  function goKey(e, id) { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(id); } }
+  return { go, init, goKey };
 })();
 </script>
 
@@ -5073,9 +5079,13 @@ const Decisions = (() => {
     return html;
   }
 
+  const SEV_ORDER = { crit:0, alto:1, medio:2 };
   function render() {
     ensureLoaded();
-    const pending = data.filter(d => d.status === 'pending');
+    // Ordenado por severidade (crítico primeiro) — sem isso, uma decisão crítica podia ficar
+    // enterrada no meio da lista se tivesse sido criada antes de outras menos urgentes. Isso
+    // é o que faz o clique em "Decisões críticas" no Dashboard levar a algo útil de verdade.
+    const pending = data.filter(d => d.status === 'pending').sort((a,b) => (SEV_ORDER[a.severity]??3) - (SEV_ORDER[b.severity]??3));
     const resolved = data.filter(d => d.status !== 'pending');
 
     const root = document.getElementById('dec-list-root');
