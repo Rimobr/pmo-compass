@@ -7546,11 +7546,13 @@ const WBS = (() => {
       const expected = expectedPctToday(m.start, m.end);
       const gap = expected != null ? m.pct - expected : null;
       const atrasado = gap != null && gap < -5;
+      const mRange = fmtRange(m.start, m.end, m.startActual, m.endActual);
+      const mSubParts = [mRange, m.responsavel ? escapeHtml(m.responsavel) : '', atrasado ? `<span style="color:var(--amb)"><i class="ti ti-alert-triangle"></i> esperado ${expected}% hoje, real ${m.pct}% — ${Math.abs(gap)}pp atrasado</span>` : ''].filter(Boolean);
       html += `<div class="wbs-row wbs-l1" style="${i>0?'margin-top:4px':''}">
         <i class="ti ${open?'ti-chevron-down':'ti-chevron-right'}" style="font-size:12px;color:var(--t3);transition:transform .15s;cursor:pointer" onclick="WBS.toggle('${m.id}')"></i>
         <div style="cursor:pointer;flex:1;min-width:0" onclick="WBS.toggle('${m.id}')">
           <span>${escapeHtml(m.label)}</span>
-          ${(m.responsavel || atrasado) ? `<div style="font-size:11px;color:var(--t3);margin-top:1px">${m.responsavel?escapeHtml(m.responsavel):''}${m.responsavel && atrasado?' · ':''}${atrasado?`<span style="color:var(--amb)"><i class="ti ti-alert-triangle"></i> esperado ${expected}% hoje, real ${m.pct}% — ${Math.abs(gap)}pp atrasado</span>`:''}</div>` : ''}
+          ${mSubParts.length ? `<div style="font-size:11px;color:var(--t3);margin-top:1px">${mSubParts.join(' · ')}</div>` : ''}
         </div>
         <div class="wbs-bar-wrap">
           <div class="wbs-mini-bar"><div class="wbs-mini-fill" style="width:${m.pct}%;background:${STATUS_COLOR[m.status]}"></div></div>
@@ -7565,11 +7567,13 @@ const WBS = (() => {
       <div id="${m.id}-children" style="${open?'':'display:none'}">`;
       (m.children||[]).forEach(t => {
         const b = BADGE[t.status] || BADGE.neu;
+        const tRange = fmtRange(t.start, t.end, t.startActual, t.endActual);
+        const tSubParts = [tRange, t.responsavel ? escapeHtml(t.responsavel) : ''].filter(Boolean);
         html += `<div class="wbs-row wbs-l2">
           <i class="ti ti-point" style="font-size:10px"></i>
           <div style="flex:1;min-width:0">
             <span>${escapeHtml(t.label)}</span>
-            ${t.responsavel ? `<div style="font-size:11px;color:var(--t3);margin-top:1px">${escapeHtml(t.responsavel)}</div>` : ''}
+            ${tSubParts.length ? `<div style="font-size:11px;color:var(--t3);margin-top:1px">${tSubParts.join(' · ')}</div>` : ''}
           </div>
           <div class="wbs-bar-wrap">
             <span class="badge ${b.cls}">${b.txt}</span>
@@ -7674,6 +7678,14 @@ const WBS = (() => {
   // e fim planejados) vs. onde ele REALMENTE está (% informado) — é o "cálculo de indicador de
   // projeto" mais simples que existe (aderência ao cronograma), mostrado na hora de editar, não
   // só depois de salvar.
+  // Mostra o intervalo planejado (sempre que houver) e, separadamente, o real (só quando pelo
+  // menos uma das datas reais existir) — são coisas diferentes, não dá pra misturar num range só.
+  function fmtRange(start, end, startActual, endActual) {
+    const parts = [];
+    if(start && end) parts.push(`${fmtDate(parseDate(start))}–${fmtDate(parseDate(end))}`);
+    if(startActual || endActual) parts.push(`real: ${startActual?fmtDate(parseDate(startActual)):'—'}–${endActual?fmtDate(parseDate(endActual)):'—'}`);
+    return parts.join(' · ');
+  }
   function expectedPctToday(start, end) {
     if(!start || !end) return null;
     const s = parseDate(start).getTime(), e = parseDate(end).getTime(), t = TODAY.getTime();
