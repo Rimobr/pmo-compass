@@ -2239,6 +2239,25 @@ const Cloud = (() => {
     return data || [];
   }
 
+  // ── Snapshots (fundação de tendência/previsão — ver schema.sql seção 10 e services/snapshots) ──
+  function pushSnapshot(row) {
+    if(!client || !session) return;
+    track(client.from('project_snapshots').insert({
+      project_id: row.projectId, source: row.source||'app_load',
+      health_score: row.healthScore, health_status: row.healthStatus,
+      budget_bac: row.budgetBac, budget_ac: row.budgetAc, budget_ev: row.budgetEv,
+      budget_cpi: row.budgetCpi, budget_eac: row.budgetEac, budget_consumo_pct: row.budgetConsumoPct,
+      priority_index: row.priorityIndex, critical_decisions_pending: row.criticalDecisionsPending,
+      team_overallocated_count: row.teamOverallocatedCount, dims: row.dims||{}, captured_by: session.user.id
+    }).then(()=>{}).catch(cloudSyncFailed));
+  }
+  async function fetchSnapshots(projectId, limit) {
+    if(!client || !session) return [];
+    const { data, error } = await client.from('project_snapshots').select('*').eq('project_id', projectId).order('captured_at', { ascending:true }).limit(limit || 200);
+    if(error) { console.warn('Snapshots: falha ao buscar', error); return []; }
+    return data || [];
+  }
+
   // Apaga da nuvem só o que pertence a UM projeto (project_id) — usado por DB.clearAll(),
   // que antes só limpava o localStorage e deixava a cópia na nuvem intacta (o próximo login
   // trazia tudo de volta). Diferente de resetForNewUsers(): não exige admin nem apaga outros
@@ -2294,7 +2313,60 @@ const Cloud = (() => {
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushDecision, deleteDecision, pushDocument, deleteDocument,
     pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual, resetForNewUsers, clearProjectData,
-    pushAuditEvent, fetchAuditLog };
+    pushAuditEvent, fetchAuditLog, pushSnapshot, fetchSnapshots };
+})();
+</script>
+
+<!-- ■ MODULE: services/snapshots ─ Fundação de tendência/previsão (P5) — captura um ponto na
+     série histórica de cada projeto em momentos naturais de uso. NÃO é um job de servidor: só
+     ganha ponto novo quem abre o Dashboard ou roda um Raio-X. Enquanto não existir um processo
+     de fundo real (Edge Function agendada, item de roadmap futuro), a série fica tão atualizada
+     quanto o uso do app — documentado como limitação conhecida, não escondido. -->
+<script data-module="services/snapshots">
+const Snapshots = (() => {
+  const THROTTLE_KEY = 'pmo_snapshot_throttle_v1';
+  const THROTTLE_MS = 20 * 60 * 60 * 1000; // ~1 ponto/dia por projeto no máximo via 'app_load'
+
+  function loadThrottle() { try { return JSON.parse(localStorage.getItem(THROTTLE_KEY) || '{}'); } catch(e) { return {}; } }
+  function saveThrottle(t) { try { localStorage.setItem(THROTTLE_KEY, JSON.stringify(t)); } catch(e){} }
+
+  function buildRow(projectId, source) {
+    if(typeof HealthScore === 'undefined' || typeof Budget === 'undefined' || typeof DB === 'undefined') return null;
+    const dims = HealthScore.computeMetrics(projectId);
+    const healthScore = HealthScore.calculate(dims);
+    const healthStatus = HealthScore.getStatus(healthScore).label;
+    const bm = Budget.computeMetrics(projectId);
+    const priorityIndex = (typeof Prioritization !== 'undefined') ? Prioritization.computeValue(Prioritization.getScores(projectId)) : null;
+    const decisions = DB.getForProject(projectId, 'decisions') || [];
+    const criticalDecisionsPending = decisions.filter(d => d.status === 'pending' && d.severity === 'crit').length;
+    const team = DB.getForProject(projectId, 'team') || [];
+    const names = new Set(team.map(m => (m.name||'').trim().toLowerCase()).filter(Boolean));
+    const teamOverallocatedCount = DB.computePortfolioAllocation().filter(p => p.overallocated && names.has(p.name.trim().toLowerCase())).length;
+    return {
+      projectId, source, healthScore, healthStatus,
+      budgetBac: bm.BAC, budgetAc: bm.AC, budgetEv: bm.EV, budgetCpi: bm.CPI, budgetEac: bm.EAC, budgetConsumoPct: bm.consumoPct,
+      priorityIndex, criticalDecisionsPending, teamOverallocatedCount, dims
+    };
+  }
+
+  // 'raiox' sempre captura (evento deliberado e raro); 'app_load' é limitado a ~1x/dia por
+  // projeto pra não encher a série de pontos quase idênticos de quem fica com o Dashboard aberto.
+  function maybeCapture(projectId, source) {
+    if(typeof Cloud === 'undefined' || !Cloud.isSignedIn() || !projectId) return;
+    const throttle = loadThrottle();
+    if(source !== 'raiox') {
+      const last = throttle[projectId];
+      if(last && (Date.now() - last) < THROTTLE_MS) return;
+    }
+    // Sempre marca o throttle (mesmo em 'raiox') — evita que o Dashboard.render() chamado logo
+    // em seguida (commitProposal já faz isso) empurre um segundo ponto quase idêntico.
+    throttle[projectId] = Date.now();
+    saveThrottle(throttle);
+    const row = buildRow(projectId, source||'app_load');
+    if(row) Cloud.pushSnapshot(row);
+  }
+
+  return { maybeCapture, buildRow };
 })();
 </script>
 
@@ -4514,6 +4586,7 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
       if(typeof Stakeholders !== 'undefined') { Stakeholders.resetCache(); Stakeholders.render(); }
     }
 
+    if(typeof Snapshots !== 'undefined') Snapshots.maybeCapture(DB.getActiveProjectId(), 'raiox');
     if(typeof Dashboard !== 'undefined') Dashboard.render();
     currentProposal = null;
     const box2 = document.getElementById(currentBoxId || 'fi-results');
@@ -5148,6 +5221,7 @@ const Dashboard = (() => {
     renderLearning();
     renderAlerts();
     renderPriorityDecision();
+    if(typeof Snapshots !== 'undefined') Snapshots.maybeCapture(DB.getActiveProjectId(), 'app_load');
   }
 
   // "Alertas da IA" e "Decisão prioritária" eram texto fixo (Bruno M. 89%, Rafael D. 110%,

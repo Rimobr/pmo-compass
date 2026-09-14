@@ -324,7 +324,47 @@ create policy "audit_log_admin_select" on public.audit_log
 create index if not exists audit_log_project_id_idx  on public.audit_log(project_id);
 create index if not exists audit_log_created_at_idx  on public.audit_log(created_at desc);
 
--- 10) PROVENIÊNCIA DO DADO (IA vs. manual) --------------------------------------
+-- 10) HISTÓRICO DE SNAPSHOTS (fundação do P5 — tendência e previsão) --------------
+-- Diferente de tudo até aqui, isso não é um dado de negócio que alguém edita — é uma série
+-- temporal: toda vez que o app computa saúde/orçamento/prazo de um projeto (ao abrir o
+-- Dashboard, ou ao confirmar um Raio-X), grava UM PONTO aqui. Sem isso não existe "tendência"
+-- nem "previsão" possível — seria a IA inventando uma trajetória que não pode calcular.
+-- Captura é melhor-esforço e throttled no cliente (core/db, computePortfolioAllocation vizinho):
+-- não é um job de servidor ainda, então só ganha ponto novo quem abre o app ou roda um Raio-X —
+-- ver nota de limitação no código (services/snapshots).
+create table if not exists public.project_snapshots (
+  id bigint generated always as identity primary key,
+  project_id text not null,
+  captured_at timestamptz not null default now(),
+  source text not null default 'app_load' check (source in ('app_load','raiox','manual')),
+  health_score int,
+  health_status text,
+  budget_bac numeric,
+  budget_ac numeric,
+  budget_ev numeric,
+  budget_cpi numeric,
+  budget_eac numeric,
+  budget_consumo_pct numeric,
+  priority_index numeric,
+  critical_decisions_pending int,
+  team_overallocated_count int,
+  dims jsonb not null default '{}', -- as 6 dimensões do HealthScore (schedule/budget/team/quality/learning/scope)
+  captured_by uuid references auth.users(id)
+);
+
+alter table public.project_snapshots enable row level security;
+
+-- Leitura: qualquer autenticado (mesmo padrão de WBS/decisões/orçamento). Escrita: qualquer
+-- autenticado pode INSERIR (é telemetria computada a partir do que a pessoa já pode ver, não
+-- dado de negócio sensível — não faz sentido restringir a admin/gerente só a captura do ponto).
+-- Sem policy de UPDATE/DELETE de propósito: é série histórica, só cresce.
+create policy "project_snapshots_read"  on public.project_snapshots for select using (auth.role() = 'authenticated');
+create policy "project_snapshots_write" on public.project_snapshots for insert with check (auth.role() = 'authenticated');
+
+create index if not exists project_snapshots_project_id_idx  on public.project_snapshots(project_id);
+create index if not exists project_snapshots_captured_at_idx on public.project_snapshots(captured_at desc);
+
+-- 11) PROVENIÊNCIA DO DADO (IA vs. manual) --------------------------------------
 -- Até aqui, um item criado a partir do Raio-X do Projeto (extração de documento por IA) ficava
 -- indistinguível de um item cadastrado manualmente assim que virava registro — só sobrava um
 -- log na Trilha, que rola pra fora da vista. Pra uso como ferramenta de auditoria/governança,
