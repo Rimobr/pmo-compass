@@ -142,6 +142,9 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 .kpi-link{cursor:pointer;transition:background .12s}
 .kpi-link:hover,.kpi-link:focus-visible{background:var(--s3)}
 .kpi-link:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.pg-sub-link{cursor:pointer;border-radius:4px;padding:0 2px;margin:0 -2px}
+.pg-sub-link:hover,.pg-sub-link:focus-visible{color:var(--acc);text-decoration:underline}
+.pg-sub-link:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 .kpi-lbl{font-size:11px;color:var(--t2);margin-bottom:5px;display:flex;align-items:center;gap:4px}
 .kpi-val{font-size:22px;font-weight:600;color:var(--t1);line-height:1}
 .kpi-unit{font-size:13px;font-weight:400;color:var(--t2)}
@@ -818,7 +821,7 @@ body.icons-failed i[data-fb]::before{
 <!-- ■ MODULE: pages/dashboard -->
 <section class="page on" id="p-dashboard" data-module="pages/dashboard">
   <div class="pg-hdr">
-    <div><div class="pg-title" id="dash-project-title">Portal Nexus — Controle de Estoque</div><div class="pg-sub">Atualizado <span id="dash-updated">—</span> · <span id="dash-doc-count">12</span> documentos indexados · <span id="dash-dec-count">4</span> decisões pendentes · <span id="dash-alert-count">1</span> membro em alerta</div></div>
+    <div><div class="pg-title" id="dash-project-title">Portal Nexus — Controle de Estoque</div><div class="pg-sub">Atualizado <span id="dash-updated">—</span> · <span class="pg-sub-link" role="button" tabindex="0" onclick="R.go('repository')" onkeydown="R.goKey(event,'repository')"><span id="dash-doc-count">12</span> documentos indexados</span> · <span class="pg-sub-link" role="button" tabindex="0" onclick="R.go('decisions')" onkeydown="R.goKey(event,'decisions')"><span id="dash-dec-count">4</span> decisões pendentes</span> · <span class="pg-sub-link" role="button" tabindex="0" onclick="R.go('burnout')" onkeydown="R.goKey(event,'burnout')"><span id="dash-alert-count">1</span> membro em alerta</span></div></div>
     <div class="flex-r"><button class="btn btn-sm btn-acc" onclick="R.go('report')"><i class="ti ti-file-report"></i>Status Report</button></div>
   </div>
 
@@ -5537,11 +5540,12 @@ const Dashboard = (() => {
     const reunioes7d = (DB.get('meetings')||[]).filter(mt => { const d = mt.date ? new Date(mt.date) : null; return d && d >= seteDiasAtras && d <= today; }).length;
 
     if(statusEl) statusEl.innerHTML = emRisco.length ? `<span class="sdot sdot-red"></span>${emRisco.length} em alerta` : '<span class="sdot sdot-grn"></span>Sob controle';
+    const kl = (page, label) => `class="kpi kpi-link" role="button" tabindex="0" aria-label="${label}" onclick="R.go('${page}')" onkeydown="R.goKey(event,'${page}')"`;
     bodyEl.innerHTML = `
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot ${emRisco.length?'sdot-red':'sdot-grn'}"></span>Risco burnout</div><div class="kpi-val">${emRisco.length}</div><div class="kpi-delta ${emRisco.length?'c-dn':'c-ne'}">${emRisco.length ? emRisco.map(m=>m.name+' — '+m.workloadPct+'%').join(', ') : 'Nenhum'}</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot ${mediaCarga>=70?'sdot-amb':'sdot-grn'}"></span>Sobrecarga média</div><div class="kpi-val">${mediaCarga}<span class="kpi-unit">%</span></div><div class="kpi-delta c-ne">Meta: 70%</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Reuniões (7 dias)</div><div class="kpi-val">${reunioes7d}</div><div class="kpi-delta c-ne">registradas em Atas e Ações</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot ${conflitos?'sdot-amb':'sdot-grn'}"></span>Conflito de recursos</div><div class="kpi-val">${conflitos}</div><div class="kpi-delta ${conflitos?'c-wa':'c-ne'}">${conflitos ? 'Alocação dupla' : 'Nenhum'}</div></div>`;
+      <div ${kl('burnout','Ver Burnout Radar')}><div class="kpi-lbl"><span class="sdot ${emRisco.length?'sdot-red':'sdot-grn'}"></span>Risco burnout</div><div class="kpi-val">${emRisco.length}</div><div class="kpi-delta ${emRisco.length?'c-dn':'c-ne'}">${emRisco.length ? emRisco.map(m=>m.name+' — '+m.workloadPct+'%').join(', ') : 'Nenhum'}</div></div>
+      <div ${kl('burnout','Ver Burnout Radar')}><div class="kpi-lbl"><span class="sdot ${mediaCarga>=70?'sdot-amb':'sdot-grn'}"></span>Sobrecarga média</div><div class="kpi-val">${mediaCarga}<span class="kpi-unit">%</span></div><div class="kpi-delta c-ne">Meta: 70%</div></div>
+      <div ${kl('meetings','Ver Atas e Ações')}><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Reuniões (7 dias)</div><div class="kpi-val">${reunioes7d}</div><div class="kpi-delta c-ne">registradas em Atas e Ações</div></div>
+      <div ${kl('resources','Ver Recursos')}><div class="kpi-lbl"><span class="sdot ${conflitos?'sdot-amb':'sdot-grn'}"></span>Conflito de recursos</div><div class="kpi-val">${conflitos}</div><div class="kpi-delta ${conflitos?'c-wa':'c-ne'}">${conflitos ? 'Alocação dupla' : 'Nenhum'}</div></div>`;
   }
 
   // Idem — "Padrões IA: 3 detectados" e "+3 esta sprint" eram texto fixo sem tabela nenhuma
@@ -5564,11 +5568,12 @@ const Dashboard = (() => {
     const totalAcoes = meetings.reduce((s,m) => s + (m.actions||[]).length, 0);
 
     if(statusEl) statusEl.innerHTML = lessons.length ? '<span class="sdot sdot-grn"></span>Crescendo' : '<span class="sdot sdot-acc"></span>Sem lições ainda';
+    const kl = (page, label) => `class="kpi kpi-link" role="button" tabindex="0" aria-label="${label}" onclick="R.go('${page}')" onkeydown="R.goKey(event,'${page}')"`;
     bodyEl.innerHTML = `
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Lições registradas</div><div class="kpi-val">${lessons.length}</div><div class="kpi-delta c-ne">total no projeto</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Aplicadas</div><div class="kpi-val">${aplicadas}</div><div class="kpi-delta c-ne">${aproveitPct}% aproveit.</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot ${padroesIA?'sdot-amb':'sdot-grn'}"></span>Padrões IA</div><div class="kpi-val">${padroesIA}</div><div class="kpi-delta c-ne">com similaridade calculada</div></div>
-      <div class="kpi"><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Atas processadas</div><div class="kpi-val">${meetings.length}</div><div class="kpi-delta c-ne">${totalAcoes} ações extraídas</div></div>`;
+      <div ${kl('lessons','Ver Lições Aprendidas')}><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Lições registradas</div><div class="kpi-val">${lessons.length}</div><div class="kpi-delta c-ne">total no projeto</div></div>
+      <div ${kl('lessons','Ver Lições Aprendidas')}><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Aplicadas</div><div class="kpi-val">${aplicadas}</div><div class="kpi-delta c-ne">${aproveitPct}% aproveit.</div></div>
+      <div ${kl('lessons','Ver Lições Aprendidas')}><div class="kpi-lbl"><span class="sdot ${padroesIA?'sdot-amb':'sdot-grn'}"></span>Padrões IA</div><div class="kpi-val">${padroesIA}</div><div class="kpi-delta c-ne">com similaridade calculada</div></div>
+      <div ${kl('meetings','Ver Atas e Ações')}><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Atas processadas</div><div class="kpi-val">${meetings.length}</div><div class="kpi-delta c-ne">${totalAcoes} ações extraídas</div></div>`;
   }
 
   function renderHealthScore() {
