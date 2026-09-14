@@ -919,7 +919,7 @@ body.icons-failed i[data-fb]::before{
   </div>
   <div id="burnout-alert-root"></div>
   <div id="burnout-list-root"></div>
-  <div class="btn-row"><button class="btn btn-grn" data-perm="business" onclick="Burnout.applyRecommendations()"><i class="ti ti-check"></i>Aplicar recomendações</button><button class="btn" onclick="R.go('resources')"><i class="ti ti-users-group"></i>Ver recursos</button></div>
+  <div class="btn-row"><button class="btn" onclick="R.go('resources')"><i class="ti ti-users-group"></i>Ver recursos e alocação real</button></div>
 </section>
 
 <!-- ■ MODULE: pages/resources -->
@@ -1013,7 +1013,7 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: pages/report -->
 <section class="page" id="p-report" data-module="pages/report">
-  <div class="pg-hdr"><div><div class="pg-title">Status Report — Gerado a partir dos dados reais</div><div class="pg-sub" id="report-sub">Baseado nos documentos indexados · Linguagem adaptada por público-alvo</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" onclick="Report.regenerate()"><i class="ti ti-sparkles"></i>Regenerar</button><button class="btn btn-sm btn-grn" onclick="T.show('✅ Enviado ao patrocinador!')"><i class="ti ti-send"></i>Enviar</button><button class="btn btn-sm" onclick="window.print()"><i class="ti ti-download"></i>PDF</button></div></div>
+  <div class="pg-hdr"><div><div class="pg-title">Status Report — Gerado a partir dos dados reais</div><div class="pg-sub" id="report-sub">Baseado nos documentos indexados · Linguagem adaptada por público-alvo</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" onclick="Report.regenerate()"><i class="ti ti-sparkles"></i>Regenerar</button><button class="btn btn-sm" onclick="T.show('🔒 Versão futura — envio por e-mail exige um provedor pago configurado no servidor (roadmap P7). Por enquanto, use PDF e envie por fora.')"><i class="ti ti-send"></i>Enviar</button><button class="btn btn-sm" onclick="window.print()"><i class="ti ti-download"></i>PDF</button></div></div>
   <div id="report-root"></div>
 </section>
 
@@ -1203,23 +1203,23 @@ body.icons-failed i[data-fb]::before{
 
   <div class="card">
     <div class="lbl"><i class="ti ti-brain"></i>IA e análise</div>
-    <div class="set-row"><div><div class="set-lbl">Sugestões automáticas de decisão</div><div class="set-sub">A IA analisa o repositório e sugere decisões proativamente</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Sugestões automáticas de decisão" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
-    <div class="set-row"><div><div class="set-lbl">Detecção de riscos em novos documentos</div><div class="set-sub">Ao indexar um doc, a IA verifica novos riscos automaticamente</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Detecção de riscos em novos documentos" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
-    <div class="set-row"><div><div class="set-lbl">Comparação com projetos históricos</div><div class="set-sub">Usa projetos anteriores para fundamentar recomendações</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Comparação com projetos históricos" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
-    <div class="set-row"><div><div class="set-lbl">Burnout Radar automático</div><div class="set-sub">Monitora carga da equipe e alerta quando algum membro atinge 80%+</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Burnout Radar automático" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Sugestões automáticas de decisão</div><div class="set-sub">O Raio-X do Projeto propõe decisões a partir do que a IA extrai do documento</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Sugestões automáticas de decisão" data-pref="autoSuggestDecisions" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Detecção de riscos em novos documentos</div><div class="set-sub">O Raio-X do Projeto inclui os riscos futuros que a IA identificar no documento</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Detecção de riscos em novos documentos" data-pref="autoRiskDetection" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Comparação com projetos históricos</div><div class="set-sub">Lições Aprendidas entram no contexto enviado à IA (Chat e Decisões)</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Comparação com projetos históricos" data-pref="useHistoricalContext" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Burnout Radar automático</div><div class="set-sub">Mostra no Dashboard quando algum membro da equipe atinge 80%+ de carga</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Burnout Radar automático" data-pref="autoBurnoutRadar" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
   </div>
   </div><!-- /settings-panel-cloud -->
 
   <div id="settings-panel-notif" style="display:none">
   <div class="card">
     <div class="lbl"><i class="ti ti-bell"></i>Notificações</div>
-    <div class="set-row"><div><div class="set-lbl">Alertas de risco crítico</div><div class="set-sub">Notificação imediata quando a IA detectar risco de impacto alto</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Alertas de risco crítico" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
-    <div class="set-row"><div><div class="set-lbl">Status report semanal automático</div><div class="set-sub">Gerado toda segunda-feira às 08h com o repositório atualizado</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Status report semanal automático" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
-    <div class="set-row"><div><div class="set-lbl">Lembrete de decisões pendentes</div><div class="set-sub">Alerta quando decisões ficam mais de 5 dias sem ação</div></div><div class="toggle" role="switch" aria-checked="false" tabindex="0" aria-label="Lembrete de decisões pendentes" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Alertas de risco crítico</div><div class="set-sub">Mostra no Dashboard quando há decisão crítica pendente (você precisa abrir o app)</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Alertas de risco crítico" data-pref="criticalRiskAlerts" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Status report semanal automático <span class="badge b-amb" style="margin-left:4px">Versão futura</span></div><div class="set-sub">Geração e envio agendados (toda segunda às 08h) sem precisar abrir o app — depende de um processo de servidor ainda não construído (roadmap P7)</div></div><div class="toggle" role="switch" aria-checked="false" aria-disabled="true" tabindex="-1" aria-label="Status report semanal automático — versão futura, indisponível" style="opacity:.4;cursor:not-allowed" onclick="T.show('🔒 Versão futura — depende de um processo agendado no servidor (roadmap P7), ainda não construído.')"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Lembrete de decisões pendentes</div><div class="set-sub">Mostra no Dashboard quando uma decisão fica mais de 5 dias sem ação (você precisa abrir o app)</div></div><div class="toggle" role="switch" aria-checked="false" tabindex="0" aria-label="Lembrete de decisões pendentes" data-pref="pendingDecisionReminder" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
   </div>
   <div class="card">
     <div class="lbl"><i class="ti ti-plug"></i>Integrações</div>
-    <div class="set-row"><div><div class="set-lbl">Google Drive</div><div class="set-sub">Indexar documentos automaticamente de uma pasta do Drive</div></div><button class="btn btn-sm btn-acc" data-perm="settings" onclick="T.show('Abrindo autenticação Google Drive…')"><i class="ti ti-plug"></i>Conectar</button></div>
+    <div class="set-row"><div><div class="set-lbl">Google Drive</div><div class="set-sub">Indexar documentos automaticamente de uma pasta do Drive</div></div><button class="btn btn-sm" data-perm="settings" onclick="T.show('🔒 Versão futura — exige registrar um app OAuth no Google Cloud (fora do escopo desta instância por enquanto).')"><i class="ti ti-plug"></i>Em breve</button></div>
     <div class="set-row"><div><div class="set-lbl">Microsoft Teams</div><div class="set-sub">Enviar status report e alertas via canal do Teams</div></div><button class="btn btn-sm" data-perm="settings" onclick="T.show('Em breve — Microsoft Teams')"><i class="ti ti-plug"></i>Em breve</button></div>
     <div class="set-row"><div><div class="set-lbl">Slack</div><div class="set-sub">Receber decisões e alertas no canal do Slack</div></div><button class="btn btn-sm" data-perm="settings" onclick="T.show('Em breve — Slack')"><i class="ti ti-plug"></i>Em breve</button></div>
   </div>
@@ -1257,7 +1257,7 @@ body.icons-failed i[data-fb]::before{
     <div><div class="pg-title">Repositório de Documentos</div><div class="pg-sub"><span id="repo-doc-count">12</span> documentos indexados · Busca por texto ativa · Base de contexto da IA</div></div>
     <div class="btn-row">
       <button class="btn btn-sm btn-acc" data-perm="business" onclick="document.getElementById('fi-files-inp').click()"><i class="ti ti-upload"></i>Adicionar documento</button>
-      <button class="btn btn-sm btn-acc" data-perm="business" onclick="T.show('Conectando ao Google Drive…')"><i class="ti ti-brand-google-drive"></i>Conectar Drive</button>
+      <button class="btn btn-sm" data-perm="business" onclick="T.show('🔒 Versão futura — exige registrar um app OAuth no Google Cloud (fora do escopo desta instância por enquanto).')"><i class="ti ti-brand-google-drive"></i>Em breve</button>
     </div>
   </div>
 
@@ -1642,6 +1642,8 @@ body.icons-failed i[data-fb]::before{
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Backup / Restaurar / Limpar dados</strong> — exporta tudo em JSON, restaura de um arquivo, e a limpeza pede backup + confirmação antes de apagar.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Backend em nuvem (Supabase)</strong> — schema, sincronização e perfis via banco de dados, validados de ponta a ponta com um projeto Supabase real (múltiplos projetos, RBAC reforçado pelo banco, Raio-X com IA). Ver <code>SETUP.md</code> para provisionar uma instância nova.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Instalação como app (PWA)</strong> — testado com servidor real. Requer hospedagem — não ativa abrindo o arquivo direto do computador.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Preferências de IA e notificações</strong> — os 6 controles de "IA e análise"/"Notificações" (sugestões automáticas, detecção de risco, uso de histórico, Burnout Radar, alertas críticos, lembrete de decisão parada) persistem de verdade e afetam o que a IA e o Dashboard mostram — só dentro do app, quando você abre.</div></div>
+    <div class="help-item"><span class="badge b-amb">Versão futura</span><div><strong>Integrações e envio externo</strong> — Google Drive, Microsoft Teams, Slack, e-mail de status report e "status report semanal automático" dependem de infraestrutura ainda não construída (OAuth de terceiro, ou um processo agendado no servidor) — os botões dizem isso claramente em vez de fingir que funcionam.</div></div>
   </div>
 
   <div class="card" style="border-color:var(--rb)">
@@ -2166,7 +2168,7 @@ const Cloud = (() => {
         if(typeof WBS !== 'undefined') WBS.render();
       }
       if(decs.data) {
-        DB.set('decisions', decs.data.map(d => ({ id:d.id, severity:d.severity, pct:d.pct, title:d.title, body:d.body, sources:d.sources||[], status:d.status, actions:d.actions||['accept'], resolvedAt:d.resolved_at, origin:d.origin||undefined })));
+        DB.set('decisions', decs.data.map(d => ({ id:d.id, severity:d.severity, pct:d.pct, title:d.title, body:d.body, sources:d.sources||[], status:d.status, actions:d.actions||['accept'], resolvedAt:d.resolved_at, origin:d.origin||undefined, createdAt:d.created_at })));
         if(typeof Decisions !== 'undefined') Decisions.render();
       }
       if(docs.data) {
@@ -3038,18 +3040,59 @@ const DB = (() => {
 
 <!-- ■ MODULE: core/theme ─ Claro / Escuro / Cinza. A aplicação em si já acontece cedo, inline
      no <head> (evita flash) — este módulo só cuida de persistir a escolha e desenhar o seletor. -->
+<!-- ■ MODULE: core/preferences ─ Os toggles de "IA e análise"/"Notificações" em Configurações
+     antes só mudavam a cor visualmente (core/a11y-toggle) — não salvavam nada, e nada no app
+     lia o estado deles. Cada um agora tem um data-pref correspondente aqui, com um valor
+     padrão IGUAL ao estado visual que a tela já mostrava (ninguém liga/desliga nada sozinho
+     só porque este módulo passou a existir). O que a preferência liga/desliga de verdade está
+     documentado ao lado de cada chave — só cobre o que roda DENTRO do app (a pessoa com a tela
+     aberta); nada aqui envia notificação fora do app sem o app aberto, isso depende de
+     infraestrutura de servidor ainda não construída (roadmap P7). -->
+<script data-module="core/preferences">
+const Prefs = (() => {
+  const KEY = 'pmo_prefs_v1';
+  const DEFAULTS = {
+    autoSuggestDecisions: true,   // Raio-X propõe decisões a partir do que a IA extrai do documento
+    autoRiskDetection: true,      // Raio-X inclui riscos futuros identificados no documento
+    useHistoricalContext: true,   // Lições Aprendidas entram no contexto enviado à IA (Chat/Decisões)
+    autoBurnoutRadar: true,       // alerta de burnout (≥80%) aparece no Dashboard
+    criticalRiskAlerts: true,     // alerta de decisão crítica pendente aparece no Dashboard
+    pendingDecisionReminder: false // alerta de decisão parada há mais de 5 dias aparece no Dashboard
+  };
+  let state = null;
+  function load() { if(!state) { try { state = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY)||'{}') }; } catch(e) { state = { ...DEFAULTS }; } } return state; }
+  function get(key) { return load()[key]; }
+  function set(key, value) { load(); state[key] = value; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
+  return { get, set, DEFAULTS };
+})();
+</script>
+
 <!-- ■ MODULE: core/a11y-toggle ─ Os toggles de Configurações eram <div onclick> puros — sem
      tabindex, role ou handler de teclado, inacessíveis via Tab/Enter/Espaço (achado CT17). -->
 <script data-module="core/a11y-toggle">
 const ToggleSwitch = (() => {
   function flip(el) {
     el.classList.toggle('on');
-    el.setAttribute('aria-checked', el.classList.contains('on') ? 'true' : 'false');
+    const isOn = el.classList.contains('on');
+    el.setAttribute('aria-checked', isOn ? 'true' : 'false');
+    const pref = el.dataset.pref;
+    if(pref && typeof Prefs !== 'undefined') Prefs.set(pref, isOn);
   }
   function key(e, el) {
     if(e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); flip(el); }
   }
-  return { flip, key };
+  // Aplica o valor salvo (ou o padrão) na marcação estática — roda no boot, antes de qualquer
+  // clique. Sem isso o toggle sempre nasceria no estado fixo do HTML, ignorando o que a pessoa
+  // escolheu da última vez.
+  function applyAll() {
+    if(typeof Prefs === 'undefined') return;
+    document.querySelectorAll('[data-pref]').forEach(el => {
+      const on = !!Prefs.get(el.dataset.pref);
+      el.classList.toggle('on', on);
+      el.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+  }
+  return { flip, key, applyAll };
 })();
 </script>
 
@@ -3954,6 +3997,14 @@ const ContextBuilder = (() => {
       ? `\n(mostrando os ${repoForContext.length} documentos mais recentes de ${repo.length} indexados)`
       : '';
 
+    // Gated por Configurações → IA e análise → "Comparação com projetos históricos" — desligar
+    // remove as Lições Aprendidas do que a IA vê, sem mudar nenhum outro dado do contexto.
+    const useHistory = (typeof Prefs === 'undefined') || Prefs.get('useHistoricalContext');
+    const lessons = useHistory ? (DB.get('lessons') || []) : [];
+    const lessonsLines = lessons.length
+      ? lessons.slice(0, 10).map(l => `- [${l.severity}] ${l.title}${l.sourceProject ? ' (origem: '+l.sourceProject+')' : ''}`).join('\n')
+      : (useHistory ? '(nenhuma lição aprendida registrada)' : '(comparação com histórico desligada em Configurações)');
+
     return `Projeto ativo: "${projectName}"
 
 WBS (entregas):
@@ -3961,6 +4012,9 @@ ${wbsLines}
 
 Decisões pendentes:
 ${decisionLines}
+
+Lições aprendidas de outros projetos:
+${lessonsLines}
 
 Equipe:
 ${teamLines}
@@ -4567,16 +4621,21 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
     }
     if(!obj || typeof obj !== 'object') return null;
     const SAUDE_VALID = ['grn','amb','red'];
+    // Configurações → IA e análise: "Detecção de riscos" e "Sugestões automáticas de decisão"
+    // desligadas removem os riscos/decisões da proposta ANTES de chegar na tela de revisão —
+    // não é a IA deixando de analisar (ela já respondeu), é o app decidindo não oferecer.
+    const riskOn = (typeof Prefs === 'undefined') || Prefs.get('autoRiskDetection');
+    const decisionsOn = (typeof Prefs === 'undefined') || Prefs.get('autoSuggestDecisions');
     return {
       saudeGeral: SAUDE_VALID.includes(obj.saudeGeral) ? obj.saudeGeral : null,
       saudeJustificativa: typeof obj.saudeJustificativa === 'string' ? obj.saudeJustificativa : '',
       caminhoCritico: typeof obj.caminhoCritico === 'string' ? obj.caminhoCritico : '',
       problemas: Array.isArray(obj.problemas) ? obj.problemas.filter(x => typeof x === 'string') : [],
       resumo: typeof obj.resumo === 'string' ? obj.resumo : '',
-      riscos: Array.isArray(obj.riscos) ? obj.riscos.filter(x => typeof x === 'string') : [],
+      riscos: riskOn && Array.isArray(obj.riscos) ? obj.riscos.filter(x => typeof x === 'string') : [],
       proximosPassos: Array.isArray(obj.proximosPassos) ? obj.proximosPassos.filter(x => typeof x === 'string') : [],
       wbs: Array.isArray(obj.wbs) ? obj.wbs.filter(x => x && x.label).map(x => ({ ...x, dependsOnLabel: typeof x.dependsOnLabel === 'string' ? x.dependsOnLabel : null })) : [],
-      decisions: Array.isArray(obj.decisions) ? obj.decisions.filter(x => x && x.title) : [],
+      decisions: decisionsOn && Array.isArray(obj.decisions) ? obj.decisions.filter(x => x && x.title) : [],
       budgetLines: Array.isArray(obj.budgetLines) ? obj.budgetLines.filter(x => x && x.label).map(x => ({ ...x, linkedWbsLabel: typeof x.linkedWbsLabel === 'string' ? x.linkedWbsLabel : null })) : [],
       stakeholders: Array.isArray(obj.stakeholders) ? obj.stakeholders.filter(x => x && x.name) : []
     };
@@ -4669,7 +4728,7 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
       const decisions = DB.get('decisions') || [];
       idxDec.forEach(i => {
         const it = p.decisions[i]; if(!it) return;
-        const d = { id:'ev'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), severity:it.severity||'medio', pct:70, title:it.title, body:it.body||'', sources:srcChip, status:'pending', actions:['accept','postpone7','reject'], origin:'ia' };
+        const d = { id:'ev'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), severity:it.severity||'medio', pct:70, title:it.title, body:it.body||'', sources:srcChip, status:'pending', actions:['accept','postpone7','reject'], origin:'ia', createdAt:new Date().toISOString() };
         decisions.push(d);
         if(typeof Cloud !== 'undefined') Cloud.pushDecision(d);
         Trail.log(`Decisão criada a partir de documento (IA): ${d.title}`, Auth.getName(), docNames, 'b-acc');
@@ -4937,6 +4996,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-brand="shortName"]').forEach(el => { el.textContent = BRAND.shortName; });
   document.querySelectorAll('[data-brand="tagline"]').forEach(el => { el.textContent = BRAND.tagline; });
   document.querySelectorAll('[data-brand="version"]').forEach(el => { el.textContent = BRAND.version; });
+  if(typeof ToggleSwitch !== 'undefined') ToggleSwitch.applyAll();
 
   Theme.load();
   Theme.render();
@@ -5125,7 +5185,7 @@ const Decisions = (() => {
     const sources = selectedIds.length
       ? selectedIds.map(id => { const r = repo.find(x => x.id === id); return { repoId:id, ico:'file-text', label: r ? r.name : id }; })
       : [{ ico:'edit', label:'Registro manual' }];
-    data.unshift({ id:genId(), severity, pct:100, title, body: body || '(sem descrição adicional)', sources, status:'pending', actions:['accept','postpone3','reject'] });
+    data.unshift({ id:genId(), severity, pct:100, title, body: body || '(sem descrição adicional)', sources, status:'pending', actions:['accept','postpone3','reject'], createdAt:new Date().toISOString() });
     persist();
     render();
     closeModal();
@@ -5369,12 +5429,15 @@ const Dashboard = (() => {
     const meetings = DB.get('meetings') || [];
     const alerts = [];
 
-    team.filter(m => (m.workloadPct||0) >= 80).forEach(m => {
-      alerts.push({ sev: m.workloadPct>=90?'Crítico':'Alto', cls: m.workloadPct>=90?'b-red':'b-amb',
-        title: `${m.name} — burnout iminente (${m.workloadPct}%)`,
-        sub: (m.signals||[]).join(' · ') || 'Sobrecarga acima do limite saudável',
-        page:'burnout', label:'Ver Burnout Radar' });
-    });
+    const P = (typeof Prefs !== 'undefined') ? Prefs : { get: () => true };
+    if(P.get('autoBurnoutRadar')) {
+      team.filter(m => (m.workloadPct||0) >= 80).forEach(m => {
+        alerts.push({ sev: m.workloadPct>=90?'Crítico':'Alto', cls: m.workloadPct>=90?'b-red':'b-amb',
+          title: `${m.name} — burnout iminente (${m.workloadPct}%)`,
+          sub: (m.signals||[]).join(' · ') || 'Sobrecarga acima do limite saudável',
+          page:'burnout', label:'Ver Burnout Radar' });
+      });
+    }
     // Alocação real entre projetos (casada por nome via DB.computePortfolioAllocation) —
     // substitui o antigo otherAllocationPct/Label, que nunca tinha campo de formulário pra
     // preencher e por isso nunca disparava pra nenhum membro cadastrado de verdade.
@@ -5383,9 +5446,22 @@ const Dashboard = (() => {
       alerts.push({ sev:'Alto', cls:'b-amb', title: `${p.name} — ${p.total}% de alocação total no portfólio`,
         sub: others ? `Também alocado em ${others}` : 'Alocação combinada acima de 100%', page:'resources', label:'Gerenciar' });
     });
-    decisions.filter(d => d.status==='pending' && d.severity==='crit').forEach(d => {
-      alerts.push({ sev:'Crítico', cls:'b-red', title: d.title, sub:'Decisão crítica pendente', page:'decisions', label:'Ver decisão' });
-    });
+    if(P.get('criticalRiskAlerts')) {
+      decisions.filter(d => d.status==='pending' && d.severity==='crit').forEach(d => {
+        alerts.push({ sev:'Crítico', cls:'b-red', title: d.title, sub:'Decisão crítica pendente', page:'decisions', label:'Ver decisão' });
+      });
+    }
+    // "Lembrete de decisões pendentes" — desligado por padrão (Configurações → Notificações);
+    // só existe cadência de "mais de 5 dias" pra decisões que têm createdAt (criadas depois
+    // desta preferência existir, ou puxadas do Supabase — decisões antigas sem essa data ficam
+    // de fora em vez de contar como "0 dias" e nunca disparar, ou "infinito" e disparar sempre).
+    if(P.get('pendingDecisionReminder')) {
+      const fiveDaysMs = 5 * 86400000;
+      decisions.filter(d => d.status==='pending' && d.createdAt && (Date.now() - new Date(d.createdAt).getTime()) > fiveDaysMs).forEach(d => {
+        const dias = Math.floor((Date.now() - new Date(d.createdAt).getTime()) / 86400000);
+        alerts.push({ sev:'Médio', cls:'b-amb', title: `${d.title} — parada há ${dias} dias`, sub:'Decisão pendente sem ação', page:'decisions', label:'Ver decisão' });
+      });
+    }
     const acoesPendentes = meetings.reduce((s,m) => s + (m.actions||[]).filter(a=>!a.done).length, 0);
     const atasComPendencia = meetings.filter(m => (m.actions||[]).some(a=>!a.done)).length;
     if(atasComPendencia) alerts.push({ sev:'Médio', cls:'b-acc', title:`${atasComPendencia} ata(s) com ações não formalizadas`, sub:`${acoesPendentes} ação(ões) pendente(s)`, page:'meetings', label:'Processar' });
@@ -6300,13 +6376,7 @@ const Burnout = (() => {
     T.show('🗑️ Membro removido.');
   }
 
-  function applyRecommendations() {
-    if(!Auth.guard('business')) return;
-    Trail.log('Recomendações de redistribuição de carga aplicadas', Auth.getName(), 'Equipe notificada', 'b-grn');
-    T.show('✅ Recomendações aplicadas! Equipe notificada.');
-  }
-
-  return { render, openAdd, openEdit, saveFromModal, deleteFromModal, applyRecommendations, closeModal, resetCache };
+  return { render, openAdd, openEdit, saveFromModal, deleteFromModal, closeModal, resetCache };
 })();
 </script>
 
