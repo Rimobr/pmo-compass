@@ -389,6 +389,17 @@ alter table public.wbs_tasks   add column if not exists responsavel text;
 alter table public.wbs_tasks   add column if not exists start_actual date;
 alter table public.wbs_tasks   add column if not exists end_actual date;
 
+-- 13) RASTREIO DE AJUSTE POR CAMPO NA WBS -----------------------------------------
+-- A nova visão em Tabela da WBS edita campo a campo, direto na célula — sem isso, "quem
+-- ajustou o quê e quando" só dava pra reconstruir vasculhando a Trilha inteira do projeto.
+-- last_edited_by/at guardam SÓ o último ajuste de cada linha (não um histórico completo —
+-- o histórico completo continua sendo a Trilha, que já registra cada alteração de campo com
+-- valor antigo → novo); isso aqui é o resumo rápido pra mostrar na própria célula da tabela.
+alter table public.wbs_modules add column if not exists last_edited_by text;
+alter table public.wbs_modules add column if not exists last_edited_at timestamptz;
+alter table public.wbs_tasks   add column if not exists last_edited_by text;
+alter table public.wbs_tasks   add column if not exists last_edited_at timestamptz;
+
 -- =========================================================================
 -- PRONTO. Depois de rodar este script:
 -- 1. Vá em Authentication → Users e crie seu primeiro usuário (ou cadastre pelo

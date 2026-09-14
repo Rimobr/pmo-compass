@@ -495,6 +495,13 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 .wbs-ic-btn{width:22px;height:22px;border-radius:6px;border:1px solid transparent;background:transparent;color:var(--t3);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;margin-left:4px;flex-shrink:0}
 .wbs-ic-btn:hover{background:var(--s3);color:var(--t1);border-color:var(--b2)}
 .wbs-ic-btn i{font-size:12px}
+.wbs-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:820px}
+.wbs-table th{text-align:left;font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t3);padding:6px 8px;border-bottom:1px solid var(--b2);white-space:nowrap}
+.wbs-table td{padding:5px 8px;border-bottom:1px solid var(--b1);vertical-align:middle}
+.wbs-table-l1 td{background:var(--s2)}
+.wbs-table-inp{width:100%;min-width:84px;background:var(--s1);border:1px solid var(--b1);border-radius:5px;padding:3px 6px;font-size:12px;color:var(--t1);font-family:inherit}
+.wbs-table-inp:hover{border-color:var(--b2)}
+.wbs-table-inp:focus{outline:none;border-color:var(--acc)}
 </style>
 
 <!-- ■ MODULE: ui/access-control ─ Perfis de acesso (ADM, Gerente, Consulta, Manutenção) -->
@@ -1537,6 +1544,7 @@ body.icons-failed i[data-fb]::before{
   </div>
   <div class="gantt-tabs">
     <button class="gantt-tab on" id="wbs-tab-tree" onclick="WBS.setView('tree')"><i class="ti ti-sitemap"></i>Árvore</button>
+    <button class="gantt-tab" id="wbs-tab-table" onclick="WBS.setView('table')"><i class="ti ti-table"></i>Tabela</button>
     <button class="gantt-tab" id="wbs-tab-gantt" onclick="WBS.setView('gantt')"><i class="ti ti-timeline"></i>Gantt / Linha do tempo</button>
   </div>
 
@@ -1545,6 +1553,13 @@ body.icons-failed i[data-fb]::before{
     <div class="wbs-tree" id="wbs-tree-root"></div>
   </div>
   </div><!-- /wbs-tree-view -->
+
+  <div id="wbs-table-view" style="display:none">
+    <div class="card" style="overflow-x:auto">
+      <p style="font-size:11.5px;color:var(--t2);margin-bottom:10px"><i class="ti ti-info-circle"></i> Edite direto na célula — salva sozinho ao sair do campo. "Últ. ajuste" mostra quem mexeu e quando pela última vez; o histórico completo de cada alteração (valor antigo → novo) fica registrado na <a href="#" onclick="R.go('trail');return false" style="color:var(--acc)">Trilha</a>.</p>
+      <table class="wbs-table" id="wbs-table-root"></table>
+    </div>
+  </div><!-- /wbs-table-view -->
 
   <div id="wbs-gantt-view" style="display:none">
     <div class="card">
@@ -2167,8 +2182,8 @@ const Cloud = (() => {
       ]);
       if(mods.data) {
         const wbs = mods.data.map(m => ({
-          id:m.id, label:m.label, status:m.status, pct:m.pct, start:m.start_date, end:m.end_date, startActual:m.start_actual||null, endActual:m.end_actual||null, responsavel:m.responsavel||'', critical:m.critical, predecessors:m.predecessors||[], origin:m.origin||undefined,
-          children:(tasks.data||[]).filter(t => t.module_id===m.id).map(t => ({id:t.id,label:t.label,status:t.status,start:t.start_date,end:t.end_date,startActual:t.start_actual||null,endActual:t.end_actual||null,responsavel:t.responsavel||'',predecessors:t.predecessors||[]}))
+          id:m.id, label:m.label, status:m.status, pct:m.pct, start:m.start_date, end:m.end_date, startActual:m.start_actual||null, endActual:m.end_actual||null, responsavel:m.responsavel||'', lastEditedBy:m.last_edited_by||'', lastEditedAt:m.last_edited_at||null, critical:m.critical, predecessors:m.predecessors||[], origin:m.origin||undefined,
+          children:(tasks.data||[]).filter(t => t.module_id===m.id).map(t => ({id:t.id,label:t.label,status:t.status,start:t.start_date,end:t.end_date,startActual:t.start_actual||null,endActual:t.end_actual||null,responsavel:t.responsavel||'',lastEditedBy:t.last_edited_by||'',lastEditedAt:t.last_edited_at||null,predecessors:t.predecessors||[]}))
         }));
         DB.set('wbs', wbs);
         if(typeof WBS !== 'undefined') WBS.render();
@@ -2197,11 +2212,11 @@ const Cloud = (() => {
   // acima (e o clearProjectData abaixo) filtrar por projeto depois.
   function pushWbsModule(m) {
     if(!client || !session) return;
-    track(client.from('wbs_modules').upsert({ id:m.id, label:m.label, status:m.status, pct:m.pct, start_date:m.start, end_date:m.end, start_actual:m.startActual||null, end_actual:m.endActual||null, responsavel:m.responsavel||null, critical:m.critical, predecessors:m.predecessors||[], project_id:DB.getActiveProjectId(), origin:m.origin||null }).then(()=>{}).catch(cloudSyncFailed));
+    track(client.from('wbs_modules').upsert({ id:m.id, label:m.label, status:m.status, pct:m.pct, start_date:m.start, end_date:m.end, start_actual:m.startActual||null, end_actual:m.endActual||null, responsavel:m.responsavel||null, last_edited_by:m.lastEditedBy||null, last_edited_at:m.lastEditedAt||null, critical:m.critical, predecessors:m.predecessors||[], project_id:DB.getActiveProjectId(), origin:m.origin||null }).then(()=>{}).catch(cloudSyncFailed));
   }
   function pushWbsTask(moduleId, t) {
     if(!client || !session) return;
-    track(client.from('wbs_tasks').upsert({ id:t.id, module_id:moduleId, label:t.label, status:t.status, start_date:t.start, end_date:t.end, start_actual:t.startActual||null, end_actual:t.endActual||null, responsavel:t.responsavel||null, predecessors:t.predecessors||[], project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed));
+    track(client.from('wbs_tasks').upsert({ id:t.id, module_id:moduleId, label:t.label, status:t.status, start_date:t.start, end_date:t.end, start_actual:t.startActual||null, end_actual:t.endActual||null, responsavel:t.responsavel||null, last_edited_by:t.lastEditedBy||null, last_edited_at:t.lastEditedAt||null, predecessors:t.predecessors||[], project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed));
   }
   function deleteWbsModule(id) { if(client && session) track(client.from('wbs_modules').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
   function deleteWbsTask(id) { if(client && session) track(client.from('wbs_tasks').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
@@ -7588,6 +7603,90 @@ const WBS = (() => {
     root.innerHTML = html;
   }
 
+  // ── Visão em Tabela — edição direta na célula, sem abrir modal ──
+  const STATUS_OPTIONS = [['grn','Concluído'],['amb','Em andamento'],['red','Bloqueado'],['neu','Não iniciado']];
+  const FIELD_LABEL = { responsavel:'Responsável', start:'Início planejado', end:'Fim planejado', startActual:'Início real', endActual:'Fim real', pct:'% Progresso', status:'Status' };
+
+  function fmtDateTimeShort(iso) { if(!iso) return ''; try { const d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); } catch(e) { return ''; } }
+
+  function renderTable() {
+    ensureLoaded();
+    const root = document.getElementById('wbs-table-root');
+    if(!root) return;
+    const canEdit = Auth.can('business');
+    const cell = (scope, moduleId, taskId, field, value, type) => {
+      if(!canEdit) {
+        if(field === 'status') return escapeHtml((BADGE[value]||BADGE.neu).txt);
+        return escapeHtml(value || '—');
+      }
+      const attrs = `onchange="WBS.updateField('${scope}','${moduleId}',${taskId?`'${taskId}'`:'null'},'${field}',this.value)"`;
+      if(field === 'status') return `<select class="wbs-table-inp" ${attrs}>${STATUS_OPTIONS.map(([v,l])=>`<option value="${v}"${v===value?' selected':''}>${l}</option>`).join('')}</select>`;
+      if(type === 'date') return `<input class="wbs-table-inp" type="date" value="${value||''}" ${attrs}>`;
+      if(type === 'number') return `<input class="wbs-table-inp" type="number" min="0" max="100" style="width:56px" value="${value==null?'':value}" ${attrs}>`;
+      return `<input class="wbs-table-inp" type="text" value="${escapeHtml(value||'')}" ${attrs}>`;
+    };
+    let rows = `<thead><tr>
+      <th>Nome</th><th>Responsável</th><th>Início plan.</th><th>Fim plan.</th><th>Início real</th><th>Fim real</th><th>%</th><th>Status</th><th>Últ. ajuste</th>
+    </tr></thead><tbody>`;
+    data.forEach(m => {
+      rows += `<tr class="wbs-table-l1">
+        <td><strong>${escapeHtml(m.label)}</strong></td>
+        <td>${cell('module',m.id,null,'responsavel',m.responsavel)}</td>
+        <td>${cell('module',m.id,null,'start',m.start,'date')}</td>
+        <td>${cell('module',m.id,null,'end',m.end,'date')}</td>
+        <td>${cell('module',m.id,null,'startActual',m.startActual,'date')}</td>
+        <td>${cell('module',m.id,null,'endActual',m.endActual,'date')}</td>
+        <td>${cell('module',m.id,null,'pct',m.pct,'number')}</td>
+        <td>${cell('module',m.id,null,'status',m.status)}</td>
+        <td style="font-size:11px;color:var(--t3)">${m.lastEditedBy ? escapeHtml(m.lastEditedBy)+'<br>'+fmtDateTimeShort(m.lastEditedAt) : '—'}</td>
+      </tr>`;
+      (m.children||[]).forEach(t => {
+        rows += `<tr class="wbs-table-l2">
+          <td style="padding-left:22px">${escapeHtml(t.label)}</td>
+          <td>${cell('task',m.id,t.id,'responsavel',t.responsavel)}</td>
+          <td>${cell('task',m.id,t.id,'start',t.start,'date')}</td>
+          <td>${cell('task',m.id,t.id,'end',t.end,'date')}</td>
+          <td>${cell('task',m.id,t.id,'startActual',t.startActual,'date')}</td>
+          <td>${cell('task',m.id,t.id,'endActual',t.endActual,'date')}</td>
+          <td style="color:var(--t3);text-align:center">—</td>
+          <td>${cell('task',m.id,t.id,'status',t.status)}</td>
+          <td style="font-size:11px;color:var(--t3)">${t.lastEditedBy ? escapeHtml(t.lastEditedBy)+'<br>'+fmtDateTimeShort(t.lastEditedAt) : '—'}</td>
+        </tr>`;
+      });
+    });
+    rows += '</tbody>';
+    root.innerHTML = rows;
+    if(!data.length) root.innerHTML = `<tbody><tr><td colspan="9" style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12.5px">Nenhuma entrega cadastrada ainda.</td></tr></tbody>`;
+  }
+
+  // Salva um campo só, direto da célula — sem passar pelo modal. Grava quem/quando no próprio
+  // item (mostrado na coluna "Últ. ajuste") E registra o valor antigo → novo na Trilha, pra
+  // quem quiser o histórico completo de uma entrega, não só o último ajuste.
+  function updateField(scope, moduleId, taskId, field, rawValue) {
+    if(!Auth.guard('business')) { renderTable(); return; }
+    ensureLoaded();
+    const m = data.find(x => x.id === moduleId);
+    if(!m) return;
+    const item = scope === 'module' ? m : (m.children||[]).find(x => x.id === taskId);
+    if(!item) return;
+    const old = item[field];
+    let value = rawValue;
+    if(field === 'pct') value = Math.max(0, Math.min(100, parseInt(rawValue,10) || 0));
+    else if(['start','end','startActual','endActual'].includes(field)) value = rawValue || null;
+    if(String(old==null?'':old) === String(value==null?'':value)) return; // sem mudança real, não polui a Trilha
+    item[field] = value;
+    if(field === 'status' && scope === 'module') item.critical = (value === 'red');
+    item.lastEditedBy = Auth.getName();
+    item.lastEditedAt = new Date().toISOString();
+    persist();
+    const fmtVal = (v) => (field === 'status') ? (BADGE[v]||BADGE.neu).txt : (v || '—');
+    Trail.log(`${item.label} — ${FIELD_LABEL[field]||field}: "${fmtVal(old)}" → "${fmtVal(value)}"`, Auth.getName(), '', 'b-acc');
+    if(typeof Cloud !== 'undefined') { if(scope === 'module') Cloud.pushWbsModule(item); else Cloud.pushWbsTask(moduleId, item); }
+    renderTree();
+    renderTable();
+    if(document.getElementById('wbs-gantt-view').style.display !== 'none') renderGantt();
+  }
+
   function renderGantt() {
     const ruler = document.getElementById('gantt-ruler');
     const body = document.getElementById('gantt-body');
@@ -7651,14 +7750,19 @@ const WBS = (() => {
 
   function setView(view) {
     const treeView = document.getElementById('wbs-tree-view');
+    const tableView = document.getElementById('wbs-table-view');
     const ganttView = document.getElementById('wbs-gantt-view');
     const tabTree = document.getElementById('wbs-tab-tree');
+    const tabTable = document.getElementById('wbs-tab-table');
     const tabGantt = document.getElementById('wbs-tab-gantt');
     if(treeView) treeView.style.display = view === 'tree' ? '' : 'none';
+    if(tableView) tableView.style.display = view === 'table' ? '' : 'none';
     if(ganttView) ganttView.style.display = view === 'gantt' ? '' : 'none';
     if(tabTree) tabTree.classList.toggle('on', view === 'tree');
+    if(tabTable) tabTable.classList.toggle('on', view === 'table');
     if(tabGantt) tabGantt.classList.toggle('on', view === 'gantt');
     if(view === 'gantt') renderGantt();
+    if(view === 'table') renderTable();
   }
 
   // ── CRUD modal ──
@@ -7858,9 +7962,9 @@ const WBS = (() => {
     closeModal();
   }
 
-  function render() { ensureLoaded(); renderTree(); }
+  function render() { ensureLoaded(); renderTree(); if(document.getElementById('wbs-table-view') && document.getElementById('wbs-table-view').style.display !== 'none') renderTable(); }
 
-  return { toggle, setView, render, openAddModule, openEditModule, openAddTask, openEditTask, saveFromModal, deleteFromModal, closeModal, resetCache, updateExpectedNoteFromForm };
+  return { toggle, setView, render, openAddModule, openEditModule, openAddTask, openEditTask, saveFromModal, deleteFromModal, closeModal, resetCache, updateExpectedNoteFromForm, updateField };
 })();
 </script>
 
