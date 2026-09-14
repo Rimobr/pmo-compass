@@ -815,7 +815,7 @@ body.icons-failed i[data-fb]::before{
 <!-- ■ MODULE: pages/dashboard -->
 <section class="page on" id="p-dashboard" data-module="pages/dashboard">
   <div class="pg-hdr">
-    <div><div class="pg-title">Portal Nexus — Controle de Estoque</div><div class="pg-sub">Atualizado <span id="dash-updated">—</span> · <span id="dash-doc-count">12</span> documentos indexados · <span id="dash-dec-count">4</span> decisões pendentes · <span id="dash-alert-count">1</span> membro em alerta</div></div>
+    <div><div class="pg-title" id="dash-project-title">Portal Nexus — Controle de Estoque</div><div class="pg-sub">Atualizado <span id="dash-updated">—</span> · <span id="dash-doc-count">12</span> documentos indexados · <span id="dash-dec-count">4</span> decisões pendentes · <span id="dash-alert-count">1</span> membro em alerta</div></div>
     <div class="flex-r"><button class="btn btn-sm btn-acc" onclick="R.go('report')"><i class="ti ti-file-report"></i>Status Report</button></div>
   </div>
 
@@ -5351,6 +5351,14 @@ const Dashboard = (() => {
   function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   function render() {
+    // Título "Portal Nexus — Controle de Estoque" ficava fixo no HTML, escrito quando o app só
+    // tinha um projeto — nunca foi religado quando o multi-projeto chegou. Trocar de projeto
+    // pelo seletor do topo atualizava o estado ativo de verdade (DB.getActiveProjectId()), mas
+    // o título do Dashboard continuava mostrando o projeto anterior até a página recarregar
+    // (achado ao vivo: seletor dizia "Modernização de TI", título continuava "Portal Nexus").
+    const activeProject = DB.listProjects().find(p => p.id === DB.getActiveProjectId());
+    if(activeProject) setText('dash-project-title', activeProject.name + (activeProject.client ? ' — ' + activeProject.client : ''));
+
     const wbs = DB.get('wbs') || [];
     const decisions = DB.get('decisions') || [];
     const repository = DB.get('repository') || [];
