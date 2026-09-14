@@ -374,6 +374,21 @@ alter table public.wbs_modules  add column if not exists origin text;
 alter table public.decisions    add column if not exists origin text;
 alter table public.budget_lines add column if not exists origin text;
 
+-- 12) RESPONSÁVEL + DATAS REAIS NA WBS (planejado vs. real) -----------------------
+-- Até aqui a WBS só tinha UMA data de início/fim por item (start_date/end_date) — usada tanto
+-- como "planejado" quanto, implicitamente, como a única referência de prazo. Sem uma data REAL
+-- separada, não dá pra calcular atraso de verdade (só "prazo vencido, não concluída" via % e
+-- data de hoje) nem comparar o que foi planejado contra o que realmente aconteceu. start_date/
+-- end_date passam a significar explicitamente "planejado"; start_actual/end_actual guardam
+-- quando a entrega realmente começou/terminou (nulo até acontecer). responsavel é texto livre
+-- (não é uma FK pra um cadastro de pessoa — a WBS não tem esse conceito ainda).
+alter table public.wbs_modules add column if not exists responsavel text;
+alter table public.wbs_modules add column if not exists start_actual date;
+alter table public.wbs_modules add column if not exists end_actual date;
+alter table public.wbs_tasks   add column if not exists responsavel text;
+alter table public.wbs_tasks   add column if not exists start_actual date;
+alter table public.wbs_tasks   add column if not exists end_actual date;
+
 -- =========================================================================
 -- PRONTO. Depois de rodar este script:
 -- 1. Vá em Authentication → Users e crie seu primeiro usuário (ou cadastre pelo

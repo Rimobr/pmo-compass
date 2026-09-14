@@ -2167,8 +2167,8 @@ const Cloud = (() => {
       ]);
       if(mods.data) {
         const wbs = mods.data.map(m => ({
-          id:m.id, label:m.label, status:m.status, pct:m.pct, start:m.start_date, end:m.end_date, critical:m.critical, predecessors:m.predecessors||[], origin:m.origin||undefined,
-          children:(tasks.data||[]).filter(t => t.module_id===m.id).map(t => ({id:t.id,label:t.label,status:t.status,start:t.start_date,end:t.end_date,predecessors:t.predecessors||[]}))
+          id:m.id, label:m.label, status:m.status, pct:m.pct, start:m.start_date, end:m.end_date, startActual:m.start_actual||null, endActual:m.end_actual||null, responsavel:m.responsavel||'', critical:m.critical, predecessors:m.predecessors||[], origin:m.origin||undefined,
+          children:(tasks.data||[]).filter(t => t.module_id===m.id).map(t => ({id:t.id,label:t.label,status:t.status,start:t.start_date,end:t.end_date,startActual:t.start_actual||null,endActual:t.end_actual||null,responsavel:t.responsavel||'',predecessors:t.predecessors||[]}))
         }));
         DB.set('wbs', wbs);
         if(typeof WBS !== 'undefined') WBS.render();
@@ -2197,11 +2197,11 @@ const Cloud = (() => {
   // acima (e o clearProjectData abaixo) filtrar por projeto depois.
   function pushWbsModule(m) {
     if(!client || !session) return;
-    track(client.from('wbs_modules').upsert({ id:m.id, label:m.label, status:m.status, pct:m.pct, start_date:m.start, end_date:m.end, critical:m.critical, predecessors:m.predecessors||[], project_id:DB.getActiveProjectId(), origin:m.origin||null }).then(()=>{}).catch(cloudSyncFailed));
+    track(client.from('wbs_modules').upsert({ id:m.id, label:m.label, status:m.status, pct:m.pct, start_date:m.start, end_date:m.end, start_actual:m.startActual||null, end_actual:m.endActual||null, responsavel:m.responsavel||null, critical:m.critical, predecessors:m.predecessors||[], project_id:DB.getActiveProjectId(), origin:m.origin||null }).then(()=>{}).catch(cloudSyncFailed));
   }
   function pushWbsTask(moduleId, t) {
     if(!client || !session) return;
-    track(client.from('wbs_tasks').upsert({ id:t.id, module_id:moduleId, label:t.label, status:t.status, start_date:t.start, end_date:t.end, predecessors:t.predecessors||[], project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed));
+    track(client.from('wbs_tasks').upsert({ id:t.id, module_id:moduleId, label:t.label, status:t.status, start_date:t.start, end_date:t.end, start_actual:t.startActual||null, end_actual:t.endActual||null, responsavel:t.responsavel||null, predecessors:t.predecessors||[], project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed));
   }
   function deleteWbsModule(id) { if(client && session) track(client.from('wbs_modules').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
   function deleteWbsTask(id) { if(client && session) track(client.from('wbs_tasks').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
@@ -4554,13 +4554,13 @@ Responda APENAS com um objeto JSON válido, sem markdown, sem texto antes ou dep
   "resumo": "resumo executivo em 2-4 frases do que os documentos revelam sobre o projeto",
   "riscos": ["frase curta de risco futuro 1", "frase curta de risco futuro 2"],
   "proximosPassos": ["sugestão 1", "sugestão 2"],
-  "wbs": [{"label":"nome da entrega","status":"grn|amb|red|neu","pct":0,"start":"YYYY-MM-DD ou null","end":"YYYY-MM-DD ou null","dependsOnLabel":"label EXATO de outra entrega deste mesmo array que bloqueia esta, segundo o texto ou a ordem/hierarquia em que aparecem no documento — ou null se não houver dependência clara"}],
+  "wbs": [{"label":"nome da entrega","status":"grn|amb|red|neu","pct":0,"start":"YYYY-MM-DD ou null","end":"YYYY-MM-DD ou null","responsavel":"nome/papel do responsável citado no texto, ou string vazia se não houver","dependsOnLabel":"label EXATO de outra entrega deste mesmo array que bloqueia esta, segundo o texto ou a ordem/hierarquia em que aparecem no documento — ou null se não houver dependência clara","parentLabel":"label EXATO de outra entrega deste mesmo array que é a FASE/MÓDULO pai desta subtarefa (ex: '2.1' e '2.2' têm '2' ou 'FASE 2' como pai) — ou null se este item for ele mesmo uma fase/módulo de primeiro nível, sem pai"}],
   "decisions": [{"severity":"crit|alto|medio","title":"título curto","body":"contexto em 1-2 frases"}],
   "budgetLines": [{"label":"nome da linha","plannedValue":0,"linkedWbsLabel":"label EXATO de uma entrega do array \"wbs\" acima à qual esta linha de orçamento se refere, segundo o texto — ou null se não houver vínculo claro"}],
   "stakeholders": [{"name":"nome","role":"papel/cargo","influence":"alta|media|baixa","engagement":"critico|atencao|saudavel","notes":"observação curta"}]
 }
 
-Regras: só inclua o que estiver realmente sustentado pelo texto — nunca invente nomes, valores ou datas. "problemas" são questões que os documentos indicam já estar acontecendo agora; "riscos" são possibilidades futuras — não confunda as duas categorias. Se uma categoria inteira não tiver base nos documentos, retorne um array vazio (ou string vazia) para ela. "pct" é 0 a 100 (progresso conhecido, ou 0 se não houver indicação). Datas só se aparecerem explicitamente no texto. "caminhoCritico" é uma leitura preliminar da IA, não um cálculo formal — deixe isso implícito no tom, sem alegar certeza. "dependsOnLabel" existe pra permitir recalcular o caminho crítico de verdade depois — preencha sempre que a ordem do documento (fases sequenciais, "após X", numeração hierárquica) deixar clara qual entrega bloqueia qual; use exatamente o mesmo texto do "label" da entrega predecessora, sem inventar uma dependência que o texto não sustente. "linkedWbsLabel" existe pra permitir calcular o Valor Agregado (EV) e o CPI de verdade depois, ligando o orçamento à entrega correspondente — preencha sempre que o texto associar claramente uma linha de orçamento a uma entrega específica (ex: o valor aparece na mesma seção/fase, ou o nome da linha cita a entrega); use exatamente o mesmo texto do "label" da entrega em "wbs", sem inventar um vínculo que o texto não sustente.`;
+Regras: só inclua o que estiver realmente sustentado pelo texto — nunca invente nomes, valores ou datas. "problemas" são questões que os documentos indicam já estar acontecendo agora; "riscos" são possibilidades futuras — não confunda as duas categorias. Se uma categoria inteira não tiver base nos documentos, retorne um array vazio (ou string vazia) para ela. "pct" é 0 a 100 (progresso conhecido, ou 0 se não houver indicação). Datas só se aparecerem explicitamente no texto. "caminhoCritico" é uma leitura preliminar da IA, não um cálculo formal — deixe isso implícito no tom, sem alegar certeza. "dependsOnLabel" existe pra permitir recalcular o caminho crítico de verdade depois — preencha sempre que a ordem do documento (fases sequenciais, "após X", numeração hierárquica) deixar clara qual entrega bloqueia qual; use exatamente o mesmo texto do "label" da entrega predecessora, sem inventar uma dependência que o texto não sustente. "parentLabel" existe pra reconstruir a hierarquia real da WBS (fase → subtarefa) em vez de uma lista achatada — preencha sempre que a numeração ou a estrutura do documento deixar claro que um item é subtarefa de outro (ex: "2.1" e "2.2" são filhos de "FASE 2" ou "2"); use exatamente o texto do "label" do item pai, e deixe null pra fases/módulos de primeiro nível. "linkedWbsLabel" existe pra permitir calcular o Valor Agregado (EV) e o CPI de verdade depois, ligando o orçamento à entrega correspondente — preencha sempre que o texto associar claramente uma linha de orçamento a uma entrega específica (ex: o valor aparece na mesma seção/fase, ou o nome da linha cita a entrega); use exatamente o mesmo texto do "label" da entrega em "wbs", sem inventar um vínculo que o texto não sustente.`;
 
   let currentProposal = null;
   let currentBoxId = null;
@@ -4643,7 +4643,7 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
       resumo: typeof obj.resumo === 'string' ? obj.resumo : '',
       riscos: riskOn && Array.isArray(obj.riscos) ? obj.riscos.filter(x => typeof x === 'string') : [],
       proximosPassos: Array.isArray(obj.proximosPassos) ? obj.proximosPassos.filter(x => typeof x === 'string') : [],
-      wbs: Array.isArray(obj.wbs) ? obj.wbs.filter(x => x && x.label).map(x => ({ ...x, dependsOnLabel: typeof x.dependsOnLabel === 'string' ? x.dependsOnLabel : null })) : [],
+      wbs: Array.isArray(obj.wbs) ? obj.wbs.filter(x => x && x.label).map(x => ({ ...x, dependsOnLabel: typeof x.dependsOnLabel === 'string' ? x.dependsOnLabel : null, parentLabel: typeof x.parentLabel === 'string' ? x.parentLabel : null, responsavel: typeof x.responsavel === 'string' ? x.responsavel : '' })) : [],
       decisions: decisionsOn && Array.isArray(obj.decisions) ? obj.decisions.filter(x => x && x.title) : [],
       budgetLines: Array.isArray(obj.budgetLines) ? obj.budgetLines.filter(x => x && x.label).map(x => ({ ...x, linkedWbsLabel: typeof x.linkedWbsLabel === 'string' ? x.linkedWbsLabel : null })) : [],
       stakeholders: Array.isArray(obj.stakeholders) ? obj.stakeholders.filter(x => x && x.name) : []
@@ -4680,9 +4680,9 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
       ${totalSelectable ? `
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--ab)">
         <div style="font-size:11.5px;color:var(--t2);margin-bottom:4px">Gostou do diagnóstico? Marque o que quer adicionar como dado real do projeto — nada abaixo foi salvo ainda:</div>
-        ${listSection('Entregas (WBS)', 'sitemap', 'wbs', p.wbs, it => `${it.label}${it.pct?' — '+it.pct+'%':''}`)}
+        ${listSection('Entregas (WBS)', 'sitemap', 'wbs', p.wbs, it => `${it.parentLabel ? '↳ ' : ''}${it.label}${it.pct?' — '+it.pct+'%':''}${it.responsavel ? ' · '+it.responsavel : ''}${it.parentLabel ? ' (filho de "'+it.parentLabel+'")' : ''}`)}
         ${listSection('Decisões / riscos', 'brain', 'decisions', p.decisions, it => `[${it.severity}] ${it.title}`)}
-        ${listSection('Linhas de orçamento', 'wallet', 'budgetLines', p.budgetLines, it => `${it.label} — R$${Math.round(it.plannedValue||0).toLocaleString('pt-BR')}${it.linkedWbsLabel ? ` <span style="color:var(--t3)">· vinculada a "${escapeHtml(it.linkedWbsLabel)}"</span>` : ''}`)}
+        ${listSection('Linhas de orçamento', 'wallet', 'budgetLines', p.budgetLines, it => `${it.label} — R$${Math.round(it.plannedValue||0).toLocaleString('pt-BR')}${it.linkedWbsLabel ? ' · vinculada a "'+it.linkedWbsLabel+'"' : ''}`)}
         ${listSection('Stakeholders', 'users', 'stakeholders', p.stakeholders, it => `${it.name} (${it.role||'—'})`)}
         <div class="btn-row" style="margin-top:12px" data-perm="business">
           <button class="btn btn-sm btn-acc" onclick="FileIntake.commitProposal()"><i class="ti ti-check"></i>Adicionar selecionados e começar a gerenciar</button>
@@ -4706,15 +4706,18 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
     const idxWbs = checked('wbs');
     if(idxWbs.length) {
       const wbs = DB.get('wbs') || [];
-      // Duas passadas: primeiro cria todas as entregas marcadas (com id definitivo), depois
-      // resolve "dependsOnLabel" pra um predecessors[] real — só assim dá pra apontar pro id
-      // gerado agora, e não pro texto solto que a IA devolveu. É isso que alimenta o CPM de
-      // verdade (services/cpm) com dados vindos de documento, em vez de nascer sempre vazio.
+      // Três passadas: (1) cria todas as entregas marcadas, cada uma como módulo de topo por
+      // padrão — (2) resolve "dependsOnLabel" pra um predecessors[] real, do mesmo jeito que
+      // já existia — (3) NOVO: resolve "parentLabel" e aninha quem tiver um pai válido dentro
+      // dele, virando subtarefa de verdade em vez de ficar solta como módulo de topo. Sem essa
+      // passada, TODO Raio-X gerava uma WBS achatada (cada "1.1", "2.2" etc. virava módulo
+      // irmão da fase, não filho dela) — é exatamente o que gerava a pergunta "não há
+      // subtarefas?" numa WBS extraída de documento.
       const created = [];
       idxWbs.forEach(i => {
         const it = p.wbs[i]; if(!it) return;
-        const m = { id:'ev'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)+i, label:it.label, status:it.status||'neu', pct:Number(it.pct)||0, start:it.start||undefined, end:it.end||undefined, critical:false, predecessors:[], children:[], origin:'ia' };
-        created.push({ m, dependsOnLabel:it.dependsOnLabel||null });
+        const m = { id:'ev'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)+i, label:it.label, status:it.status||'neu', pct:Number(it.pct)||0, start:it.start||undefined, end:it.end||undefined, startActual:null, endActual:null, responsavel:it.responsavel||'', critical:false, predecessors:[], children:[], origin:'ia' };
+        created.push({ m, dependsOnLabel:it.dependsOnLabel||null, parentLabel:it.parentLabel||null });
         wbs.push(m);
       });
       const labelToId = new Map(created.map(({m}) => [m.label, m.id]));
@@ -4723,8 +4726,25 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
           m.predecessors = [labelToId.get(dependsOnLabel)];
         }
       });
-      created.forEach(({m}) => {
-        if(typeof Cloud !== 'undefined') Cloud.pushWbsModule(m);
+      // Quem tem parentLabel válido (aponta pra outra entrega desta mesma leva, não pra si
+      // mesma) vira candidato a filho — mas só vira filho de verdade se o PAI não for, ele
+      // próprio, também um candidato a filho (a árvore da WBS só tem 2 níveis; evita esconder
+      // um item numa cadeia de 3 níveis que a tela não sabe desenhar).
+      const byLabel = new Map(created.map(c => [c.m.label, c]));
+      const childCandidates = new Set(created.filter(c => c.parentLabel && byLabel.has(c.parentLabel) && byLabel.get(c.parentLabel).m.id !== c.m.id).map(c => c.m.id));
+      created.forEach(c => {
+        if(!childCandidates.has(c.m.id)) return;
+        const parent = byLabel.get(c.parentLabel);
+        if(childCandidates.has(parent.m.id)) return; // pai também seria filho — mantém os dois como módulos de topo
+        const idx = wbs.indexOf(c.m);
+        if(idx !== -1) wbs.splice(idx, 1);
+        parent.m.children.push({ id:c.m.id, label:c.m.label, status:c.m.status, start:c.m.start, end:c.m.end, startActual:c.m.startActual, endActual:c.m.endActual, responsavel:c.m.responsavel, predecessors:c.m.predecessors });
+        c.nestedUnder = parent.m.id;
+      });
+      created.forEach(({m, nestedUnder}) => {
+        if(nestedUnder) {
+          if(typeof Cloud !== 'undefined') Cloud.pushWbsTask(nestedUnder, (wbs.find(x=>x.id===nestedUnder)||{children:[]}).children.find(t=>t.id===m.id) || m);
+        } else if(typeof Cloud !== 'undefined') Cloud.pushWbsModule(m);
         Trail.log(`Entrega criada a partir de documento (IA): ${m.label}`, Auth.getName(), docNames, 'b-acc');
         added++;
       });
@@ -7523,9 +7543,15 @@ const WBS = (() => {
     data.forEach((m, i) => {
       const open = expand[m.id] === undefined ? (i < 2) : expand[m.id];
       const onCpm = isCritical(m.id) || moduleHasCriticalChild(m);
+      const expected = expectedPctToday(m.start, m.end);
+      const gap = expected != null ? m.pct - expected : null;
+      const atrasado = gap != null && gap < -5;
       html += `<div class="wbs-row wbs-l1" style="${i>0?'margin-top:4px':''}">
         <i class="ti ${open?'ti-chevron-down':'ti-chevron-right'}" style="font-size:12px;color:var(--t3);transition:transform .15s;cursor:pointer" onclick="WBS.toggle('${m.id}')"></i>
-        <span style="cursor:pointer;flex:1" onclick="WBS.toggle('${m.id}')">${escapeHtml(m.label)}</span>
+        <div style="cursor:pointer;flex:1;min-width:0" onclick="WBS.toggle('${m.id}')">
+          <span>${escapeHtml(m.label)}</span>
+          ${(m.responsavel || atrasado) ? `<div style="font-size:11px;color:var(--t3);margin-top:1px">${m.responsavel?escapeHtml(m.responsavel):''}${m.responsavel && atrasado?' · ':''}${atrasado?`<span style="color:var(--amb)"><i class="ti ti-alert-triangle"></i> esperado ${expected}% hoje, real ${m.pct}% — ${Math.abs(gap)}pp atrasado</span>`:''}</div>` : ''}
+        </div>
         <div class="wbs-bar-wrap">
           <div class="wbs-mini-bar"><div class="wbs-mini-fill" style="width:${m.pct}%;background:${STATUS_COLOR[m.status]}"></div></div>
           <span class="wbs-pct ${pctClass(m.pct)}">${m.pct}%</span>
@@ -7541,7 +7567,10 @@ const WBS = (() => {
         const b = BADGE[t.status] || BADGE.neu;
         html += `<div class="wbs-row wbs-l2">
           <i class="ti ti-point" style="font-size:10px"></i>
-          <span style="flex:1">${escapeHtml(t.label)}</span>
+          <div style="flex:1;min-width:0">
+            <span>${escapeHtml(t.label)}</span>
+            ${t.responsavel ? `<div style="font-size:11px;color:var(--t3);margin-top:1px">${escapeHtml(t.responsavel)}</div>` : ''}
+          </div>
           <div class="wbs-bar-wrap">
             <span class="badge ${b.cls}">${b.txt}</span>
             ${isCritical(t.id) ? '<span class="badge b-acc" title="Folga zero — atraso aqui atrasa o projeto"><i class="ti ti-link"></i> Caminho crítico</span>' : ''}
@@ -7629,12 +7658,42 @@ const WBS = (() => {
   }
 
   // ── CRUD modal ──
-  function fillCommon(label, start, end, status, pct) {
+  function fillCommon(label, start, end, status, pct, startActual, endActual, responsavel) {
     document.getElementById('wbs-f-label').value = label || '';
     document.getElementById('wbs-f-start').value = start || '';
     document.getElementById('wbs-f-end').value = end || '';
+    document.getElementById('wbs-f-start-actual').value = startActual || '';
+    document.getElementById('wbs-f-end-actual').value = endActual || '';
+    document.getElementById('wbs-f-responsavel').value = responsavel || '';
     document.getElementById('wbs-f-status').value = status || 'neu';
     document.getElementById('wbs-f-pct').value = (pct === undefined || pct === null) ? '' : pct;
+    renderExpectedNote(start, end, pct);
+  }
+
+  // Nota informativa no modal: onde o item DEVERIA estar hoje (interpolação linear entre início
+  // e fim planejados) vs. onde ele REALMENTE está (% informado) — é o "cálculo de indicador de
+  // projeto" mais simples que existe (aderência ao cronograma), mostrado na hora de editar, não
+  // só depois de salvar.
+  function expectedPctToday(start, end) {
+    if(!start || !end) return null;
+    const s = parseDate(start).getTime(), e = parseDate(end).getTime(), t = TODAY.getTime();
+    if(e <= s) return null;
+    if(t <= s) return 0;
+    if(t >= e) return 100;
+    return Math.round(((t - s) / (e - s)) * 100);
+  }
+  function updateExpectedNoteFromForm() {
+    renderExpectedNote(document.getElementById('wbs-f-start').value, document.getElementById('wbs-f-end').value, document.getElementById('wbs-f-pct').value);
+  }
+  function renderExpectedNote(start, end, pct) {
+    const el = document.getElementById('wbs-f-expected-note');
+    if(!el) return;
+    const expected = expectedPctToday(start, end);
+    if(expected == null || pct == null || pct === '') { el.textContent = ''; return; }
+    const gap = Number(pct) - expected;
+    if(Math.abs(gap) < 5) { el.innerHTML = `<i class="ti ti-check"></i> Esperado hoje: ${expected}% — dentro do previsto.`; return; }
+    const atrasado = gap < 0;
+    el.innerHTML = `<i class="ti ti-${atrasado?'alert-triangle':'trending-up'}" style="color:var(--${atrasado?'amb':'grn'})"></i> Esperado hoje: ${expected}% (real: ${pct}%) — ${Math.abs(gap)}pp ${atrasado?'atrasado':'adiantado'} em relação ao planejado.`;
   }
 
   // Lista todos os outros itens (entregas + subtarefas) como opções de predecessora, excluindo o próprio item
@@ -7661,7 +7720,7 @@ const WBS = (() => {
     document.getElementById('wbs-modal-sub').textContent = 'Cria um novo módulo/entrega de alto nível na WBS';
     document.getElementById('wbs-f-pct-wrap').style.display = '';
     document.getElementById('wbs-f-delete-btn').style.display = 'none';
-    fillCommon('', '', '', 'neu', 0);
+    fillCommon('', '', '', 'neu', 0, '', '', '');
     populatePredecessorOptions([], []);
     openModal();
   }
@@ -7676,7 +7735,7 @@ const WBS = (() => {
     document.getElementById('wbs-modal-sub').textContent = m.label;
     document.getElementById('wbs-f-pct-wrap').style.display = '';
     document.getElementById('wbs-f-delete-btn').style.display = '';
-    fillCommon(m.label, m.start, m.end, m.status, m.pct);
+    fillCommon(m.label, m.start, m.end, m.status, m.pct, m.startActual, m.endActual, m.responsavel);
     populatePredecessorOptions([m.id, ...(m.children||[]).map(t=>t.id)], m.predecessors||[]);
     openModal();
   }
@@ -7689,7 +7748,7 @@ const WBS = (() => {
     document.getElementById('wbs-modal-sub').textContent = 'Adiciona uma subtarefa dentro da entrega selecionada';
     document.getElementById('wbs-f-pct-wrap').style.display = 'none';
     document.getElementById('wbs-f-delete-btn').style.display = 'none';
-    fillCommon('', '', '', 'neu');
+    fillCommon('', '', '', 'neu', null, '', '', '');
     populatePredecessorOptions([], []);
     openModal();
   }
@@ -7705,7 +7764,7 @@ const WBS = (() => {
     document.getElementById('wbs-modal-sub').textContent = t.label;
     document.getElementById('wbs-f-pct-wrap').style.display = 'none';
     document.getElementById('wbs-f-delete-btn').style.display = '';
-    fillCommon(t.label, t.start, t.end, t.status);
+    fillCommon(t.label, t.start, t.end, t.status, null, t.startActual, t.endActual, t.responsavel);
     populatePredecessorOptions([taskId], t.predecessors||[]);
     openModal();
   }
@@ -7716,6 +7775,9 @@ const WBS = (() => {
     const label = document.getElementById('wbs-f-label').value.trim();
     const start = document.getElementById('wbs-f-start').value;
     const end = document.getElementById('wbs-f-end').value;
+    const startActual = document.getElementById('wbs-f-start-actual').value || null;
+    const endActual = document.getElementById('wbs-f-end-actual').value || null;
+    const responsavel = document.getElementById('wbs-f-responsavel').value.trim();
     const status = document.getElementById('wbs-f-status').value;
     const pctRaw = document.getElementById('wbs-f-pct').value;
     const pct = Math.max(0, Math.min(100, parseInt(pctRaw,10) || 0));
@@ -7725,25 +7787,26 @@ const WBS = (() => {
     if(!label) { T.show('⚠️ Dê um nome para a entrega/subtarefa antes de salvar.'); return; }
     if(!start || !end) { T.show('⚠️ Preencha as datas de início e fim.'); return; }
     if(parseDate(end) < parseDate(start)) { T.show('⚠️ A data de fim não pode ser antes da data de início.'); return; }
+    if(startActual && endActual && parseDate(endActual) < parseDate(startActual)) { T.show('⚠️ O fim real não pode ser antes do início real.'); return; }
 
     if(modalCtx.mode === 'add-module') {
-      data.push({ id:genId('wm'), label, status, pct, start, end, critical: status==='red', predecessors, children:[] });
+      data.push({ id:genId('wm'), label, status, pct, start, end, startActual, endActual, responsavel, critical: status==='red', predecessors, children:[] });
       T.show('✅ Nova entrega adicionada!');
       Trail.log(`Nova entrega criada: ${label}`, Auth.getName(), status==='red'?'Risco crítico':(status==='grn'?'Concluída':'Em andamento'), status==='red'?'b-red':(status==='grn'?'b-grn':'b-amb'));
     } else if(modalCtx.mode === 'edit-module') {
       const m = data.find(x => x.id === modalCtx.moduleId);
-      if(m) { m.label=label; m.status=status; m.pct=pct; m.start=start; m.end=end; m.critical = status==='red'; m.predecessors = predecessors; }
+      if(m) { m.label=label; m.status=status; m.pct=pct; m.start=start; m.end=end; m.startActual=startActual; m.endActual=endActual; m.responsavel=responsavel; m.critical = status==='red'; m.predecessors = predecessors; }
       T.show('✅ Entrega atualizada!');
       Trail.log(`Entrega atualizada: ${label} (${pct}%)`, Auth.getName(), status==='red'?'Risco crítico':(status==='grn'?'Concluída':'Em andamento'), status==='red'?'b-red':(status==='grn'?'b-grn':'b-amb'));
     } else if(modalCtx.mode === 'add-task') {
       const m = data.find(x => x.id === modalCtx.moduleId);
-      if(m) { m.children = m.children || []; m.children.push({ id:genId('wt'), label, status, start, end, predecessors }); }
+      if(m) { m.children = m.children || []; m.children.push({ id:genId('wt'), label, status, start, end, startActual, endActual, responsavel, predecessors }); }
       T.show('✅ Subtarefa adicionada!');
       Trail.log(`Nova subtarefa: ${label}`, Auth.getName(), '', 'b-acc');
     } else if(modalCtx.mode === 'edit-task') {
       const m = data.find(x => x.id === modalCtx.moduleId);
       const t = m && (m.children||[]).find(x => x.id === modalCtx.taskId);
-      if(t) { t.label=label; t.status=status; t.start=start; t.end=end; t.predecessors = predecessors; }
+      if(t) { t.label=label; t.status=status; t.start=start; t.end=end; t.startActual=startActual; t.endActual=endActual; t.responsavel=responsavel; t.predecessors = predecessors; }
       T.show('✅ Subtarefa atualizada!');
       Trail.log(`Subtarefa atualizada: ${label}`, Auth.getName(), '', 'b-acc');
     }
@@ -7785,7 +7848,7 @@ const WBS = (() => {
 
   function render() { ensureLoaded(); renderTree(); }
 
-  return { toggle, setView, render, openAddModule, openEditModule, openAddTask, openEditTask, saveFromModal, deleteFromModal, closeModal, resetCache };
+  return { toggle, setView, render, openAddModule, openEditModule, openAddTask, openEditTask, saveFromModal, deleteFromModal, closeModal, resetCache, updateExpectedNoteFromForm };
 })();
 </script>
 
@@ -7959,8 +8022,16 @@ const WBS = (() => {
         <input class="input" id="wbs-f-label" placeholder="Ex: Cadastro de matrículas">
       </div>
       <div class="g2" style="gap:10px">
-        <div><div class="field-label">Início</div><input class="input" type="date" id="wbs-f-start"></div>
-        <div><div class="field-label">Fim</div><input class="input" type="date" id="wbs-f-end"></div>
+        <div><div class="field-label">Início planejado</div><input class="input" type="date" id="wbs-f-start" oninput="WBS.updateExpectedNoteFromForm()"></div>
+        <div><div class="field-label">Fim planejado</div><input class="input" type="date" id="wbs-f-end" oninput="WBS.updateExpectedNoteFromForm()"></div>
+      </div>
+      <div class="g2" style="gap:10px">
+        <div><div class="field-label">Início real</div><input class="input" type="date" id="wbs-f-start-actual"></div>
+        <div><div class="field-label">Fim real</div><input class="input" type="date" id="wbs-f-end-actual"></div>
+      </div>
+      <div>
+        <div class="field-label">Responsável</div>
+        <input class="input" id="wbs-f-responsavel" placeholder="Ex: Ana Souza">
       </div>
       <div class="g2" style="gap:10px">
         <div>
@@ -7973,10 +8044,11 @@ const WBS = (() => {
           </select>
         </div>
         <div id="wbs-f-pct-wrap">
-          <div class="field-label">% Progresso</div>
-          <input class="input" type="number" min="0" max="100" id="wbs-f-pct" placeholder="0–100">
+          <div class="field-label">% Progresso (real)</div>
+          <input class="input" type="number" min="0" max="100" id="wbs-f-pct" placeholder="0–100" oninput="WBS.updateExpectedNoteFromForm()">
         </div>
       </div>
+      <div id="wbs-f-expected-note" style="font-size:11.5px;color:var(--t3)"></div>
       <div>
         <div class="field-label">Depende de (predecessoras)</div>
         <select class="input" id="wbs-f-preds" multiple size="5" style="height:auto"></select>
