@@ -179,6 +179,58 @@ test('getStatus: limiares grn/amb/red', () => {
   assert.strictEqual(HealthScore.getStatus(0).label, 'Em risco');
 });
 
+// ── services/forecast → Forecast.analyze() ──────────────────────────────────
+section('Tendência e previsão — Forecast.analyze() (services/forecast)');
+const Forecast = loadModule('services/forecast', 'Forecast');
+
+test('Menos de 2 pontos → "enough" é false, nunca inventa tendência', () => {
+  assert.strictEqual(Forecast.analyze([], 'p1').enough, false);
+  assert.strictEqual(Forecast.analyze([{ health_score:80, captured_at:'2026-01-01' }], 'p1').enough, false);
+});
+
+test('Saúde caindo 3 leituras seguidas → declineStreak = 3', () => {
+  const rows = [
+    { captured_at:'2026-01-01', health_score:90 },
+    { captured_at:'2026-01-02', health_score:85 },
+    { captured_at:'2026-01-03', health_score:80 },
+    { captured_at:'2026-01-04', health_score:70 },
+  ];
+  const a = Forecast.analyze(rows, 'p1');
+  assert.strictEqual(a.enough, true);
+  assert.strictEqual(a.declineStreak, 3);
+  assert.strictEqual(a.healthDelta, -20);
+});
+
+test('Saúde subindo → declineStreak = 0, healthDelta positivo', () => {
+  const rows = [
+    { captured_at:'2026-01-01', health_score:60 },
+    { captured_at:'2026-01-02', health_score:70 },
+  ];
+  const a = Forecast.analyze(rows, 'p1');
+  assert.strictEqual(a.declineStreak, 0);
+  assert.strictEqual(a.healthDelta, 10);
+});
+
+test('Ritmo de queima projeta data de estouro do orçamento coerente com a reta', () => {
+  // 10pp em 10 dias = 1pp/dia; de 50% faltam 50pp → 50 dias até 100%
+  const rows = [
+    { captured_at:'2026-01-01T00:00:00Z', budget_consumo_pct:40 },
+    { captured_at:'2026-01-11T00:00:00Z', budget_consumo_pct:50 },
+  ];
+  const a = Forecast.analyze(rows, 'p1');
+  assert.ok(a.budgetForecast, 'esperava budgetForecast calculado');
+  assert.strictEqual(a.budgetForecast.daysToExhaust, 50);
+});
+
+test('Consumo de orçamento caindo ou estável → não projeta estouro (sem inventar previsão)', () => {
+  const rows = [
+    { captured_at:'2026-01-01T00:00:00Z', budget_consumo_pct:50 },
+    { captured_at:'2026-01-11T00:00:00Z', budget_consumo_pct:50 },
+  ];
+  const a = Forecast.analyze(rows, 'p1');
+  assert.strictEqual(a.budgetForecast, null);
+});
+
 // ── Resultado ────────────────────────────────────────────────────────────────
 console.log(`\n${passed} passaram, ${failed} falharam.`);
 process.exit(failed > 0 ? 1 : 0);

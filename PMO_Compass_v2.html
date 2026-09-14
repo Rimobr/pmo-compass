@@ -893,6 +893,11 @@ body.icons-failed i[data-fb]::before{
     <div class="lbl" style="color:var(--acc)"><i class="ti ti-sparkles"></i>Decisão prioritária — IA recomenda agora</div>
     <div id="dash-priority-root"></div>
   </div>
+
+  <div class="card" id="dash-forecast-card">
+    <div class="lbl"><i class="ti ti-trending-up"></i>Tendência e previsão</div>
+    <div id="dash-forecast-root"></div>
+  </div>
 </section>
 
 <!-- ■ MODULE: pages/decisions -->
@@ -2367,6 +2372,130 @@ const Snapshots = (() => {
   }
 
   return { maybeCapture, buildRow };
+})();
+</script>
+
+<!-- ■ MODULE: services/forecast ─ P6 — tendência e previsão a partir da série real de snapshots
+     (services/snapshots). Nunca extrapola sem pontos suficientes: com menos de 2 snapshots não
+     existe reta pra projetar, e a tela diz isso em vez de fingir uma tendência. -->
+<script data-module="services/forecast">
+const Forecast = (() => {
+  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmtDate(iso) { try { return new Date(iso).toLocaleDateString('pt-BR'); } catch(e) { return iso||''; } }
+
+  // Fim planejado do projeto — maior data de término cadastrada na WBS (mesma noção de "fim do
+  // projeto" já usada no Gantt/CPM), usada só pra comparar contra a previsão de estouro de orçamento.
+  function plannedEndDate(projectId) {
+    const wbs = (typeof DB !== 'undefined') ? (DB.getForProject(projectId, 'wbs') || []) : [];
+    let max = null;
+    wbs.forEach(m => {
+      [m.end, ...(m.children||[]).map(t=>t.end)].forEach(d => {
+        if(d && (!max || d > max)) max = d;
+      });
+    });
+    return max;
+  }
+
+  function analyze(rows, projectId) {
+    if(!rows || rows.length < 2) return { enough:false, count: (rows||[]).length };
+    const sorted = [...rows].sort((a,b) => new Date(a.captured_at) - new Date(b.captured_at));
+    const first = sorted[0], last = sorted[sorted.length-1];
+
+    let declineStreak = 0;
+    for(let i = sorted.length-1; i>0; i--) {
+      if(sorted[i].health_score!=null && sorted[i-1].health_score!=null && sorted[i].health_score < sorted[i-1].health_score) declineStreak++;
+      else break;
+    }
+    const healthDelta = (last.health_score!=null && first.health_score!=null) ? last.health_score - first.health_score : null;
+    const priorityDelta = (last.priority_index!=null && first.priority_index!=null) ? Math.round((last.priority_index - first.priority_index)*100)/100 : null;
+
+    // Ritmo de queima: reta simples entre o primeiro e o último ponto com % de consumo > 0 —
+    // não é regressão robusta a outliers, é uma projeção linear grosseira, deixada explícita
+    // como tal no texto (nunca apresentada como certeza).
+    const budgetPoints = sorted.filter(r => r.budget_consumo_pct != null);
+    let budgetForecast = null;
+    if(budgetPoints.length >= 2) {
+      const bFirst = budgetPoints[0], bLast = budgetPoints[budgetPoints.length-1];
+      const days = (new Date(bLast.captured_at) - new Date(bFirst.captured_at)) / 86400000;
+      const deltaPct = bLast.budget_consumo_pct - bFirst.budget_consumo_pct;
+      if(days >= 1 && deltaPct > 0) {
+        const dailyRate = deltaPct / days;
+        const daysToExhaust = Math.round((100 - bLast.budget_consumo_pct) / dailyRate);
+        const exhaustDate = new Date(Date.now() + daysToExhaust*86400000);
+        const plannedEnd = plannedEndDate(projectId);
+        budgetForecast = {
+          currentPct: bLast.budget_consumo_pct, dailyRate, daysToExhaust,
+          exhaustDateStr: exhaustDate.toISOString().slice(0,10),
+          beforePlannedEnd: plannedEnd ? (exhaustDate.toISOString().slice(0,10) < plannedEnd) : null,
+          plannedEnd
+        };
+      }
+    }
+
+    return {
+      enough:true, count: sorted.length, firstDate:first.captured_at, lastDate:last.captured_at,
+      healthSeries: sorted.map(r => r.health_score).filter(v => v!=null),
+      currentHealth: last.health_score, currentStatus: last.health_status,
+      declineStreak, healthDelta, priorityDelta, budgetForecast
+    };
+  }
+
+  function sparkline(series) {
+    if(series.length < 2) return '';
+    const w = 180, h = 36, pad = 3;
+    const min = Math.min(...series), max = Math.max(...series);
+    const range = (max - min) || 1;
+    const pts = series.map((v,i) => {
+      const x = pad + (i/(series.length-1)) * (w-2*pad);
+      const y = h - pad - ((v-min)/range) * (h-2*pad);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    const last = series[series.length-1];
+    const lastUp = series.length>1 && last >= series[series.length-2];
+    return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;max-width:220px;height:36px;display:block;margin:6px 0">
+      <polyline points="${pts}" fill="none" stroke="${lastUp?'var(--grn)':'var(--red)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+  }
+
+  async function render() {
+    const root = document.getElementById('dash-forecast-root');
+    if(!root) return;
+    if(typeof Cloud === 'undefined' || !Cloud.isSignedIn()) {
+      root.innerHTML = `<div style="font-size:12.5px;color:var(--t3)"><i class="ti ti-cloud-off"></i> Disponível quando conectado à nuvem — a série histórica (services/snapshots) é salva lá, não neste navegador.</div>`;
+      return;
+    }
+    const pid = DB.getActiveProjectId();
+    const rows = await Cloud.fetchSnapshots(pid, 200);
+    const a = analyze(rows, pid);
+    if(!a.enough) {
+      root.innerHTML = `<div style="font-size:12.5px;color:var(--t3)"><i class="ti ti-clock-hour-4"></i> Ainda não há histórico suficiente pra calcular tendência (${a.count} ponto${a.count===1?'':'s'} coletado${a.count===1?'':'s'} até agora — um ponto novo entra a cada dia de uso, ou a cada Raio-X confirmado).</div>`;
+      return;
+    }
+    const parts = [];
+    parts.push(`<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div>${sparkline(a.healthSeries)}</div><div style="font-size:11.5px;color:var(--t3)">Saúde de ${fmtDate(a.firstDate)} a ${fmtDate(a.lastDate)} (${a.count} pontos)</div></div>`);
+
+    if(a.declineStreak >= 2) {
+      parts.push(`<div style="display:flex;align-items:center;gap:8px;margin-top:8px"><i class="ti ti-trending-down" style="color:var(--red)"></i><span style="font-size:12.5px;color:var(--t1)">Saúde caindo há <strong>${a.declineStreak} leituras seguidas</strong> (atual: ${a.currentHealth}/100 — ${escapeHtml(a.currentStatus||'')})</span></div>`);
+    } else if(a.healthDelta != null) {
+      const up = a.healthDelta >= 0;
+      parts.push(`<div style="display:flex;align-items:center;gap:8px;margin-top:8px"><i class="ti ti-trending-${up?'up':'down'}" style="color:var(--${up?'grn':'amb'})"></i><span style="font-size:12.5px;color:var(--t1)">Saúde ${up?'subiu':'caiu'} ${Math.abs(a.healthDelta)} pontos desde ${fmtDate(a.firstDate)} (atual: ${a.currentHealth}/100)</span></div>`);
+    }
+
+    if(a.budgetForecast) {
+      const bf = a.budgetForecast;
+      const risky = bf.beforePlannedEnd === true;
+      parts.push(`<div style="display:flex;align-items:flex-start;gap:8px;margin-top:8px"><i class="ti ti-${risky?'alert-triangle':'chart-line'}" style="color:var(--${risky?'red':'t3'})"></i><span style="font-size:12.5px;color:var(--t1)">No ritmo de consumo atual (${bf.currentPct}%, ~${bf.dailyRate.toFixed(2)}pp/dia), o orçamento chega a 100% em <strong>~${bf.daysToExhaust} dias</strong> (${fmtDate(bf.exhaustDateStr)})${risky?` — <strong style="color:var(--red)">antes do fim planejado do projeto</strong> (${fmtDate(bf.plannedEnd)})`:(bf.plannedEnd?` — dentro do prazo planejado (${fmtDate(bf.plannedEnd)})`:'')}. Projeção linear simples a partir do histórico — não é garantia.</span></div>`);
+    }
+
+    if(a.priorityDelta != null && Math.abs(a.priorityDelta) >= 5) {
+      const up = a.priorityDelta > 0;
+      parts.push(`<div style="display:flex;align-items:center;gap:8px;margin-top:8px"><i class="ti ti-arrows-${up?'up':'down'}" style="color:var(--t3)"></i><span style="font-size:12.5px;color:var(--t1)">Índice de priorização ${up?'subiu':'caiu'} ${Math.abs(a.priorityDelta)} pontos desde ${fmtDate(a.firstDate)}</span></div>`);
+    }
+
+    root.innerHTML = parts.join('');
+  }
+
+  return { analyze, render };
 })();
 </script>
 
@@ -5222,6 +5351,7 @@ const Dashboard = (() => {
     renderAlerts();
     renderPriorityDecision();
     if(typeof Snapshots !== 'undefined') Snapshots.maybeCapture(DB.getActiveProjectId(), 'app_load');
+    if(typeof Forecast !== 'undefined') Forecast.render();
   }
 
   // "Alertas da IA" e "Decisão prioritária" eram texto fixo (Bruno M. 89%, Rafael D. 110%,
