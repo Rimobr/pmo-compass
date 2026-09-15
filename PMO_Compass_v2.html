@@ -7676,12 +7676,19 @@ const WBS = (() => {
   let cpmResult = new Map();
   let cpmHasDeps = false;
 
+  // status "grn" (Entregue ✓) é a fonte de verdade pra "concluído" na árvore da WBS — mas nem
+  // toda entrega/subtarefa tem o campo numérico "pct" preenchido além do status (ex: itens
+  // criados antes do campo existir, ou tarefas marcadas concluídas só pelo status). Sem essa
+  // correção, o replanejamento (R4) trataria um item já entregue como "não iniciado" e jogaria
+  // a data dele pra hoje — errado, porque o trabalho já aconteceu de verdade.
+  function effectivePct(it) { return it.status === 'grn' ? 100 : (typeof it.pct === 'number' ? it.pct : 0); }
+
   function buildFlatItems() {
     ensureLoaded();
     const items = [];
     data.forEach(m => {
-      items.push({ id:m.id, label:m.label, start:m.start, end:m.end, predecessors:m.predecessors||[], pct:m.pct||0 });
-      (m.children||[]).forEach(t => items.push({ id:t.id, label:t.label, start:t.start, end:t.end, predecessors:t.predecessors||[], pct:t.pct||0 }));
+      items.push({ id:m.id, label:m.label, start:m.start, end:m.end, predecessors:m.predecessors||[], pct:effectivePct(m) });
+      (m.children||[]).forEach(t => items.push({ id:t.id, label:t.label, start:t.start, end:t.end, predecessors:t.predecessors||[], pct:effectivePct(t) }));
     });
     return items;
   }
