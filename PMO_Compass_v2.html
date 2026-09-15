@@ -745,6 +745,7 @@ body.icons-failed i[data-fb]::before{
       <button class="ntab" data-p="repository" onclick="R.go('repository')"><i class="ti ti-files"></i>Repositório</button>
       <button class="ntab" data-p="chat" onclick="R.go('chat')"><i class="ti ti-message-2"></i>Chat IA</button>
       <button class="ntab" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
+      <button class="ntab" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Diretoria</button>
       <button class="ntab" data-p="settings" onclick="R.go('settings')"><i class="ti ti-settings"></i>Config.</button>
       <button class="ntab" data-p="help" onclick="R.go('help')"><i class="ti ti-help-circle"></i>Ajuda</button>
     </div>
@@ -818,6 +819,7 @@ body.icons-failed i[data-fb]::before{
     <div class="sb-group-body" id="sbg-projetos-list">
       <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
       <button class="si" data-p="prioritization" onclick="R.go('prioritization')"><i class="ti ti-sort-descending-2"></i>Priorização</button>
+      <button class="si" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button>
       <div id="sb-projects-root"></div>
       <button class="si" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
     </div>
@@ -1097,6 +1099,23 @@ body.icons-failed i[data-fb]::before{
   <div class="card">
     <div class="lbl"><i class="ti ti-list-numbers"></i>Ranking do portfólio</div>
     <div id="prio-table-root"></div>
+  </div>
+</section>
+
+<!-- ■ MODULE: pages/board -->
+<section class="page" id="p-board" data-module="pages/board">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Painel da Diretoria<span class="help-q" data-help="Uma visão rápida e sem jargão de todos os projetos — pra decidir seguir, pausar ou escalar. Cada sugestão da IA é baseada em dado já calculado no sistema, nunca um palpite solto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Visão rápida do portfólio pra decidir — sem precisar entender os detalhes técnicos.</div></div>
+    <div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Board.generateSuggestions()"><i class="ti ti-sparkles"></i>Atualizar sugestões da IA</button></div>
+  </div>
+
+  <div class="g4" id="board-kpis-root" style="margin-bottom:16px"></div>
+
+  <div id="board-cards-root" class="g3"></div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="lbl"><i class="ti ti-history"></i>Decisões já tomadas<span class="help-q" data-help="Todo registro de uma decisão de seguir, pausar ou cancelar — com a sugestão da IA que veio antes (quando houve). Avaliar se foi uma boa decisão ajuda a IA a raciocinar melhor da próxima vez." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div id="board-history-root"></div>
   </div>
 </section>
 
@@ -2261,6 +2280,37 @@ const Cloud = (() => {
     track(client.from('project_settings').upsert({ project_id:projectId, key, value, updated_by:(typeof Auth!=='undefined'?Auth.getName():null) }, { onConflict:'project_id,key' }).then(()=>{}).catch(cloudSyncFailed));
   }
 
+  // Painel da Diretoria — um ciclo (sugestão da IA → decisão → avaliação) por linha. Recebe
+  // projectId explícito (mesmo motivo de pushProjectSetting): a tela mostra o portfólio inteiro
+  // de uma vez, sem trocar o projeto ativo.
+  function pushBoardDecision(projectId, row) {
+    if(!client || !session || !projectId) return;
+    track(client.from('board_decisions').upsert({
+      id:row.id, project_id:projectId,
+      ai_suggestion:row.aiSuggestion||null, ai_reasoning:row.aiReasoning||null, ai_generated_at:row.aiGeneratedAt||null,
+      board_decision:row.boardDecision||null, board_comment:row.boardComment||null, decided_by:row.decidedBy||null, decided_at:row.decidedAt||null,
+      outcome_rating:row.outcomeRating||null, outcome_comment:row.outcomeComment||null, outcome_rated_at:row.outcomeRatedAt||null
+    }).then(()=>{}).catch(cloudSyncFailed));
+  }
+  function deleteBoardDecision(id) { if(client && session) track(client.from('board_decisions').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
+
+  // Painel da Diretoria mostra o portfólio inteiro de uma vez (como a Priorização já faz) — por
+  // isso busca TODAS as linhas de uma vez, sem filtrar pelo projeto ativo (diferente do pullAll
+  // de cima, que só traz o que pertence ao projeto ativo no momento).
+  async function pullBoardDecisions() {
+    if(!client || !session) return [];
+    await flush();
+    try {
+      const { data, error } = await client.from('board_decisions').select('*').order('decided_at', { ascending:false });
+      if(error || !data) return [];
+      return data.map(r => ({
+        id:r.id, projectId:r.project_id, aiSuggestion:r.ai_suggestion, aiReasoning:r.ai_reasoning, aiGeneratedAt:r.ai_generated_at,
+        boardDecision:r.board_decision, boardComment:r.board_comment, decidedBy:r.decided_by, decidedAt:r.decided_at,
+        outcomeRating:r.outcome_rating, outcomeComment:r.outcome_comment, outcomeRatedAt:r.outcome_rated_at
+      }));
+    } catch(e) { console.warn('Supabase: falha ao buscar decisões da diretoria', e); return []; }
+  }
+
   function pushDecision(d) {
     if(!client || !session) return;
     track(client.from('decisions').upsert({ id:d.id, severity:d.severity, pct:d.pct, title:d.title, body:d.body, sources:d.sources, status:d.status, actions:d.actions, resolved_at:d.resolvedAt||null, project_id:DB.getActiveProjectId(), origin:d.origin||null }).then(()=>{}).catch(cloudSyncFailed));
@@ -2381,7 +2431,8 @@ const Cloud = (() => {
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushDecision, deleteDecision, pushDocument, deleteDocument,
     pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual, resetForNewUsers, clearProjectData,
-    pushAuditEvent, fetchAuditLog, pushSnapshot, fetchSnapshots, pushProjectSetting };
+    pushAuditEvent, fetchAuditLog, pushSnapshot, fetchSnapshots, pushProjectSetting,
+    pushBoardDecision, deleteBoardDecision, pullBoardDecisions };
 })();
 </script>
 
@@ -3382,7 +3433,7 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','help','xray'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','help','xray'];
   function go(id) {
     pages.forEach(p => {
       const el = document.getElementById('p-'+p);
@@ -3398,6 +3449,7 @@ const R = (() => {
     if(id === 'loop' && typeof Loop !== 'undefined') Loop.render();
     if(id === 'portfolio' && typeof Portfolio !== 'undefined') Portfolio.render();
     if(id === 'prioritization' && typeof Prioritization !== 'undefined') Prioritization.render();
+    if(id === 'board' && typeof Board !== 'undefined') Board.render();
     if(id === 'resources' && typeof Resources !== 'undefined') Resources.render();
     if(id === 'budget' && typeof Budget !== 'undefined') Budget.render();
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
@@ -3425,7 +3477,7 @@ const Nav = (() => {
     wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento',
     burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe',
     lessons:'sbg-conhecimento', meetings:'sbg-conhecimento', repository:'sbg-conhecimento', chat:'sbg-conhecimento',
-    portfolio:'sbg-projetos', prioritization:'sbg-projetos'
+    portfolio:'sbg-projetos', prioritization:'sbg-projetos', board:'sbg-projetos'
   };
 
   // Comportamento sanfona: só um menu fica aberto por vez — todo menu sem
@@ -3500,7 +3552,7 @@ const Nav = (() => {
     wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos',
     burnout:'Burnout Radar', resources:'Recursos', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
-    portfolio:'Portfólio', prioritization:'Priorização', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
+    portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
   };
 
   function renderBreadcrumb(pageId) {
@@ -3561,6 +3613,7 @@ const CmdK = (() => {
     { label:'Chat contextual', page:'chat', icon:'message-2', group:'Conhecimento' },
     { label:'Portfólio', page:'portfolio', icon:'layout-grid', group:'Projetos' },
     { label:'Priorização', page:'prioritization', icon:'sort-descending-2', group:'Projetos' },
+    { label:'Painel da Diretoria', page:'board', icon:'presentation-analytics', group:'Projetos' },
     { label:'Configurações', page:'settings', icon:'settings', group:'' },
     { label:'Ajuda', page:'help', icon:'help-circle', group:'' }
   ];
@@ -7546,6 +7599,113 @@ const Prioritization = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: core/board-history ─ Registro de cada ciclo do Painel da Diretoria (sugestão da IA
+     → decisão → avaliação posterior). Não existe treino de modelo aqui — "aprender" significa só
+     isso: guardar o resultado real e devolver pro prompt da próxima sugestão, mesmo princípio já
+     usado em core/raiox-history pro diagnóstico do Raio-X. Dado é portfólio inteiro (não muda com
+     o projeto ativo), por isso usa localStorage direto — mesmo motivo de Prioritization.getConfig
+     não usar DB.get/set (que são por-projeto). -->
+<script data-module="core/board-history">
+const BoardHistory = (() => {
+  const LOCAL_KEY = 'pmo_board_decisions_v1';
+  let cache = null;
+
+  function loadLocal() {
+    if(cache) return cache;
+    try { const raw = localStorage.getItem(LOCAL_KEY); cache = raw ? JSON.parse(raw) : []; } catch(e) { cache = []; }
+    return cache;
+  }
+  function persistLocal() { try { localStorage.setItem(LOCAL_KEY, JSON.stringify(cache||[])); } catch(e){} }
+  function genId() { return 'bd' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+
+  // Busca da nuvem (quando conectado) e substitui o cache local pelo que voltou — mesmo padrão
+  // de "nuvem manda" já usado no resto do app quando há sessão ativa.
+  async function sync() {
+    if(typeof Cloud !== 'undefined' && Cloud.isSignedIn && Cloud.isSignedIn()) {
+      const rows = await Cloud.pullBoardDecisions();
+      if(rows) { cache = rows; persistLocal(); }
+    }
+    return loadLocal();
+  }
+
+  function list(projectId) {
+    loadLocal();
+    const sorted = [...cache].sort((a,b) => (b.aiGeneratedAt||b.decidedAt||'').localeCompare(a.aiGeneratedAt||a.decidedAt||''));
+    return projectId ? sorted.filter(r => r.projectId === projectId) : sorted;
+  }
+
+  function recordSuggestion(projectId, sugestao, motivo) {
+    loadLocal();
+    const row = { id:genId(), projectId, aiSuggestion:sugestao, aiReasoning:motivo, aiGeneratedAt:new Date().toISOString(),
+      boardDecision:null, boardComment:null, decidedBy:null, decidedAt:null, outcomeRating:null, outcomeComment:null, outcomeRatedAt:null };
+    cache.push(row);
+    persistLocal();
+    if(typeof Cloud !== 'undefined') Cloud.pushBoardDecision(projectId, row);
+    return row;
+  }
+
+  function recordDecision(id, boardDecision, comment) {
+    loadLocal();
+    const row = cache.find(r => r.id === id);
+    if(!row) return null;
+    row.boardDecision = boardDecision;
+    row.boardComment = comment || '';
+    row.decidedBy = (typeof Auth !== 'undefined') ? Auth.getName() : '';
+    row.decidedAt = new Date().toISOString();
+    persistLocal();
+    if(typeof Cloud !== 'undefined') Cloud.pushBoardDecision(row.projectId, row);
+    return row;
+  }
+
+  // Registro manual — a diretoria decide sem ter pedido sugestão da IA antes.
+  function recordManualDecision(projectId, boardDecision, comment) {
+    loadLocal();
+    const row = { id:genId(), projectId, aiSuggestion:null, aiReasoning:null, aiGeneratedAt:null,
+      boardDecision, boardComment:comment||'', decidedBy:(typeof Auth!=='undefined')?Auth.getName():'', decidedAt:new Date().toISOString(),
+      outcomeRating:null, outcomeComment:null, outcomeRatedAt:null };
+    cache.push(row);
+    persistLocal();
+    if(typeof Cloud !== 'undefined') Cloud.pushBoardDecision(projectId, row);
+    return row;
+  }
+
+  function recordOutcome(id, rating, comment) {
+    loadLocal();
+    const row = cache.find(r => r.id === id);
+    if(!row) return null;
+    row.outcomeRating = rating;
+    row.outcomeComment = comment || '';
+    row.outcomeRatedAt = new Date().toISOString();
+    persistLocal();
+    if(typeof Cloud !== 'undefined') Cloud.pushBoardDecision(row.projectId, row);
+    return row;
+  }
+
+  // % das sugestões já avaliadas que foram consideradas boa decisão — mesmo cálculo de
+  // RaioXHistory.accuracySummary(), aplicado ao histórico de diretoria.
+  function accuracySummary(projectId) {
+    loadLocal();
+    const rows = (projectId ? cache.filter(r=>r.projectId===projectId) : cache).filter(r => r.aiSuggestion && r.outcomeRating);
+    if(!rows.length) return null;
+    const good = rows.filter(r => r.outcomeRating === 'boa').length;
+    return { total: rows.length, good, pct: Math.round(good/rows.length*100) };
+  }
+
+  // Texto pronto pra entrar no prompt do BoardAdvisor — só existe quando há avaliação real; nunca
+  // inventa taxa de acerto sem dado.
+  function contextForPrompt(projectId) {
+    const rows = list(projectId).filter(r => r.aiSuggestion && r.outcomeRating);
+    if(!rows.length) return '';
+    const summary = accuracySummary(projectId);
+    const ruins = rows.filter(r => r.outcomeRating === 'ruim').slice(0,3)
+      .map(r => `- Sugeriu "${r.aiSuggestion}" (${r.aiReasoning}) → avaliado depois como decisão ruim: ${r.outcomeComment||'sem comentário registrado'}`).join('\n');
+    return `Histórico real de sugestões anteriores pra este projeto: ${summary.pct}% (${summary.good} de ${summary.total}) foram avaliadas como boas decisões pela diretoria depois.${ruins ? '\nCasos avaliados como decisão ruim — não repita esse raciocínio sem justificativa nova:\n'+ruins : ''}`;
+  }
+
+  return { sync, list, recordSuggestion, recordDecision, recordManualDecision, recordOutcome, accuracySummary, contextForPrompt };
+})();
+</script>
+
 <!-- ■ MODULE: core/portfolio-diagnosis ─ Síntese cruzada do portfólio pela IA — lê o status real
      (HealthScore) e a priorização já lançada de cada projeto, pede pra IA achar padrão entre eles;
      nunca inventa projeto/número que não esteja no rollup que montamos aqui. -->
@@ -7606,6 +7766,258 @@ Regra inegociável: cite APENAS projetos, números e decisões que estejam liter
   }
 
   return { generate };
+})();
+</script>
+
+<!-- ■ MODULE: core/board-advisor ─ Sugestão da IA pro Painel da Diretoria — linguagem de negócio,
+     sem jargão de gestão de projeto (nada de "CPI"/"caminho crítico"), sempre ancorada em dado já
+     calculado por regra (HealthScore, Budget, Prioritization) e, quando existir, no histórico real
+     de acerto das sugestões anteriores (core/board-history). -->
+<script data-module="core/board-advisor">
+const BoardAdvisor = (() => {
+  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  const SYSTEM = `Você é a IA do ${BRAND.name}, apresentando um resumo do portfólio de projetos pra DIRETORIA — pessoas que não são gerentes de projeto e não conhecem termos técnicos de gestão de projeto. Nunca use jargão (nada de "CPI", "WSJF", "caminho crítico", "EVM") — traduza tudo pra linguagem direta de negócio (ex: "gastando mais do que o combinado", "no ritmo atual, não deve entregar o valor prometido").
+
+Você recebe, por projeto: situação geral (calculada por regra, não é opinião sua), orçamento planejado vs. já gasto, se o valor prometido já foi entregue, decisões críticas pendentes, e às vezes o histórico real de sugestões anteriores com a avaliação da diretoria sobre elas.
+
+Responda APENAS com um objeto JSON válido, sem markdown, sem texto antes ou depois, neste formato exato:
+{
+  "sugestoes": [
+    { "projectId": "id exatamente como recebido", "sugestao": "continuar|pausar|escalar",
+      "motivo": "1-2 frases diretas, sem jargão, citando o dado real recebido",
+      "riscoPrincipal": "1 frase curta, ou string vazia se não houver risco crítico nos dados" }
+  ]
+}
+
+Regras: uma entrada por projeto recebido, na mesma ordem. Só sugira "pausar" ou "escalar" quando houver motivo concreto nos dados (custo bem acima do combinado, risco crítico parado há tempo, valor prometido não realizado apesar do prazo já ter passado) — nunca sem apontar exatamente qual dado sustenta. Nunca invente número, nome de projeto ou risco que não esteja nos dados recebidos. Quando houver histórico de avaliação anterior, leve em conta o que já foi considerado decisão ruim antes, pra não repetir o mesmo raciocínio sem uma justificativa nova.`;
+
+  function buildRollup() {
+    const projects = DB.listProjects();
+    return projects.map(p => {
+      const health = (typeof HealthScore !== 'undefined') ? HealthScore.calculate(HealthScore.computeMetrics(p.id)) : null;
+      const statusLabel = health != null ? HealthScore.getStatus(health).label : 'sem dado';
+      const decisions = DB.getForProject(p.id, 'decisions') || [];
+      const criticas = decisions.filter(d => d.status === 'pending' && d.severity === 'crit').map(d => d.title);
+      const bm = (typeof Budget !== 'undefined') ? Budget.computeMetrics(p.id) : null;
+      const scores = (typeof Prioritization !== 'undefined') ? Prioritization.getScores(p.id) : {};
+      const vr = (typeof Prioritization !== 'undefined') ? Prioritization.getValueRealization(p.id) : {};
+      const histCtx = (typeof BoardHistory !== 'undefined') ? BoardHistory.contextForPrompt(p.id) : '';
+
+      let line = `Projeto "${p.name}" (id:${p.id})${p.client?' (cliente: '+p.client+')':''}: situação ${statusLabel}${health!=null?' ('+health+'/100)':''}. `;
+      line += (bm && bm.hasLines) ? `Orçamento: planejado R$${Math.round(bm.BAC)}, já gasto R$${Math.round(bm.AC)} (${bm.consumoPct}% do orçado)${bm.CPI!=null ? (bm.CPI < 0.95 ? ', gastando mais do que o combinado para o que já foi entregue' : bm.CPI > 1.05 ? ', gastando menos do que o combinado' : ', dentro do combinado') : ''}. ` : 'Sem orçamento lançado ainda. ';
+      line += scores.benefitValueAnnual ? `Benefício prometido: R$${scores.benefitValueAnnual}/ano. ` : '';
+      line += vr.status ? `Valor entregue: ${vr.status === 'total' ? 'totalmente realizado' : vr.status === 'parcial' ? 'parcialmente realizado' : 'ainda não iniciado'}${vr.valorRealizado?` (R$${vr.valorRealizado} já confirmado)`:''}. ` : 'Valor entregue: ainda não validado. ';
+      line += `Decisões críticas pendentes: ${criticas.length ? criticas.join('; ') : 'nenhuma'}.`;
+      if(histCtx) line += '\n' + histCtx;
+      return line;
+    }).join('\n\n');
+  }
+
+  function parseSuggestions(text) {
+    const tryParse = (s) => { try { return JSON.parse(s); } catch(e) { return null; } };
+    let obj = tryParse(text.trim());
+    if(!obj) { const m = text.match(/\{[\s\S]*\}/); if(m) obj = tryParse(m[0]); }
+    if(!obj || !Array.isArray(obj.sugestoes)) return null;
+    const VALID = ['continuar','pausar','escalar'];
+    return obj.sugestoes.filter(s => s && s.projectId && s.motivo).map(s => ({
+      projectId: s.projectId, sugestao: VALID.includes(s.sugestao) ? s.sugestao : 'continuar',
+      motivo: s.motivo, riscoPrincipal: s.riscoPrincipal || ''
+    }));
+  }
+
+  async function generate() {
+    if(!Store.hasKeyOrCloud()) return { error: 'Configure uma chave de IA em Configurações → Provedor de IA.' };
+    const projects = DB.listProjects();
+    if(!projects.length) return { error: 'Nenhum projeto no portfólio ainda.' };
+    const rollup = buildRollup();
+    const r = await AI.send([{ role:'user', content: rollup }], { system: SYSTEM });
+    if(r.error) return { error: r.error };
+    const parsed = parseSuggestions(r.text || '');
+    if(!parsed || !parsed.length) return { error: 'A IA respondeu, mas não em um formato que consegui interpretar.' };
+    parsed.forEach(s => {
+      if(typeof BoardHistory !== 'undefined') {
+        const motivo = s.riscoPrincipal ? `${s.motivo} Risco principal: ${s.riscoPrincipal}` : s.motivo;
+        BoardHistory.recordSuggestion(s.projectId, s.sugestao, motivo);
+      }
+    });
+    return { suggestions: parsed };
+  }
+
+  return { generate, buildRollup };
+})();
+</script>
+
+<!-- ■ MODULE: pages/board-js ─ Painel da Diretoria: cards visuais por projeto, sugestão da IA,
+     registro de decisão e avaliação posterior — a tela em si, sem lógica de cálculo (isso vive em
+     HealthScore/Budget/Prioritization/BoardAdvisor/BoardHistory, todos já existentes). -->
+<script data-module="pages/board-js">
+const Board = (() => {
+  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmtMoney(v) { return 'R$' + Math.round(v||0).toLocaleString('pt-BR'); }
+  function fmtDate(iso) { try { return new Date(iso).toLocaleDateString('pt-BR'); } catch(e) { return iso||''; } }
+
+  const SUG_LABEL = { continuar:'Continuar', pausar:'Pausar', escalar:'Escalar' };
+  const SUG_ICON = { continuar:'player-play', pausar:'player-pause', escalar:'alert-triangle' };
+  const SUG_CLASS = { continuar:'b-grn', pausar:'b-amb', escalar:'b-red' };
+  const DECISION_LABEL = { continuar:'Continuar como está', replanejar:'Continuar, replanejado', pausar:'Pausado', cancelar:'Cancelado' };
+  const OUTCOME_LABEL = { boa:'Boa decisão', neutra:'Resultado neutro', ruim:'Não foi uma boa decisão' };
+  const OUTCOME_CLASS = { boa:'b-grn', neutra:'b-neu', ruim:'b-red' };
+
+  let modalCtx = { mode:null, id:null, projectId:null };
+
+  function projectData(p) {
+    const health = (typeof HealthScore !== 'undefined') ? HealthScore.calculate(HealthScore.computeMetrics(p.id)) : null;
+    const status = health != null ? HealthScore.getStatus(health) : { label:'Sem dado', badge:'b-neu' };
+    const bm = (typeof Budget !== 'undefined') ? Budget.computeMetrics(p.id) : null;
+    const decisions = DB.getForProject(p.id, 'decisions') || [];
+    const criticas = decisions.filter(d => d.status === 'pending' && d.severity === 'crit');
+    const vr = (typeof Prioritization !== 'undefined') ? Prioritization.getValueRealization(p.id) : {};
+    const hist = (typeof BoardHistory !== 'undefined') ? BoardHistory.list(p.id) : [];
+    const lastSuggestion = hist.find(r => r.aiSuggestion && !r.boardDecision) || null;
+    return { project:p, health, status, bm, criticas, vr, lastSuggestion };
+  }
+
+  function renderKpis(rows) {
+    const root = document.getElementById('board-kpis-root');
+    if(!root) return;
+    const investido = rows.reduce((s,r) => s + (r.bm ? r.bm.AC : 0), 0);
+    const valorEntregue = rows.reduce((s,r) => s + (r.vr && r.vr.valorRealizado ? r.vr.valorRealizado : 0), 0);
+    const riscos = rows.reduce((s,r) => s + r.criticas.length, 0);
+    const tiles = [
+      { lbl:'Projetos ativos', val: rows.length, icon:'briefcase' },
+      { lbl:'Investido até agora', val: fmtMoney(investido), icon:'coin', help:'Soma do que já foi realmente gasto em todos os projetos, comparado ao orçamento de cada um.' },
+      { lbl:'Valor já entregue', val: fmtMoney(valorEntregue), icon:'target-arrow', help:'Soma do valor financeiro que já foi confirmado como entregue (validado na Priorização), não o valor prometido.' },
+      { lbl:'Riscos críticos abertos', val: riscos, icon:'alert-triangle', help:'Decisões marcadas como críticas que ainda não foram resolvidas, somadas de todos os projetos.' }
+    ];
+    root.innerHTML = tiles.map(t => `<div class="card" style="padding:14px"><div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t3);margin-bottom:6px"><i class="ti ti-${t.icon}"></i>${t.lbl}${t.help?`<span class="help-q" data-help="${escapeHtml(t.help)}" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>`:''}</div><div style="font-size:22px;font-weight:600;color:var(--t1)">${t.val}</div></div>`).join('');
+  }
+
+  function renderCards(rows) {
+    const root = document.getElementById('board-cards-root');
+    if(!root) return;
+    if(!rows.length) { root.innerHTML = `<div style="text-align:center;padding:20px 10px;color:var(--t3);font-size:12.5px">Nenhum projeto no portfólio ainda.</div>`; return; }
+    root.innerHTML = rows.map(r => {
+      const p = r.project;
+      const costPct = (r.bm && r.bm.BAC > 0) ? Math.min(Math.round(r.bm.AC / r.bm.BAC * 100), 999) : null;
+      const costColor = costPct == null ? 'var(--t3)' : costPct > 100 ? 'var(--red)' : costPct > 85 ? 'var(--amb)' : 'var(--grn)';
+      const costHtml = costPct == null
+        ? `<div style="font-size:11.5px;color:var(--t3)">Sem orçamento lançado ainda</div>`
+        : `<div style="font-size:11px;color:var(--t2);display:flex;justify-content:space-between;margin-bottom:3px"><span>Gasto até agora</span><span>${fmtMoney(r.bm.AC)} de ${fmtMoney(r.bm.BAC)}</span></div><div class="hbar-track"><div class="hbar-fill" style="width:${Math.min(costPct,100)}%;background:${costColor}"></div></div>`;
+      const vrLabel = r.vr.status === 'total' ? 'Valor: totalmente entregue' : r.vr.status === 'parcial' ? 'Valor: parcialmente entregue' : r.vr.status === 'nao_iniciado' ? 'Valor: ainda não entregue' : 'Valor: não validado ainda';
+      const vrClass = r.vr.status === 'total' ? 'b-grn' : r.vr.status === 'parcial' ? 'b-amb' : 'b-neu';
+      const riskHtml = r.criticas.length ? `<div style="font-size:11.5px;color:var(--red);display:flex;align-items:center;gap:5px;margin-top:8px"><i class="ti ti-alert-triangle"></i>${escapeHtml(r.criticas[0].title)}${r.criticas.length>1?` (+${r.criticas.length-1})`:''}</div>` : `<div style="font-size:11.5px;color:var(--t3);display:flex;align-items:center;gap:5px;margin-top:8px"><i class="ti ti-shield-check" style="color:var(--grn)"></i>Sem risco crítico aberto</div>`;
+      const sug = r.lastSuggestion;
+      const sugHtml = sug
+        ? `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:8px 10px;margin-top:10px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><i class="ti ti-${SUG_ICON[sug.aiSuggestion]}"></i><span class="badge ${SUG_CLASS[sug.aiSuggestion]}" style="font-size:10.5px">Sugestão da IA: ${SUG_LABEL[sug.aiSuggestion]}</span></div><div style="font-size:11.5px;color:var(--t2);line-height:1.5">${escapeHtml(sug.aiReasoning)}</div></div>`
+        : '';
+      return `<div class="card" style="display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:14px;font-weight:600;color:var(--t1)">${escapeHtml(p.name)}</div>
+          <span class="badge ${r.status.badge}" style="font-size:10.5px">${escapeHtml(r.status.label)}</span>
+        </div>
+        ${costHtml}
+        <div style="margin-top:10px"><span class="badge ${vrClass}" style="font-size:10.5px">${vrLabel}</span></div>
+        ${riskHtml}
+        ${sugHtml}
+        <div style="margin-top:auto;padding-top:10px">
+          <button class="btn btn-sm btn-acc" style="width:100%;justify-content:center" data-perm="business" onclick="Board.openDecisionModal('${p.id}'${sug?`,'${sug.id}'`:''})"><i class="ti ti-gavel"></i>Registrar decisão da diretoria</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderHistory() {
+    const root = document.getElementById('board-history-root');
+    if(!root || typeof BoardHistory === 'undefined') return;
+    const rows = BoardHistory.list().filter(r => r.boardDecision);
+    if(!rows.length) { root.innerHTML = `<div style="text-align:center;padding:16px 10px;color:var(--t3);font-size:12.5px">Nenhuma decisão registrada ainda.</div>`; return; }
+    const projects = DB.listProjects();
+    root.innerHTML = rows.map(r => {
+      const proj = projects.find(p => p.id === r.projectId);
+      const outcomeHtml = r.outcomeRating
+        ? `<span class="badge ${OUTCOME_CLASS[r.outcomeRating]}" style="font-size:10.5px">${OUTCOME_LABEL[r.outcomeRating]}</span>`
+        : `<button class="btn btn-sm" onclick="Board.openOutcomeModal('${r.id}')"><i class="ti ti-star"></i>Avaliar esta decisão</button>`;
+      return `<div class="set-row" style="align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div class="set-lbl">${escapeHtml(proj ? proj.name : r.projectId)}</div>
+            <span class="badge b-acc" style="font-size:10.5px">${DECISION_LABEL[r.boardDecision]||r.boardDecision}</span>
+            ${r.aiSuggestion ? `<span class="badge b-neu" style="font-size:10px">sugestão da IA foi: ${SUG_LABEL[r.aiSuggestion]}</span>` : ''}
+          </div>
+          <div class="set-sub">${r.boardComment ? escapeHtml(r.boardComment)+' · ' : ''}${escapeHtml(r.decidedBy||'')} em ${fmtDate(r.decidedAt)}</div>
+        </div>
+        ${outcomeHtml}
+      </div>`;
+    }).join('');
+  }
+
+  async function render() {
+    if(typeof DB === 'undefined') return;
+    if(typeof BoardHistory !== 'undefined') await BoardHistory.sync();
+    const rows = DB.listProjects().map(p => projectData(p));
+    renderKpis(rows);
+    renderCards(rows);
+    renderHistory();
+  }
+
+  async function generateSuggestions() {
+    if(!Auth.guard('business')) return;
+    if(typeof BoardAdvisor === 'undefined') return;
+    T.show('🧠 Lendo o status real de todos os projetos e montando as sugestões…', 4000);
+    const r = await BoardAdvisor.generate();
+    if(r.error) { T.show('⚠️ ' + r.error, 5000); return; }
+    render();
+    T.show(`✅ ${r.suggestions.length} sugestão(ões) atualizada(s).`);
+  }
+
+  function openDecisionModal(projectId, suggestionId) {
+    if(!Auth.guard('business')) return;
+    const p = DB.listProjects().find(x => x.id === projectId);
+    if(!p) return;
+    modalCtx = { mode: suggestionId ? 'existing' : 'manual', id: suggestionId||null, projectId };
+    document.getElementById('board-decision-title').textContent = 'Registrar decisão — ' + p.name;
+    document.getElementById('board-f-decision').value = 'continuar';
+    document.getElementById('board-f-comment').value = '';
+    document.getElementById('modal-board-decision').classList.remove('hidden');
+  }
+  function closeDecisionModal() { document.getElementById('modal-board-decision').classList.add('hidden'); }
+
+  function saveDecision() {
+    if(!Auth.guard('business')) return;
+    const decision = document.getElementById('board-f-decision').value;
+    const comment = document.getElementById('board-f-comment').value.trim();
+    if(typeof BoardHistory === 'undefined' || !modalCtx.projectId) return;
+    const row = modalCtx.mode === 'existing'
+      ? BoardHistory.recordDecision(modalCtx.id, decision, comment)
+      : BoardHistory.recordManualDecision(modalCtx.projectId, decision, comment);
+    if(row && typeof Trail !== 'undefined') Trail.log(`Diretoria registrou decisão: ${DECISION_LABEL[decision]||decision}`, Auth.getName(), '', 'b-acc');
+    closeDecisionModal();
+    render();
+    T.show('✅ Decisão registrada.');
+  }
+
+  function openOutcomeModal(id) {
+    if(!Auth.guard('business')) return;
+    modalCtx = { mode:'outcome', id, projectId:null };
+    document.getElementById('board-f-outcome').value = 'boa';
+    document.getElementById('board-f-outcome-comment').value = '';
+    document.getElementById('modal-board-outcome').classList.remove('hidden');
+  }
+  function closeOutcomeModal() { document.getElementById('modal-board-outcome').classList.add('hidden'); }
+
+  function saveOutcome() {
+    if(!Auth.guard('business')) return;
+    const rating = document.getElementById('board-f-outcome').value;
+    const comment = document.getElementById('board-f-outcome-comment').value.trim();
+    if(typeof BoardHistory === 'undefined' || !modalCtx.id) return;
+    BoardHistory.recordOutcome(modalCtx.id, rating, comment);
+    closeOutcomeModal();
+    render();
+    T.show('✅ Avaliação registrada — isso entra no contexto da próxima sugestão da IA pra este projeto.');
+  }
+
+  return { render, generateSuggestions, openDecisionModal, closeDecisionModal, saveDecision, openOutcomeModal, closeOutcomeModal, saveOutcome };
 })();
 </script>
 
@@ -9105,6 +9517,59 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     </div>
     <div class="btn-row" style="margin-top:12px">
       <button class="btn btn-acc btn-sm" onclick="Prioritization.save()"><i class="ti ti-check"></i>Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ■ MODULE: ui/board-decision-modal -->
+<div class="modal-ov hidden" id="modal-board-decision" onclick="if(event.target===this)Board.closeDecisionModal()">
+  <div class="modal-box" style="width:440px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" id="board-decision-title">Registrar decisão</div>
+      <button class="btn btn-sm" onclick="Board.closeDecisionModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-sub" id="board-decision-sub">O que foi decidido pra este projeto?</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <div class="field-label">Decisão</div>
+        <select class="input" id="board-f-decision">
+          <option value="continuar">Continuar como está</option>
+          <option value="replanejar">Continuar, mas replanejar</option>
+          <option value="pausar">Pausar</option>
+          <option value="cancelar">Cancelar</option>
+        </select>
+      </div>
+      <div><div class="field-label">Comentário (opcional)</div><textarea class="input" id="board-f-comment" rows="3" style="resize:vertical;font-family:inherit" placeholder="Contexto da decisão, pra quem for consultar depois"></textarea></div>
+    </div>
+    <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
+      <button class="btn btn-sm" onclick="Board.closeDecisionModal()">Cancelar</button>
+      <button class="btn btn-sm btn-acc" onclick="Board.saveDecision()"><i class="ti ti-check"></i>Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ■ MODULE: ui/board-outcome-modal -->
+<div class="modal-ov hidden" id="modal-board-outcome" onclick="if(event.target===this)Board.closeOutcomeModal()">
+  <div class="modal-box" style="width:440px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title">Avaliar esta decisão</div>
+      <button class="btn btn-sm" onclick="Board.closeOutcomeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-sub">Olhando pra trás, essa foi uma boa decisão? Isso ajuda a IA a raciocinar melhor da próxima vez.</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <div class="field-label">Resultado</div>
+        <select class="input" id="board-f-outcome">
+          <option value="boa">Foi uma boa decisão</option>
+          <option value="neutra">Resultado neutro / ainda não dá pra dizer</option>
+          <option value="ruim">Não foi uma boa decisão</option>
+        </select>
+      </div>
+      <div><div class="field-label">Por quê (opcional)</div><textarea class="input" id="board-f-outcome-comment" rows="3" style="resize:vertical;font-family:inherit" placeholder="O que aconteceu depois dessa decisão"></textarea></div>
+    </div>
+    <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
+      <button class="btn btn-sm" onclick="Board.closeOutcomeModal()">Cancelar</button>
+      <button class="btn btn-sm btn-acc" onclick="Board.saveOutcome()"><i class="ti ti-check"></i>Salvar avaliação</button>
     </div>
   </div>
 </div>

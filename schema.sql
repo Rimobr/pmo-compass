@@ -423,6 +423,37 @@ create policy "project_settings_write" on public.project_settings for all
   using (public.current_role() in ('admin','gerente'))
   with check (public.current_role() in ('admin','gerente'));
 
+-- 15) PAINEL DA DIRETORIA — sugestão de IA + decisão registrada + avaliação posterior ----------
+-- Diferente de project_settings (um objeto único por projeto/chave), isto é uma lista que só
+-- cresce — cada linha é UM ciclo de "IA sugeriu → diretoria decidiu → resultado avaliado depois".
+-- Guardar isso de verdade (não só na tela) é o que permite, futuramente, alimentar a próxima
+-- sugestão da IA com o histórico real de acerto — sem essa tabela não há como avaliar se uma
+-- sugestão passada foi uma boa decisão, nem aprender nada com isso.
+create table if not exists public.board_decisions (
+  id text primary key,
+  project_id text not null,
+  ai_suggestion text,          -- 'continuar' | 'pausar' | 'escalar'
+  ai_reasoning text,
+  ai_generated_at timestamptz,
+  board_decision text,         -- 'continuar' | 'pausar' | 'cancelar' | 'replanejar'
+  board_comment text,
+  decided_by text,
+  decided_at timestamptz,
+  outcome_rating text,         -- 'boa' | 'ruim' | 'neutra'
+  outcome_comment text,
+  outcome_rated_at timestamptz,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.board_decisions enable row level security;
+
+create policy "board_decisions_read" on public.board_decisions for select using (auth.role() = 'authenticated');
+create policy "board_decisions_write" on public.board_decisions for all
+  using (public.current_role() in ('admin','gerente'))
+  with check (public.current_role() in ('admin','gerente'));
+
+create index if not exists board_decisions_project_id_idx on public.board_decisions(project_id);
+
 -- =========================================================================
 -- PRONTO. Depois de rodar este script:
 -- 1. Vá em Authentication → Users e crie seu primeiro usuário (ou cadastre pelo
