@@ -2155,6 +2155,32 @@ const Cloud = (() => {
     return data || [];
   }
 
+  // RBAC por projeto — admin lê/edita tudo (policy project_access_admin_all já libera).
+  async function listAllProjects() {
+    if(!client || !session) return [];
+    const { data, error } = await client.from('projects').select('id,name').order('name');
+    if(error) { console.warn('Supabase: falha ao listar projetos', error); return []; }
+    return data || [];
+  }
+  async function listAllProjectAccess() {
+    if(!client || !session) return [];
+    const { data, error } = await client.from('project_access').select('project_id,user_id');
+    if(error) { console.warn('Supabase: falha ao listar acessos', error); return []; }
+    return data || [];
+  }
+  async function setProjectAccess(userId, projectId, granted) {
+    if(!client || !session) return false;
+    if(granted) {
+      const { error } = await client.from('project_access').upsert({ project_id:projectId, user_id:userId, granted_by:session.user.id });
+      if(error) { T.show('❌ ' + error.message); return false; }
+    } else {
+      const { error } = await client.from('project_access').delete().eq('project_id', projectId).eq('user_id', userId);
+      if(error) { T.show('❌ ' + error.message); return false; }
+    }
+    pushAuditEvent('role_change', `Acesso ao projeto "${projectId}" ${granted?'concedido a':'revogado de'} ${userId}`, { targetUserId:userId, projectId, granted });
+    return true;
+  }
+
   async function updateUserRole(userId, role) {
     if(!client || !session) return false;
     const { error } = await client.from('profiles').update({ role }).eq('id', userId);
@@ -2503,7 +2529,8 @@ const Cloud = (() => {
     pushDecision, deleteDecision, pushDocument, deleteDocument,
     pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual, resetForNewUsers, clearProjectData,
     pushAuditEvent, fetchAuditLog, pushSnapshot, fetchSnapshots, pushProjectSetting,
-    pushBoardDecision, deleteBoardDecision, pullBoardDecisions, pushProject, grantSelfProjectAccess };
+    pushBoardDecision, deleteBoardDecision, pullBoardDecisions, pushProject, grantSelfProjectAccess,
+    listAllProjects, listAllProjectAccess, setProjectAccess };
 })();
 </script>
 
@@ -2742,22 +2769,40 @@ const Users = (() => {
     if(resetCard) resetCard.style.display = show ? '' : 'none';
   }
 
+  let allProjects = [];
+  let allAccess = []; // [{project_id, user_id}]
+
+  function hasAccess(projectId, userId) { return allAccess.some(a => a.project_id === projectId && a.user_id === userId); }
+
   async function refresh() {
     const root = document.getElementById('users-list-root');
     if(!root) return;
     root.innerHTML = `<div style="font-size:12px;color:var(--t3)"><i class="ti ti-loader-2"></i> Carregando…</div>`;
-    const profiles = await Cloud.listProfiles();
+    const [profiles, projects, access] = await Promise.all([Cloud.listProfiles(), Cloud.listAllProjects(), Cloud.listAllProjectAccess()]);
+    allProjects = projects;
+    allAccess = access;
     if(!profiles.length) { root.innerHTML = `<div style="font-size:12px;color:var(--t3)">Nenhum perfil encontrado.</div>`; return; }
     const myId = Cloud.getUserId();
     root.innerHTML = profiles.map(p => {
       const isMe = p.id === myId;
       const opts = Object.keys(ROLE_LABEL).map(r => `<option value="${r}"${r===p.role?' selected':''}>${ROLE_LABEL[r]}</option>`).join('');
-      return `<div class="set-row">
-        <div>
-          <div class="set-lbl">${escapeHtml(p.name || '(sem nome)')}${isMe ? ' <span class="badge b-acc">você</span>' : ''}</div>
-          <div class="set-sub" style="font-family:var(--font-mono);font-size:10.5px">${escapeHtml(p.id)}</div>
+      // admin já vê tudo por definição (has_project_access libera geral) — a lista de projetos
+      // só faz sentido mostrar/editar pros outros 3 papéis, que dependem de concessão explícita.
+      const projectsHtml = (p.role === 'admin' || !allProjects.length) ? '' : `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--b1)">
+        <div style="font-size:10.5px;color:var(--t3);margin-bottom:5px">Projetos que ${isMe?'você':'essa pessoa'} pode ver:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px">
+          ${allProjects.map(proj => `<label style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--t2);cursor:pointer"><input type="checkbox" ${hasAccess(proj.id,p.id)?'checked':''} onchange="Users.toggleAccess('${p.id}','${proj.id}',this.checked)">${escapeHtml(proj.name)}</label>`).join('')}
         </div>
-        <select class="input" style="width:auto" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>
+      </div>`;
+      return `<div class="set-row" style="flex-direction:column;align-items:stretch">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div class="set-lbl">${escapeHtml(p.name || '(sem nome)')}${isMe ? ' <span class="badge b-acc">você</span>' : ''}</div>
+            <div class="set-sub" style="font-family:var(--font-mono);font-size:10.5px">${escapeHtml(p.id)}</div>
+          </div>
+          <select class="input" style="width:auto" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>
+        </div>
+        ${projectsHtml}
       </div>`;
     }).join('');
   }
@@ -2776,7 +2821,16 @@ const Users = (() => {
     }
   }
 
-  return { render, refresh, changeRole };
+  async function toggleAccess(userId, projectId, granted) {
+    const ok = await Cloud.setProjectAccess(userId, projectId, granted);
+    if(ok) {
+      if(granted) allAccess.push({ project_id:projectId, user_id:userId });
+      else allAccess = allAccess.filter(a => !(a.project_id===projectId && a.user_id===userId));
+      T.show(granted ? '✅ Acesso concedido.' : '✅ Acesso revogado.');
+    } else refresh();
+  }
+
+  return { render, refresh, changeRole, toggleAccess };
 })();
 </script>
 
