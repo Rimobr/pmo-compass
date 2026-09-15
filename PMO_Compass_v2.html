@@ -2976,7 +2976,11 @@ const DB = (() => {
     if(!Array.isArray(cloudList) || !cloudList.length) return;
     projects = cloudList;
     persistProjects();
-    if(!projects.some(p => p.id === activeProjectId)) {
+    // getActiveProjectId() (não a variável "activeProjectId" crua) hidrata a partir do
+    // localStorage antes de comparar — numa carga de página fresca, "activeProjectId" ainda
+    // está null aqui, e comparar direto sempre falhava, resetando o projeto ativo pro primeiro
+    // da nuvem a cada reload (bug real: é o que explicava o projeto ativo "trocar sozinho").
+    if(!projects.some(p => p.id === getActiveProjectId())) {
       activeProjectId = projects[0].id;
       try { localStorage.setItem(ACTIVE_KEY, activeProjectId); } catch(e){}
     }
