@@ -1541,6 +1541,7 @@ body.icons-failed i[data-fb]::before{
     <div><div class="pg-title">WBS — Work Breakdown Structure</div><div class="pg-sub">Hierarquia de entregas com rastreamento de progresso · "Quem tem a versão mais recente?" — respondida aqui.</div></div>
     <div class="btn-row">
       <button class="btn btn-sm btn-acc" data-perm="business" onclick="WBS.openAddModule()"><i class="ti ti-plus"></i>Nova entrega</button>
+      <button class="btn btn-sm" data-perm="business" onclick="WBS.openReplan()" title="Recalcula as datas do que ainda não terminou, a partir de hoje"><i class="ti ti-calendar-time"></i>Replanejar cronograma</button>
       <button class="btn btn-sm" onclick="T.show('Exportando WBS…')"><i class="ti ti-download"></i>Exportar</button>
       <button class="btn btn-sm" onclick="T.show('IA sugerindo decomposição de tarefas…')"><i class="ti ti-brain"></i>IA: sugerir</button>
     </div>
@@ -3828,7 +3829,79 @@ const CPM = (() => {
     return { error:null, result };
   }
 
-  return { compute };
+  function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+  function fmtDate(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+
+  // Replanejamento real a partir de hoje — usado pra "resgatar" o cronograma de um projeto
+  // atrasado (R4 do roadmap PMO/VMO). Não é um palpite: é um forward-pass CPM com "data date" =
+  // hoje, igual à técnica clássica de replanejamento de PM. Regras:
+  // - item com pct=100 mantém as datas planejadas como estão (já aconteceu, não se replaneja o passado);
+  // - item em andamento (0<pct<100) usa duração RESTANTE proporcional ao que falta, começando hoje;
+  // - item não iniciado (pct=0) começa no maior entre "hoje" e o fim (replanejado) das suas predecessoras.
+  // items: [{id, start, end, predecessors:[id,...], pct}]. Retorna { error, result: Map<id,{...}> }.
+  function replan(allItems, todayStr) {
+    if(!allItems || !allItems.length) return { error:null, result:new Map() };
+    const today = parseDate(todayStr);
+    const allById = new Map(allItems.map(it => [it.id, it]));
+    const connectedIds = new Set();
+    allItems.forEach(it => {
+      const preds = (it.predecessors||[]).filter(p => allById.has(p) && p !== it.id);
+      if(preds.length) { connectedIds.add(it.id); preds.forEach(p => connectedIds.add(p)); }
+    });
+    const items = allItems.filter(it => connectedIds.has(it.id));
+    if(!items.length) return { error:null, result:new Map() };
+    const byId = new Map(items.map(it => [it.id, it]));
+
+    const succMap = new Map(items.map(it => [it.id, []]));
+    const inDeg = new Map(items.map(it => [it.id, 0]));
+    items.forEach(it => {
+      (it.predecessors||[]).forEach(p => {
+        if(byId.has(p) && p !== it.id) { succMap.get(p).push(it.id); inDeg.set(it.id, inDeg.get(it.id) + 1); }
+      });
+    });
+    const queue = items.filter(it => inDeg.get(it.id) === 0).map(it => it.id);
+    const order = [];
+    while(queue.length) {
+      const id = queue.shift();
+      order.push(id);
+      succMap.get(id).forEach(s => { inDeg.set(s, inDeg.get(s) - 1); if(inDeg.get(s) === 0) queue.push(s); });
+    }
+    if(order.length !== items.length) return { error:'Dependência circular detectada entre itens da WBS — corrija antes de replanejar.', result:new Map() };
+
+    const newStart = new Map(), newEnd = new Map();
+    order.forEach(id => {
+      const it = byId.get(id);
+      const pct = Math.max(0, Math.min(100, it.pct||0));
+      const origStart = parseDate(it.start), origEnd = parseDate(it.end);
+
+      if(pct >= 100) { newStart.set(id, origStart); newEnd.set(id, origEnd); return; }
+
+      const totalDur = Math.max(1, dayDiff(origStart, origEnd));
+      const remainingDur = pct > 0 ? Math.max(1, Math.ceil(totalDur * (1 - pct/100))) : totalDur;
+      const preds = (it.predecessors||[]).filter(p => byId.has(p));
+      const predFinishes = preds.map(p => newEnd.get(p));
+      const predFinish = predFinishes.length ? new Date(Math.max(...predFinishes.map(d => d.getTime()))) : null;
+      const s = predFinish && predFinish > today ? predFinish : today;
+      newStart.set(id, s);
+      newEnd.set(id, addDays(s, remainingDur));
+    });
+
+    const result = new Map();
+    order.forEach(id => {
+      const it = byId.get(id);
+      const pct = Math.max(0, Math.min(100, it.pct||0));
+      result.set(id, {
+        changed: pct < 100 && (fmtDate(newStart.get(id)) !== it.start || fmtDate(newEnd.get(id)) !== it.end),
+        newStart: fmtDate(newStart.get(id)),
+        newEnd: fmtDate(newEnd.get(id)),
+        oldStart: it.start,
+        oldEnd: it.end
+      });
+    });
+    return { error:null, result };
+  }
+
+  return { compute, replan };
 })();
 </script>
 
@@ -4574,6 +4647,7 @@ Responda APENAS com um objeto JSON válido, sem markdown, sem texto antes ou dep
   "problemas": ["problema já em curso segundo o documento 1", "problema já em curso 2"],
   "resumo": "resumo executivo em 2-4 frases do que os documentos revelam sobre o projeto",
   "riscos": ["frase curta de risco futuro 1", "frase curta de risco futuro 2"],
+  "qualitySignals": [{"descricao":"frase curta descrevendo um sinal de qualidade encontrado no texto (defeito, retrabalho, não conformidade, teste reprovado, entrega rejeitada, reclamação do cliente sobre o que foi entregue)","severidade":"baixa|media|alta"}],
   "proximosPassos": ["sugestão 1", "sugestão 2"],
   "wbs": [{"label":"nome da entrega","status":"grn|amb|red|neu","pct":0,"start":"YYYY-MM-DD ou null","end":"YYYY-MM-DD ou null","responsavel":"nome/papel do responsável citado no texto, ou string vazia se não houver","dependsOnLabel":"label EXATO de outra entrega deste mesmo array que bloqueia esta, segundo o texto ou a ordem/hierarquia em que aparecem no documento — ou null se não houver dependência clara","parentLabel":"label EXATO de outra entrega deste mesmo array que é a FASE/MÓDULO pai desta subtarefa (ex: '2.1' e '2.2' têm '2' ou 'FASE 2' como pai) — ou null se este item for ele mesmo uma fase/módulo de primeiro nível, sem pai"}],
   "decisions": [{"severity":"crit|alto|medio","title":"título curto","body":"contexto em 1-2 frases"}],
@@ -4581,7 +4655,7 @@ Responda APENAS com um objeto JSON válido, sem markdown, sem texto antes ou dep
   "stakeholders": [{"name":"nome","role":"papel/cargo","influence":"alta|media|baixa","engagement":"critico|atencao|saudavel","notes":"observação curta"}]
 }
 
-Regras: só inclua o que estiver realmente sustentado pelo texto — nunca invente nomes, valores ou datas. "problemas" são questões que os documentos indicam já estar acontecendo agora; "riscos" são possibilidades futuras — não confunda as duas categorias. Se uma categoria inteira não tiver base nos documentos, retorne um array vazio (ou string vazia) para ela. "pct" é 0 a 100 (progresso conhecido, ou 0 se não houver indicação). Datas só se aparecerem explicitamente no texto. "caminhoCritico" é uma leitura preliminar da IA, não um cálculo formal — deixe isso implícito no tom, sem alegar certeza. "dependsOnLabel" existe pra permitir recalcular o caminho crítico de verdade depois — preencha sempre que a ordem do documento (fases sequenciais, "após X", numeração hierárquica) deixar clara qual entrega bloqueia qual; use exatamente o mesmo texto do "label" da entrega predecessora, sem inventar uma dependência que o texto não sustente. "parentLabel" existe pra reconstruir a hierarquia real da WBS (fase → subtarefa) em vez de uma lista achatada — preencha sempre que a numeração ou a estrutura do documento deixar claro que um item é subtarefa de outro (ex: "2.1" e "2.2" são filhos de "FASE 2" ou "2"); use exatamente o texto do "label" do item pai, e deixe null pra fases/módulos de primeiro nível. "linkedWbsLabel" existe pra permitir calcular o Valor Agregado (EV) e o CPI de verdade depois, ligando o orçamento à entrega correspondente — preencha sempre que o texto associar claramente uma linha de orçamento a uma entrega específica (ex: o valor aparece na mesma seção/fase, ou o nome da linha cita a entrega); use exatamente o mesmo texto do "label" da entrega em "wbs", sem inventar um vínculo que o texto não sustente. "gastoReal" é o valor JÁ GASTO/comprometido nessa linha até agora — preencha só quando o texto declarar isso explicitamente (ex: "já foram gastos R$X", "comprometido: R$Y"); deixe null se o documento só falar do valor planejado/orçado, sem dizer quanto já foi de fato gasto — não estime, não deduza a partir do "pct" da entrega.`;
+Regras: só inclua o que estiver realmente sustentado pelo texto — nunca invente nomes, valores ou datas. "problemas" são questões que os documentos indicam já estar acontecendo agora; "riscos" são possibilidades futuras — não confunda as duas categorias. "qualitySignals" é especificamente sobre QUALIDADE do que está sendo entregue (não confundir com atraso de prazo ou estouro de custo, que já têm campo próprio) — só preencha quando o texto citar explicitamente algo como defeito, bug, retrabalho, não conformidade, item reprovado em teste/QA, entrega recusada/rejeitada ou reclamação do cliente sobre a qualidade do que foi entregue; não infira problema de qualidade a partir de atraso de cronograma sozinho. Se uma categoria inteira não tiver base nos documentos, retorne um array vazio (ou string vazia) para ela. "pct" é 0 a 100 (progresso conhecido, ou 0 se não houver indicação). Datas só se aparecerem explicitamente no texto. "caminhoCritico" é uma leitura preliminar da IA, não um cálculo formal — deixe isso implícito no tom, sem alegar certeza. "dependsOnLabel" existe pra permitir recalcular o caminho crítico de verdade depois — preencha sempre que a ordem do documento (fases sequenciais, "após X", numeração hierárquica) deixar clara qual entrega bloqueia qual; use exatamente o mesmo texto do "label" da entrega predecessora, sem inventar uma dependência que o texto não sustente. "parentLabel" existe pra reconstruir a hierarquia real da WBS (fase → subtarefa) em vez de uma lista achatada — preencha sempre que a numeração ou a estrutura do documento deixar claro que um item é subtarefa de outro (ex: "2.1" e "2.2" são filhos de "FASE 2" ou "2"); use exatamente o texto do "label" do item pai, e deixe null pra fases/módulos de primeiro nível. "linkedWbsLabel" existe pra permitir calcular o Valor Agregado (EV) e o CPI de verdade depois, ligando o orçamento à entrega correspondente — preencha sempre que o texto associar claramente uma linha de orçamento a uma entrega específica (ex: o valor aparece na mesma seção/fase, ou o nome da linha cita a entrega); use exatamente o mesmo texto do "label" da entrega em "wbs", sem inventar um vínculo que o texto não sustente. "gastoReal" é o valor JÁ GASTO/comprometido nessa linha até agora — preencha só quando o texto declarar isso explicitamente (ex: "já foram gastos R$X", "comprometido: R$Y"); deixe null se o documento só falar do valor planejado/orçado, sem dizer quanto já foi de fato gasto — não estime, não deduza a partir do "pct" da entrega.`;
 
   // R2 — dado o diagnóstico CALCULADO (R1, computeCalculatedDiagnosis — não é leitura de texto),
   // gera opções de retomada com o trade-off clássico de PM (prazo/custo/escopo) em vez de só
@@ -4596,16 +4670,16 @@ Responda APENAS com um objeto JSON válido, sem markdown, neste formato exato:
 {
   "cenarios": [
     {
-      "nome": "nome curto (ex: 'Comprimir cronograma', 'Renegociar prazo com o cliente', 'Cortar escopo de menor prioridade')",
-      "tipo": "prazo|custo|escopo",
-      "resumo": "2-3 frases explicando a lógica do cenário, citando as entregas reais do caminho crítico ou os números reais de orçamento fornecidos",
+      "nome": "nome curto (ex: 'Comprimir cronograma', 'Renegociar prazo com o cliente', 'Cortar escopo de menor prioridade', 'Reforçar QA antes da entrega')",
+      "tipo": "prazo|custo|escopo|qualidade",
+      "resumo": "2-3 frases explicando a lógica do cenário, citando as entregas reais do caminho crítico, os números reais de orçamento, ou os sinais de qualidade fornecidos",
       "acaoImediata": "a PRÓXIMA ação concreta e específica que o PMO deveria tomar essa semana",
       "risco": "principal risco desse caminho, em 1 frase"
     }
   ]
 }
 
-Gere de 2 a 3 cenários, cada um de um "tipo" diferente (nunca repita tipo) — cubra o trade-off clássico de gestão de projeto (comprimir prazo custando mais recurso, manter custo aceitando novo prazo, ou cortar escopo pra caber no que já foi gasto/planejado). Se não houver orçamento calculado suficiente, não proponha cenário de "custo". Se não houver caminho crítico calculado, não proponha cenário de "prazo".`;
+Gere de 2 a 3 cenários, cada um de um "tipo" diferente (nunca repita tipo) — priorize o trade-off clássico de gestão de projeto (comprimir prazo custando mais recurso, manter custo aceitando novo prazo, ou cortar escopo pra caber no que já foi gasto/planejado). Se não houver orçamento calculado suficiente, não proponha cenário de "custo". Se não houver caminho crítico calculado, não proponha cenário de "prazo". Só proponha cenário de "qualidade" se sinais de qualidade reais tiverem sido fornecidos — nesse caso ele deve tratar diretamente desses sinais (ex: reforçar QA, corrigir não conformidade, replanejar retrabalho), nunca de prazo ou custo genérico.`;
 
   let currentProposal = null;
   let currentBoxId = null;
@@ -4687,6 +4761,7 @@ Gere de 2 a 3 cenários, cada um de um "tipo" diferente (nunca repita tipo) — 
       problemas: Array.isArray(obj.problemas) ? obj.problemas.filter(x => typeof x === 'string') : [],
       resumo: typeof obj.resumo === 'string' ? obj.resumo : '',
       riscos: riskOn && Array.isArray(obj.riscos) ? obj.riscos.filter(x => typeof x === 'string') : [],
+      qualitySignals: riskOn && Array.isArray(obj.qualitySignals) ? obj.qualitySignals.filter(x => x && typeof x.descricao === 'string').map(x => ({ descricao:x.descricao, severidade: ['baixa','media','alta'].includes(x.severidade) ? x.severidade : 'media' })) : [],
       proximosPassos: Array.isArray(obj.proximosPassos) ? obj.proximosPassos.filter(x => typeof x === 'string') : [],
       wbs: Array.isArray(obj.wbs) ? obj.wbs.filter(x => x && x.label).map(x => ({ ...x, dependsOnLabel: typeof x.dependsOnLabel === 'string' ? x.dependsOnLabel : null, parentLabel: typeof x.parentLabel === 'string' ? x.parentLabel : null, responsavel: typeof x.responsavel === 'string' ? x.responsavel : '' })) : [],
       decisions: decisionsOn && Array.isArray(obj.decisions) ? obj.decisions.filter(x => x && x.title) : [],
@@ -4743,27 +4818,28 @@ Gere de 2 a 3 cenários, cada um de um "tipo" diferente (nunca repita tipo) — 
     let obj = tryParse(text.trim());
     if(!obj) { const match = text.match(/\{[\s\S]*\}/); if(match) obj = tryParse(match[0]); }
     if(!obj || !Array.isArray(obj.cenarios)) return null;
-    const TIPO_VALID = ['prazo','custo','escopo'];
+    const TIPO_VALID = ['prazo','custo','escopo','qualidade'];
     return obj.cenarios.filter(c => c && c.nome && c.resumo).map(c => ({
       nome: c.nome, tipo: TIPO_VALID.includes(c.tipo) ? c.tipo : 'prazo',
       resumo: c.resumo, acaoImediata: c.acaoImediata||'', risco: c.risco||''
     }));
   }
 
-  const TIPO_ICON = { prazo:'clock', custo:'coin', escopo:'scissors' };
-  const TIPO_LABEL = { prazo:'Prazo', custo:'Custo', escopo:'Escopo' };
+  const TIPO_ICON = { prazo:'clock', custo:'coin', escopo:'scissors', qualidade:'shield-check' };
+  const TIPO_LABEL = { prazo:'Prazo', custo:'Custo', escopo:'Escopo', qualidade:'Qualidade' };
 
   async function generateRecoveryPlan() {
     const p = currentProposal;
     const root = document.getElementById('fi-recovery-root');
     if(!p || !root) return;
     const calc = p.calculated || {};
-    if(!calc.cpm && !calc.budget) { root.innerHTML = `<div style="font-size:12px;color:var(--t3)">Sem caminho crítico ou orçamento calculado suficiente pra gerar um plano de retomada.</div>`; return; }
+    if(!calc.cpm && !calc.budget && !p.qualitySignals.length) { root.innerHTML = `<div style="font-size:12px;color:var(--t3)">Sem caminho crítico, orçamento calculado ou sinal de qualidade suficiente pra gerar um plano de retomada.</div>`; return; }
     root.innerHTML = `<div style="font-size:12px;color:var(--t3);display:flex;align-items:center;gap:6px"><i class="ti ti-loader-2" style="animation:fi-spin 1s linear infinite"></i>Montando opções de retomada a partir do diagnóstico calculado…</div>`;
     const projectName = (typeof DB !== 'undefined' && DB.listProjects) ? ((DB.listProjects().find(x=>x.id===DB.getActiveProjectId())||{}).name || 'projeto ativo') : 'projeto ativo';
     let context = `Projeto: ${projectName}\n\n`;
     context += calc.cpm ? `Caminho crítico calculado (CPM real): ${calc.cpm.critical.map(c=>c.label).join(' → ')}. Duração total: ${calc.cpm.totalDays} dias.\n` : 'Caminho crítico: não calculável (datas insuficientes na WBS extraída).\n';
     context += calc.budget ? `Orçamento — BAC: R$${Math.round(calc.budget.BAC)}${calc.budget.hasActuals ? `, gasto real: R$${Math.round(calc.budget.AC)} (${calc.budget.consumoPct}% do orçado), CPI: ${calc.budget.CPI}` : ', sem gasto real declarado no documento'}.\n` : 'Orçamento: sem linhas suficientes.\n';
+    context += p.qualitySignals.length ? `Sinais de qualidade extraídos do documento:\n${p.qualitySignals.map(q=>`- [${q.severidade}] ${q.descricao}`).join('\n')}\n` : 'Qualidade: nenhum sinal explícito de defeito/retrabalho/não conformidade no documento.\n';
 
     const r = await AI.send([{ role:'user', content: context }], { system: RECOVERY_SYSTEM });
     if(r.error) { root.innerHTML = `<div class="card-danger" style="border-radius:var(--r8);padding:10px 12px;font-size:12px;color:var(--t1)"><i class="ti ti-alert-triangle"></i> Não consegui gerar o plano de retomada: ${escapeHtml(r.error)}</div>`; return; }
@@ -4810,6 +4886,12 @@ Gere de 2 a 3 cenários, cada um de um "tipo" diferente (nunca repita tipo) — 
     const budgetCalcHtml = calc.budget
       ? `<div style="background:var(--s1);border:1px solid var(--ab);border-radius:var(--r8);padding:10px 12px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:2px"><i class="ti ti-calculator" style="color:var(--acc);font-size:15px"></i><strong style="font-size:11.5px;color:var(--t1)">Orçamento (calculado)</strong></div><span style="font-size:12.5px;color:var(--t2)">BAC: R$${Math.round(calc.budget.BAC).toLocaleString('pt-BR')}${calc.budget.hasActuals ? ` · Gasto real: R$${Math.round(calc.budget.AC).toLocaleString('pt-BR')} (${calc.budget.consumoPct}% do orçado)${calc.budget.CPI!=null?` · CPI: ${calc.budget.CPI.toFixed(2)}`:''}` : ' · nenhum valor de "já gasto" foi encontrado no documento — sem isso, CPI e % de consumo real não dão pra calcular.'}</span></div>`
       : '';
+    // Qualidade (R3): diferente de CPM/orçamento, não há como "calcular" qualidade a partir da
+    // WBS — é extração direta do texto (igual riscos/problemas), só que isolada num terceiro
+    // bloco pra completar a linha de raciocínio prazo → custo → qualidade num único lugar.
+    const qualityHtml = p.qualitySignals.length
+      ? `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><i class="ti ti-shield-check" style="color:var(--acc);font-size:15px"></i><strong style="font-size:11.5px;color:var(--t1)">Qualidade — sinais encontrados no documento</strong></div><ul style="margin:0;padding:0 0 0 18px;font-size:12.5px;color:var(--t2);line-height:1.7">${p.qualitySignals.map(q => `<li><span class="badge ${q.severidade==='alta'?'b-red':q.severidade==='media'?'b-amb':'b-neu'}" style="font-size:10px;margin-right:4px;vertical-align:1px">${q.severidade}</span>${escapeHtml(q.descricao)}</li>`).join('')}</ul></div>`
+      : '';
 
     box.innerHTML = `<div class="card-accent" style="border-radius:var(--r8);padding:14px;margin-top:12px">
       <div class="lbl" style="color:var(--acc);margin-bottom:6px"><i class="ti ti-brain"></i>Avaliação da IA sobre os documentos enviados</div>
@@ -4818,7 +4900,8 @@ Gere de 2 a 3 cenários, cada um de um "tipo" diferente (nunca repita tipo) — 
       ${(typeof RaioXHistory !== 'undefined') ? RaioXHistory.accuracyHtml() : ''}
       ${cpmCalcHtml}
       ${budgetCalcHtml}
-      ${(calc.cpm || calc.budget) ? `<div style="margin-bottom:8px"><button type="button" class="btn btn-sm btn-acc" onclick="FileIntake.generateRecoveryPlan()" id="fi-recovery-btn"><i class="ti ti-first-aid-kit"></i>Gerar plano de retomada</button><div id="fi-recovery-root" style="margin-top:8px"></div></div>` : ''}
+      ${qualityHtml}
+      ${(calc.cpm || calc.budget || p.qualitySignals.length) ? `<div style="margin-bottom:8px"><button type="button" class="btn btn-sm btn-acc" onclick="FileIntake.generateRecoveryPlan()" id="fi-recovery-btn"><i class="ti ti-first-aid-kit"></i>Gerar plano de retomada</button><div id="fi-recovery-root" style="margin-top:8px"></div></div>` : ''}
       ${p.caminhoCritico ?`<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;margin-bottom:8px;display:flex;gap:8px;align-items:flex-start"><i class="ti ti-clock" style="color:var(--amb);font-size:15px;flex-shrink:0;margin-top:1px"></i><div><strong style="font-size:11.5px;color:var(--t1)">Leitura preliminar da IA sobre o prazo${calc.cpm?' (a IA leu o texto; o cálculo real está acima)':''}:</strong> <span style="font-size:12.5px;color:var(--t2)">${escapeHtml(p.caminhoCritico)}</span></div></div>` : ''}
       ${p.problemas.length ? `<div style="margin-top:8px"><strong style="font-size:11.5px;color:var(--red)">Problemas já em curso:</strong>${textList(p.problemas)}</div>` : ''}
       ${p.resumo ? `<p style="font-size:12.5px;color:var(--t1);line-height:1.65;margin-top:8px">${escapeHtml(p.resumo)}</p>` : ''}
@@ -7597,8 +7680,8 @@ const WBS = (() => {
     ensureLoaded();
     const items = [];
     data.forEach(m => {
-      items.push({ id:m.id, label:m.label, start:m.start, end:m.end, predecessors:m.predecessors||[] });
-      (m.children||[]).forEach(t => items.push({ id:t.id, label:t.label, start:t.start, end:t.end, predecessors:t.predecessors||[] }));
+      items.push({ id:m.id, label:m.label, start:m.start, end:m.end, predecessors:m.predecessors||[], pct:m.pct||0 });
+      (m.children||[]).forEach(t => items.push({ id:t.id, label:t.label, start:t.start, end:t.end, predecessors:t.predecessors||[], pct:t.pct||0 }));
     });
     return items;
   }
@@ -7835,6 +7918,87 @@ const WBS = (() => {
     renderTree();
     renderTable();
     if(document.getElementById('wbs-gantt-view').style.display !== 'none') renderGantt();
+  }
+
+  // ── Replanejamento real (R4) — CPM.replan roda um forward-pass real a partir de hoje sobre
+  // as entregas/subtarefas ainda não concluídas, usando duração restante proporcional ao %
+  // já feito. Aqui só monta a pré-visualização e aplica o que o usuário confirmar — nada muda
+  // sem essa confirmação explícita, mesmo sendo um número calculado (não um palpite da IA).
+  let replanPreview = [];
+  function isoDate(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+  function fmtIso(s) { return fmtDate(parseDate(s)); }
+
+  function openReplan() {
+    if(!Auth.guard('business')) return;
+    ensureLoaded();
+    const items = buildFlatItems();
+    const hasDeps = items.some(it => (it.predecessors||[]).length > 0);
+    if(!hasDeps) { T.show('⚠️ Cadastre pelo menos uma dependência (predecessora) entre entregas/subtarefas pra poder replanejar o cronograma.'); return; }
+    const { error, result } = CPM.replan(items, isoDate(TODAY));
+    if(error) { T.show('⚠️ ' + error); return; }
+    replanPreview = [];
+    data.forEach(m => {
+      const rm = result.get(m.id);
+      if(rm && rm.changed) replanPreview.push({ scope:'module', moduleId:m.id, taskId:null, label:m.label, oldStart:rm.oldStart, oldEnd:rm.oldEnd, newStart:rm.newStart, newEnd:rm.newEnd });
+      (m.children||[]).forEach(t => {
+        const rt = result.get(t.id);
+        if(rt && rt.changed) replanPreview.push({ scope:'task', moduleId:m.id, taskId:t.id, label:t.label, oldStart:rt.oldStart, oldEnd:rt.oldEnd, newStart:rt.newStart, newEnd:rt.newEnd });
+      });
+    });
+    renderReplanModal();
+    document.getElementById('modal-wbs-replan').classList.remove('hidden');
+  }
+
+  function closeReplanModal() { document.getElementById('modal-wbs-replan').classList.add('hidden'); }
+
+  function renderReplanModal() {
+    const root = document.getElementById('wbs-replan-root');
+    const sub = document.getElementById('wbs-replan-sub');
+    const applyBtn = document.getElementById('wbs-replan-apply-btn');
+    if(!root || !sub || !applyBtn) return;
+    if(!replanPreview.length) {
+      sub.textContent = 'Nada pra replanejar agora — o que ainda está em andamento já está com a data planejada alinhada ao cálculo a partir de hoje, ou tudo que tem dependência já foi concluído.';
+      root.innerHTML = '';
+      applyBtn.style.display = 'none';
+      return;
+    }
+    sub.textContent = `${replanPreview.length} entrega(s)/subtarefa(s) com nova data calculada a partir de hoje (${fmtDate(TODAY)}) e da duração que falta de cada uma. Desmarque o que não quiser aplicar.`;
+    applyBtn.style.display = '';
+    root.innerHTML = replanPreview.map((r,i) => `<label style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--b1)">
+      <input type="checkbox" checked data-replan-idx="${i}" style="margin-top:3px">
+      <div style="flex:1;font-size:12.5px">
+        <div style="color:var(--t1);font-weight:600">${escapeHtml(r.label)}</div>
+        <div style="color:var(--t3)">Planejado atual: ${fmtIso(r.oldStart)}–${fmtIso(r.oldEnd)} &rarr; <strong style="color:var(--acc)">Novo: ${fmtIso(r.newStart)}–${fmtIso(r.newEnd)}</strong></div>
+      </div>
+    </label>`).join('');
+  }
+
+  function applyReplan() {
+    if(!Auth.guard('business')) return;
+    const checks = document.querySelectorAll('#wbs-replan-root input[data-replan-idx]:checked');
+    const idxs = [...checks].map(c => parseInt(c.dataset.replanIdx, 10));
+    if(!idxs.length) { T.show('Nada marcado pra aplicar.'); return; }
+    let count = 0;
+    idxs.forEach(i => {
+      const r = replanPreview[i];
+      if(!r) return;
+      const m = data.find(x => x.id === r.moduleId);
+      if(!m) return;
+      const item = r.scope === 'module' ? m : (m.children||[]).find(x => x.id === r.taskId);
+      if(!item) return;
+      item.start = r.newStart;
+      item.end = r.newEnd;
+      item.lastEditedBy = Auth.getName();
+      item.lastEditedAt = new Date().toISOString();
+      Trail.log(`${item.label} — cronograma replanejado: ${fmtIso(r.oldStart)}–${fmtIso(r.oldEnd)} → ${fmtIso(r.newStart)}–${fmtIso(r.newEnd)}`, Auth.getName(), '', 'b-amb');
+      if(typeof Cloud !== 'undefined') { if(r.scope === 'module') Cloud.pushWbsModule(item); else Cloud.pushWbsTask(r.moduleId, item); }
+      count++;
+    });
+    persist();
+    closeReplanModal();
+    render();
+    if(document.getElementById('wbs-gantt-view').style.display !== 'none') renderGantt();
+    T.show(`✅ ${count} data(s) replanejada(s) a partir de hoje.`);
   }
 
   function renderGantt() {
@@ -8132,7 +8296,7 @@ const WBS = (() => {
 
   function render() { ensureLoaded(); renderTree(); if(document.getElementById('wbs-table-view') && document.getElementById('wbs-table-view').style.display !== 'none') renderTable(); }
 
-  return { toggle, setView, render, openAddModule, openEditModule, openAddTask, openEditTask, saveFromModal, deleteFromModal, closeModal, resetCache, updateExpectedNoteFromForm, updateField, toggleTableFullscreen };
+  return { toggle, setView, render, openAddModule, openEditModule, openAddTask, openEditTask, saveFromModal, deleteFromModal, closeModal, resetCache, updateExpectedNoteFromForm, updateField, toggleTableFullscreen, openReplan, closeReplanModal, applyReplan };
 })();
 </script>
 
@@ -8343,6 +8507,22 @@ const WBS = (() => {
       <button class="btn btn-sm btn-red" id="wbs-f-delete-btn" style="display:none" onclick="WBS.deleteFromModal()"><i class="ti ti-trash"></i>Excluir</button>
       <button class="btn btn-sm" onclick="WBS.closeModal()">Cancelar</button>
       <button class="btn btn-sm btn-acc" onclick="WBS.saveFromModal()"><i class="ti ti-device-floppy"></i>Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ■ MODULE: ui/wbs-replan-modal -->
+<div class="modal-ov hidden" id="modal-wbs-replan" onclick="if(event.target===this)WBS.closeReplanModal()">
+  <div class="modal-box" style="width:520px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title"><i class="ti ti-calendar-time"></i> Replanejar cronograma</div>
+      <button class="btn btn-sm" onclick="WBS.closeReplanModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-sub" id="wbs-replan-sub">Calculando…</div>
+    <div style="max-height:340px;overflow-y:auto" id="wbs-replan-root"></div>
+    <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
+      <button class="btn btn-sm" onclick="WBS.closeReplanModal()">Cancelar</button>
+      <button class="btn btn-sm btn-acc" id="wbs-replan-apply-btn" onclick="WBS.applyReplan()"><i class="ti ti-check"></i>Aplicar novo cronograma</button>
     </div>
   </div>
 </div>
