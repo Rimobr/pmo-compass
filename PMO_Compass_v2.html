@@ -1429,7 +1429,7 @@ body.icons-failed i[data-fb]::before{
         <div style="background:var(--rd);border:1px solid var(--rb);border-radius:var(--r8);padding:10px 12px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><span style="font-size:12.5px;font-weight:500;color:var(--t1)">Diretor de TI</span><span class="badge b-red">Urgente — hoje</span></div>
           <div style="font-size:12px;color:var(--t2);line-height:1.55;font-style:italic;margin-bottom:8px">"Precisamos confirmar a arquitetura de integração (API REST vs CSV) até 20/06. Sem esta decisão, a Fase 2 não pode iniciar. Posso agendar 30min esta semana?"</div>
-          <button class="btn btn-sm btn-red" data-perm="business" onclick="Auth.guard('business')&&T.show('✅ Mensagem enviada via e-mail!')"><i class="ti ti-send"></i>Enviar e-mail</button>
+          <button class="btn btn-sm btn-red" data-perm="business" onclick="Auth.guard('business')&&T.show('🔒 Versão futura — envio por e-mail exige um provedor pago configurado no servidor. Por enquanto, copie o texto e envie por fora.', 5000)"><i class="ti ti-send"></i>Enviar e-mail</button>
         </div>
         <div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><span style="font-size:12.5px;font-weight:500;color:var(--t1)">Patrocinador</span><span class="badge b-amb">Esta semana</span></div>
@@ -1576,17 +1576,17 @@ body.icons-failed i[data-fb]::before{
         <div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
           <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px"><span class="badge b-red">Patrocinador / CEO</span><span style="font-size:11px;color:var(--t3)">Tom: executivo, direto</span></div>
           <div style="font-size:12px;color:var(--t2);line-height:1.55;font-style:italic;margin-bottom:8px">"O projeto possui risco crítico de atraso de 13 dias na Fase 2 por validação técnica pendente do ERP. Solicito decisão até 20/06 para preservar a data de entrega e manter orçamento dentro da reserva."</div>
-          <button class="btn btn-sm" data-perm="business" onclick="Auth.guard('business')&&T.show('✅ E-mail enviado ao patrocinador!')"><i class="ti ti-send"></i>Enviar e-mail</button>
+          <button class="btn btn-sm" data-perm="business" onclick="Auth.guard('business')&&T.show('🔒 Versão futura — envio por e-mail exige um provedor pago configurado no servidor. Por enquanto, copie o texto e envie por fora.', 5000)"><i class="ti ti-send"></i>Enviar e-mail</button>
         </div>
         <div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
           <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px"><span class="badge b-acc">Equipe técnica — TI</span><span style="font-size:11px;color:var(--t3)">Tom: técnico, detalhado</span></div>
           <div style="font-size:12px;color:var(--t2);line-height:1.55;font-style:italic;margin-bottom:8px">"RF-ERP-008 permanece como [DISCOVERY]. Necessário confirmar até 20/06: tipo de integração (API REST vs CSV), credenciais de homologação e janela de testes disponível."</div>
-          <button class="btn btn-sm" data-perm="business" onclick="Auth.guard('business')&&T.show('✅ Mensagem enviada via Teams!')"><i class="ti ti-brand-teams"></i>Enviar via Teams</button>
+          <button class="btn btn-sm" data-perm="business" onclick="Auth.guard('business')&&T.show('🔒 Versão futura — envio via Teams exige integração paga (Microsoft Graph). Por enquanto, copie o texto e envie por fora.', 5000)"><i class="ti ti-brand-teams"></i>Enviar via Teams</button>
         </div>
         <div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
           <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px"><span class="badge b-grn">Cliente / Usuário-chave</span><span style="font-size:11px;color:var(--t3)">Tom: parceiro, positivo</span></div>
           <div style="font-size:12px;color:var(--t2);line-height:1.55;font-style:italic;margin-bottom:8px">"Identificamos um ponto de validação técnica que, resolvido esta semana, mantém nossa entrega em 30/07. Sua equipe de TI precisa confirmar os acessos de homologação."</div>
-          <button class="btn btn-sm" data-perm="business" onclick="Auth.guard('business')&&T.show('✅ E-mail enviado ao cliente!')"><i class="ti ti-send"></i>Enviar e-mail</button>
+          <button class="btn btn-sm" data-perm="business" onclick="Auth.guard('business')&&T.show('🔒 Versão futura — envio por e-mail exige um provedor pago configurado no servidor. Por enquanto, copie o texto e envie por fora.', 5000)"><i class="ti ti-send"></i>Enviar e-mail</button>
         </div>
       </div>
     </div>
@@ -3877,7 +3877,7 @@ const WI = (() => {
         <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:12px"><div style="font-size:11px;color:var(--t3);margin-bottom:4px">Impacto orçamentário</div><div style="font-size:20px;font-weight:700">${escapeHtml(s.budgetImpact||'—')}</div><div style="font-size:11.5px;color:var(--amb)">${escapeHtml(s.budgetNote||'')}</div></div>
         <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:12px"><div style="font-size:11px;color:var(--t3);margin-bottom:4px">Satisfação cliente</div><div style="font-size:20px;font-weight:700;color:var(--grn)">${escapeHtml(s.satisfaction||'—')}</div><div style="font-size:11.5px;color:var(--grn)">${escapeHtml(s.satisfactionNote||'')}</div></div>
       </div>
-      <div class="btn-row" data-perm="business"><button class="btn btn-grn" onclick="WI.adopt('${s.id}')"><i class="ti ti-check"></i>Adotar ${escapeHtml(s.title.split('—')[0].trim())}</button><span class="help-q" data-help="Registra esse cenário como a decisão tomada, com data e responsável, na Trilha de Decisões — pra ficar registrado por que o projeto seguiu por esse caminho." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span><button class="btn" onclick="T.show('✅ Comunicação enviada ao patrocinador!')"><i class="ti ti-send"></i>Comunicar ao patrocinador</button></div>`;
+      <div class="btn-row" data-perm="business"><button class="btn btn-grn" onclick="WI.adopt('${s.id}')"><i class="ti ti-check"></i>Adotar ${escapeHtml(s.title.split('—')[0].trim())}</button><span class="help-q" data-help="Registra esse cenário como a decisão tomada, com data e responsável, na Trilha de Decisões — pra ficar registrado por que o projeto seguiu por esse caminho." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span><button class="btn" onclick="T.show('🔒 Versão futura — envio por e-mail exige um provedor pago configurado no servidor. Por enquanto, copie o texto e envie por fora.', 5000)"><i class="ti ti-send"></i>Comunicar ao patrocinador</button></div>`;
   }
 
   function sel(id) { selectedId = id; render(); }
