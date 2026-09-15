@@ -4583,6 +4583,30 @@ Responda APENAS com um objeto JSON válido, sem markdown, sem texto antes ou dep
 
 Regras: só inclua o que estiver realmente sustentado pelo texto — nunca invente nomes, valores ou datas. "problemas" são questões que os documentos indicam já estar acontecendo agora; "riscos" são possibilidades futuras — não confunda as duas categorias. Se uma categoria inteira não tiver base nos documentos, retorne um array vazio (ou string vazia) para ela. "pct" é 0 a 100 (progresso conhecido, ou 0 se não houver indicação). Datas só se aparecerem explicitamente no texto. "caminhoCritico" é uma leitura preliminar da IA, não um cálculo formal — deixe isso implícito no tom, sem alegar certeza. "dependsOnLabel" existe pra permitir recalcular o caminho crítico de verdade depois — preencha sempre que a ordem do documento (fases sequenciais, "após X", numeração hierárquica) deixar clara qual entrega bloqueia qual; use exatamente o mesmo texto do "label" da entrega predecessora, sem inventar uma dependência que o texto não sustente. "parentLabel" existe pra reconstruir a hierarquia real da WBS (fase → subtarefa) em vez de uma lista achatada — preencha sempre que a numeração ou a estrutura do documento deixar claro que um item é subtarefa de outro (ex: "2.1" e "2.2" são filhos de "FASE 2" ou "2"); use exatamente o texto do "label" do item pai, e deixe null pra fases/módulos de primeiro nível. "linkedWbsLabel" existe pra permitir calcular o Valor Agregado (EV) e o CPI de verdade depois, ligando o orçamento à entrega correspondente — preencha sempre que o texto associar claramente uma linha de orçamento a uma entrega específica (ex: o valor aparece na mesma seção/fase, ou o nome da linha cita a entrega); use exatamente o mesmo texto do "label" da entrega em "wbs", sem inventar um vínculo que o texto não sustente. "gastoReal" é o valor JÁ GASTO/comprometido nessa linha até agora — preencha só quando o texto declarar isso explicitamente (ex: "já foram gastos R$X", "comprometido: R$Y"); deixe null se o documento só falar do valor planejado/orçado, sem dizer quanto já foi de fato gasto — não estime, não deduza a partir do "pct" da entrega.`;
 
+  // R2 — dado o diagnóstico CALCULADO (R1, computeCalculatedDiagnosis — não é leitura de texto),
+  // gera opções de retomada com o trade-off clássico de PM (prazo/custo/escopo) em vez de só
+  // apontar o sintoma. Proibido inventar data final nova ou valor de custo fora do diagnóstico —
+  // "quanto tempo/custo economiza cada opção" é trabalho de simulação (What-If já existe pra
+  // isso), não de leitura de texto; a IA aqui orienta a ação, não calcula números novos.
+  const RECOVERY_SYSTEM = `Você é a IA do ${BRAND.name}, atuando como PMO/VMO sênior que acabou de receber o diagnóstico calculado (não é palpite seu) de um projeto com problema real de prazo e/ou custo, e precisa apresentar um PLANO DE RETOMADA — opções concretas de recuperação, não só o diagnóstico do problema.
+
+Você recebe números JÁ CALCULADOS de caminho crítico (CPM real) e/ou orçamento (EVM real). Baseie toda recomendação nesses números reais — cite os nomes reais das entregas do caminho crítico e os valores reais de orçamento fornecidos. NUNCA invente uma data final nova, nem um valor de custo/economia que não esteja nos dados fornecidos — isso exige simulação de cenário, não leitura de texto; quando fizer sentido, oriente a pessoa a simular no módulo What-If do sistema, não simule você mesma.
+
+Responda APENAS com um objeto JSON válido, sem markdown, neste formato exato:
+{
+  "cenarios": [
+    {
+      "nome": "nome curto (ex: 'Comprimir cronograma', 'Renegociar prazo com o cliente', 'Cortar escopo de menor prioridade')",
+      "tipo": "prazo|custo|escopo",
+      "resumo": "2-3 frases explicando a lógica do cenário, citando as entregas reais do caminho crítico ou os números reais de orçamento fornecidos",
+      "acaoImediata": "a PRÓXIMA ação concreta e específica que o PMO deveria tomar essa semana",
+      "risco": "principal risco desse caminho, em 1 frase"
+    }
+  ]
+}
+
+Gere de 2 a 3 cenários, cada um de um "tipo" diferente (nunca repita tipo) — cubra o trade-off clássico de gestão de projeto (comprimir prazo custando mais recurso, manter custo aceitando novo prazo, ou cortar escopo pra caber no que já foi gasto/planejado). Se não houver orçamento calculado suficiente, não proponha cenário de "custo". Se não houver caminho crítico calculado, não proponha cenário de "prazo".`;
+
   let currentProposal = null;
   let currentBoxId = null;
 
@@ -4714,6 +4738,50 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
     return { cpm, budget };
   }
 
+  function parseRecoveryPlan(text) {
+    const tryParse = (s) => { try { return JSON.parse(s); } catch(e) { return null; } };
+    let obj = tryParse(text.trim());
+    if(!obj) { const match = text.match(/\{[\s\S]*\}/); if(match) obj = tryParse(match[0]); }
+    if(!obj || !Array.isArray(obj.cenarios)) return null;
+    const TIPO_VALID = ['prazo','custo','escopo'];
+    return obj.cenarios.filter(c => c && c.nome && c.resumo).map(c => ({
+      nome: c.nome, tipo: TIPO_VALID.includes(c.tipo) ? c.tipo : 'prazo',
+      resumo: c.resumo, acaoImediata: c.acaoImediata||'', risco: c.risco||''
+    }));
+  }
+
+  const TIPO_ICON = { prazo:'clock', custo:'coin', escopo:'scissors' };
+  const TIPO_LABEL = { prazo:'Prazo', custo:'Custo', escopo:'Escopo' };
+
+  async function generateRecoveryPlan() {
+    const p = currentProposal;
+    const root = document.getElementById('fi-recovery-root');
+    if(!p || !root) return;
+    const calc = p.calculated || {};
+    if(!calc.cpm && !calc.budget) { root.innerHTML = `<div style="font-size:12px;color:var(--t3)">Sem caminho crítico ou orçamento calculado suficiente pra gerar um plano de retomada.</div>`; return; }
+    root.innerHTML = `<div style="font-size:12px;color:var(--t3);display:flex;align-items:center;gap:6px"><i class="ti ti-loader-2" style="animation:fi-spin 1s linear infinite"></i>Montando opções de retomada a partir do diagnóstico calculado…</div>`;
+    const projectName = (typeof DB !== 'undefined' && DB.listProjects) ? ((DB.listProjects().find(x=>x.id===DB.getActiveProjectId())||{}).name || 'projeto ativo') : 'projeto ativo';
+    let context = `Projeto: ${projectName}\n\n`;
+    context += calc.cpm ? `Caminho crítico calculado (CPM real): ${calc.cpm.critical.map(c=>c.label).join(' → ')}. Duração total: ${calc.cpm.totalDays} dias.\n` : 'Caminho crítico: não calculável (datas insuficientes na WBS extraída).\n';
+    context += calc.budget ? `Orçamento — BAC: R$${Math.round(calc.budget.BAC)}${calc.budget.hasActuals ? `, gasto real: R$${Math.round(calc.budget.AC)} (${calc.budget.consumoPct}% do orçado), CPI: ${calc.budget.CPI}` : ', sem gasto real declarado no documento'}.\n` : 'Orçamento: sem linhas suficientes.\n';
+
+    const r = await AI.send([{ role:'user', content: context }], { system: RECOVERY_SYSTEM });
+    if(r.error) { root.innerHTML = `<div class="card-danger" style="border-radius:var(--r8);padding:10px 12px;font-size:12px;color:var(--t1)"><i class="ti ti-alert-triangle"></i> Não consegui gerar o plano de retomada: ${escapeHtml(r.error)}</div>`; return; }
+    const cenarios = parseRecoveryPlan(r.text || '');
+    if(!cenarios || !cenarios.length) { root.innerHTML = `<div class="card-danger" style="border-radius:var(--r8);padding:10px 12px;font-size:12px;color:var(--t1)"><i class="ti ti-alert-triangle"></i> A IA respondeu, mas não em um formato que consegui interpretar. Tente novamente.</div>`; return; }
+    p.recoveryPlan = cenarios;
+    renderRecoveryPlanHtml(root, cenarios);
+  }
+
+  function renderRecoveryPlanHtml(root, cenarios) {
+    root.innerHTML = cenarios.map(c => `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;margin-top:8px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><i class="ti ti-${TIPO_ICON[c.tipo]}" style="color:var(--acc)"></i><strong style="font-size:12.5px;color:var(--t1)">${escapeHtml(c.nome)}</strong><span class="badge b-acc" style="font-size:10px">${TIPO_LABEL[c.tipo]}</span></div>
+      <p style="font-size:12px;color:var(--t2);line-height:1.55;margin-bottom:6px">${escapeHtml(c.resumo)}</p>
+      ${c.acaoImediata ? `<div style="font-size:11.5px;color:var(--t1)"><i class="ti ti-arrow-right" style="color:var(--grn)"></i> <strong>Ação imediata:</strong> ${escapeHtml(c.acaoImediata)}</div>` : ''}
+      ${c.risco ? `<div style="font-size:11.5px;color:var(--t3);margin-top:2px"><i class="ti ti-alert-triangle"></i> Risco: ${escapeHtml(c.risco)}</div>` : ''}
+    </div>`).join('') + `<div style="font-size:11px;color:var(--t3);margin-top:8px"><i class="ti ti-info-circle"></i> Nenhuma data ou valor de custo novo foi calculado automaticamente — pra simular um cenário específico com número real, use o <a href="#" onclick="R.go('whatif');return false" style="color:var(--acc)">What-If</a> depois de confirmar os dados abaixo.</div>`;
+  }
+
   const SAUDE_LABEL = { grn:{txt:'Saudável', cls:'b-grn'}, amb:{txt:'Atenção', cls:'b-amb'}, red:{txt:'Crítico', cls:'b-red'} };
 
   function renderProposal(box) {
@@ -4750,7 +4818,8 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
       ${(typeof RaioXHistory !== 'undefined') ? RaioXHistory.accuracyHtml() : ''}
       ${cpmCalcHtml}
       ${budgetCalcHtml}
-      ${p.caminhoCritico ? `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;margin-bottom:8px;display:flex;gap:8px;align-items:flex-start"><i class="ti ti-clock" style="color:var(--amb);font-size:15px;flex-shrink:0;margin-top:1px"></i><div><strong style="font-size:11.5px;color:var(--t1)">Leitura preliminar da IA sobre o prazo${calc.cpm?' (a IA leu o texto; o cálculo real está acima)':''}:</strong> <span style="font-size:12.5px;color:var(--t2)">${escapeHtml(p.caminhoCritico)}</span></div></div>` : ''}
+      ${(calc.cpm || calc.budget) ? `<div style="margin-bottom:8px"><button type="button" class="btn btn-sm btn-acc" onclick="FileIntake.generateRecoveryPlan()" id="fi-recovery-btn"><i class="ti ti-first-aid-kit"></i>Gerar plano de retomada</button><div id="fi-recovery-root" style="margin-top:8px"></div></div>` : ''}
+      ${p.caminhoCritico ?`<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;margin-bottom:8px;display:flex;gap:8px;align-items:flex-start"><i class="ti ti-clock" style="color:var(--amb);font-size:15px;flex-shrink:0;margin-top:1px"></i><div><strong style="font-size:11.5px;color:var(--t1)">Leitura preliminar da IA sobre o prazo${calc.cpm?' (a IA leu o texto; o cálculo real está acima)':''}:</strong> <span style="font-size:12.5px;color:var(--t2)">${escapeHtml(p.caminhoCritico)}</span></div></div>` : ''}
       ${p.problemas.length ? `<div style="margin-top:8px"><strong style="font-size:11.5px;color:var(--red)">Problemas já em curso:</strong>${textList(p.problemas)}</div>` : ''}
       ${p.resumo ? `<p style="font-size:12.5px;color:var(--t1);line-height:1.65;margin-top:8px">${escapeHtml(p.resumo)}</p>` : ''}
       ${p.riscos.length ? `<div style="margin-top:8px"><strong style="font-size:11.5px;color:var(--t1)">Riscos futuros:</strong>${textList(p.riscos)}</div>` : ''}
@@ -4900,7 +4969,7 @@ Regras: só inclua o que estiver realmente sustentado pelo texto — nunca inven
     T.show(`✅ ${added} item(ns) adicionado(s) ao projeto.`);
   }
 
-  return { handleFiles, ingestFiles, requestStructuredEvaluation, dragOver, dragLeave, drop, commitProposal };
+  return { handleFiles, ingestFiles, requestStructuredEvaluation, dragOver, dragLeave, drop, commitProposal, generateRecoveryPlan };
 })();
 </script>
 
