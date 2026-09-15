@@ -1219,6 +1219,19 @@ body.icons-failed i[data-fb]::before{
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px">Muda o <strong style="color:var(--t1)">tom</strong> das recomendações da IA (Chat, Decisões, Relatório) — mais consultivo, mais rigoroso ou mais prescritivo, conforme o papel real do seu PMO. A IA também ajusta o tom sozinha com base na taxa de aceitação das próprias recomendações neste projeto.</p>
     <div id="pmo-profile-root"></div>
   </div>
+
+  <!-- Só aparece para quem está logado como Administrador via Supabase — gestão de acesso pelo
+       lado do PROJETO (não do usuário), pra escalar quando o portfólio tiver dezenas de projetos:
+       ver [[feedback_permission_ui_scale]]. -->
+  <div class="card" id="project-members-card" style="display:none">
+    <div class="lbl"><i class="ti ti-users"></i>Membros deste projeto</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Administradores sempre veem o portfólio inteiro. Para os outros perfis, escolha aqui quem tem acesso a <strong style="color:var(--t1)" id="project-members-name">este projeto</strong> — a lista fica por projeto, não por pessoa, pra continuar simples mesmo com muitos projetos.</p>
+    <div id="project-members-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
+    <div class="btn-row">
+      <select class="input" id="project-members-add-select" style="width:auto;min-width:220px"></select>
+      <button class="btn btn-sm btn-acc" onclick="ProjectMembers.add()"><i class="ti ti-user-plus"></i>Adicionar</button>
+    </div>
+  </div>
   </div><!-- /settings-panel-pmo -->
 
   <div id="settings-panel-cloud" style="display:none">
@@ -2041,6 +2054,7 @@ const Cloud = (() => {
     if(signedInBox) signedInBox.style.display = isSignedIn() ? '' : 'none';
     if(typeof Auth !== 'undefined' && Auth.updateCloudBadge) Auth.updateCloudBadge();
     if(typeof Users !== 'undefined') Users.render();
+    if(typeof ProjectMembers !== 'undefined') ProjectMembers.render();
     if(typeof AuditLog !== 'undefined') AuditLog.render();
     if(typeof Store !== 'undefined' && Store.reflectCloudMode) Store.reflectCloudMode();
   }
@@ -2769,40 +2783,22 @@ const Users = (() => {
     if(resetCard) resetCard.style.display = show ? '' : 'none';
   }
 
-  let allProjects = [];
-  let allAccess = []; // [{project_id, user_id}]
-
-  function hasAccess(projectId, userId) { return allAccess.some(a => a.project_id === projectId && a.user_id === userId); }
-
   async function refresh() {
     const root = document.getElementById('users-list-root');
     if(!root) return;
     root.innerHTML = `<div style="font-size:12px;color:var(--t3)"><i class="ti ti-loader-2"></i> Carregando…</div>`;
-    const [profiles, projects, access] = await Promise.all([Cloud.listProfiles(), Cloud.listAllProjects(), Cloud.listAllProjectAccess()]);
-    allProjects = projects;
-    allAccess = access;
+    const profiles = await Cloud.listProfiles();
     if(!profiles.length) { root.innerHTML = `<div style="font-size:12px;color:var(--t3)">Nenhum perfil encontrado.</div>`; return; }
     const myId = Cloud.getUserId();
     root.innerHTML = profiles.map(p => {
       const isMe = p.id === myId;
       const opts = Object.keys(ROLE_LABEL).map(r => `<option value="${r}"${r===p.role?' selected':''}>${ROLE_LABEL[r]}</option>`).join('');
-      // admin já vê tudo por definição (has_project_access libera geral) — a lista de projetos
-      // só faz sentido mostrar/editar pros outros 3 papéis, que dependem de concessão explícita.
-      const projectsHtml = (p.role === 'admin' || !allProjects.length) ? '' : `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--b1)">
-        <div style="font-size:10.5px;color:var(--t3);margin-bottom:5px">Projetos que ${isMe?'você':'essa pessoa'} pode ver:</div>
-        <div style="display:flex;flex-wrap:wrap;gap:10px">
-          ${allProjects.map(proj => `<label style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--t2);cursor:pointer"><input type="checkbox" ${hasAccess(proj.id,p.id)?'checked':''} onchange="Users.toggleAccess('${p.id}','${proj.id}',this.checked)">${escapeHtml(proj.name)}</label>`).join('')}
+      return `<div class="set-row">
+        <div>
+          <div class="set-lbl">${escapeHtml(p.name || '(sem nome)')}${isMe ? ' <span class="badge b-acc">você</span>' : ''}</div>
+          <div class="set-sub" style="font-family:var(--font-mono);font-size:10.5px">${escapeHtml(p.id)}</div>
         </div>
-      </div>`;
-      return `<div class="set-row" style="flex-direction:column;align-items:stretch">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div>
-            <div class="set-lbl">${escapeHtml(p.name || '(sem nome)')}${isMe ? ' <span class="badge b-acc">você</span>' : ''}</div>
-            <div class="set-sub" style="font-family:var(--font-mono);font-size:10.5px">${escapeHtml(p.id)}</div>
-          </div>
-          <select class="input" style="width:auto" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>
-        </div>
-        ${projectsHtml}
+        <select class="input" style="width:auto" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>
       </div>`;
     }).join('');
   }
@@ -2821,16 +2817,69 @@ const Users = (() => {
     }
   }
 
-  async function toggleAccess(userId, projectId, granted) {
-    const ok = await Cloud.setProjectAccess(userId, projectId, granted);
-    if(ok) {
-      if(granted) allAccess.push({ project_id:projectId, user_id:userId });
-      else allAccess = allAccess.filter(a => !(a.project_id===projectId && a.user_id===userId));
-      T.show(granted ? '✅ Acesso concedido.' : '✅ Acesso revogado.');
-    } else refresh();
+  return { render, refresh, changeRole };
+})();
+</script>
+
+<!-- ■ MODULE: ui/project-members ─ Quem pode ver ESTE projeto (gestão pelo lado do projeto, não
+     pelo lado da pessoa — evita listar N projetos por usuário quando o portfólio cresce). -->
+<script data-module="ui/project-members">
+const ProjectMembers = (() => {
+  const ROLE_LABEL = { admin:'Administrador', gerente:'Gerente', consulta:'Consulta', manutencao:'Manutenção' };
+  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  let profiles = [];
+  let access = []; // [{project_id, user_id}]
+
+  function eligible() { return (typeof Cloud !== 'undefined') && Cloud.isSignedIn() && typeof Auth !== 'undefined' && Auth.getRole() === 'admin'; }
+
+  async function render() {
+    const card = document.getElementById('project-members-card');
+    if(!card) return;
+    const ok = eligible();
+    card.style.display = ok ? '' : 'none';
+    if(!ok) return;
+    const pid = DB.getActiveProjectId();
+    const nameEl = document.getElementById('project-members-name');
+    if(nameEl) { const proj = (DB.listProjects().find(p => p.id === pid) || {}); nameEl.textContent = proj.name || pid; }
+    [profiles, access] = await Promise.all([Cloud.listProfiles(), Cloud.listAllProjectAccess()]);
+    renderList();
   }
 
-  return { render, refresh, changeRole, toggleAccess };
+  function renderList() {
+    const listEl = document.getElementById('project-members-list');
+    const selectEl = document.getElementById('project-members-add-select');
+    if(!listEl || !selectEl) return;
+    const pid = DB.getActiveProjectId();
+    const memberIds = new Set(access.filter(a => a.project_id === pid).map(a => a.user_id));
+    // Administrador enxerga todo o portfólio por definição — não precisa aparecer como "membro".
+    const members = profiles.filter(p => p.role !== 'admin' && memberIds.has(p.id));
+    const nonMembers = profiles.filter(p => p.role !== 'admin' && !memberIds.has(p.id));
+    listEl.innerHTML = members.length
+      ? members.map(p => `<span class="chip">${escapeHtml(p.name || '(sem nome)')} <span style="color:var(--t3)">· ${ROLE_LABEL[p.role] || p.role}</span> <i class="ti ti-x" style="cursor:pointer;margin-left:2px" title="Remover acesso" onclick="ProjectMembers.remove('${p.id}')"></i></span>`).join('')
+      : `<div style="font-size:12px;color:var(--t3)">Só Administradores têm acesso a este projeto por enquanto.</div>`;
+    selectEl.innerHTML = nonMembers.length
+      ? `<option value="">Adicionar pessoa…</option>` + nonMembers.map(p => `<option value="${p.id}">${escapeHtml(p.name || p.id)} (${ROLE_LABEL[p.role] || p.role})</option>`).join('')
+      : `<option value="">Todo mundo já tem acesso</option>`;
+    selectEl.disabled = !nonMembers.length;
+  }
+
+  async function add() {
+    const selectEl = document.getElementById('project-members-add-select');
+    const userId = selectEl && selectEl.value;
+    if(!userId) return;
+    const pid = DB.getActiveProjectId();
+    const ok = await Cloud.setProjectAccess(userId, pid, true);
+    if(ok) { access.push({ project_id: pid, user_id: userId }); renderList(); T.show('✅ Acesso concedido.'); }
+  }
+
+  async function remove(userId) {
+    const pid = DB.getActiveProjectId();
+    const ok = await Cloud.setProjectAccess(userId, pid, false);
+    if(ok) { access = access.filter(a => !(a.project_id === pid && a.user_id === userId)); renderList(); T.show('✅ Acesso revogado.'); }
+  }
+
+  return { render, add, remove };
 })();
 </script>
 
@@ -3596,6 +3645,7 @@ const R = (() => {
     if(id === 'budget' && typeof Budget !== 'undefined') Budget.render();
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
     if(id === 'settings' && typeof PmoProfiles !== 'undefined') PmoProfiles.render();
+    if(id === 'settings' && typeof ProjectMembers !== 'undefined') ProjectMembers.render();
     if(typeof Nav !== 'undefined') { Nav.expandGroupFor(id); Nav.renderBreadcrumb(id); }
   }
   function init() {
