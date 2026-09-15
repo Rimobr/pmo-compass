@@ -1543,7 +1543,7 @@ body.icons-failed i[data-fb]::before{
       <button class="btn btn-sm btn-acc" data-perm="business" onclick="WBS.openAddModule()"><i class="ti ti-plus"></i>Nova entrega</button>
       <button class="btn btn-sm" data-perm="business" onclick="WBS.openReplan()" title="Recalcula as datas do que ainda não terminou, a partir de hoje"><i class="ti ti-calendar-time"></i>Replanejar cronograma</button>
       <button class="btn btn-sm" onclick="T.show('Exportando WBS…')"><i class="ti ti-download"></i>Exportar</button>
-      <button class="btn btn-sm" onclick="T.show('IA sugerindo decomposição de tarefas…')"><i class="ti ti-brain"></i>IA: sugerir</button>
+      <button class="btn btn-sm" data-perm="business" onclick="WBS.openAiSuggest()"><i class="ti ti-brain"></i>IA: sugerir</button>
     </div>
   </div>
   <div class="gantt-tabs">
@@ -8008,6 +8008,97 @@ const WBS = (() => {
     T.show(`✅ ${count} data(s) replanejada(s) a partir de hoje.`);
   }
 
+  // ── IA: sugerir decomposição — pede à IA subtarefas concretas pra uma entrega existente.
+  // Só sugere NOMES (nenhuma data/responsável/percentual é inventado); nada é criado sem o
+  // usuário revisar e marcar o que aceita, mesmo padrão de confirmação já usado no Raio-X.
+  const WBS_SUGGEST_SYSTEM = `Você é a IA do ${BRAND.name}. Vai receber o nome de um projeto e o nome de uma entrega/fase da WBS desse projeto. Sua tarefa é sugerir uma DECOMPOSIÇÃO dessa entrega em subtarefas concretas e executáveis — não conversar.
+
+Responda APENAS com um objeto JSON válido, sem markdown, sem texto antes ou depois, neste formato exato:
+{
+  "subtarefas": ["nome curto e concreto da subtarefa 1", "nome curto e concreto da subtarefa 2"]
+}
+
+Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e verificável (ex: "Configurar ambiente de homologação", não "Fazer o necessário"). Não invente datas, responsável, percentual de progresso ou qualquer dado além do nome — isso é preenchido manualmente depois, por quem conhece o projeto de verdade.`;
+
+  let aiSuggestResult = [];
+  let aiSuggestModuleId = null;
+
+  function openAiSuggest() {
+    if(!Auth.guard('business')) return;
+    ensureLoaded();
+    if(!data.length) { T.show('⚠️ Cadastre pelo menos uma entrega antes de pedir sugestão de decomposição.'); return; }
+    aiSuggestResult = [];
+    aiSuggestModuleId = null;
+    const sel = document.getElementById('wbs-ai-suggest-module');
+    sel.innerHTML = data.map(m => `<option value="${m.id}">${escapeHtml(m.label)}</option>`).join('');
+    document.getElementById('wbs-ai-suggest-root').innerHTML = '';
+    document.getElementById('wbs-ai-suggest-apply-btn').style.display = 'none';
+    document.getElementById('modal-wbs-ai-suggest').classList.remove('hidden');
+  }
+
+  function closeAiSuggestModal() { document.getElementById('modal-wbs-ai-suggest').classList.add('hidden'); }
+
+  function parseAiSuggest(text) {
+    const tryParse = (s) => { try { return JSON.parse(s); } catch(e) { return null; } };
+    let obj = tryParse(text.trim());
+    if(!obj) { const match = text.match(/\{[\s\S]*\}/); if(match) obj = tryParse(match[0]); }
+    if(!obj || !Array.isArray(obj.subtarefas)) return null;
+    return obj.subtarefas.filter(x => typeof x === 'string' && x.trim()).slice(0, 6);
+  }
+
+  async function generateAiSuggest() {
+    const sel = document.getElementById('wbs-ai-suggest-module');
+    const moduleId = sel.value;
+    const m = data.find(x => x.id === moduleId);
+    const root = document.getElementById('wbs-ai-suggest-root');
+    if(!m || !root) return;
+    aiSuggestModuleId = moduleId;
+    if(!Store.hasKeyOrCloud()) { root.innerHTML = `<div class="card-accent" style="border-radius:var(--r8);padding:10px 12px;font-size:12px;color:var(--t2)"><i class="ti ti-info-circle"></i> Configure uma chave de IA em <strong style="color:var(--t1)">Configurações → Provedor de IA</strong> pra usar essa sugestão.</div>`; return; }
+    root.innerHTML = `<div style="font-size:12px;color:var(--t3);display:flex;align-items:center;gap:6px"><i class="ti ti-loader-2" style="animation:fi-spin 1s linear infinite"></i>Pensando na decomposição de "${escapeHtml(m.label)}"…</div>`;
+    const projectName = (typeof DB !== 'undefined' && DB.listProjects) ? ((DB.listProjects().find(x=>x.id===DB.getActiveProjectId())||{}).name || 'projeto ativo') : 'projeto ativo';
+    const context = `Projeto: ${projectName}\nEntrega/fase a decompor: ${m.label}`;
+    const r = await AI.send([{ role:'user', content: context }], { system: WBS_SUGGEST_SYSTEM });
+    if(r.error) { root.innerHTML = `<div class="card-danger" style="border-radius:var(--r8);padding:10px 12px;font-size:12px;color:var(--t1)"><i class="ti ti-alert-triangle"></i> Não consegui gerar sugestões: ${escapeHtml(r.error)}</div>`; return; }
+    const parsed = parseAiSuggest(r.text || '');
+    if(!parsed || !parsed.length) { root.innerHTML = `<div class="card-danger" style="border-radius:var(--r8);padding:10px 12px;font-size:12px;color:var(--t1)"><i class="ti ti-alert-triangle"></i> A IA respondeu, mas não em um formato que consegui interpretar. Tente novamente.</div>`; return; }
+    aiSuggestResult = parsed;
+    renderAiSuggestList();
+  }
+
+  function renderAiSuggestList() {
+    const root = document.getElementById('wbs-ai-suggest-root');
+    const applyBtn = document.getElementById('wbs-ai-suggest-apply-btn');
+    if(!root || !applyBtn) return;
+    if(!aiSuggestResult.length) { root.innerHTML = ''; applyBtn.style.display = 'none'; return; }
+    applyBtn.style.display = '';
+    root.innerHTML = aiSuggestResult.map((s,i) => `<label style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--b1)">
+      <input type="checkbox" checked data-suggest-idx="${i}" style="margin-top:3px">
+      <span style="font-size:12.5px;color:var(--t1)">${escapeHtml(s)}</span>
+    </label>`).join('') + `<div style="font-size:11px;color:var(--t3);margin-top:8px"><i class="ti ti-info-circle"></i> Nenhuma data, responsável ou % foi definido — edite cada subtarefa depois de adicionar pra preencher com o que for real.</div>`;
+  }
+
+  function applyAiSuggest() {
+    if(!Auth.guard('business')) return;
+    const m = data.find(x => x.id === aiSuggestModuleId);
+    if(!m) return;
+    const checks = document.querySelectorAll('#wbs-ai-suggest-root input[data-suggest-idx]:checked');
+    const idxs = [...checks].map(c => parseInt(c.dataset.suggestIdx, 10));
+    if(!idxs.length) { T.show('Nada marcado pra adicionar.'); return; }
+    m.children = m.children || [];
+    idxs.forEach(i => {
+      const label = aiSuggestResult[i];
+      if(!label) return;
+      const task = { id:genId('wt'), label, status:'neu', start:null, end:null, startActual:null, endActual:null, responsavel:'', predecessors:[], origin:'ia' };
+      m.children.push(task);
+      if(typeof Cloud !== 'undefined') Cloud.pushWbsTask(m.id, task);
+    });
+    persist();
+    Trail.log(`${idxs.length} subtarefa(s) sugerida(s) pela IA adicionada(s) em "${m.label}"`, Auth.getName(), '', 'b-acc');
+    closeAiSuggestModal();
+    render();
+    T.show(`✅ ${idxs.length} subtarefa(s) adicionada(s) a "${m.label}" — edite pra preencher data e responsável.`);
+  }
+
   function renderGantt() {
     const ruler = document.getElementById('gantt-ruler');
     const body = document.getElementById('gantt-body');
@@ -8303,7 +8394,7 @@ const WBS = (() => {
 
   function render() { ensureLoaded(); renderTree(); if(document.getElementById('wbs-table-view') && document.getElementById('wbs-table-view').style.display !== 'none') renderTable(); }
 
-  return { toggle, setView, render, openAddModule, openEditModule, openAddTask, openEditTask, saveFromModal, deleteFromModal, closeModal, resetCache, updateExpectedNoteFromForm, updateField, toggleTableFullscreen, openReplan, closeReplanModal, applyReplan };
+  return { toggle, setView, render, openAddModule, openEditModule, openAddTask, openEditTask, saveFromModal, deleteFromModal, closeModal, resetCache, updateExpectedNoteFromForm, updateField, toggleTableFullscreen, openReplan, closeReplanModal, applyReplan, openAiSuggest, closeAiSuggestModal, generateAiSuggest, applyAiSuggest };
 })();
 </script>
 
@@ -8530,6 +8621,29 @@ const WBS = (() => {
     <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
       <button class="btn btn-sm" onclick="WBS.closeReplanModal()">Cancelar</button>
       <button class="btn btn-sm btn-acc" id="wbs-replan-apply-btn" onclick="WBS.applyReplan()"><i class="ti ti-check"></i>Aplicar novo cronograma</button>
+    </div>
+  </div>
+</div>
+
+<!-- ■ MODULE: ui/wbs-ai-suggest-modal -->
+<div class="modal-ov hidden" id="modal-wbs-ai-suggest" onclick="if(event.target===this)WBS.closeAiSuggestModal()">
+  <div class="modal-box" style="width:480px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title"><i class="ti ti-brain"></i> IA: sugerir decomposição</div>
+      <button class="btn btn-sm" onclick="WBS.closeAiSuggestModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-sub">Escolha a entrega e a IA sugere subtarefas — nada é criado sem você confirmar</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <div class="field-label">Entrega a decompor</div>
+        <select class="input" id="wbs-ai-suggest-module"></select>
+      </div>
+      <button class="btn btn-sm btn-acc" onclick="WBS.generateAiSuggest()"><i class="ti ti-sparkles"></i>Gerar sugestões</button>
+      <div id="wbs-ai-suggest-root" style="max-height:280px;overflow-y:auto"></div>
+    </div>
+    <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
+      <button class="btn btn-sm" onclick="WBS.closeAiSuggestModal()">Cancelar</button>
+      <button class="btn btn-sm btn-acc" id="wbs-ai-suggest-apply-btn" style="display:none" onclick="WBS.applyAiSuggest()"><i class="ti ti-check"></i>Adicionar subtarefas selecionadas</button>
     </div>
   </div>
 </div>
