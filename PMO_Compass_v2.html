@@ -2236,11 +2236,39 @@ const Cloud = (() => {
       const { data: profile, error } = await client.from('profiles').select('name,role').eq('id', session.user.id).single();
       if(error) throw error;
       Auth.setFromCloud((profile && profile.name) || session.user.email, (profile && profile.role) || 'consulta');
+      await syncProjects();
       await pullAll();
     } catch(e) {
       console.warn('Supabase: falha ao ler perfil — caindo para o perfil mais restrito', e);
       Auth.setFromCloud(session.user.email, 'consulta');
     }
+  }
+
+  // RBAC por projeto — "projects" era só uma lista em localStorage, cada navegador com a sua
+  // própria cópia; sem sincronizar isso, dar acesso a alguém não adianta (o seletor de projeto
+  // dessa pessoa nem vai listar o que foi liberado). Empurra os projetos locais que ainda não
+  // estão na nuvem (upsert, idempotente) e depois traz de volta a lista REAL — que, com a RLS de
+  // project_access, já vem filtrada só pelo que este usuário tem permissão de ver.
+  async function syncProjects() {
+    if(!client || !session || typeof DB === 'undefined') return;
+    try {
+      const local = DB.listProjects();
+      await Promise.all(local.map(p => client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', created_by:session.user.id }).then(()=>{}).catch(()=>{})));
+      const { data, error } = await client.from('projects').select('*').order('created_at', { ascending:true });
+      if(error || !data) return;
+      DB.setProjectsFromCloud(data.map(p => ({ id:p.id, name:p.name, client:p.client||'', icon:p.icon||'compass' })));
+    } catch(e) { console.warn('Supabase: falha ao sincronizar projetos', e); }
+  }
+
+  function pushProject(p) {
+    if(!client || !session) return;
+    track(client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', created_by:session.user.id }).then(()=>{}).catch(cloudSyncFailed));
+  }
+  // Quem cria o projeto precisa conseguir vê-lo — a policy "project_access_self_grant" só deixa
+  // conceder acesso PRA SI MESMO, nunca pra outra pessoa (isso continua exigindo um admin).
+  function grantSelfProjectAccess(projectId) {
+    if(!client || !session) return;
+    track(client.from('project_access').upsert({ project_id:projectId, user_id:session.user.id, granted_by:session.user.id }).then(()=>{}).catch(cloudSyncFailed));
   }
 
   async function pullAll() {
@@ -2475,7 +2503,7 @@ const Cloud = (() => {
     pushDecision, deleteDecision, pushDocument, deleteDocument,
     pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual, resetForNewUsers, clearProjectData,
     pushAuditEvent, fetchAuditLog, pushSnapshot, fetchSnapshots, pushProjectSetting,
-    pushBoardDecision, deleteBoardDecision, pullBoardDecisions };
+    pushBoardDecision, deleteBoardDecision, pullBoardDecisions, pushProject, grantSelfProjectAccess };
 })();
 </script>
 
@@ -2837,6 +2865,20 @@ const DB = (() => {
   function persistProjects() { try { localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects)); } catch(e){} }
   function listProjects() { return loadProjects(); }
 
+  // Substitui a lista local pela lista real da nuvem — chamado uma vez, logo após conectar
+  // (Cloud.syncProjects()). "projects" no Supabase é o registro compartilhado de verdade; o que
+  // tinha só neste navegador era, na melhor das hipóteses, uma cópia local desatualizada — e com
+  // RBAC por projeto, é também só o que ESTE usuário tem permissão de ver (RLS já filtra).
+  function setProjectsFromCloud(cloudList) {
+    if(!Array.isArray(cloudList) || !cloudList.length) return;
+    projects = cloudList;
+    persistProjects();
+    if(!projects.some(p => p.id === activeProjectId)) {
+      activeProjectId = projects[0].id;
+      try { localStorage.setItem(ACTIVE_KEY, activeProjectId); } catch(e){}
+    }
+  }
+
   function getActiveProjectId() {
     if(activeProjectId) return activeProjectId;
     try { activeProjectId = localStorage.getItem(ACTIVE_KEY) || 'nexus'; } catch(e) { activeProjectId = 'nexus'; }
@@ -3070,9 +3112,11 @@ const DB = (() => {
   function createProject(name, client) {
     if(!Auth.guard('business')) return null;
     const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
-    loadProjects().push({ id, name: name || 'Novo projeto', client: client || '', icon:'compass' });
+    const p = { id, name: name || 'Novo projeto', client: client || '', icon:'compass' };
+    loadProjects().push(p);
     persistProjects();
     switchProject(id);
+    if(typeof Cloud !== 'undefined') { Cloud.pushProject(p); Cloud.grantSelfProjectAccess(id); }
     return id;
   }
 
@@ -3232,7 +3276,7 @@ const DB = (() => {
     })).sort((a,b) => b.total - a.total);
   }
 
-  return { get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, factoryReset, listProjects, getActiveProjectId, switchProject, createProject, computePortfolioAllocation };
+  return { get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, factoryReset, listProjects, getActiveProjectId, switchProject, createProject, computePortfolioAllocation, setProjectsFromCloud };
 })();
 </script>
 
@@ -7970,11 +8014,11 @@ const Board = (() => {
     if(!rows.length) { root.innerHTML = `<div style="text-align:center;padding:16px 10px;color:var(--t3);font-size:12.5px">Nenhum projeto pra comparar com esse filtro.</div>`; return; }
     const sorted = [...rows].sort((a,b) => (a.health==null?-1:a.health) - (b.health==null?-1:b.health));
     const color = (r) => r.statusCode==='grn' ? 'var(--grn)' : r.statusCode==='amb' ? 'var(--amb)' : r.statusCode==='red' ? 'var(--red)' : 'var(--t3)';
-    root.innerHTML = sorted.map(r => `<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+    root.innerHTML = sorted.map(r => `<div class="kpi-link" role="button" tabindex="0" aria-label="Abrir ${escapeHtml(r.project.name)}" style="display:flex;align-items:center;gap:10px;margin-bottom:2px;padding:4px 6px;border-radius:var(--r6)" onclick="DB.switchProject('${r.project.id}');R.go('dashboard')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();DB.switchProject('${r.project.id}');R.go('dashboard')}">
       <div style="width:150px;flex-shrink:0;font-size:12px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(r.project.name)}">${escapeHtml(r.project.name)}</div>
       <div style="flex:1;height:10px;background:var(--s3);border-radius:5px;overflow:hidden"><div style="width:${r.health||0}%;height:100%;background:${color(r)}"></div></div>
       <div style="width:30px;text-align:right;font-size:11.5px;color:var(--t2);font-variant-numeric:tabular-nums">${r.health==null?'—':r.health}</div>
-    </div>`).join('') + `<div style="font-size:10.5px;color:var(--t3);margin-top:4px">Nota de situação geral (0-100) — combina prazo, orçamento, equipe e qualidade. Quem está pior aparece primeiro.</div>`;
+    </div>`).join('') + `<div style="font-size:10.5px;color:var(--t3);margin-top:6px">Nota de situação geral (0-100) — combina prazo, orçamento, equipe e qualidade. Quem está pior aparece primeiro. Clique num projeto pra abrir o Dashboard dele.</div>`;
   }
 
   function renderKpis(rows) {
@@ -7984,12 +8028,12 @@ const Board = (() => {
     const valorEntregue = rows.reduce((s,r) => s + (r.vr && r.vr.valorRealizado ? r.vr.valorRealizado : 0), 0);
     const riscos = rows.reduce((s,r) => s + r.criticas.length, 0);
     const tiles = [
-      { lbl:'Projetos ativos', val: rows.length, icon:'briefcase' },
-      { lbl:'Investido até agora', val: fmtMoney(investido), icon:'coin', help:'Soma do que já foi realmente gasto em todos os projetos, comparado ao orçamento de cada um.' },
-      { lbl:'Valor já entregue', val: fmtMoney(valorEntregue), icon:'target-arrow', help:'Soma do valor financeiro que já foi confirmado como entregue (validado na Priorização), não o valor prometido.' },
-      { lbl:'Riscos críticos abertos', val: riscos, icon:'alert-triangle', help:'Decisões marcadas como críticas que ainda não foram resolvidas, somadas de todos os projetos.' }
+      { lbl:'Projetos ativos', val: rows.length, icon:'briefcase', page:'portfolio' },
+      { lbl:'Investido até agora', val: fmtMoney(investido), icon:'coin', help:'Soma do que já foi realmente gasto em todos os projetos, comparado ao orçamento de cada um.', page:'budget' },
+      { lbl:'Valor já entregue', val: fmtMoney(valorEntregue), icon:'target-arrow', help:'Soma do valor financeiro que já foi confirmado como entregue (validado na Priorização), não o valor prometido.', page:'prioritization' },
+      { lbl:'Riscos críticos abertos', val: riscos, icon:'alert-triangle', help:'Decisões marcadas como críticas que ainda não foram resolvidas, somadas de todos os projetos.', page:'decisions' }
     ];
-    root.innerHTML = tiles.map(t => `<div class="card" style="padding:14px"><div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t3);margin-bottom:6px"><i class="ti ti-${t.icon}"></i>${t.lbl}${t.help?`<span class="help-q" data-help="${escapeHtml(t.help)}" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>`:''}</div><div style="font-size:22px;font-weight:600;color:var(--t1)">${t.val}</div></div>`).join('');
+    root.innerHTML = tiles.map(t => `<div class="card kpi-link" role="button" tabindex="0" aria-label="Ver ${escapeHtml(t.lbl)}" style="padding:14px" onclick="R.go('${t.page}')" onkeydown="R.goKey(event,'${t.page}')"><div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t3);margin-bottom:6px"><i class="ti ti-${t.icon}"></i>${t.lbl}${t.help?`<span class="help-q" data-help="${escapeHtml(t.help)}" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>`:''}</div><div style="font-size:22px;font-weight:600;color:var(--t1)">${t.val}</div></div>`).join('');
   }
 
   function renderCards(rows) {
@@ -8012,7 +8056,7 @@ const Board = (() => {
         ? `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:8px 10px;margin-top:10px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><i class="ti ti-${SUG_ICON[sug.aiSuggestion]}"></i><span class="badge ${SUG_CLASS[sug.aiSuggestion]}" style="font-size:10.5px">Sugestão da IA: ${SUG_LABEL[sug.aiSuggestion]}</span></div><div style="font-size:11.5px;color:var(--t2);line-height:1.5">${escapeHtml(sug.aiReasoning)}</div></div>`
         : '';
       return `<div class="card" style="display:flex;flex-direction:column">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="kpi-link" role="button" tabindex="0" aria-label="Abrir ${escapeHtml(p.name)}" style="display:flex;align-items:center;justify-content:space-between;margin:-6px -6px 4px;padding:6px;border-radius:var(--r6)" onclick="DB.switchProject('${p.id}');R.go('dashboard')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();DB.switchProject('${p.id}');R.go('dashboard')}">
           <div style="font-size:14px;font-weight:600;color:var(--t1)">${escapeHtml(p.name)}</div>
           <span class="badge ${r.status.badge}" style="font-size:10.5px">${escapeHtml(r.status.label)}</span>
         </div>

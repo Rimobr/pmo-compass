@@ -454,6 +454,84 @@ create policy "board_decisions_write" on public.board_decisions for all
 
 create index if not exists board_decisions_project_id_idx on public.board_decisions(project_id);
 
+-- 16) RBAC POR PROJETO — quem pode ver qual projeto ------------------------------------------
+-- Até aqui, dentro de uma mesma instância, qualquer pessoa autenticada lia os dados de TODOS os
+-- projetos — a RLS restringia por PAPEL (admin/gerente escrevem, todo mundo lê), nunca por
+-- PROJETO. "projects" é o registro real do portfólio (antes só existia em localStorage, cada
+-- navegador com sua própria lista — sem isso, dar acesso a alguém não adiantava, o seletor de
+-- projeto dessa pessoa nem ia listar o projeto liberado). "project_access" é quem pode ver o quê.
+-- admin sempre vê tudo (é o papel de visão de portfólio inteiro); os outros 3 papéis só veem
+-- projeto onde têm uma linha aqui.
+create table if not exists public.projects (
+  id text primary key,
+  name text not null,
+  client text,
+  icon text default 'compass',
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.project_access (
+  project_id text not null references public.projects(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  granted_by uuid references auth.users(id),
+  granted_at timestamptz not null default now(),
+  primary key (project_id, user_id)
+);
+
+alter table public.projects enable row level security;
+alter table public.project_access enable row level security;
+
+-- Função auxiliar reaproveitada em toda policy abaixo (evita repetir a mesma subquery em 9
+-- tabelas) — security definer pra poder ler project_access/profiles independente da RLS de quem
+-- está chamando, mesmo padrão já usado em current_role().
+create or replace function public.has_project_access(pid text)
+returns boolean as $$
+  select public.current_role() = 'admin'
+    or exists (select 1 from public.project_access where project_id = pid and user_id = auth.uid());
+$$ language sql stable security definer;
+
+-- Leitura de "projects": só quem tem acesso àquele projeto específico (reaproveita a mesma
+-- função, com o id da própria tabela). Escrita: admin/gerente.
+create policy "projects_read" on public.projects for select using (public.has_project_access(id));
+create policy "projects_write" on public.projects for all
+  using (public.current_role() in ('admin','gerente'))
+  with check (public.current_role() in ('admin','gerente'));
+
+-- project_access: cada um vê as próprias concessões (pra saber quais projetos tem acesso);
+-- admin vê e edita tudo (é quem concede/revoga acesso de outras pessoas).
+create policy "project_access_read_own" on public.project_access for select using (user_id = auth.uid());
+create policy "project_access_admin_all" on public.project_access for all
+  using (public.current_role() = 'admin')
+  with check (public.current_role() = 'admin');
+
+-- Quem cria um projeto (admin/gerente, mesma permissão de escrever em "projects") precisa
+-- conseguir se auto-conceder acesso a ele na hora — senão ficaria sem ver o próprio projeto que
+-- acabou de criar, já que só admin tem a policy "all" acima. Restrito a conceder só PRA SI MESMO
+-- (user_id = auth.uid()), nunca pra outra pessoa — isso continua exigindo um admin.
+create policy "project_access_self_grant" on public.project_access for insert
+  with check (user_id = auth.uid() and public.current_role() in ('admin','gerente'));
+
+-- NOTA IMPORTANTE — como ativar de verdade (deliberadamente NÃO automático neste script):
+-- Só criar as tabelas acima não muda nada ainda — as 9 tabelas com project_id continuam com a
+-- policy antiga (`auth.role() = 'authenticated'`, sem checar projeto) até você rodar, NESTA
+-- ORDEM, depois de confirmar que "projects" já tem uma linha por projeto real (o app sincroniza
+-- isso sozinho no primeiro load depois de conectado — ver Cloud.pushProject):
+--
+-- 1) Backfill de acesso — todo usuário existente mantém acesso a todo projeto já existente:
+--      insert into public.project_access (project_id, user_id)
+--      select p.id, u.id from public.projects p cross join public.profiles u
+--      on conflict do nothing;
+--
+-- 2) Só depois do passo 1, trocar a policy de leitura em cada uma destas tabelas —
+--    wbs_modules, wbs_tasks, decisions, documents, budget_lines, cost_actuals,
+--    project_settings, board_decisions, project_snapshots — de:
+--      auth.role() = 'authenticated'
+--    para:
+--      auth.role() = 'authenticated' and public.has_project_access(project_id)
+--    e na policy de ESCRITA de cada uma, acrescentar "and public.has_project_access(project_id)"
+--    à condição que já existia (current_role() in ('admin','gerente')).
+
 -- =========================================================================
 -- PRONTO. Depois de rodar este script:
 -- 1. Vá em Authentication → Users e crie seu primeiro usuário (ou cadastre pelo
