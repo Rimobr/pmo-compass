@@ -166,6 +166,8 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 .input{width:100%;background:var(--s2);border:1px solid var(--b1);border-radius:var(--r6);padding:8px 12px;font-size:12.5px;color:var(--t1);outline:none;transition:border-color .14s}
 .input:focus{border-color:var(--ab)}
 .input::placeholder{color:var(--t3)}
+.input.input-error{border-color:var(--red)}
+.input-error-msg{font-size:11px;color:var(--red);margin-top:4px;display:flex;align-items:center;gap:4px}
 .toggle{width:38px;height:21px;border-radius:21px;background:var(--s3);border:1px solid var(--b2);cursor:pointer;position:relative;transition:background .15s;flex-shrink:0;margin-top:2px}
 .toggle:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .toggle.on{background:var(--acc);border-color:var(--ab)}
@@ -266,6 +268,11 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 .sb-xray-btn:hover{background:rgba(77,142,240,.18)}
 .sb-xray-btn.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 .sb-xray-btn.on i{color:inherit}
+.sb-board-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;margin-bottom:4px;border-radius:var(--r8);border:1px solid var(--pb);background:var(--pd);color:var(--pur);font-size:12.5px;font-weight:600;cursor:pointer;text-align:left}
+.sb-board-btn i{font-size:15px;flex-shrink:0}
+.sb-board-btn:hover{background:rgba(139,92,246,.18)}
+.sb-board-btn.on{background:var(--pur);color:#fff;border-color:var(--pur)}
+.sb-board-btn.on i{color:inherit}
 </style>
 <style>.page{padding:20px;display:none;flex-direction:column;gap:14px;animation:pgIn .15s ease}
 .page.on{display:flex}
@@ -767,6 +774,7 @@ body.icons-failed i[data-fb]::before{
 <!-- ■ MODULE: ui/sidebar -->
 <aside class="sidebar" data-module="ui/sidebar">
   <button class="sb-xray-btn" data-p="xray" onclick="R.go('xray')"><i class="ti ti-report-medical"></i>Raio-X do Projeto</button>
+  <button class="sb-board-btn" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button>
 
   <div class="sb-div"></div>
   <div class="sb-sec">Gestão de Projeto</div>
@@ -819,7 +827,6 @@ body.icons-failed i[data-fb]::before{
     <div class="sb-group-body" id="sbg-projetos-list">
       <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
       <button class="si" data-p="prioritization" onclick="R.go('prioritization')"><i class="ti ti-sort-descending-2"></i>Priorização</button>
-      <button class="si" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button>
       <div id="sb-projects-root"></div>
       <button class="si" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
     </div>
@@ -949,7 +956,11 @@ body.icons-failed i[data-fb]::before{
   <div class="pg-hdr"><div><div class="pg-title">Gestão de recursos e capacidade<span class="help-q" data-help="Mostra quem está alocado em mais de um projeto ao mesmo tempo, e se essa soma passou do que uma pessoa consegue dar conta." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Conflitos em múltiplos projetos causam mais atrasos que falta de pessoas (PMI 2025).</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" onclick="R.go('whatif')"><i class="ti ti-arrows-split"></i>What-If IA</button></div></div>
   <div class="card" id="res-portfolio-card">
     <div class="lbl"><i class="ti ti-affiliate"></i>Alocação real entre projetos</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Soma a alocação (%) de cada pessoa em todos os projetos do portfólio, casando por nome — só aparece quem está em mais de um projeto. <strong style="color:var(--t1)">Limitação:</strong> só enxerga projetos já abertos neste navegador (a Equipe não sincroniza com a nuvem ainda).</p>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Soma a alocação (%) de cada pessoa em todos os projetos do portfólio, casando por nome — só aparece quem está em mais de um projeto.</p>
+    <div style="background:var(--amd);border:1px solid var(--ambb);border-radius:var(--r8);padding:10px 12px;margin-bottom:10px;display:flex;gap:8px;align-items:flex-start">
+      <i class="ti ti-alert-triangle" style="color:var(--amb);font-size:16px;flex-shrink:0;margin-top:1px"></i>
+      <div style="font-size:12px;color:var(--t1);line-height:1.55"><strong>Pode não mostrar a sobrecarga real:</strong> a Equipe ainda não sincroniza com a nuvem — este número só enxerga os projetos que já foram abertos neste navegador. Se um projeto onde a pessoa também está alocada nunca foi aberto aqui, a sobrealocação dela não aparece nesta conta.</div>
+    </div>
     <div id="res-portfolio-root"></div>
   </div>
   <div class="card">
@@ -1110,6 +1121,33 @@ body.icons-failed i[data-fb]::before{
   </div>
 
   <div class="g4" id="board-kpis-root" style="margin-bottom:16px"></div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="lbl"><i class="ti ti-chart-bar"></i>Comparativo do portfólio<span class="help-q" data-help="Todos os projetos na mesma escala (0 a 100), pra comparar de verdade — não é só custo, é uma nota que combina prazo, orçamento, equipe e qualidade." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div id="board-compare-root"></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:11.5px;color:var(--t3)">Mostrar:</span>
+        <select class="input" id="board-f-status" style="width:auto;padding:5px 10px;font-size:12px" onchange="Board.render()">
+          <option value="">Todos os projetos</option>
+          <option value="grn">Só saudáveis</option>
+          <option value="amb">Só em atenção</option>
+          <option value="red">Só em risco</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:11.5px;color:var(--t3)">Ordenar por:</span>
+        <select class="input" id="board-f-sort" style="width:auto;padding:5px 10px;font-size:12px" onchange="Board.render()">
+          <option value="risco">Mais em risco primeiro</option>
+          <option value="nome">Nome do projeto</option>
+          <option value="custo">Maior gasto primeiro</option>
+        </select>
+      </div>
+    </div>
+  </div>
 
   <div id="board-cards-root" class="g3"></div>
 
@@ -2403,6 +2441,11 @@ const Cloud = (() => {
     if(wantsBackup && typeof DB !== 'undefined') DB.exportBackup();
     const sure = confirm('⚠️ ATENÇÃO — isso apaga:\n\n• Todos os dados compartilhados na nuvem (WBS, decisões, documentos, orçamento e custos) — para TODAS as pessoas que fizerem login, não só você\n• Os dados de demonstração e projetos salvos neste navegador\n\nContas de usuário e chaves de IA de cada pessoa NÃO são apagadas.\n\nEssa ação não pode ser desfeita. Confirma o reset?');
     if(!sure) { T.show('Reset cancelado — nenhum dado foi apagado.'); return; }
+    // Confirmação reforçada — ação irreversível que apaga dado de TODAS as pessoas da conta, não
+    // só do administrador que clicou. Um segundo "OK" é fácil demais de clicar sem pensar; digitar
+    // a palavra exige uma pausa deliberada antes de uma ação que não tem como desfazer.
+    const typed = prompt('Pra confirmar de vez, digite APAGAR (em maiúsculas) e clique OK:');
+    if(typed !== 'APAGAR') { T.show('Reset cancelado — texto de confirmação não bateu. Nenhum dado foi apagado.'); return; }
     // Registrado ANTES de apagar (e esperado, não fire-and-forget) — se a página recarregar
     // logo em seguida, o evento mais crítico deste módulo não pode depender de vencer a corrida
     // contra o setTimeout do reload. audit_log não está entre as tabelas apagadas abaixo.
@@ -2738,7 +2781,7 @@ const AuditLog = (() => {
     if(!root) return;
     root.innerHTML = `<div style="font-size:12px;color:var(--t3)"><i class="ti ti-loader-2"></i> Carregando…</div>`;
     rows = await Cloud.fetchAuditLog(500);
-    if(!rows.length) { root.innerHTML = `<div style="font-size:12px;color:var(--t3)">Nenhum evento registrado ainda (ou você não tem permissão de admin para vê-los).</div>`; return; }
+    if(!rows.length) { root.innerHTML = `<div style="font-size:12px;color:var(--t3)">Nenhum evento registrado ainda — a trilha de auditoria se preenche sozinha conforme login, mudança de permissão, backup e outras ações sensíveis acontecem.</div>`; return; }
     root.innerHTML = rows.map(r => {
       const cls = ACTION_CLS[r.action] || 'b-neu';
       const label = ACTION_LABEL[r.action] || r.action;
@@ -3440,10 +3483,11 @@ const R = (() => {
       if(el) el.classList.toggle('on', p===id);
     });
     document.querySelectorAll('.ntab[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===id));
-    document.querySelectorAll('.si[data-p], .sb-xray-btn[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===id));
+    document.querySelectorAll('.si[data-p], .sb-xray-btn[data-p], .sb-board-btn[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===id));
     const c = document.getElementById('content');
     if(c) c.scrollTop = 0;
     history.replaceState(null,'','#'+id);
+    if(typeof Notif !== 'undefined') Notif.refreshBadge(); // independente do Dashboard — fica live em toda navegação
     if(typeof Dashboard !== 'undefined') Dashboard.render();
     if(id === 'report' && typeof Report !== 'undefined') Report.render();
     if(id === 'loop' && typeof Loop !== 'undefined') Loop.render();
@@ -3477,7 +3521,7 @@ const Nav = (() => {
     wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento',
     burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe',
     lessons:'sbg-conhecimento', meetings:'sbg-conhecimento', repository:'sbg-conhecimento', chat:'sbg-conhecimento',
-    portfolio:'sbg-projetos', prioritization:'sbg-projetos', board:'sbg-projetos'
+    portfolio:'sbg-projetos', prioritization:'sbg-projetos'
   };
 
   // Comportamento sanfona: só um menu fica aberto por vez — todo menu sem
@@ -5531,8 +5575,9 @@ const Decisions = (() => {
       root.innerHTML = pending.length ? pending.map(d => {
         const sev = SEV[d.severity] || SEV.medio;
         return `<div class="di" ${sev.border?`style="border-color:${sev.border}"`:''}>
-          <div class="di-hdr"><span class="badge ${sev.cls}" style="flex-shrink:0;font-size:11px">${sev.label} · ${d.pct}%</span>${d.origin==='ia'?'<span class="badge" style="flex-shrink:0;background:var(--s2);color:var(--t3)" title="Criado a partir de um documento pelo Raio-X do Projeto"><i class="ti ti-sparkles"></i> IA</span>':''}<span class="di-title">${escapeHtml(d.title)}</span></div>
+          <div class="di-hdr"><span class="badge ${sev.cls}" style="flex-shrink:0;font-size:11px">${sev.label}</span>${d.origin==='ia'?'<span class="badge" style="flex-shrink:0;background:var(--s2);color:var(--t3)" title="Criado a partir de um documento pelo Raio-X do Projeto"><i class="ti ti-sparkles"></i> IA</span>':''}<span class="di-title">${escapeHtml(d.title)}</span></div>
           <p class="di-body">${escapeHtml(d.body)}</p>
+          ${d.origin==='ia' && typeof RaioXHistory !== 'undefined' ? RaioXHistory.accuracyHtml() : ''}
           <div class="di-src">${sourcesHtml(d.sources)}</div>
           <div class="btn-row">${actionButtons(d)}</div>
         </div>`;
@@ -5550,7 +5595,7 @@ const Decisions = (() => {
         const sev = SEV[d.severity] || SEV.medio;
         const statusTxt = { accepted:'✅ Aceita', postponed:'⏱️ Adiada', rejected:'❌ Discordou' }[d.status] || d.status;
         return `<div class="di" style="opacity:.7">
-          <div class="di-hdr"><span class="badge ${sev.cls}" style="flex-shrink:0;font-size:11px">${sev.label} · ${d.pct}%</span>${d.origin==='ia'?'<span class="badge" style="flex-shrink:0;background:var(--s2);color:var(--t3)" title="Criado a partir de um documento pelo Raio-X do Projeto"><i class="ti ti-sparkles"></i> IA</span>':''}<span class="di-title">${escapeHtml(d.title)}</span></div>
+          <div class="di-hdr"><span class="badge ${sev.cls}" style="flex-shrink:0;font-size:11px">${sev.label}</span>${d.origin==='ia'?'<span class="badge" style="flex-shrink:0;background:var(--s2);color:var(--t3)" title="Criado a partir de um documento pelo Raio-X do Projeto"><i class="ti ti-sparkles"></i> IA</span>':''}<span class="di-title">${escapeHtml(d.title)}</span></div>
           <p class="di-body">${escapeHtml(d.body)}</p>
           <div class="btn-row" style="justify-content:space-between;align-items:center">
             <span style="font-size:11.5px;color:var(--t2)">${statusTxt}</span>
@@ -5799,6 +5844,14 @@ const Dashboard = (() => {
   function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   function render() {
+    // Achado num review de performance: o router chama Dashboard.render() em TODA navegação
+    // (não só ao entrar no Dashboard), pra manter os contadores do cabeçalho atualizados — mas
+    // isso também disparava renderKpis/renderAlerts/Forecast.render() (que busca project_snapshots
+    // na nuvem) mesmo navegando pra uma tela sem nenhum elemento "dash-*" visível. Sem isso, cada
+    // clique no menu gerava uma chamada de rede desperdiçada. Os contadores do cabeçalho (badge de
+    // notificação etc.) são atualizados à parte, direto no router — não dependem deste retorno.
+    const pageEl = document.getElementById('p-dashboard');
+    if(!pageEl || !pageEl.classList.contains('on')) return;
     // Título "Portal Nexus — Controle de Estoque" ficava fixo no HTML, escrito quando o app só
     // tinha um projeto — nunca foi religado quando o multi-projeto chegou. Trocar de projeto
     // pelo seletor do topo atualizava o estado ativo de verdade (DB.getActiveProjectId()), mas
@@ -5993,8 +6046,9 @@ const Dashboard = (() => {
     card.style.display = '';
     const chips = (top.sources||[]).map(s => `<span class="chip"><i class="ti ti-${s.ico||'file-text'}"></i>${escapeHtml(s.label)}</span>`).join('');
     root.innerHTML = `
-      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px"><span class="badge b-grn" style="font-size:11px;padding:3px 10px;flex-shrink:0">${top.pct||0}% confiança</span><span style="font-size:14px;font-weight:600;line-height:1.4">${escapeHtml(top.title)}</span></div>
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px"><span class="badge ${top.severity==='crit'?'b-red':top.severity==='alto'?'b-amb':'b-acc'}" style="font-size:11px;padding:3px 10px;flex-shrink:0">${top.severity==='crit'?'CRÍTICO':top.severity==='alto'?'ALTO':'MÉDIO'}</span><span style="font-size:14px;font-weight:600;line-height:1.4">${escapeHtml(top.title)}</span></div>
       <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">${escapeHtml(top.body||'')}</p>
+      ${top.origin==='ia' && typeof RaioXHistory !== 'undefined' ? RaioXHistory.accuracyHtml() : ''}
       ${chips ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${chips}</div>` : ''}
       <div class="btn-row"><button class="btn btn-grn" data-perm="business" onclick="Decisions.resolve('${top.id}','accepted');Dashboard.render()"><i class="ti ti-check"></i>Aceitar e registrar</button><button class="btn btn-acc" onclick="R.go('decisions')"><i class="ti ti-list"></i>Ver todas as decisões</button></div>`;
   }
@@ -6122,8 +6176,9 @@ const Dashboard = (() => {
       setText('dash-kpi-cpi-sub', 'Sem custo real ainda');
     } else {
       setText('dash-kpi-cpi', m.CPI.toFixed(2));
-      setDot('dash-kpi-cpi-dot', m.CPI >= 1 ? 'sdot-grn' : (m.CPI >= 0.9 ? 'sdot-amb' : 'sdot-red'));
-      setText('dash-kpi-cpi-sub', m.CPI >= 1 ? 'Dentro do planejado' : 'Abaixo de 1,0');
+      const anomalo = m.CPI > 1.3 || m.CPI < 0.5;
+      setDot('dash-kpi-cpi-dot', anomalo ? 'sdot-amb' : (m.CPI >= 1 ? 'sdot-grn' : (m.CPI >= 0.9 ? 'sdot-amb' : 'sdot-red')));
+      setText('dash-kpi-cpi-sub', anomalo ? '⚠️ Fora do padrão — confira o lançamento' : (m.CPI >= 1 ? 'Dentro do planejado' : 'Abaixo de 1,0'));
     }
 
     const fmtK = n => { const v = Math.round(n||0); return (Math.abs(v)>=1000 ? 'R$'+Math.round(v/1000)+'k' : 'R$'+v); };
@@ -6541,8 +6596,12 @@ const Budget = (() => {
       setText('bud-kpi-cpi-sub', 'Sem custo real lançado ainda');
     } else {
       setText('bud-kpi-cpi', m.CPI.toFixed(2));
-      setDot('bud-kpi-cpi-dot', m.CPI >= 1 ? 'sdot-grn' : (m.CPI >= 0.9 ? 'sdot-amb' : 'sdot-red'));
-      setText('bud-kpi-cpi-sub', m.CPI >= 1 ? 'Dentro ou acima do planejado' : 'Abaixo de 1,0');
+      // CPI fora de uma faixa plausível (muito abaixo OU muito acima de 1,0) quase sempre indica
+      // erro de lançamento (custo/EV trocados, valor com casa decimal errada), não um desempenho
+      // real — sinalizar isso evita que alguém leia "1.76" como "ótimo" sem checar o dado.
+      const anomalo = m.CPI > 1.3 || m.CPI < 0.5;
+      setDot('bud-kpi-cpi-dot', anomalo ? 'sdot-amb' : (m.CPI >= 1 ? 'sdot-grn' : (m.CPI >= 0.9 ? 'sdot-amb' : 'sdot-red')));
+      setText('bud-kpi-cpi-sub', anomalo ? '⚠️ Fora do padrão — confira o lançamento' : (m.CPI >= 1 ? 'Dentro ou acima do planejado' : 'Abaixo de 1,0'));
     }
 
     setText('bud-kpi-eac', fmtMoneyK(m.EAC));
@@ -7208,12 +7267,14 @@ const Loop = (() => {
 
     card.style.borderColor = '';
     if(titleEl) titleEl.textContent = risk.title;
-    if(badgeEl) { badgeEl.style.display = ''; badgeEl.textContent = `${(risk.severity==='crit'?'CRÍTICO':'ALTO')} · ${risk.pct}%`; }
+    if(badgeEl) { badgeEl.style.display = ''; badgeEl.textContent = (risk.severity==='crit'?'CRÍTICO':'ALTO'); }
     if(chipsEl) chipsEl.innerHTML = (risk.sources||[]).map(s => `<span class="chip"><i class="ti ti-${s.icon}"></i>${escapeHtml(s.label)}</span>`).join('');
     if(bodyEl) bodyEl.textContent = risk.body;
+    const accHtml = (risk.origin==='ia' && typeof RaioXHistory !== 'undefined') ? RaioXHistory.accuracyHtml() : '';
     if(stepsEl) stepsEl.innerHTML = `
+      ${accHtml}
       <div class="ls done"><div class="ls-num"><i class="ti ti-check" style="font-size:12px"></i></div><div class="ls-lbl">Risco detectado nos documentos</div></div>
-      <div class="ls done"><div class="ls-num"><i class="ti ti-check" style="font-size:12px"></i></div><div class="ls-lbl">Impacto quantificado (${risk.pct}% de confiança)</div></div>
+      <div class="ls done"><div class="ls-num"><i class="ti ti-check" style="font-size:12px"></i></div><div class="ls-lbl">Impacto avaliado por severidade (${risk.severity==='crit'?'crítica':'alta'})</div></div>
       <div class="ls active"><div class="ls-num">3</div><div class="ls-lbl">Cronograma revisado gerado pela IA</div></div>
       <div class="ls pend"><div class="ls-num">4</div><div class="ls-lbl">Comunicações redigidas por perfil</div></div>
       <div class="ls pend"><div class="ls-num">5</div><div class="ls-lbl">Decisão registrada na trilha</div></div>`;
@@ -7866,16 +7927,54 @@ const Board = (() => {
 
   let modalCtx = { mode:null, id:null, projectId:null };
 
+  // Dimensões que a diretoria realmente usa pra decidir, segundo a metodologia PMI de
+  // governança de portfólio (cronograma, custo, equipe, qualidade) — não só custo. Reaproveita
+  // o HealthScore que o app já calcula pro Dashboard, só que mostrado aqui na mesma escala
+  // (0-100) em todos os projetos, pra comparar de verdade — em vez de uma barra de custo cujo
+  // tamanho varia com o valor em R$ de cada projeto (o que não é comparável entre projetos).
+  const DIM_KEYS = ['schedule','budget','team','quality'];
+  const DIM_LABEL_SHORT = { schedule:'Prazo', budget:'Custo', team:'Equipe', quality:'Qualidade' };
+
   function projectData(p) {
-    const health = (typeof HealthScore !== 'undefined') ? HealthScore.calculate(HealthScore.computeMetrics(p.id)) : null;
+    const dims = (typeof HealthScore !== 'undefined') ? HealthScore.computeMetrics(p.id) : {};
+    const health = (typeof HealthScore !== 'undefined') ? HealthScore.calculate(dims) : null;
     const status = health != null ? HealthScore.getStatus(health) : { label:'Sem dado', badge:'b-neu' };
+    const statusCode = (status.badge||'b-neu').replace('b-','');
     const bm = (typeof Budget !== 'undefined') ? Budget.computeMetrics(p.id) : null;
     const decisions = DB.getForProject(p.id, 'decisions') || [];
     const criticas = decisions.filter(d => d.status === 'pending' && d.severity === 'crit');
     const vr = (typeof Prioritization !== 'undefined') ? Prioritization.getValueRealization(p.id) : {};
     const hist = (typeof BoardHistory !== 'undefined') ? BoardHistory.list(p.id) : [];
     const lastSuggestion = hist.find(r => r.aiSuggestion && !r.boardDecision) || null;
-    return { project:p, health, status, bm, criticas, vr, lastSuggestion };
+    return { project:p, dims, health, status, statusCode, bm, criticas, vr, lastSuggestion };
+  }
+
+  function currentFilters() {
+    const status = document.getElementById('board-f-status')?.value || '';
+    const sort = document.getElementById('board-f-sort')?.value || 'risco';
+    return { status, sort };
+  }
+
+  function applyFilters(rows) {
+    const { status, sort } = currentFilters();
+    let out = status ? rows.filter(r => r.statusCode === status) : rows.slice();
+    if(sort === 'nome') out.sort((a,b) => a.project.name.localeCompare(b.project.name));
+    else if(sort === 'custo') out.sort((a,b) => (b.bm?b.bm.AC:0) - (a.bm?a.bm.AC:0));
+    else out.sort((a,b) => (a.health==null?-1:a.health) - (b.health==null?-1:b.health)); // risco: pior saúde primeiro
+    return out;
+  }
+
+  function renderComparisonChart(rows) {
+    const root = document.getElementById('board-compare-root');
+    if(!root) return;
+    if(!rows.length) { root.innerHTML = `<div style="text-align:center;padding:16px 10px;color:var(--t3);font-size:12.5px">Nenhum projeto pra comparar com esse filtro.</div>`; return; }
+    const sorted = [...rows].sort((a,b) => (a.health==null?-1:a.health) - (b.health==null?-1:b.health));
+    const color = (r) => r.statusCode==='grn' ? 'var(--grn)' : r.statusCode==='amb' ? 'var(--amb)' : r.statusCode==='red' ? 'var(--red)' : 'var(--t3)';
+    root.innerHTML = sorted.map(r => `<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+      <div style="width:150px;flex-shrink:0;font-size:12px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(r.project.name)}">${escapeHtml(r.project.name)}</div>
+      <div style="flex:1;height:10px;background:var(--s3);border-radius:5px;overflow:hidden"><div style="width:${r.health||0}%;height:100%;background:${color(r)}"></div></div>
+      <div style="width:30px;text-align:right;font-size:11.5px;color:var(--t2);font-variant-numeric:tabular-nums">${r.health==null?'—':r.health}</div>
+    </div>`).join('') + `<div style="font-size:10.5px;color:var(--t3);margin-top:4px">Nota de situação geral (0-100) — combina prazo, orçamento, equipe e qualidade. Quem está pior aparece primeiro.</div>`;
   }
 
   function renderKpis(rows) {
@@ -7899,11 +7998,12 @@ const Board = (() => {
     if(!rows.length) { root.innerHTML = `<div style="text-align:center;padding:20px 10px;color:var(--t3);font-size:12.5px">Nenhum projeto no portfólio ainda.</div>`; return; }
     root.innerHTML = rows.map(r => {
       const p = r.project;
-      const costPct = (r.bm && r.bm.BAC > 0) ? Math.min(Math.round(r.bm.AC / r.bm.BAC * 100), 999) : null;
-      const costColor = costPct == null ? 'var(--t3)' : costPct > 100 ? 'var(--red)' : costPct > 85 ? 'var(--amb)' : 'var(--grn)';
-      const costHtml = costPct == null
-        ? `<div style="font-size:11.5px;color:var(--t3)">Sem orçamento lançado ainda</div>`
-        : `<div style="font-size:11px;color:var(--t2);display:flex;justify-content:space-between;margin-bottom:3px"><span>Gasto até agora</span><span>${fmtMoney(r.bm.AC)} de ${fmtMoney(r.bm.BAC)}</span></div><div class="hbar-track"><div class="hbar-fill" style="width:${Math.min(costPct,100)}%;background:${costColor}"></div></div>`;
+      const dimColor = (v) => v >= 80 ? 'var(--grn)' : v >= 60 ? 'var(--amb)' : 'var(--red)';
+      const dimsHtml = DIM_KEYS.map(k => {
+        const v = Math.max(0, Math.min(100, r.dims[k] ?? 100));
+        return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="width:52px;flex-shrink:0;font-size:10.5px;color:var(--t3)">${DIM_LABEL_SHORT[k]}</span><div style="flex:1;height:6px;background:var(--s3);border-radius:3px;overflow:hidden"><div style="width:${v}%;height:100%;background:${dimColor(v)}"></div></div><span style="width:24px;text-align:right;font-size:10px;color:var(--t3);font-variant-numeric:tabular-nums">${v}</span></div>`;
+      }).join('');
+      const costSub = (r.bm && r.bm.BAC > 0) ? `<div style="font-size:10.5px;color:var(--t3);margin-top:2px">Gasto: ${fmtMoney(r.bm.AC)} de ${fmtMoney(r.bm.BAC)}</div>` : `<div style="font-size:10.5px;color:var(--t3);margin-top:2px">Sem orçamento lançado ainda</div>`;
       const vrLabel = r.vr.status === 'total' ? 'Valor: totalmente entregue' : r.vr.status === 'parcial' ? 'Valor: parcialmente entregue' : r.vr.status === 'nao_iniciado' ? 'Valor: ainda não entregue' : 'Valor: não validado ainda';
       const vrClass = r.vr.status === 'total' ? 'b-grn' : r.vr.status === 'parcial' ? 'b-amb' : 'b-neu';
       const riskHtml = r.criticas.length ? `<div style="font-size:11.5px;color:var(--red);display:flex;align-items:center;gap:5px;margin-top:8px"><i class="ti ti-alert-triangle"></i>${escapeHtml(r.criticas[0].title)}${r.criticas.length>1?` (+${r.criticas.length-1})`:''}</div>` : `<div style="font-size:11.5px;color:var(--t3);display:flex;align-items:center;gap:5px;margin-top:8px"><i class="ti ti-shield-check" style="color:var(--grn)"></i>Sem risco crítico aberto</div>`;
@@ -7912,11 +8012,12 @@ const Board = (() => {
         ? `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:8px 10px;margin-top:10px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><i class="ti ti-${SUG_ICON[sug.aiSuggestion]}"></i><span class="badge ${SUG_CLASS[sug.aiSuggestion]}" style="font-size:10.5px">Sugestão da IA: ${SUG_LABEL[sug.aiSuggestion]}</span></div><div style="font-size:11.5px;color:var(--t2);line-height:1.5">${escapeHtml(sug.aiReasoning)}</div></div>`
         : '';
       return `<div class="card" style="display:flex;flex-direction:column">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
           <div style="font-size:14px;font-weight:600;color:var(--t1)">${escapeHtml(p.name)}</div>
           <span class="badge ${r.status.badge}" style="font-size:10.5px">${escapeHtml(r.status.label)}</span>
         </div>
-        ${costHtml}
+        ${dimsHtml}
+        ${costSub}
         <div style="margin-top:10px"><span class="badge ${vrClass}" style="font-size:10.5px">${vrLabel}</span></div>
         ${riskHtml}
         ${sugHtml}
@@ -7956,8 +8057,10 @@ const Board = (() => {
     if(typeof DB === 'undefined') return;
     if(typeof BoardHistory !== 'undefined') await BoardHistory.sync();
     const rows = DB.listProjects().map(p => projectData(p));
-    renderKpis(rows);
-    renderCards(rows);
+    renderKpis(rows); // KPI strip sempre mostra o portfólio inteiro, sem filtro — é o "big picture"
+    const filtered = applyFilters(rows);
+    renderComparisonChart(filtered);
+    renderCards(filtered);
     renderHistory();
   }
 
@@ -9119,7 +9222,8 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     <div id="wz-panel-1">
       <div class="field-group">
         <div class="field-label">Nome do projeto *</div>
-        <input class="input" id="wz-name" type="text" placeholder="Ex: Portal Nexus 2.0 — Módulo Financeiro">
+        <input class="input" id="wz-name" type="text" placeholder="Ex: Portal Nexus 2.0 — Módulo Financeiro" oninput="this.classList.remove('input-error');document.getElementById('wz-name-err').style.display='none'">
+        <div class="input-error-msg" id="wz-name-err" style="display:none"><i class="ti ti-alert-circle"></i>Informe o nome do projeto pra continuar</div>
       </div>
       <div class="field-group">
         <div class="field-label">Cliente / empresa</div>
@@ -9887,9 +9991,16 @@ const Wizard = (() => {
     if(sub) sub.textContent = subtitles[step-1];
   }
   function next() {
-    if(step === 1 && !document.getElementById('wz-name')?.value.trim()) {
-      T.show('⚠️ Por favor, informe o nome do projeto');
-      return;
+    if(step === 1) {
+      const nameEl = document.getElementById('wz-name');
+      const errEl = document.getElementById('wz-name-err');
+      if(!nameEl?.value.trim()) {
+        nameEl?.classList.add('input-error');
+        if(errEl) errEl.style.display = '';
+        nameEl?.focus();
+        T.show('⚠️ Por favor, informe o nome do projeto');
+        return;
+      }
     }
     if(step < total) { step++; render(); }
     else { create(); }
