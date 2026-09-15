@@ -400,6 +400,29 @@ alter table public.wbs_modules add column if not exists last_edited_at timestamp
 alter table public.wbs_tasks   add column if not exists last_edited_by text;
 alter table public.wbs_tasks   add column if not exists last_edited_at timestamptz;
 
+-- 14) CONFIGURAÇÕES POR PROJETO NA NUVEM (priorização, perfil de PMO, valor entregue) --------
+-- pmoProfile e prioritization sempre foram "um objeto só por projeto" (não uma lista) — ficavam
+-- só no localStorage do navegador. Funcionava, mas sumia ao trocar de navegador/aparelho — e a
+-- Priorização (que sustenta a classificação de projeto por benefício/diretoria) e o novo Valor
+-- Entregue (validação de valor com foco em VMO) precisam sobreviver a isso pra o produto ser
+-- confiável em portfólio. Uma tabela genérica (chave/valor em JSON, por projeto) resolve os três
+-- de uma vez, sem precisar de uma tabela nova pra cada "objeto único" que o app tem ou vier a ter.
+create table if not exists public.project_settings (
+  project_id text not null,
+  key text not null, -- 'prioritization' | 'pmoProfile' | 'valueRealization'
+  value jsonb not null default '{}',
+  updated_at timestamptz not null default now(),
+  updated_by text,
+  primary key (project_id, key)
+);
+
+alter table public.project_settings enable row level security;
+
+create policy "project_settings_read" on public.project_settings for select using (auth.role() = 'authenticated');
+create policy "project_settings_write" on public.project_settings for all
+  using (public.current_role() in ('admin','gerente'))
+  with check (public.current_role() in ('admin','gerente'));
+
 -- =========================================================================
 -- PRONTO. Depois de rodar este script:
 -- 1. Vá em Authentication → Users e crie seu primeiro usuário (ou cadastre pelo
