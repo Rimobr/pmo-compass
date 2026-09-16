@@ -6683,6 +6683,18 @@ const Budget = (() => {
   function fmtMoney(n) { return 'R$' + Math.round(n||0).toLocaleString('pt-BR'); }
   function fmtMoneyK(n) { const v = Math.round(n||0); return Math.abs(v) >= 1000 ? 'R$' + Math.round(v/1000) + 'k' : fmtMoney(v); }
 
+  // Mesma data-referência fixa do WBS — usada só pro IDP/SPI (% esperado hoje pela data planejada).
+  const TODAY = new Date(2026, 5, 20);
+  function parseDate(s) { const [y,m,d] = (s||'2026-01-01').split('-').map(Number); return new Date(y,(m||1)-1,d||1); }
+  function expectedPctToday(start, end) {
+    if(!start || !end) return null;
+    const s = parseDate(start).getTime(), e = parseDate(end).getTime(), t = TODAY.getTime();
+    if(e <= s) return null;
+    if(t <= s) return 0;
+    if(t >= e) return 100;
+    return Math.round(((t - s) / (e - s)) * 100);
+  }
+
   function ensureLoaded() { if(!lines) lines = DB.get('budgetLines'); if(!actuals) actuals = DB.get('costActuals'); return { lines, actuals }; }
   function resetCache() { lines = null; actuals = null; }
   function persistLines() { DB.set('budgetLines', lines); }
@@ -6713,14 +6725,29 @@ const Budget = (() => {
       if(m) EV += (l.plannedValue||0) * ((m.pct||0) / 100);
     });
 
+    // PV (Valor Planejado) — mesmo peso financeiro do EV acima (linha de orçamento vinculada),
+    // mas usando o % que o módulo DEVERIA ter hoje (interpolação linear entre início e fim
+    // planejados), não o % real. EV/PV = IDP (SPI), o índice de desvio de prazo do artigo de
+    // referência (artia.com/blog/indicadores-de-projetos) — calculado com peso financeiro real,
+    // não um número solto. Módulo sem datas cai pro próprio % real (neutro: nem atrasa nem adianta).
+    let PV = 0;
+    baseLines.forEach(l => {
+      if(!l.wbsModuleId) return;
+      const m = wbs.find(x => x.id === l.wbsModuleId);
+      if(!m) return;
+      const expected = expectedPctToday(m.start, m.end);
+      PV += (l.plannedValue||0) * ((expected == null ? (m.pct||0) : expected) / 100);
+    });
+
     const CPI = AC > 0 ? EV / AC : null;
+    const SPI = PV > 0 ? EV / PV : null;
     const EAC = (CPI && CPI > 0) ? AC + (BAC - EV) / CPI : BAC;
     const consumoPct = BAC > 0 ? Math.round((AC / BAC) * 100) : 0;
     // Reserva é consumida por mudanças de escopo já aprovadas — reaproveita o dado real de Scope Changes.
     const reserveConsumed = scope.filter(s => s.status === 'approved').reduce((s,x) => s + (x.impactCost||0), 0);
     const reserveRemaining = reserveInitial - reserveConsumed;
 
-    return { BAC, reserveInitial, AC, committed, EV, CPI, EAC, consumoPct, reserveConsumed, reserveRemaining, unlinkedCount, hasLines: ls.length > 0 };
+    return { BAC, reserveInitial, AC, committed, EV, PV, CPI, SPI, EAC, consumoPct, reserveConsumed, reserveRemaining, unlinkedCount, hasLines: ls.length > 0 };
   }
 
   function render() {
@@ -8125,10 +8152,32 @@ const Board = (() => {
   // status — Red/Amber/Green), segundo a prática comum de PMO — um "cockpit" com todas as
   // dimensões lado a lado, pra escalar bem mesmo com muitos projetos (cada linha é só uma
   // tabela compacta, ao contrário dos cards, que crescem em altura por projeto).
+  // Prazo e Custo mostram o IDP/SPI e o IDC/CPI de verdade (razão VA/VP e VA/CR), os mesmos
+  // índices do artigo de referência (artia.com/blog/indicadores-de-projetos) — não uma nota de
+  // 0 a 100 disfarçada. Equipe e Qualidade continuam como proxy interno (0-100), porque não há
+  // indicador padrão do PMI pra eles nos dados que o app coleta hoje — por isso cada coluna tem
+  // um "?" explicando exatamente a conta, como pedido: "se usar pontos, precisa explicar o cálculo".
   const RISK_COL = 'risk';
-  const HEAT_COLS = [...DIM_KEYS, RISK_COL, 'overall'];
+  const RATIO_COLS = ['schedule', 'budget'];
+  const PROXY_COLS = ['team', 'quality'];
+  const HEAT_COLS = [...RATIO_COLS, ...PROXY_COLS, RISK_COL, 'overall'];
   const HEAT_COL_LABEL = { ...DIM_LABEL_SHORT, [RISK_COL]:'Risco', overall:'Geral' };
+  const HEAT_COL_HELP = {
+    schedule: 'IDP / SPI (Índice de Desempenho de Prazo) = Valor Agregado ÷ Valor Planejado. Valor Agregado é o valor (em R$) das entregas da WBS vinculadas a orçamento que já foram concluídas; Valor Planejado é o valor que DEVERIA estar concluído hoje, pela data prevista de cada entrega. 1,00 = no prazo. Acima de 1 = adiantado. Abaixo = atrasado.',
+    budget: 'IDC / CPI (Índice de Desempenho de Custo) = Valor Agregado ÷ Custo Real. 1,00 = gastando exatamente o combinado pelo que já foi entregue. Acima de 1 = gastando menos que o previsto. Abaixo = gastando mais.',
+    team: 'Não é um indicador oficial do PMI — é um proxy interno (0-100): 100 menos 30 pontos para cada pessoa da equipe com carga de trabalho crítica (≥85%). Serve como sinal de sobrecarga, não de desempenho financeiro.',
+    quality: 'Não é um indicador oficial do PMI — é um proxy interno (0-100): percentual de ações combinadas em atas de reunião que já foram concluídas. Serve como sinal de execução do que foi combinado.',
+    [RISK_COL]: 'Número de decisões críticas ainda pendentes neste projeto (Decisões IA + registradas manualmente). 0 = saudável. 1-2 = atenção. 3 ou mais = crítico.',
+    overall: 'Nota composta (0-100): média ponderada de prazo 25%, orçamento 20%, equipe 20%, qualidade 15%, aprendizado 10% e controle de escopo 10% — não é a média simples das colunas ao lado. Mesma nota usada no Dashboard de cada projeto.'
+  };
 
+  function ratioCode(v) {
+    if(v == null) return null;
+    if(v > 1.3 || v < 0.5) return 'amb'; // fora de faixa plausível — quase sempre erro de lançamento, não desempenho real
+    if(v >= 1) return 'grn';
+    if(v >= 0.9) return 'amb';
+    return 'red';
+  }
   function heatDimCode(v) { return v == null ? null : v >= 80 ? 'grn' : v >= 60 ? 'amb' : 'red'; }
   function heatRiskCode(n) { return n === 0 ? 'grn' : n <= 2 ? 'amb' : 'red'; }
   function heatCellStyle(code) {
@@ -8143,15 +8192,15 @@ const Board = (() => {
     if(!root) return;
     if(!rows.length) { root.innerHTML = `<div style="text-align:center;padding:16px 10px;color:var(--t3);font-size:12.5px">Nenhum projeto pra mostrar com esse filtro.</div>`; return; }
     const sorted = [...rows].sort((a,b) => (a.health==null?-1:a.health) - (b.health==null?-1:b.health));
-    const headHtml = `<tr><th style="text-align:left;padding:6px 10px;font-size:10.5px;color:var(--t3);font-weight:600">Projeto</th>${HEAT_COLS.map(c => `<th style="padding:6px 6px;font-size:10.5px;color:var(--t3);font-weight:600;text-align:center;white-space:nowrap">${HEAT_COL_LABEL[c]}</th>`).join('')}</tr>`;
+    const headHtml = `<tr><th style="text-align:left;padding:6px 10px;font-size:10.5px;color:var(--t3);font-weight:600">Projeto</th>${HEAT_COLS.map(c => `<th style="padding:6px 6px;font-size:10.5px;color:var(--t3);font-weight:600;text-align:center;white-space:nowrap">${HEAT_COL_LABEL[c]}<span class="help-q" data-help="${escapeHtml(HEAT_COL_HELP[c])}" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></th>`).join('')}</tr>`;
     const bodyHtml = sorted.map(r => {
       const cells = HEAT_COLS.map(c => {
-        let val, code;
-        if(c === RISK_COL) { val = r.criticas.length; code = heatRiskCode(val); }
-        else if(c === 'overall') { val = r.health; code = r.statusCode; }
-        else { val = r.dims[c]; code = heatDimCode(val); }
+        let val, code, display;
+        if(c === RISK_COL) { val = r.criticas.length; code = heatRiskCode(val); display = String(val); }
+        else if(c === 'overall') { val = r.health; code = r.statusCode; display = val == null ? '—' : val; }
+        else if(RATIO_COLS.includes(c)) { val = r.bm ? r.bm[c === 'schedule' ? 'SPI' : 'CPI'] : null; code = ratioCode(val); display = val == null ? '—' : val.toFixed(2); }
+        else { val = r.dims[c]; code = heatDimCode(val); display = val == null ? '—' : val; }
         const st = heatCellStyle(code);
-        const display = c === RISK_COL ? String(val) : (val == null ? '—' : val);
         return `<td style="padding:3px 4px;text-align:center"><div style="background:${st.bg};color:${st.fg};border:1px solid ${st.bd};border-radius:var(--r6);padding:6px 4px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums">${display}</div></td>`;
       }).join('');
       return `<tr class="kpi-link" role="button" tabindex="0" aria-label="Abrir ${escapeHtml(r.project.name)}" onclick="DB.switchProject('${r.project.id}');R.go('dashboard')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();DB.switchProject('${r.project.id}');R.go('dashboard')}">
@@ -8159,7 +8208,7 @@ const Board = (() => {
         ${cells}
       </tr>`;
     }).join('');
-    root.innerHTML = `<table style="width:100%;border-collapse:collapse;min-width:520px">
+    root.innerHTML = `<table style="width:100%;border-collapse:collapse;min-width:560px">
       <thead>${headHtml}</thead>
       <tbody>${bodyHtml}</tbody>
     </table>
