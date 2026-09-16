@@ -1123,6 +1123,11 @@ body.icons-failed i[data-fb]::before{
   <div class="g4" id="board-kpis-root" style="margin-bottom:16px"></div>
 
   <div class="card" style="margin-bottom:16px">
+    <div class="lbl"><i class="ti ti-grid-dots"></i>Farol do portfólio<span class="help-q" data-help="Formato de semáforo/mapa de calor — o jeito mais usado em reporte de PMO pra diretoria, porque mostra prazo, custo, equipe, qualidade e risco de todos os projetos lado a lado, num único olhar. Verde = saudável, amarelo = atenção, vermelho = crítico. Clique num projeto pra abrir o Dashboard dele." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div id="board-heatmap-root" style="overflow-x:auto"></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
     <div class="lbl"><i class="ti ti-chart-bar"></i>Comparativo do portfólio<span class="help-q" data-help="Todos os projetos na mesma escala (0 a 100), pra comparar de verdade — não é só custo, é uma nota que combina prazo, orçamento, equipe e qualidade." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div id="board-compare-root"></div>
   </div>
@@ -8116,6 +8121,55 @@ const Board = (() => {
     return out;
   }
 
+  // Farol/mapa de calor: formato de referência em reporte de portfólio pra diretoria (RAG
+  // status — Red/Amber/Green), segundo a prática comum de PMO — um "cockpit" com todas as
+  // dimensões lado a lado, pra escalar bem mesmo com muitos projetos (cada linha é só uma
+  // tabela compacta, ao contrário dos cards, que crescem em altura por projeto).
+  const RISK_COL = 'risk';
+  const HEAT_COLS = [...DIM_KEYS, RISK_COL, 'overall'];
+  const HEAT_COL_LABEL = { ...DIM_LABEL_SHORT, [RISK_COL]:'Risco', overall:'Geral' };
+
+  function heatDimCode(v) { return v == null ? null : v >= 80 ? 'grn' : v >= 60 ? 'amb' : 'red'; }
+  function heatRiskCode(n) { return n === 0 ? 'grn' : n <= 2 ? 'amb' : 'red'; }
+  function heatCellStyle(code) {
+    return code === 'grn' ? { bg:'var(--gd)', fg:'var(--grn)', bd:'var(--gb)' }
+      : code === 'amb' ? { bg:'var(--amd)', fg:'var(--amb)', bd:'var(--ambb)' }
+      : code === 'red' ? { bg:'var(--rd)', fg:'var(--red)', bd:'var(--rb)' }
+      : { bg:'var(--s2)', fg:'var(--t3)', bd:'var(--b1)' };
+  }
+
+  function renderHeatmap(rows) {
+    const root = document.getElementById('board-heatmap-root');
+    if(!root) return;
+    if(!rows.length) { root.innerHTML = `<div style="text-align:center;padding:16px 10px;color:var(--t3);font-size:12.5px">Nenhum projeto pra mostrar com esse filtro.</div>`; return; }
+    const sorted = [...rows].sort((a,b) => (a.health==null?-1:a.health) - (b.health==null?-1:b.health));
+    const headHtml = `<tr><th style="text-align:left;padding:6px 10px;font-size:10.5px;color:var(--t3);font-weight:600">Projeto</th>${HEAT_COLS.map(c => `<th style="padding:6px 6px;font-size:10.5px;color:var(--t3);font-weight:600;text-align:center;white-space:nowrap">${HEAT_COL_LABEL[c]}</th>`).join('')}</tr>`;
+    const bodyHtml = sorted.map(r => {
+      const cells = HEAT_COLS.map(c => {
+        let val, code;
+        if(c === RISK_COL) { val = r.criticas.length; code = heatRiskCode(val); }
+        else if(c === 'overall') { val = r.health; code = r.statusCode; }
+        else { val = r.dims[c]; code = heatDimCode(val); }
+        const st = heatCellStyle(code);
+        const display = c === RISK_COL ? String(val) : (val == null ? '—' : val);
+        return `<td style="padding:3px 4px;text-align:center"><div style="background:${st.bg};color:${st.fg};border:1px solid ${st.bd};border-radius:var(--r6);padding:6px 4px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums">${display}</div></td>`;
+      }).join('');
+      return `<tr class="kpi-link" role="button" tabindex="0" aria-label="Abrir ${escapeHtml(r.project.name)}" onclick="DB.switchProject('${r.project.id}');R.go('dashboard')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();DB.switchProject('${r.project.id}');R.go('dashboard')}">
+        <td style="padding:6px 10px;font-size:12.5px;color:var(--t1);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(r.project.name)}">${escapeHtml(r.project.name)}</td>
+        ${cells}
+      </tr>`;
+    }).join('');
+    root.innerHTML = `<table style="width:100%;border-collapse:collapse;min-width:520px">
+      <thead>${headHtml}</thead>
+      <tbody>${bodyHtml}</tbody>
+    </table>
+    <div style="font-size:10.5px;color:var(--t3);margin-top:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:var(--grn);display:inline-block"></span>Saudável</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:var(--amb);display:inline-block"></span>Atenção</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:var(--red);display:inline-block"></span>Crítico</span>
+    </div>`;
+  }
+
   function renderComparisonChart(rows) {
     const root = document.getElementById('board-compare-root');
     if(!root) return;
@@ -8211,6 +8265,7 @@ const Board = (() => {
     const rows = DB.listProjects().map(p => projectData(p));
     renderKpis(rows); // KPI strip sempre mostra o portfólio inteiro, sem filtro — é o "big picture"
     const filtered = applyFilters(rows);
+    renderHeatmap(filtered);
     renderComparisonChart(filtered);
     renderCards(filtered);
     renderHistory();
