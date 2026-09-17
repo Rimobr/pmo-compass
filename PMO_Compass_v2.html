@@ -572,6 +572,10 @@ body[data-role="manutencao"] .role-badge{background:var(--amd);color:var(--amb)}
 <!-- ■ MODULE: core/print-pwa -->
 <style data-module="core/print-pwa">
 @media print {
+  /* Sem isso, o navegador some com toda cor de fundo ao imprimir (padrão "economizar tinta") —
+     e o Farol do Portfólio, os badges de status e os pontos de saúde viram só texto sem cor,
+     inúteis num relatório pra diretoria que é justamente pra ler de longe pela cor. */
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
   .topbar,.sidebar,.btn-row,.chat-input-row,.chat-sugs,.ci-row{display:none!important}
   .page{display:block!important;padding:0}
   .app-shell{height:auto!important}
@@ -580,7 +584,9 @@ body[data-role="manutencao"] .role-badge{background:var(--amd);color:var(--amb)}
   body{background:white!important;color:black!important}
   .card{border:1px solid #ddd!important;background:white!important}
   .t1{color:#000!important} .t2{color:#444!important} .t3{color:#888!important}
+  .print-only{display:block!important}
 }
+.print-only{display:none}
 </style>
 
 <!-- ■ MODULE: ui/wizard-styles -->
@@ -957,9 +963,9 @@ body.icons-failed i[data-fb]::before{
   <div class="card" id="res-portfolio-card">
     <div class="lbl"><i class="ti ti-affiliate"></i>Alocação real entre projetos</div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Soma a alocação (%) de cada pessoa em todos os projetos do portfólio, casando por nome — só aparece quem está em mais de um projeto.</p>
-    <div style="background:var(--amd);border:1px solid var(--ambb);border-radius:var(--r8);padding:10px 12px;margin-bottom:10px;display:flex;gap:8px;align-items:flex-start">
+    <div id="res-portfolio-warning" style="background:var(--amd);border:1px solid var(--ambb);border-radius:var(--r8);padding:10px 12px;margin-bottom:10px;display:flex;gap:8px;align-items:flex-start">
       <i class="ti ti-alert-triangle" style="color:var(--amb);font-size:16px;flex-shrink:0;margin-top:1px"></i>
-      <div style="font-size:12px;color:var(--t1);line-height:1.55"><strong>Pode não mostrar a sobrecarga real:</strong> a Equipe ainda não sincroniza com a nuvem — este número só enxerga os projetos que já foram abertos neste navegador. Se um projeto onde a pessoa também está alocada nunca foi aberto aqui, a sobrealocação dela não aparece nesta conta.</div>
+      <div style="font-size:12px;color:var(--t1);line-height:1.55"><strong>Pode não mostrar a sobrecarga real:</strong> sem estar conectado à nuvem, este número só enxerga os projetos que já foram abertos neste navegador. Se um projeto onde a pessoa também está alocada nunca foi aberto aqui, a sobrealocação dela não aparece nesta conta. Conecte-se em Configurações → Nuvem &amp; Automação pra ver o portfólio inteiro.</div>
     </div>
     <div id="res-portfolio-root"></div>
   </div>
@@ -1047,6 +1053,12 @@ body.icons-failed i[data-fb]::before{
 <!-- ■ MODULE: pages/report -->
 <section class="page" id="p-report" data-module="pages/report">
   <div class="pg-hdr"><div><div class="pg-title">Status Report — Gerado a partir dos dados reais<span class="help-q" data-help="Um relatório de status pronto, montado a partir do que já está cadastrado no sistema — não é preciso escrever do zero toda semana." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub" id="report-sub">Baseado nos documentos indexados · Linguagem adaptada por público-alvo</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" onclick="Report.regenerate()"><i class="ti ti-sparkles"></i>Regenerar</button><button class="btn btn-sm" onclick="T.show('🔒 Versão futura — envio por e-mail exige um provedor pago configurado no servidor (roadmap P7). Por enquanto, use PDF e envie por fora.')"><i class="ti ti-send"></i>Enviar</button><button class="btn btn-sm" onclick="window.print()"><i class="ti ti-download"></i>PDF</button></div></div>
+  <!-- Só aparece no PDF/impressão — a tela some com topbar/sidebar (onde ficam nome do projeto e
+       data), então sem isso o relatório impresso saía sem dizer de qual projeto ou de quando é. -->
+  <div class="print-only" id="report-print-header" style="margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #000">
+    <div style="font-size:18px;font-weight:700" id="report-print-project"></div>
+    <div style="font-size:12px;color:#444;margin-top:2px" id="report-print-meta"></div>
+  </div>
   <div id="report-root"></div>
 </section>
 
@@ -1117,7 +1129,14 @@ body.icons-failed i[data-fb]::before{
 <section class="page" id="p-board" data-module="pages/board">
   <div class="pg-hdr">
     <div><div class="pg-title">Painel da Diretoria<span class="help-q" data-help="Uma visão rápida e sem jargão de todos os projetos — pra decidir seguir, pausar ou escalar. Cada sugestão da IA é baseada em dado já calculado no sistema, nunca um palpite solto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Visão rápida do portfólio pra decidir — sem precisar entender os detalhes técnicos.</div></div>
-    <div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Board.generateSuggestions()"><i class="ti ti-sparkles"></i>Atualizar sugestões da IA</button></div>
+    <div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Board.generateSuggestions()"><i class="ti ti-sparkles"></i>Atualizar sugestões da IA</button><button class="btn btn-sm" onclick="window.print()"><i class="ti ti-download"></i>PDF</button></div>
+  </div>
+
+  <!-- Só aparece no PDF/impressão — mesma lógica do Status Report: sem isso, o portfólio impresso
+       saía sem nome da empresa nem data de geração (topbar some na impressão). -->
+  <div class="print-only" id="board-print-header" style="margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #000">
+    <div style="font-size:18px;font-weight:700" id="board-print-title"></div>
+    <div style="font-size:12px;color:#444;margin-top:2px" id="board-print-meta"></div>
   </div>
 
   <div class="g4" id="board-kpis-root" style="margin-bottom:16px"></div>
@@ -2282,6 +2301,7 @@ const Cloud = (() => {
       if(error) throw error;
       Auth.setFromCloud((profile && profile.name) || session.user.email, (profile && profile.role) || 'consulta');
       await syncProjects();
+      await syncAllTeamMembers();
       await pullAll();
     } catch(e) {
       console.warn('Supabase: falha ao ler perfil — caindo para o perfil mais restrito', e);
@@ -2326,14 +2346,15 @@ const Cloud = (() => {
     // de um projeto na tela de outro. Antes disso não existia esse filtro: era um pool só.
     const pid = DB.getActiveProjectId();
     try {
-      const [mods, tasks, decs, docs, budLines, costActs, settings] = await Promise.all([
+      const [mods, tasks, decs, docs, budLines, costActs, settings, team] = await Promise.all([
         client.from('wbs_modules').select('*').eq('project_id', pid),
         client.from('wbs_tasks').select('*').eq('project_id', pid),
         client.from('decisions').select('*').eq('project_id', pid),
         client.from('documents').select('*').eq('project_id', pid),
         client.from('budget_lines').select('*').eq('project_id', pid),
         client.from('cost_actuals').select('*').eq('project_id', pid),
-        client.from('project_settings').select('*').eq('project_id', pid)
+        client.from('project_settings').select('*').eq('project_id', pid),
+        client.from('team_members').select('*').eq('project_id', pid)
       ]);
       if(mods.data) {
         const wbs = mods.data.map(m => ({
@@ -2365,6 +2386,11 @@ const Cloud = (() => {
         if(typeof Prioritization !== 'undefined') Prioritization.render();
         if(typeof PmoProfiles !== 'undefined') PmoProfiles.render();
       }
+      if(team.data) {
+        DB.set('team', team.data.map(x => ({ id:x.id, name:x.name, role:x.role||'', allocationPct:x.allocation_pct, workloadPct:x.workload_pct, signals:x.signals||[], recommendation:x.recommendation||'', actionPage:x.action_page||'' })));
+        if(typeof Burnout !== 'undefined') { Burnout.resetCache(); Burnout.render(); }
+        if(typeof Resources !== 'undefined') Resources.render();
+      }
       T.show('☁️ Dados sincronizados do Supabase.');
     } catch(e) { console.warn('Supabase: falha ao sincronizar', e); T.show('⚠️ Não consegui buscar os dados mais recentes da nuvem — mostrando o que já estava salvo neste navegador.'); }
   }
@@ -2382,6 +2408,32 @@ const Cloud = (() => {
   }
   function deleteWbsModule(id) { if(client && session) track(client.from('wbs_modules').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
   function deleteWbsTask(id) { if(client && session) track(client.from('wbs_tasks').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
+
+  function pushTeamMember(m) {
+    if(!client || !session) return;
+    track(client.from('team_members').upsert({ id:m.id, name:m.name, role:m.role||null, allocation_pct:m.allocationPct, workload_pct:m.workloadPct, signals:m.signals||[], recommendation:m.recommendation||null, action_page:m.actionPage||null, project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed));
+  }
+  function deleteTeamMember(id) { if(client && session) track(client.from('team_members').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
+  // Alocação real entre projetos (Resources/DB.computePortfolioAllocation) lê o 'team' LOCAL de
+  // cada projeto — sem sincronizar a equipe de TODOS os projetos pro localStorage, essa conta só
+  // enxergava sobrealocação se cada projeto já tivesse sido aberto neste navegador. Busca
+  // team_members SEM filtro de projeto (RLS de has_project_access já restringe ao que der certo) e
+  // popula o cache local de cada projeto — chamada uma vez por conexão, junto de syncProjects().
+  async function syncAllTeamMembers() {
+    if(!client || !session || typeof DB === 'undefined') return;
+    try {
+      const { data, error } = await client.from('team_members').select('*');
+      if(error || !data) return;
+      const byProject = new Map();
+      data.forEach(x => {
+        const row = { id:x.id, name:x.name, role:x.role||'', allocationPct:x.allocation_pct, workloadPct:x.workload_pct, signals:x.signals||[], recommendation:x.recommendation||'', actionPage:x.action_page||'' };
+        if(!byProject.has(x.project_id)) byProject.set(x.project_id, []);
+        byProject.get(x.project_id).push(row);
+      });
+      DB.listProjects().forEach(p => DB.setForProject(p.id, 'team', byProject.get(p.id) || []));
+      if(typeof Burnout !== 'undefined') Burnout.resetCache();
+    } catch(e) { console.warn('Supabase: falha ao sincronizar equipe do portfólio', e); }
+  }
 
   // "Objeto único por projeto" (prioritization, pmoProfile, valueRealization) — recebe o
   // projectId explícito porque Priorização edita o portfólio inteiro de uma tela só, sem trocar
@@ -2545,6 +2597,7 @@ const Cloud = (() => {
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole,
     saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, doSignUp, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
+    pushTeamMember, deleteTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument,
     pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual, resetForNewUsers, clearProjectData,
     pushAuditEvent, fetchAuditLog, pushSnapshot, fetchSnapshots, pushProjectSetting,
@@ -7098,16 +7151,19 @@ const Burnout = (() => {
     const rec = document.getElementById('burnout-f-rec').value.trim();
     if(!name) { T.show('⚠️ Dê um nome para o membro.'); return; }
 
+    let saved;
     if(modalCtx.mode === 'add') {
-      data.push({ id:genId(), name, role, allocationPct:alloc, workloadPct:pct, signals, recommendation:rec, actionPage:'' });
+      saved = { id:genId(), name, role, allocationPct:alloc, workloadPct:pct, signals, recommendation:rec, actionPage:'' };
+      data.push(saved);
       T.show('✅ Membro adicionado!');
     } else {
-      const m = data.find(x => x.id === modalCtx.id);
-      if(m) { m.name=name; m.role=role; m.allocationPct=alloc; m.workloadPct=pct; m.signals=signals; m.recommendation=rec; }
+      saved = data.find(x => x.id === modalCtx.id);
+      if(saved) { saved.name=name; saved.role=role; saved.allocationPct=alloc; saved.workloadPct=pct; saved.signals=signals; saved.recommendation=rec; }
       T.show('✅ Atualizado!');
       if(statusOf(pct) === 'critico') Trail.log(`${name} entrou em zona crítica de sobrecarga (${pct}%)`, Auth.getName(), 'Atenção necessária', 'b-red');
     }
     persist();
+    if(saved && typeof Cloud !== 'undefined') Cloud.pushTeamMember(saved);
     render();
     closeModal();
   }
@@ -7116,8 +7172,10 @@ const Burnout = (() => {
     if(!Auth.guard('business')) return;
     ensureLoaded();
     if(!confirm('Remover este membro do radar?')) return;
-    data = data.filter(x => x.id !== modalCtx.id);
+    const removedId = modalCtx.id;
+    data = data.filter(x => x.id !== removedId);
     persist();
+    if(typeof Cloud !== 'undefined') Cloud.deleteTeamMember(removedId);
     render();
     closeModal();
     T.show('🗑️ Membro removido.');
@@ -7350,6 +7408,12 @@ const Report = (() => {
 
     const sub = document.getElementById('report-sub');
     if(sub) sub.textContent = `Baseado em ${d.repository.length} documentos indexados · Gerado agora`;
+
+    const activeProj = (typeof DB !== 'undefined') ? (DB.listProjects().find(p => p.id === DB.getActiveProjectId()) || {}) : {};
+    const projEl = document.getElementById('report-print-project');
+    const metaEl = document.getElementById('report-print-meta');
+    if(projEl) projEl.textContent = `${BRAND.name} — ${activeProj.name || 'Projeto'}`;
+    if(metaEl) metaEl.textContent = `${activeProj.client ? activeProj.client + ' · ' : ''}Status Report gerado em ${new Date().toLocaleString('pt-BR')}`;
 
     // Resumo executivo
     let resumo = `O projeto está com saúde geral estimada de <strong>${d.saude}/100</strong>, aderência de cronograma (WBS) de <strong>${d.aderencia}%</strong>. `;
@@ -8311,6 +8375,10 @@ const Board = (() => {
   async function render() {
     if(typeof DB === 'undefined') return;
     if(typeof BoardHistory !== 'undefined') await BoardHistory.sync();
+    const titleEl = document.getElementById('board-print-title');
+    const metaEl = document.getElementById('board-print-meta');
+    if(titleEl) titleEl.textContent = `${BRAND.name} — Painel da Diretoria`;
+    if(metaEl) metaEl.textContent = `Portfólio completo · gerado em ${new Date().toLocaleString('pt-BR')}`;
     const rows = DB.listProjects().map(p => projectData(p));
     renderKpis(rows); // KPI strip sempre mostra o portfólio inteiro, sem filtro — é o "big picture"
     const filtered = applyFilters(rows);
@@ -8561,6 +8629,8 @@ const Resources = (() => {
   }
 
   function render() {
+    const warnEl = document.getElementById('res-portfolio-warning');
+    if(warnEl) warnEl.style.display = (typeof Cloud !== 'undefined' && Cloud.isSignedIn()) ? 'none' : '';
     const team = DB.get('team') || [];
     const root = document.getElementById('res-list-root');
     if(root) {

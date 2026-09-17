@@ -532,6 +532,36 @@ create policy "project_access_self_grant" on public.project_access for insert
 --    e na policy de ESCRITA de cada uma, acrescentar "and public.has_project_access(project_id)"
 --    à condição que já existia (current_role() in ('admin','gerente')).
 
+-- 17) EQUIPE / CAPACIDADE (team_members) — sincroniza com a nuvem -------------------------------
+-- Até aqui, "quem está na equipe de cada projeto" só existia em localStorage — cada navegador com
+-- sua própria cópia, nunca sincronizada. Isso quebrava silenciosamente a visão de "Alocação real
+-- entre projetos" (Resources / DB.computePortfolioAllocation): só enxergava sobrealocação de uma
+-- pessoa se TODOS os projetos onde ela está tivessem sido abertos NESTE MESMO navegador. Criada já
+-- com RBAC por projeto desde o início (has_project_access já existe — seção 16), sem o rollout em
+-- duas fases que as tabelas mais antigas exigiram.
+create table if not exists public.team_members (
+  id text primary key,
+  project_id text not null references public.projects(id) on delete cascade,
+  name text not null,
+  role text,
+  allocation_pct int,
+  workload_pct int,
+  signals jsonb default '[]'::jsonb,
+  recommendation text,
+  action_page text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.team_members enable row level security;
+
+create policy "team_members_read" on public.team_members for select
+  using (auth.role() = 'authenticated' and public.has_project_access(project_id));
+create policy "team_members_write" on public.team_members for all
+  using (public.current_role() in ('admin','gerente') and public.has_project_access(project_id))
+  with check (public.current_role() in ('admin','gerente') and public.has_project_access(project_id));
+
+create index if not exists team_members_project_id_idx on public.team_members(project_id);
+
 -- =========================================================================
 -- PRONTO. Depois de rodar este script:
 -- 1. Vá em Authentication → Users e crie seu primeiro usuário (ou cadastre pelo
