@@ -582,7 +582,13 @@ body[data-role="manutencao"] .role-badge{background:var(--amd);color:var(--amb)}
      inúteis num relatório pra diretoria que é justamente pra ler de longe pela cor. */
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
   .topbar,.sidebar,.btn-row,.chat-input-row,.chat-sugs,.ci-row{display:none!important}
-  .page{display:block!important;padding:0}
+  /* .page{display:none} normalmente esconde toda página exceto a ativa (.page.on{display:flex}
+     faz isso na tela) — mas essa regra só pega ATIVA/INATIVA por classe, e o `!important` de
+     impressão anterior forçava display:block em TODAS elas, sem exceção. Resultado: imprimir
+     "gerava" as ~24 páginas do app empilhadas, quase todas em branco (só a ativa tem conteúdo
+     renderizado). Corrige mantendo as inativas escondidas e só a `.on` visível na impressão. */
+  .page{display:none!important;padding:0}
+  .page.on{display:block!important}
   .app-shell{height:auto!important}
   .app-body{display:block!important}
   .content{overflow:visible!important}
