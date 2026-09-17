@@ -273,6 +273,11 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 .sb-board-btn:hover{background:rgba(139,92,246,.18)}
 .sb-board-btn.on{background:var(--pur);color:#fff;border-color:var(--pur)}
 .sb-board-btn.on i{color:inherit}
+.sb-exec-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;margin-bottom:4px;border-radius:var(--r8);border:1px solid var(--gb);background:var(--gd);color:var(--grn);font-size:12.5px;font-weight:600;cursor:pointer;text-align:left}
+.sb-exec-btn i{font-size:15px;flex-shrink:0}
+.sb-exec-btn:hover{background:rgba(63,185,80,.18)}
+.sb-exec-btn.on{background:var(--grn);color:#fff;border-color:var(--grn)}
+.sb-exec-btn.on i{color:inherit}
 </style>
 <style>.page{padding:20px;display:none;flex-direction:column;gap:14px;animation:pgIn .15s ease}
 .page.on{display:flex}
@@ -759,6 +764,7 @@ body.icons-failed i[data-fb]::before{
       <button class="ntab" data-p="chat" onclick="R.go('chat')"><i class="ti ti-message-2"></i>Chat IA</button>
       <button class="ntab" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
       <button class="ntab" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Diretoria</button>
+      <button class="ntab" data-p="execview" onclick="R.go('execview')"><i class="ti ti-chart-infographic"></i>Executiva</button>
       <button class="ntab" data-p="settings" onclick="R.go('settings')"><i class="ti ti-settings"></i>Config.</button>
       <button class="ntab" data-p="help" onclick="R.go('help')"><i class="ti ti-help-circle"></i>Ajuda</button>
     </div>
@@ -781,6 +787,7 @@ body.icons-failed i[data-fb]::before{
 <aside class="sidebar" data-module="ui/sidebar">
   <button class="sb-xray-btn" data-p="xray" onclick="R.go('xray')"><i class="ti ti-report-medical"></i>Raio-X do Projeto</button>
   <button class="sb-board-btn" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button>
+  <button class="sb-exec-btn" data-p="execview" onclick="R.go('execview')"><i class="ti ti-chart-infographic"></i>Visão Executiva</button>
 
   <div class="sb-div"></div>
   <div class="sb-sec">Gestão de Projeto</div>
@@ -1178,6 +1185,37 @@ body.icons-failed i[data-fb]::before{
   <div class="card" style="margin-top:16px">
     <div class="lbl"><i class="ti ti-history"></i>Decisões já tomadas<span class="help-q" data-help="Todo registro de uma decisão de seguir, pausar ou cancelar — com a sugestão da IA que veio antes (quando houve). Avaliar se foi uma boa decisão ajuda a IA a raciocinar melhor da próxima vez." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div id="board-history-root"></div>
+  </div>
+</section>
+
+<!-- ■ MODULE: pages/execview ─ Complemento do Painel da Diretoria: visão do portfólio como UM
+     todo, não projeto por projeto — financeiro consolidado, decisões que precisam de assinatura
+     executiva agora (hoje espalhadas por tela) e tendência de saúde do portfólio ao longo do
+     tempo (hoje só existe por projeto, no Dashboard/Forecast). -->
+<section class="page" id="p-execview" data-module="pages/execview">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Visão Executiva<span class="help-q" data-help="Complemento do Painel da Diretoria — em vez de status projeto por projeto, mostra o portfólio como um todo: financeiro consolidado, o que precisa de decisão executiva agora, e se a saúde geral do portfólio está melhorando ou piorando ao longo do tempo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">O portfólio como um todo — financeiro consolidado, decisões pendentes e tendência de saúde.</div></div>
+    <div class="btn-row"><button class="btn btn-sm" onclick="window.print()"><i class="ti ti-download"></i>PDF</button></div>
+  </div>
+
+  <div class="print-only" id="execview-print-header" style="margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #000">
+    <div style="font-size:18px;font-weight:700" id="execview-print-title"></div>
+    <div style="font-size:12px;color:#444;margin-top:2px" id="execview-print-meta"></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="lbl"><i class="ti ti-report-money"></i>Financeiro consolidado do portfólio<span class="help-q" data-help="Soma o orçamento (BAC), o gasto real (AC), a previsão no término (EAC) e o valor já entregue (validado na Priorização) de TODOS os projetos. ROI agregado = (valor entregue − investido) ÷ investido." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div id="execview-financial-root"></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="lbl"><i class="ti ti-gavel"></i>Precisa da sua decisão agora<span class="help-q" data-help="Junta, de todos os projetos, o que hoje fica espalhado em telas diferentes: decisões críticas pendentes, mudanças de escopo sem aprovação e pessoas sobrealocadas entre projetos. Clique em qualquer item pra ir direto resolver." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div id="execview-inbox-root"></div>
+  </div>
+
+  <div class="card">
+    <div class="lbl"><i class="ti ti-chart-line"></i>Tendência de maturidade do portfólio<span class="help-q" data-help="Média da nota de saúde (0-100) de todos os projetos, dia a dia — responde 'estamos melhorando como organização', diferente da tendência por projeto que já existe no Dashboard. Precisa estar conectado à nuvem (histórico vem de lá)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div id="execview-trend-root"></div>
   </div>
 </section>
 
@@ -2079,6 +2117,7 @@ const Cloud = (() => {
     if(typeof Auth !== 'undefined' && Auth.updateCloudBadge) Auth.updateCloudBadge();
     if(typeof Users !== 'undefined') Users.render();
     if(typeof ProjectMembers !== 'undefined') ProjectMembers.render();
+    if(typeof ExecView !== 'undefined' && document.getElementById('p-execview')?.classList.contains('on')) ExecView.render();
     if(typeof AuditLog !== 'undefined') AuditLog.render();
     if(typeof Store !== 'undefined' && Store.reflectCloudMode) Store.reflectCloudMode();
   }
@@ -2538,6 +2577,15 @@ const Cloud = (() => {
     if(error) { console.warn('Snapshots: falha ao buscar', error); return []; }
     return data || [];
   }
+  // Sem filtro de project_id — has_project_access já restringe ao que der certo (mesmo padrão de
+  // listAllTeamMembers). Usado pela Visão Executiva pra ver a tendência do PORTFÓLIO inteiro ao
+  // longo do tempo, não de um projeto por vez (fetchSnapshots acima é sempre por projeto).
+  async function fetchAllSnapshots(limit) {
+    if(!client || !session) return [];
+    const { data, error } = await client.from('project_snapshots').select('*').order('captured_at', { ascending:true }).limit(limit || 1000);
+    if(error) { console.warn('Snapshots: falha ao buscar portfólio inteiro', error); return []; }
+    return data || [];
+  }
 
   // Apaga da nuvem só o que pertence a UM projeto (project_id) — usado por DB.clearAll(),
   // que antes só limpava o localStorage e deixava a cópia na nuvem intacta (o próximo login
@@ -2600,7 +2648,7 @@ const Cloud = (() => {
     pushTeamMember, deleteTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument,
     pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual, resetForNewUsers, clearProjectData,
-    pushAuditEvent, fetchAuditLog, pushSnapshot, fetchSnapshots, pushProjectSetting,
+    pushAuditEvent, fetchAuditLog, pushSnapshot, fetchSnapshots, fetchAllSnapshots, pushProjectSetting,
     pushBoardDecision, deleteBoardDecision, pullBoardDecisions, pushProject, grantSelfProjectAccess,
     listAllProjects, listAllProjectAccess, setProjectAccess };
 })();
@@ -3685,14 +3733,14 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','help','xray'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','help','xray'];
   function go(id) {
     pages.forEach(p => {
       const el = document.getElementById('p-'+p);
       if(el) el.classList.toggle('on', p===id);
     });
     document.querySelectorAll('.ntab[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===id));
-    document.querySelectorAll('.si[data-p], .sb-xray-btn[data-p], .sb-board-btn[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===id));
+    document.querySelectorAll('.si[data-p], .sb-xray-btn[data-p], .sb-board-btn[data-p], .sb-exec-btn[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===id));
     const c = document.getElementById('content');
     if(c) c.scrollTop = 0;
     history.replaceState(null,'','#'+id);
@@ -3703,6 +3751,7 @@ const R = (() => {
     if(id === 'portfolio' && typeof Portfolio !== 'undefined') Portfolio.render();
     if(id === 'prioritization' && typeof Prioritization !== 'undefined') Prioritization.render();
     if(id === 'board' && typeof Board !== 'undefined') Board.render();
+    if(id === 'execview' && typeof ExecView !== 'undefined') ExecView.render();
     if(id === 'resources' && typeof Resources !== 'undefined') Resources.render();
     if(id === 'budget' && typeof Budget !== 'undefined') Budget.render();
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
@@ -3806,7 +3855,7 @@ const Nav = (() => {
     wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos',
     burnout:'Burnout Radar', resources:'Recursos', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
-    portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
+    portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
   };
 
   function renderBreadcrumb(pageId) {
@@ -3868,6 +3917,7 @@ const CmdK = (() => {
     { label:'Portfólio', page:'portfolio', icon:'layout-grid', group:'Projetos' },
     { label:'Priorização', page:'prioritization', icon:'sort-descending-2', group:'Projetos' },
     { label:'Painel da Diretoria', page:'board', icon:'presentation-analytics', group:'Projetos' },
+    { label:'Visão Executiva', page:'execview', icon:'chart-infographic', group:'Projetos' },
     { label:'Configurações', page:'settings', icon:'settings', group:'' },
     { label:'Ajuda', page:'help', icon:'help-circle', group:'' }
   ];
@@ -8445,6 +8495,125 @@ const Board = (() => {
   }
 
   return { render, generateSuggestions, openDecisionModal, closeDecisionModal, saveDecision, openOutcomeModal, closeOutcomeModal, saveOutcome };
+})();
+</script>
+
+<!-- ■ MODULE: pages/execview-js ─ Visão Executiva: portfólio como UM todo (financeiro
+     consolidado, caixa de decisões executivas, tendência de maturidade) — complemento do Painel
+     da Diretoria, que é por projeto. Não recalcula nada: só soma/agrega o que Budget,
+     Prioritization e DB.computePortfolioAllocation já calculam por projeto. -->
+<script data-module="pages/execview-js">
+const ExecView = (() => {
+  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmtMoney(v) { return 'R$' + Math.round(v||0).toLocaleString('pt-BR'); }
+  function fmtPct(v) { return (v>=0?'+':'') + Math.round(v*100) + '%'; }
+  function go(projectId, page) { if(projectId) DB.switchProject(projectId); R.go(page); }
+
+  async function render() {
+    if(typeof DB === 'undefined') return;
+    const titleEl = document.getElementById('execview-print-title');
+    const metaEl = document.getElementById('execview-print-meta');
+    if(titleEl) titleEl.textContent = `${BRAND.name} — Visão Executiva`;
+    if(metaEl) metaEl.textContent = `Portfólio completo · gerado em ${new Date().toLocaleString('pt-BR')}`;
+    const projects = DB.listProjects();
+    renderFinancial(projects);
+    renderInbox(projects);
+    await renderTrend();
+  }
+
+  // ── Financeiro consolidado ────────────────────────────────────────────────────────────────
+  function renderFinancial(projects) {
+    const root = document.getElementById('execview-financial-root');
+    if(!root) return;
+    let BAC=0, AC=0, EAC=0, valorEntregue=0;
+    projects.forEach(p => {
+      const bm = (typeof Budget !== 'undefined') ? Budget.computeMetrics(p.id) : null;
+      if(bm) { BAC += bm.BAC||0; AC += bm.AC||0; EAC += bm.EAC||0; }
+      const vr = (typeof Prioritization !== 'undefined') ? Prioritization.getValueRealization(p.id) : {};
+      valorEntregue += vr && vr.valorRealizado ? vr.valorRealizado : 0;
+    });
+    const roi = AC > 0 ? (valorEntregue - AC) / AC : null;
+    const tiles = [
+      { lbl:'Orçado (BAC)', val:fmtMoney(BAC), icon:'target' },
+      { lbl:'Gasto real (AC)', val:fmtMoney(AC), icon:'coin' },
+      { lbl:'Previsão no término (EAC)', val:fmtMoney(EAC), icon:'trending-up', warn: EAC > BAC * 1.05 },
+      { lbl:'Valor já entregue', val:fmtMoney(valorEntregue), icon:'target-arrow' },
+      { lbl:'ROI agregado', val: roi==null ? '—' : fmtPct(roi), icon:'chart-arrows', warn: roi!=null && roi<0 }
+    ];
+    root.innerHTML = `<div class="g4">${tiles.map(t => `<div class="card" style="padding:14px"><div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t3);margin-bottom:6px"><i class="ti ti-${t.icon}"></i>${t.lbl}</div><div style="font-size:20px;font-weight:600;color:${t.warn?'var(--red)':'var(--t1)'}">${t.val}</div></div>`).join('')}</div>
+    <div style="margin-top:12px">
+      <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--s3)">
+        <div style="width:${BAC>0?Math.min(100,Math.round(AC/BAC*100)):0}%;background:var(--acc)" title="Gasto real"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--t3);margin-top:4px"><span>Gasto: ${BAC>0?Math.round(AC/BAC*100):0}% do orçado</span><span>Previsão final: ${BAC>0?Math.round(EAC/BAC*100):0}% do orçado</span></div>
+    </div>`;
+  }
+
+  // ── Precisa da sua decisão agora ──────────────────────────────────────────────────────────
+  function renderInbox(projects) {
+    const root = document.getElementById('execview-inbox-root');
+    if(!root) return;
+    const items = [];
+    projects.forEach(p => {
+      (DB.getForProject(p.id,'decisions')||[]).filter(d => d.status==='pending' && d.severity==='crit').forEach(d => {
+        items.push({ sev:3, cls:'b-red', label:'Decisão crítica', project:p, title:d.title, onclick:`ExecView.open('${p.id}','decisions')` });
+      });
+      (DB.getForProject(p.id,'scopeChanges')||[]).filter(s => s.status==='pending'||s.status==='analysis').forEach(s => {
+        items.push({ sev:2, cls:'b-amb', label:'Escopo sem aprovação', project:p, title:`${s.title} (+${s.impactDays||0}d, +${fmtMoney(s.impactCost)})`, onclick:`ExecView.open('${p.id}','scope')` });
+      });
+    });
+    if(typeof DB.computePortfolioAllocation === 'function') {
+      DB.computePortfolioAllocation().filter(person => person.overallocated).forEach(person => {
+        items.push({ sev:2, cls:'b-amb', label:'Sobrealocação', project:null, title:`${person.name} — ${person.total}% somando ${person.rows.length} projetos`, onclick:`R.go('resources')` });
+      });
+    }
+    items.sort((a,b) => b.sev - a.sev);
+    if(!items.length) { root.innerHTML = `<div style="text-align:center;padding:16px 10px;color:var(--t3);font-size:12.5px"><i class="ti ti-shield-check" style="color:var(--grn)"></i> Nada pendente de decisão executiva agora.</div>`; return; }
+    root.innerHTML = items.map(it => `<div class="set-row kpi-link" role="button" tabindex="0" onclick="${it.onclick}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${it.onclick}}">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <span class="badge ${it.cls}" style="flex-shrink:0">${it.label}</span>
+        <div style="min-width:0"><div class="set-lbl" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(it.title)}</div>${it.project?`<div class="set-sub">${escapeHtml(it.project.name)}</div>`:''}</div>
+      </div>
+      <i class="ti ti-chevron-right" style="color:var(--t3);flex-shrink:0"></i>
+    </div>`).join('');
+  }
+  function open(projectId, page) { go(projectId, page); }
+
+  // ── Tendência de maturidade do portfólio ──────────────────────────────────────────────────
+  async function renderTrend() {
+    const root = document.getElementById('execview-trend-root');
+    if(!root) return;
+    if(typeof Cloud === 'undefined' || !Cloud.isSignedIn()) {
+      root.innerHTML = `<div style="font-size:12.5px;color:var(--t3)"><i class="ti ti-cloud-off"></i> Disponível quando conectado à nuvem — o histórico (services/snapshots) é salvo lá, não neste navegador.</div>`;
+      return;
+    }
+    const rows = await Cloud.fetchAllSnapshots(1000);
+    if(rows.length < 2) {
+      root.innerHTML = `<div style="font-size:12.5px;color:var(--t3)"><i class="ti ti-clock-hour-4"></i> Ainda não há histórico suficiente do portfólio pra calcular tendência.</div>`;
+      return;
+    }
+    const byDate = new Map();
+    rows.forEach(r => {
+      if(r.health_score == null) return;
+      const d = String(r.captured_at).slice(0,10);
+      if(!byDate.has(d)) byDate.set(d, []);
+      byDate.get(d).push(r.health_score);
+    });
+    const points = [...byDate.entries()].map(([date, vals]) => ({ date, avg: Math.round(vals.reduce((s,v)=>s+v,0)/vals.length) })).sort((a,b) => a.date < b.date ? -1 : 1).slice(-21);
+    if(points.length < 2) { root.innerHTML = `<div style="font-size:12.5px;color:var(--t3)"><i class="ti ti-clock-hour-4"></i> Ainda não há histórico suficiente do portfólio pra calcular tendência.</div>`; return; }
+    const first = points[0].avg, last = points[points.length-1].avg;
+    const delta = last - first;
+    const barColor = (v) => v>=80?'var(--grn)':v>=60?'var(--amb)':'var(--red)';
+    const bars = points.map(p => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px" title="${p.date}: ${p.avg}"><div style="width:100%;max-width:14px;height:60px;background:var(--s3);border-radius:3px;display:flex;align-items:flex-end;overflow:hidden"><div style="width:100%;height:${p.avg}%;background:${barColor(p.avg)}"></div></div></div>`).join('');
+    root.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
+        <span style="font-size:22px;font-weight:600;color:var(--t1)">${last}</span><span style="font-size:12px;color:var(--t3)">/100 hoje</span>
+        <span style="margin-left:8px;font-size:12.5px;font-weight:600;color:${delta>=0?'var(--grn)':'var(--red)'}"><i class="ti ti-${delta>=0?'trending-up':'trending-down'}"></i> ${delta>=0?'+':''}${delta} pontos desde ${points[0].date.split('-').reverse().join('/')}</span>
+      </div>
+      <div style="display:flex;gap:4px;align-items:flex-end">${bars}</div>
+      <div style="font-size:10.5px;color:var(--t3);margin-top:6px">Média da nota de saúde (0-100) de todos os projetos, dia a dia — últimos ${points.length} dias com dado.</div>`;
+  }
+
+  return { render, open };
 })();
 </script>
 
