@@ -8532,12 +8532,15 @@ const ExecView = (() => {
     const root = document.getElementById('execview-financial-root');
     if(!root) return;
     let BAC=0, AC=0, EAC=0, valorEntregue=0;
-    projects.forEach(p => {
+    const rows = projects.map(p => {
       const bm = (typeof Budget !== 'undefined') ? Budget.computeMetrics(p.id) : null;
-      if(bm) { BAC += bm.BAC||0; AC += bm.AC||0; EAC += bm.EAC||0; }
       const vr = (typeof Prioritization !== 'undefined') ? Prioritization.getValueRealization(p.id) : {};
-      valorEntregue += vr && vr.valorRealizado ? vr.valorRealizado : 0;
-    });
+      const pBac = bm ? (bm.BAC||0) : 0, pAc = bm ? (bm.AC||0) : 0, pEac = bm ? (bm.EAC||0) : 0;
+      const pValor = vr && vr.valorRealizado ? vr.valorRealizado : 0;
+      BAC += pBac; AC += pAc; EAC += pEac; valorEntregue += pValor;
+      const pRoi = pAc > 0 ? (pValor - pAc) / pAc : null;
+      return { project:p, bac:pBac, ac:pAc, eac:pEac, valor:pValor, roi:pRoi };
+    }).filter(r => r.bac > 0 || r.ac > 0); // esconde projeto sem nenhum lançamento — nada a mostrar na tabela
     const roi = AC > 0 ? (valorEntregue - AC) / AC : null;
     const tiles = [
       { lbl:'Orçado (BAC)', val:fmtMoney(BAC), icon:'target' },
@@ -8546,13 +8549,34 @@ const ExecView = (() => {
       { lbl:'Valor já entregue', val:fmtMoney(valorEntregue), icon:'target-arrow' },
       { lbl:'ROI agregado', val: roi==null ? '—' : fmtPct(roi), icon:'chart-arrows', warn: roi!=null && roi<0 }
     ];
+    const tableHtml = rows.length ? `<div style="overflow-x:auto;margin-top:14px">
+      <table style="width:100%;border-collapse:collapse;min-width:520px">
+        <thead><tr>
+          <th style="text-align:left;padding:6px 10px;font-size:10.5px;color:var(--t3);font-weight:600">Projeto</th>
+          <th style="padding:6px 8px;font-size:10.5px;color:var(--t3);font-weight:600;text-align:right">Orçado</th>
+          <th style="padding:6px 8px;font-size:10.5px;color:var(--t3);font-weight:600;text-align:right">Gasto</th>
+          <th style="padding:6px 8px;font-size:10.5px;color:var(--t3);font-weight:600;text-align:right">Previsão</th>
+          <th style="padding:6px 8px;font-size:10.5px;color:var(--t3);font-weight:600;text-align:right">Valor entregue</th>
+          <th style="padding:6px 8px;font-size:10.5px;color:var(--t3);font-weight:600;text-align:right">ROI</th>
+        </tr></thead>
+        <tbody>${rows.map(r => `<tr class="kpi-link" role="button" tabindex="0" aria-label="Abrir orçamento de ${escapeHtml(r.project.name)}" onclick="ExecView.open('${r.project.id}','budget')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ExecView.open('${r.project.id}','budget')}">
+          <td style="padding:7px 10px;font-size:12.5px;color:var(--t1);white-space:nowrap">${escapeHtml(r.project.name)}</td>
+          <td style="padding:7px 8px;font-size:12px;color:var(--t2);text-align:right;font-variant-numeric:tabular-nums">${fmtMoney(r.bac)}</td>
+          <td style="padding:7px 8px;font-size:12px;color:var(--t2);text-align:right;font-variant-numeric:tabular-nums">${fmtMoney(r.ac)}</td>
+          <td style="padding:7px 8px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;color:${r.eac>r.bac*1.05?'var(--red)':'var(--t2)'}">${fmtMoney(r.eac)}</td>
+          <td style="padding:7px 8px;font-size:12px;color:var(--t2);text-align:right;font-variant-numeric:tabular-nums">${fmtMoney(r.valor)}</td>
+          <td style="padding:7px 8px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;color:${r.roi!=null&&r.roi<0?'var(--red)':'var(--t2)'}">${r.roi==null?'—':fmtPct(r.roi)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>` : `<div style="font-size:12px;color:var(--t3);margin-top:14px">Nenhum projeto com orçamento lançado ainda.</div>`;
     root.innerHTML = `<div class="g4">${tiles.map(t => `<div class="card" style="padding:14px"><div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t3);margin-bottom:6px"><i class="ti ti-${t.icon}"></i>${t.lbl}</div><div style="font-size:20px;font-weight:600;color:${t.warn?'var(--red)':'var(--t1)'}">${t.val}</div></div>`).join('')}</div>
     <div style="margin-top:12px">
       <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--s3)">
         <div style="width:${BAC>0?Math.min(100,Math.round(AC/BAC*100)):0}%;background:var(--acc)" title="Gasto real"></div>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--t3);margin-top:4px"><span>Gasto: ${BAC>0?Math.round(AC/BAC*100):0}% do orçado</span><span>Previsão final: ${BAC>0?Math.round(EAC/BAC*100):0}% do orçado</span></div>
-    </div>`;
+    </div>
+    ${tableHtml}`;
   }
 
   // ── Precisa da sua decisão agora ──────────────────────────────────────────────────────────
