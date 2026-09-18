@@ -42,7 +42,7 @@ document.querySelector('meta[name="description"]').setAttribute('content', BRAND
 :root {
   --bg:#0d1117; --s1:#161b22; --s2:#1c2230; --s3:#21293f;
   --b1:rgba(255,255,255,0.06); --b2:rgba(255,255,255,0.11); --b3:rgba(255,255,255,0.20);
-  --t1:#e6edf3; --t2:#8b949e; --t3:#484f58;
+  --t1:#e6edf3; --t2:#8b949e; --t3:#848d97;
   --acc:#5995f1; --ad:rgba(77,142,240,0.10); --ab:rgba(77,142,240,0.28);
   --grn:#3fb950; --gd:rgba(63,185,80,0.09); --gb:rgba(63,185,80,0.28);
   --amb:#d29922; --amd:rgba(210,153,34,0.09); --ambb:rgba(210,153,34,0.28);
@@ -58,7 +58,7 @@ document.querySelector('meta[name="description"]').setAttribute('content', BRAND
 html[data-theme="light"] {
   --bg:#f6f7f9; --s1:#ffffff; --s2:#f1f3f6; --s3:#e6e9ee;
   --b1:rgba(15,23,42,0.08); --b2:rgba(15,23,42,0.14); --b3:rgba(15,23,42,0.24);
-  --t1:#0f172a; --t2:#55606e; --t3:#94a0ac;
+  --t1:#0f172a; --t2:#55606e; --t3:#5f6a76;
   --acc:#2a63c7; --ad:rgba(47,111,224,0.08); --ab:rgba(47,111,224,0.28);
   --grn:#13763d; --gd:rgba(26,158,82,0.08); --gb:rgba(26,158,82,0.28);
   --amb:#895d0b; --amd:rgba(179,121,15,0.10); --ambb:rgba(179,121,15,0.28);
@@ -69,7 +69,7 @@ html[data-theme="light"] {
 html[data-theme="gray"] {
   --bg:#1e2530; --s1:#26303d; --s2:#2d3846; --s3:#374254;
   --b1:rgba(255,255,255,0.07); --b2:rgba(255,255,255,0.13); --b3:rgba(255,255,255,0.22);
-  --t1:#eef1f5; --t2:#a3adb8; --t3:#6b7684;
+  --t1:#eef1f5; --t2:#a3adb8; --t3:#9aa5b1;
   --acc:#88b7f9; --ad:rgba(91,155,247,0.12); --ab:rgba(91,155,247,0.30);
   --grn:#4bc767; --gd:rgba(75,199,103,0.11); --gb:rgba(75,199,103,0.30);
   --amb:#e0ab3f; --amd:rgba(224,171,63,0.11); --ambb:rgba(224,171,63,0.30);
@@ -268,16 +268,14 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 .sb-xray-btn:hover{background:rgba(77,142,240,.18)}
 .sb-xray-btn.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 .sb-xray-btn.on i{color:inherit}
-.sb-board-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;margin-bottom:4px;border-radius:var(--r8);border:1px solid var(--pb);background:var(--pd);color:var(--pur);font-size:12.5px;font-weight:600;cursor:pointer;text-align:left}
-.sb-board-btn i{font-size:15px;flex-shrink:0}
+.sb-board-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;margin-bottom:4px;border-radius:var(--r8);border:1px solid var(--pb);background:var(--pd);color:var(--t1);font-size:12.5px;font-weight:600;cursor:pointer;text-align:left}
+.sb-board-btn i{font-size:15px;flex-shrink:0;color:var(--pur)}
 .sb-board-btn:hover{background:rgba(139,92,246,.18)}
-.sb-board-btn.on{background:var(--pur);color:#fff;border-color:var(--pur)}
-.sb-board-btn.on i{color:inherit}
-.sb-exec-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;margin-bottom:4px;border-radius:var(--r8);border:1px solid var(--gb);background:var(--gd);color:var(--grn);font-size:12.5px;font-weight:600;cursor:pointer;text-align:left}
-.sb-exec-btn i{font-size:15px;flex-shrink:0}
+.sb-board-btn.on{background:var(--pd);color:var(--t1);border-color:var(--pur);box-shadow:inset 3px 0 0 var(--pur)}
+.sb-exec-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;margin-bottom:4px;border-radius:var(--r8);border:1px solid var(--gb);background:var(--gd);color:var(--t1);font-size:12.5px;font-weight:600;cursor:pointer;text-align:left}
+.sb-exec-btn i{font-size:15px;flex-shrink:0;color:var(--grn)}
 .sb-exec-btn:hover{background:rgba(63,185,80,.18)}
-.sb-exec-btn.on{background:var(--grn);color:#fff;border-color:var(--grn)}
-.sb-exec-btn.on i{color:inherit}
+.sb-exec-btn.on{background:var(--gd);color:var(--t1);border-color:var(--grn);box-shadow:inset 3px 0 0 var(--grn)}
 </style>
 <style>.page{padding:20px;display:none;flex-direction:column;gap:14px;animation:pgIn .15s ease}
 .page.on{display:flex}
@@ -1168,7 +1166,7 @@ body.icons-failed i[data-fb]::before{
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-size:11.5px;color:var(--t3)">Mostrar:</span>
-        <select class="input" id="board-f-status" style="width:auto;padding:5px 10px;font-size:12px" onchange="Board.render()">
+        <select class="input" id="board-f-status" aria-label="Filtrar projetos por situação" style="width:auto;padding:5px 10px;font-size:12px" onchange="Board.render()">
           <option value="">Todos os projetos</option>
           <option value="grn">Só saudáveis</option>
           <option value="amb">Só em atenção</option>
@@ -1177,7 +1175,7 @@ body.icons-failed i[data-fb]::before{
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-size:11.5px;color:var(--t3)">Ordenar por:</span>
-        <select class="input" id="board-f-sort" style="width:auto;padding:5px 10px;font-size:12px" onchange="Board.render()">
+        <select class="input" id="board-f-sort" aria-label="Ordenar projetos por" style="width:auto;padding:5px 10px;font-size:12px" onchange="Board.render()">
           <option value="risco">Mais em risco primeiro</option>
           <option value="nome">Nome do projeto</option>
           <option value="custo">Maior gasto primeiro</option>
@@ -1249,7 +1247,7 @@ body.icons-failed i[data-fb]::before{
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px" id="prov-mode-note"><strong style="color:var(--t1)">Modo local:</strong> cada chave fica salva só neste navegador.</p>
 
     <div class="prov-row" id="prov-anthropic">
-      <div class="prov-radio" data-perm="settings" role="radio" tabindex="0" aria-label="Usar Claude (Anthropic)" onclick="Store.setProvider('anthropic')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="Usar Claude (Anthropic)"></div>
+      <div class="prov-radio" data-perm="settings" role="radio" aria-checked="false" tabindex="0" aria-label="Usar Claude (Anthropic)" onclick="Store.setProvider('anthropic')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="Usar Claude (Anthropic)"></div>
       <div class="prov-body">
         <div class="prov-name"><i class="ti ti-brain" style="color:var(--acc)"></i>Claude (Anthropic)<span class="badge b-acc" id="prov-badge-anthropic" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-anthropic" style="display:none">Configurada</span></div>
         <div class="prov-desc">Padrão do <span data-brand="name">PMO Compass</span> — forte em analisar documentos longos e avaliar risco de projetos.</div>
@@ -1259,7 +1257,7 @@ body.icons-failed i[data-fb]::before{
     </div>
 
     <div class="prov-row" id="prov-openai">
-      <div class="prov-radio" data-perm="settings" role="radio" tabindex="0" aria-label="Usar ChatGPT (OpenAI)" onclick="Store.setProvider('openai')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="Usar ChatGPT (OpenAI)"></div>
+      <div class="prov-radio" data-perm="settings" role="radio" aria-checked="false" tabindex="0" aria-label="Usar ChatGPT (OpenAI)" onclick="Store.setProvider('openai')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="Usar ChatGPT (OpenAI)"></div>
       <div class="prov-body">
         <div class="prov-name"><i class="ti ti-sparkles" style="color:var(--grn)"></i>ChatGPT (OpenAI)<span class="badge b-acc" id="prov-badge-openai" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-openai" style="display:none">Configurada</span></div>
         <div class="prov-desc">Alternativa da OpenAI — bom custo-benefício para chat e resumos rápidos.</div>
@@ -1269,7 +1267,7 @@ body.icons-failed i[data-fb]::before{
     </div>
 
     <div class="prov-row" id="prov-google">
-      <div class="prov-radio" data-perm="settings" role="radio" tabindex="0" aria-label="Usar Gemini (Google)" onclick="Store.setProvider('google')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="Usar Gemini (Google)"></div>
+      <div class="prov-radio" data-perm="settings" role="radio" aria-checked="false" tabindex="0" aria-label="Usar Gemini (Google)" onclick="Store.setProvider('google')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="Usar Gemini (Google)"></div>
       <div class="prov-body">
         <div class="prov-name"><i class="ti ti-brand-google" style="color:var(--pur)"></i>Gemini (Google)<span class="badge b-acc" id="prov-badge-google" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-google" style="display:none">Configurada</span></div>
         <div class="prov-desc">Alternativa do Google — boa opção se você já usa o ecossistema Google Workspace.</div>
@@ -1296,7 +1294,7 @@ body.icons-failed i[data-fb]::before{
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Administradores sempre veem o portfólio inteiro. Para os outros perfis, escolha aqui quem tem acesso a <strong style="color:var(--t1)" id="project-members-name">este projeto</strong> — a lista fica por projeto, não por pessoa, pra continuar simples mesmo com muitos projetos.</p>
     <div id="project-members-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
     <div class="btn-row">
-      <select class="input" id="project-members-add-select" style="width:auto;min-width:220px"></select>
+      <select class="input" id="project-members-add-select" aria-label="Adicionar pessoa ao projeto" style="width:auto;min-width:220px"></select>
       <button class="btn btn-sm btn-acc" onclick="ProjectMembers.add()"><i class="ti ti-user-plus"></i>Adicionar</button>
     </div>
   </div>
@@ -2934,7 +2932,7 @@ const Users = (() => {
           <div class="set-lbl">${escapeHtml(p.name || '(sem nome)')}${isMe ? ' <span class="badge b-acc">você</span>' : ''}</div>
           <div class="set-sub" style="font-family:var(--font-mono);font-size:10.5px">${escapeHtml(p.id)}</div>
         </div>
-        <select class="input" style="width:auto" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>
+        <select class="input" style="width:auto" aria-label="Perfil de acesso de ${escapeHtml(p.name || '(sem nome)')}" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>
       </div>`;
     }).join('');
   }
@@ -3724,7 +3722,7 @@ const Store = (() => {
     PROVIDERS.forEach(p => {
       const radio = document.querySelector('#prov-'+p+' .prov-radio');
       const badge = document.getElementById('prov-badge-'+p);
-      if(radio) radio.classList.toggle('sel', state.aiProvider===p);
+      if(radio) { radio.classList.toggle('sel', state.aiProvider===p); radio.setAttribute('aria-checked', state.aiProvider===p ? 'true' : 'false'); }
       if(badge) badge.style.display = state.aiProvider===p ? 'inline-flex' : 'none';
     });
   }

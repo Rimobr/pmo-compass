@@ -10,7 +10,7 @@ module.exports = defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: [['list'], ['html', { open: 'never' }]],
-  timeout: 30000,
+  timeout: 120000, // o login pela UI carrega o SDK do Supabase por CDN — leva 20-40s no headless
   use: {
     baseURL: process.env.APP_BASE_URL || 'http://localhost:8080/PMO_Compass_v2.html',
     trace: 'retain-on-failure',
