@@ -21,7 +21,7 @@ test.describe('Acessibilidade WCAG 2.1 AA', () => {
     for (const p of PAGES) {
       test(`${p.name} — tema ${theme}`, async ({ page }) => {
         await page.evaluate((t) => { if (typeof Theme !== 'undefined') Theme.set(t); }, theme);
-        await page.goto('/' + p.hash);
+        await page.goto(p.hash);
         await page.waitForTimeout(600); // deixa o render assíncrono (Cloud/DB) terminar
 
         const results = await new AxeBuilder({ page })
@@ -41,7 +41,7 @@ test.describe('Acessibilidade WCAG 2.1 AA', () => {
   }
 
   test('Farol do Portfólio é 100% navegável por teclado', async ({ page }) => {
-    await page.goto('/#board');
+    await page.goto('#board');
     await page.waitForTimeout(500);
     let foundProjectLink = false;
     for (let i = 0; i < 60 && !foundProjectLink; i++) {

@@ -14,7 +14,7 @@ test.describe('XSS em campos de texto livre (CT12)', () => {
   });
 
   test('nome de membro de equipe não executa script ao renderizar', async ({ page }) => {
-    await page.goto('/#burnout');
+    await page.goto('#burnout');
     const memberId = await page.evaluate((payload) => {
       Burnout.openAdd();
       document.getElementById('burnout-f-name').value = payload;
@@ -44,11 +44,10 @@ test.describe('XSS em campos de texto livre (CT12)', () => {
   });
 
   test('título de decisão não executa script ao renderizar', async ({ page }) => {
-    await page.goto('/#decisions');
+    await page.goto('#decisions');
     const decisionId = await page.evaluate((payload) => {
-      if (typeof Decisions === 'undefined' || !Decisions.createManual) return null;
-      // Fallback: grava direto no DB se não houver um "criar manual" exposto — o alvo do teste
-      // é a RENDERIZAÇÃO, não o fluxo de criação.
+      // Grava direto no DB (não há "criar decisão manual" exposto na UI) — o alvo do teste é a
+      // RENDERIZAÇÃO da lista de decisões, não o fluxo de criação em si.
       const id = 'dec-e2e-' + Date.now();
       const decisions = DB.get('decisions') || [];
       decisions.push({ id, severity: 'crit', pct: 100, title: payload, body: 'teste e2e', sources: [], status: 'pending', actions: ['accept'], createdAt: new Date().toISOString() });
@@ -72,7 +71,7 @@ test.describe('XSS em campos de texto livre (CT12)', () => {
   });
 
   test('título de mudança de escopo não executa script ao renderizar', async ({ page }) => {
-    await page.goto('/#scope');
+    await page.goto('#scope');
     const scopeId = await page.evaluate((payload) => {
       const id = 'SC-E2E-' + Date.now();
       const scope = DB.get('scopeChanges') || [];

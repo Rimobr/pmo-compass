@@ -94,10 +94,13 @@ test.describe('Imutabilidade do audit_log (CT03)', () => {
   // continua exatamente igual depois da tentativa. Testamos isso, não um tipo de erro específico.
   test('admin não consegue alterar a descrição de uma linha de audit_log', async () => {
     const client = await supabaseClientAs('admin');
+    const { data: { user } } = await client.auth.getUser();
     const marker = 'linha de teste E2E — imutabilidade — ' + Date.now();
+    // audit_log_insert_own exige auth.uid() = actor_id — sem isso, o INSERT falha em silêncio
+    // (RLS bloqueia sem lançar erro), e a linha nunca chega a existir pra testar imutabilidade.
     await client.from('audit_log').insert({
       project_id: requireEnv('TEST_PROJECT_WITH_GRANT_ID'),
-      action: 'login', description: marker,
+      actor_id: user.id, action: 'login', description: marker,
     });
     const { data: rows } = await client.from('audit_log').select('id, description').eq('description', marker).limit(1);
     expect(rows && rows.length).toBeGreaterThan(0);
@@ -109,10 +112,11 @@ test.describe('Imutabilidade do audit_log (CT03)', () => {
 
   test('admin não consegue apagar uma linha de audit_log', async () => {
     const client = await supabaseClientAs('admin');
+    const { data: { user } } = await client.auth.getUser();
     const marker = 'linha de teste E2E — delete — ' + Date.now();
     await client.from('audit_log').insert({
       project_id: requireEnv('TEST_PROJECT_WITH_GRANT_ID'),
-      action: 'login', description: marker,
+      actor_id: user.id, action: 'login', description: marker,
     });
     const { data: rows } = await client.from('audit_log').select('id').eq('description', marker).limit(1);
     expect(rows && rows.length).toBeGreaterThan(0);
