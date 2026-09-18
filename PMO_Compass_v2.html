@@ -2139,6 +2139,7 @@ const Cloud = (() => {
     return window.supabase;
   }
 
+  let sessionExpiredNotified = false;
   async function initClient() {
     try {
       const sb = await loadSdk();
@@ -2150,6 +2151,20 @@ const Cloud = (() => {
       // Config de nuvem existe mas não há sessão ativa (nunca logou, ou expirou) — nada a
       // confirmar do servidor, libera o papel local pra não ficar "Confirmando perfil…" pra sempre.
       else if(typeof Auth !== 'undefined' && Auth.confirmNoCloudSession) Auth.confirmNoCloudSession();
+      // Sem isso, se o refresh token expirasse/fosse revogado (sessão realmente morta no
+      // servidor, não só o access token de curta duração — esse o SDK renova sozinho), a tela
+      // continuava mostrando usuário logado e todo push/pull falhava em silêncio, só com um
+      // toast genérico repetido de "falha ao sincronizar" — sem nunca dizer "faça login de novo".
+      client.auth.onAuthStateChange((event, newSession) => {
+        if(event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !newSession)) {
+          session = null;
+          reflectUi();
+          if(!sessionExpiredNotified) { sessionExpiredNotified = true; T.show('🔒 Sua sessão expirou — faça login de novo pra continuar sincronizando com a nuvem.', 8000); }
+        } else if(newSession) {
+          session = newSession;
+          sessionExpiredNotified = false;
+        }
+      });
     } catch(e) {
       console.warn('Supabase: falha ao iniciar', e);
       T.show('⚠️ Não consegui conectar ao Supabase — confira a URL e a chave.');
@@ -2459,6 +2474,15 @@ const Cloud = (() => {
     track(client.from('team_members').upsert({ id:m.id, name:m.name, role:m.role||null, allocation_pct:m.allocationPct, workload_pct:m.workloadPct, signals:m.signals||[], recommendation:m.recommendation||null, action_page:m.actionPage||null, project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed));
   }
   function deleteTeamMember(id) { if(client && session) track(client.from('team_members').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
+  // Uma linha só, pra detectar edição concorrente antes de sobrescrever (ver Burnout.saveFromModal)
+  // — sem isso, duas pessoas editando o mesmo membro ao mesmo tempo faziam a última gravação
+  // vencer em silêncio, sem avisar ninguém.
+  async function fetchTeamMember(id) {
+    if(!client || !session) return null;
+    const { data, error } = await client.from('team_members').select('*').eq('id', id).maybeSingle();
+    if(error || !data) return null;
+    return { id:data.id, name:data.name, role:data.role||'', allocationPct:data.allocation_pct, workloadPct:data.workload_pct, signals:data.signals||[], recommendation:data.recommendation||'' };
+  }
   // Alocação real entre projetos (Resources/DB.computePortfolioAllocation) lê o 'team' LOCAL de
   // cada projeto — sem sincronizar a equipe de TODOS os projetos pro localStorage, essa conta só
   // enxergava sobrealocação se cada projeto já tivesse sido aberto neste navegador. Busca
@@ -2651,7 +2675,7 @@ const Cloud = (() => {
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole,
     saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, doSignUp, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
-    pushTeamMember, deleteTeamMember, syncAllTeamMembers,
+    pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument,
     pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual, resetForNewUsers, clearProjectData,
     pushAuditEvent, fetchAuditLog, pushSnapshot, fetchSnapshots, fetchAllSnapshots, pushProjectSetting,
@@ -3003,11 +3027,11 @@ const AuditLog = (() => {
     login:'Login', logout:'Logout', role_change:'Troca de perfil', backup_export:'Backup exportado',
     backup_import:'Backup restaurado', cloud_disconnect:'Desconectou da nuvem',
     reset_shared_data:'Reset de dados compartilhados', project_data_cleared:'Dados de projeto apagados',
-    permission_denied:'Permissão negada'
+    permission_denied:'Permissão negada', team_member_change:'Alteração na equipe'
   };
   const ACTION_CLS = {
     permission_denied:'b-amb', reset_shared_data:'b-red', project_data_cleared:'b-red',
-    role_change:'b-acc', login:'b-grn', logout:'b-neu'
+    role_change:'b-acc', login:'b-grn', logout:'b-neu', team_member_change:'b-acc'
   };
   let rows = [];
   function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -7189,14 +7213,16 @@ const Burnout = (() => {
     ensureLoaded();
     const m = data.find(x => x.id === id);
     if(!m) return;
-    modalCtx = { mode:'edit', id };
+    // Snapshot do estado no momento em que abriu — comparado no save pra detectar se alguém
+    // mais mexeu neste membro enquanto o modal estava aberto (edição concorrente).
+    modalCtx = { mode:'edit', id, snapshot:{ name:m.name, role:m.role||'', allocationPct:m.allocationPct, workloadPct:m.workloadPct, signals:m.signals||[], recommendation:m.recommendation||'' } };
     document.getElementById('burnout-modal-title').textContent = 'Editar membro';
     document.getElementById('burnout-f-delete-btn').style.display = '';
     fill(m.name, m.role, m.allocationPct, m.workloadPct, m.signals, m.recommendation);
     openModal();
   }
 
-  function saveFromModal() {
+  async function saveFromModal() {
     if(!Auth.guard('business')) return;
     ensureLoaded();
     const name = document.getElementById('burnout-f-name').value.trim();
@@ -7208,7 +7234,25 @@ const Burnout = (() => {
     if(!name) { T.show('⚠️ Dê um nome para o membro.'); return; }
 
     let saved;
-    if(modalCtx.mode === 'add') {
+    const wasAdd = modalCtx.mode === 'add';
+    // Edição concorrente: se outra pessoa salvou este membro depois que abrimos o modal, a
+    // última gravação vencia em silêncio — agora avisa e deixa a pessoa decidir.
+    if(!wasAdd && modalCtx.snapshot && typeof Cloud !== 'undefined' && Cloud.isSignedIn()) {
+      const current = await Cloud.fetchTeamMember(modalCtx.id);
+      if(current && JSON.stringify(current.name)+JSON.stringify(current.role)+current.allocationPct+current.workloadPct+JSON.stringify(current.signals)+current.recommendation
+        !== JSON.stringify(modalCtx.snapshot.name)+JSON.stringify(modalCtx.snapshot.role)+modalCtx.snapshot.allocationPct+modalCtx.snapshot.workloadPct+JSON.stringify(modalCtx.snapshot.signals)+modalCtx.snapshot.recommendation) {
+        const overwrite = confirm(`"${current.name}" foi alterado por outra pessoa enquanto você editava (agora: ${current.allocationPct}% alocado, ${current.workloadPct}% de carga). Sobrescrever mesmo assim?\n\nCancelar recarrega com o valor mais recente, sem salvar o que você digitou.`);
+        if(!overwrite) {
+          const idx = data.findIndex(x => x.id === modalCtx.id);
+          if(idx >= 0) data[idx] = { ...data[idx], ...current };
+          persist();
+          fill(current.name, current.role, current.allocationPct, current.workloadPct, current.signals, current.recommendation);
+          modalCtx.snapshot = current;
+          return;
+        }
+      }
+    }
+    if(wasAdd) {
       saved = { id:genId(), name, role, allocationPct:alloc, workloadPct:pct, signals, recommendation:rec, actionPage:'' };
       data.push(saved);
       T.show('✅ Membro adicionado!');
@@ -7219,7 +7263,12 @@ const Burnout = (() => {
       if(statusOf(pct) === 'critico') Trail.log(`${name} entrou em zona crítica de sobrecarga (${pct}%)`, Auth.getName(), 'Atenção necessária', 'b-red');
     }
     persist();
-    if(saved && typeof Cloud !== 'undefined') Cloud.pushTeamMember(saved);
+    if(saved && typeof Cloud !== 'undefined') {
+      Cloud.pushTeamMember(saved);
+      // Sobrealocação e burnout afetam decisão de alocação de recursos — vira evento de
+      // auditoria igual troca de perfil, não só um toast que some (gap apontado na revisão).
+      Cloud.pushAuditEvent('team_member_change', `${wasAdd?'Adicionou':'Editou'} membro da equipe: ${name} (${alloc}% alocado, ${pct}% de carga)`, { memberId:saved.id, allocationPct:alloc, workloadPct:pct });
+    }
     render();
     closeModal();
   }
@@ -7229,9 +7278,13 @@ const Burnout = (() => {
     ensureLoaded();
     if(!confirm('Remover este membro do radar?')) return;
     const removedId = modalCtx.id;
+    const removedName = (data.find(x => x.id === removedId) || {}).name || removedId;
     data = data.filter(x => x.id !== removedId);
     persist();
-    if(typeof Cloud !== 'undefined') Cloud.deleteTeamMember(removedId);
+    if(typeof Cloud !== 'undefined') {
+      Cloud.deleteTeamMember(removedId);
+      Cloud.pushAuditEvent('team_member_change', `Removeu membro da equipe: ${removedName}`, { memberId:removedId });
+    }
     render();
     closeModal();
     T.show('🗑️ Membro removido.');

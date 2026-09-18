@@ -32,6 +32,34 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// Segunda camada de descaracterização de PII (LGPD), independente do que o navegador já faz em
+// anonymize() (PMO_Compass_v2.html) — mesmos padrões, mesma decisão de design (não redigir CEP/RG
+// sem contexto, pra não gerar falso-positivo demais). Antes desta função, a anonimização só
+// existia no cliente: alguém interceptando a chamada de rede ou chamando sendAi() direto pelo
+// console do navegador podia pular o filtro inteiro. Redigir aqui também garante que NENHUM
+// provedor externo (Anthropic/OpenAI/Google) recebe PII, mesmo se o navegador falhar ou for
+// contornado — defesa em profundidade, não substitui o filtro do cliente (que ainda evita gastar
+// tokens com dado sensível), só fecha o buraco de quem tenta pular por fora dele.
+function redactPii(text: string): string {
+  if (!text) return text;
+  const patterns: Array<[RegExp, string]> = [
+    [/\b\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2}\b/g, "[CPF REDACTADO]"],
+    [/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g, "[CNPJ REDACTADO]"],
+    [/(?<=RG[:\s]{0,3})\d{1,2}[.\s]?\d{3}[.\s]?\d{3}-?[\dXx]\b/gi, "[RG REDACTADO]"],
+    [/[\w.+-]+@[\w-]+\.[\w.-]+/g, "[E-MAIL REDACTADO]"],
+    [/\(?\d{2}\)?\s?9?\d{4}-?\d{4}/g, "[TELEFONE REDACTADO]"],
+    [/\b\d{5}-\d{3}\b/g, "[CEP REDACTADO]"],
+    [/(?<=CEP[:\s]{0,3})\b\d{8}\b/gi, "[CEP REDACTADO]"],
+  ];
+  let out = text;
+  for (const [re, tag] of patterns) out = out.replace(re, tag);
+  return out;
+}
+
+function redactMessages(messages: any[]): any[] {
+  return (messages || []).map((m: any) => ({ ...m, content: typeof m.content === "string" ? redactPii(m.content) : m.content }));
+}
+
 async function callAnthropic(apiKey: string, messages: any[], system: string) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -116,8 +144,10 @@ Deno.serve(async (req) => {
     if (error) return json({ error: error.message }, 500);
     if (!row) return json({ error: `Nenhuma chave de ${provider} configurada para esta conta. Configure em Configurações → Provedor de IA.` }, 400);
 
-    const messages = Array.isArray(body.messages) ? body.messages : [];
-    const system = body.system || "";
+    // Redige PII aqui (servidor) mesmo que o navegador já tenha feito isso — defesa em
+    // profundidade, ver comentário de redactPii() acima.
+    const messages = redactMessages(Array.isArray(body.messages) ? body.messages : []);
+    const system = redactPii(body.system || "");
     try {
       if (provider === "anthropic") return json(await callAnthropic(row.api_key, messages, system));
       if (provider === "openai") return json(await callOpenAI(row.api_key, messages, system));
