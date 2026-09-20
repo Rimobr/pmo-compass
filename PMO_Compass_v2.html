@@ -520,9 +520,9 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 .wbs-lastedit-btn:hover{background:var(--s3);color:var(--t1);border-color:var(--b2)}
 </style>
 
-<!-- ■ MODULE: ui/access-control ─ Perfis de acesso (ADM, Gerente, Consulta, Manutenção) -->
+<!-- ■ MODULE: ui/access-control ─ Perfis de acesso (ADM, Gerente, Consulta, TI/Suporte) -->
 <style data-module="ui/access-control">
-/* admin: nada é escondido. gerente: sem acesso a settings sensíveis. consulta: somente leitura. manutenção: sem CRUD de negócio. */
+/* admin: nada é escondido. gerente: sem acesso a settings sensíveis. consulta: somente leitura. TI/Suporte (chave manutencao): sem CRUD de negócio. */
 body[data-role="consulta"] [data-perm]{display:none !important;}
 body[data-role="manutencao"] [data-perm="business"]{display:none !important;}
 body[data-role="gerente"] [data-perm="settings"]{display:none !important;}
@@ -1818,7 +1818,7 @@ body.icons-failed i[data-fb]::before{
 
   <div class="card">
     <div class="lbl"><i class="ti ti-settings"></i>Configurações</div>
-    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Perfis de acesso</strong> — Administrador, Gerente, Consulta e Manutenção, com bloqueio reforçado mesmo via console do navegador. Se conectado ao Supabase, os perfis também são validados no banco de dados.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Perfis de acesso</strong> — Administrador, Gerente, Consulta e TI/Suporte, com bloqueio reforçado mesmo via console do navegador. Se conectado ao Supabase, os perfis também são validados no banco de dados.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Provedor de IA</strong> — escolha entre Claude, ChatGPT ou Gemini, com chave salva localmente no navegador.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Backup / Restaurar / Limpar dados</strong> — exporta tudo em JSON, restaura de um arquivo, e a limpeza pede backup + confirmação antes de apagar.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Backend em nuvem (Supabase)</strong> — schema, sincronização e perfis via banco de dados, validados de ponta a ponta com um projeto Supabase real (múltiplos projetos, RBAC reforçado pelo banco, Raio-X com IA). Ver <code>SETUP.md</code> para provisionar uma instância nova.</div></div>
@@ -1845,13 +1845,13 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: core/store ─ Estado e localStorage -->
 <!-- ■ MODULE: core/db ─ Base de dados local real (WBS, Decisões, Repositório) com backup/restauração -->
-<!-- ■ MODULE: core/auth ─ Perfis de acesso (ADM, Gerente, Consulta, Manutenção) -->
+<!-- ■ MODULE: core/auth ─ Perfis de acesso (ADM, Gerente, Consulta, TI/Suporte) -->
 <script data-module="core/auth">
 const Auth = (() => {
   const KEY = 'pmo_auth_v1';
   const ROLES = ['admin','gerente','consulta','manutencao'];
-  const LABEL = { admin:'Administrador', gerente:'Gerente', consulta:'Consulta (somente leitura)', manutencao:'Manutenção' };
-  const FALLBACK_INITIALS = { admin:'AD', gerente:'GE', consulta:'CO', manutencao:'MN' };
+  const LABEL = { admin:'Administrador', gerente:'Gerente', consulta:'Consulta (somente leitura)', manutencao:'TI / Suporte' };
+  const FALLBACK_INITIALS = { admin:'AD', gerente:'GE', consulta:'CO', manutencao:'TI' };
   // Modelo de permissão: 'business' = CRUD de WBS/Decisões/Repositório · 'settings' = chaves de IA, integrações, backup/limpeza
   const PERMS = {
     admin:      { business:true,  settings:true  },
@@ -2905,7 +2905,7 @@ const Forecast = (() => {
 <!-- ■ MODULE: ui/users ─ Promover/rebaixar perfis do Supabase pela interface, sem SQL manual -->
 <script data-module="ui/users">
 const Users = (() => {
-  const ROLE_LABEL = { admin:'Administrador', gerente:'Gerente', consulta:'Consulta', manutencao:'Manutenção' };
+  const ROLE_LABEL = { admin:'Administrador', gerente:'Gerente', consulta:'Consulta', manutencao:'TI / Suporte' };
   function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   // Mostra/esconde os cards de admin — só fazem sentido pra quem está logado de verdade como admin
@@ -2959,7 +2959,7 @@ const Users = (() => {
      pelo lado da pessoa — evita listar N projetos por usuário quando o portfólio cresce). -->
 <script data-module="ui/project-members">
 const ProjectMembers = (() => {
-  const ROLE_LABEL = { admin:'Administrador', gerente:'Gerente', consulta:'Consulta', manutencao:'Manutenção' };
+  const ROLE_LABEL = { admin:'Administrador', gerente:'Gerente', consulta:'Consulta', manutencao:'TI / Suporte' };
   function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   let profiles = [];
@@ -10074,7 +10074,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
       </div>
       <div class="auth-role-opt" data-role="manutencao" onclick="Auth.pickRole('manutencao')">
         <div class="aro-ico"><i class="ti ti-settings"></i></div>
-        <div class="aro-body"><div class="aro-title">Manutenção</div><div class="aro-desc">Cuida de chaves de IA, integrações e backup/limpeza. Sem acesso a WBS/decisões/repositório.</div></div>
+        <div class="aro-body"><div class="aro-title">TI / Suporte</div><div class="aro-desc">Cuida de chaves de IA, integrações e backup/limpeza. Sem permissão de edição em WBS/decisões/repositório.</div></div>
       </div>
       <div style="margin-top:12px;padding:10px 12px;background:var(--s2);border-radius:var(--r8);font-size:11px;color:var(--t3);line-height:1.5">
         <i class="ti ti-info-circle" style="font-size:13px"></i> Este controle é local ao navegador (não há login de servidor) — ideal para evitar cliques acidentais e organizar quem faz o quê, mas não substitui autenticação real em um ambiente multiusuário.

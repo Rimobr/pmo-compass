@@ -20,7 +20,7 @@ PMO Compass é um sistema de apoio à decisão para gerentes de projetos, com IA
 - **Frontend:** HTML+CSS+JS vanilla, sem framework, sem bundler. Cada "módulo" é um bloco `<script data-module="nome">` autoexecutável (IIFE) que expõe funções via `return { ... }`.
 - **"Banco de dados":** `localStorage` do navegador, gerenciado pelo módulo `DB` (`core/db`). Cada projeto tem sua própria chave de armazenamento — ver seção 4.
 - **IA:** chamadas diretas do navegador para Claude/OpenAI/Gemini (módulo `AI`, `services/ai`), com a chave escolhida pelo usuário em Configurações. **A chave fica no navegador — isso é uma dívida técnica conhecida, não um acidente** (ver seção 7, P0).
-- **Perfis de acesso:** 4 perfis (Administrador, Gerente, Consulta, Manutenção) via módulo `Auth` (`core/auth`), reforçados tanto na interface (`data-perm` + CSS) quanto em cada função de mutação (`Auth.guard('business'|'settings')`).
+- **Perfis de acesso:** 4 perfis (Administrador, Gerente, Consulta, TI/Suporte) via módulo `Auth` (`core/auth`), reforçados tanto na interface (`data-perm` + CSS) quanto em cada função de mutação (`Auth.guard('business'|'settings')`).
 - **Multi-projeto:** cada projeto (Portal Nexus, Valdori Dist., Grupo Beltrano, ou qualquer criado pelo usuário) tem sua própria base de dados isolada em `localStorage`, trocada via `DB.switchProject(id)`.
 - **Backend opcional (Supabase):** módulo `Cloud` (`core/cloud`) sincroniza WBS/Decisões/Repositório com um projeto Supabase real, se configurado. Ver seção 5.
 
@@ -72,7 +72,7 @@ Arquivos: `manifest.json`, `sw.js`, `icon-192.png`, `icon-512.png`, `icon-maskab
 
 O app tem dois sistemas de identidade com naturezas diferentes, que **hoje compartilham um único ponto de entrada** na UI:
 
-1. **Perfil de acesso local** (`core/auth`, módulo `Auth`) — nome + papel (Administrador/Gerente/Consulta/Manutenção) salvos em `localStorage`, **sem senha, sem sessão real**. Existe pra evitar cliques acidentais em modo local (sem backend), não substitui autenticação.
+1. **Perfil de acesso local** (`core/auth`, módulo `Auth`) — nome + papel (Administrador/Gerente/Consulta/TI-Suporte) salvos em `localStorage`, **sem senha, sem sessão real**. Existe pra evitar cliques acidentais em modo local (sem backend), não substitui autenticação.
 2. **Login Supabase real** (`core/cloud`, módulo `Cloud`) — e-mail/senha reais, papel vindo do banco (`profiles.role`) via `Auth.setFromCloud()`.
 
 **Como fica agora:** clicar no avatar/badge no topo da tela (`Auth.openModal()`) abre **um único modal** que se adapta ao estado real — mostra "Conectado como {email}" + botão "Sair da conta" quando há sessão Supabase real; mostra um formulário de entrar/criar conta quando o projeto está conectado mas ninguém logou ainda; ou mostra o seletor local (com atalho pra conectar Supabase) quando não há backend configurado. Um badge (`tb-cloud-badge`) sempre visível na barra superior mostra qual desses 3 estados está ativo, mesmo sem abrir o modal. A tela de Configurações → Nuvem & Automação manteve só a parte técnica (URL/chave do projeto, sincronizar, desconectar) — login/logout não vivem mais lá.
