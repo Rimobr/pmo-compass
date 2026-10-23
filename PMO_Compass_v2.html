@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.1.1'
+  version: '2.1.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -233,7 +233,7 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .ico-btn .bdot{width:7px;height:7px;border-radius:50%;background:var(--red);position:absolute;top:4px;right:4px;border:1.5px solid var(--s1)}
 .ava{width:30px;height:30px;border-radius:50%;background:var(--pd);border:1px solid var(--pb);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--t1);cursor:pointer;flex-shrink:0}
 .app-body{flex:1;display:flex;overflow:hidden}
-.sidebar{width:192px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--b1);padding:12px 8px;display:flex;flex-direction:column;gap:1px;overflow-y:auto}
+.sidebar{width:var(--sbw,192px);flex-shrink:0;background:var(--s1);border-right:1px solid var(--b1);padding:12px 8px;display:flex;flex-direction:column;gap:1px;overflow-y:auto}
 .sb-sec{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);padding:8px 10px 4px;margin-top:6px}
 .sb-sec:first-child{margin-top:0}
 .si{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:var(--r6);font-size:12.5px;color:var(--t2);cursor:pointer;border:none;background:transparent;width:100%;text-align:left}
@@ -284,7 +284,11 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .pg-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .pg-title{font-size:17px;font-weight:600;color:var(--t1);margin-bottom:2px}
 .pg-sub{font-size:12px;color:var(--t3);line-height:1.5}
-@media(max-width:900px){.sidebar{display:none}.tb-nav{display:flex;justify-content:flex-start}}
+@media(max-width:900px){.sidebar,.sb-rz{display:none}.tb-nav{display:flex;justify-content:flex-start}}
+.sb-rz{flex:0 0 6px;margin:0 -3px;position:relative;z-index:30;cursor:col-resize;touch-action:none}
+.sb-rz::after{content:'';position:absolute;left:2px;top:0;bottom:0;width:2px;background:transparent}
+.sb-rz:hover::after,.sb-rz.on::after,.sb-rz:focus-visible::after{background:var(--acc)}
+.sb-rz:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
 </style>
 
 <!-- ■ MODULE: ui/kg ─ KPI Groups -->
@@ -7792,11 +7796,36 @@ const ColumnDrag = (() => {
     rz.addEventListener('keydown', e => { if(e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); set(cur() + (e.key === 'ArrowRight' ? STEP : -STEP)); keep(); } });
     rz.addEventListener('dblclick', () => { inner.style.removeProperty('--gl'); try { localStorage.removeItem(K); } catch(e) {} });
   }
-  if(typeof document !== 'undefined') {
-    document.addEventListener('DOMContentLoaded', enableGantt);
-    if(document.readyState !== 'loading') enableGantt();
+  // Menu lateral: a largura é da pessoa (arrastar a borda, ou setas com a borda em foco; duplo clique volta a 192 px)
+  function enableSidebar() {
+    const sb = document.querySelector('aside.sidebar');
+    if(!sb || document.getElementById('sb-rz')) return;
+    const K = 'pmo_sidebar_w_v1', MIN = 150, MAX = 420, DEF = 192, root = document.documentElement;
+    const set = w => root.style.setProperty('--sbw', Math.max(MIN, Math.min(MAX, Math.round(w))) + 'px');
+    const cur = () => sb.getBoundingClientRect().width || DEF;
+    const keep = () => { try { localStorage.setItem(K, String(Math.round(cur()))); } catch(e) {} };
+    try { const v = parseFloat(localStorage.getItem(K)); if(v >= MIN && v <= MAX) set(v); } catch(e) {}
+    const rz = document.createElement('div');
+    rz.id = 'sb-rz'; rz.className = 'sb-rz'; rz.tabIndex = 0;
+    rz.setAttribute('role', 'separator'); rz.setAttribute('aria-orientation', 'vertical');
+    rz.setAttribute('aria-label', 'Largura do menu lateral: arraste ou use as setas esquerda e direita');
+    rz.title = 'Arraste para mudar a largura do menu (duplo clique restaura)';
+    sb.insertAdjacentElement('afterend', rz);
+    rz.addEventListener('pointerdown', e => {
+      e.preventDefault(); rz.setPointerCapture(e.pointerId); rz.classList.add('on');
+      const x0 = e.clientX, w0 = cur();
+      const mv = ev => set(w0 + ev.clientX - x0);
+      const up = () => { rz.classList.remove('on'); rz.removeEventListener('pointermove', mv); rz.removeEventListener('pointerup', up); keep(); };
+      rz.addEventListener('pointermove', mv); rz.addEventListener('pointerup', up);
+    });
+    rz.addEventListener('keydown', e => { if(e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); set(cur() + (e.key === 'ArrowRight' ? STEP : -STEP)); keep(); } });
+    rz.addEventListener('dblclick', () => { root.style.removeProperty('--sbw'); try { localStorage.removeItem(K); } catch(e) {} });
   }
-  return { enable, reset, moveOrder, isPermutation, enableGantt };
+  if(typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => { enableGantt(); enableSidebar(); });
+    if(document.readyState !== 'loading') { enableGantt(); enableSidebar(); }
+  }
+  return { enable, reset, moveOrder, isPermutation, enableGantt, enableSidebar };
 })();
 </script>
 
