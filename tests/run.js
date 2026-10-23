@@ -439,6 +439,27 @@ test('isPermutation recusa ordem salva de uma tabela com outro número de coluna
   assert.ok(!ColumnDrag.isPermutation('x', 1));
 });
 
+// ── Versão publicada: um número só em todos os lugares ───────────────────────
+section('Versão e aviso de atualização (ui/update-check)');
+const UpdateCheck = loadModule('ui/update-check', 'UpdateCheck');
+
+test('version.json, BRAND.version, package.json e cache do service worker têm a MESMA versão', () => {
+  const root = path.join(__dirname, '..');
+  const v = JSON.parse(fs.readFileSync(path.join(root, 'version.json'), 'utf8')).version;
+  const brand = html.match(/tagline: [^\n]*\n\s*version: '([0-9.]+)'/)[1];
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
+  const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8').match(/CACHE_NAME = 'pmo-compass-v([0-9.]+)'/)[1];
+  assert.deepStrictEqual([brand, pkg, sw], [v, v, v], 'suba a versão nos 4 lugares ao publicar (senão o aviso de atualização não dispara)');
+});
+
+test('differs: avisa quando a versão publicada é outra e nunca com resposta vazia', () => {
+  assert.ok(UpdateCheck.differs('2.1.0', '2.1.1'));
+  assert.ok(UpdateCheck.differs('2.1.1', '2.1.0'));
+  assert.ok(!UpdateCheck.differs('2.1.1', '2.1.1'));
+  assert.ok(!UpdateCheck.differs('2.1.1', undefined));
+  assert.ok(!UpdateCheck.differs('2.1.1', ''));
+});
+
 // ── Resultado ────────────────────────────────────────────────────────────────
 console.log(`\n${passed} passaram, ${failed} falharam.`);
 process.exit(failed > 0 ? 1 : 0);

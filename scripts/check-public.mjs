@@ -2,7 +2,7 @@
 // Conferência pós-publicação (regra "publicar só o app"): o app responde 200; arquivos de trabalho e
 // credenciais respondem 404. Uso: node scripts/check-public.mjs [https://pmo-compass.vercel.app]
 const base = (process.argv[2] || 'https://pmo-compass.vercel.app').replace(/\/$/, '');
-const mustBeOk = ['/', '/manifest.json', '/sw.js', '/icon-192.png'];
+const mustBeOk = ['/', '/manifest.json', '/sw.js', '/version.json', '/icon-192.png'];
 const mustBeHidden = [
   '/schema.sql', '/DPA_LGPD.md', '/CONTEXTO_PROJETO.md', '/SETUP.md', '/package.json', '/package-lock.json',
   '/playwright.config.js', '/tests/e2e/fixtures.js', '/tests/run.js', '/supabase/functions/ai-proxy/index.ts',

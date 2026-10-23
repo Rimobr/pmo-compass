@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.1.0'
+  version: '2.1.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -7797,6 +7797,70 @@ const ColumnDrag = (() => {
     if(document.readyState !== 'loading') enableGantt();
   }
   return { enable, reset, moveOrder, isPermutation, enableGantt };
+})();
+</script>
+
+<!-- ■ MODULE: ui/update-check ─ Aviso de nova versão: o app confere sozinho (ao abrir, ao voltar para a aba e a cada 5 min) se o
+     servidor publicou uma versão diferente da que está rodando e mostra uma faixa fixa com o botão "Atualizar agora". -->
+<style data-module="ui/update-check-css">
+.upd-bar{position:fixed;left:0;right:0;top:0;z-index:2000;display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;padding:10px 16px;background:var(--s1);border-bottom:2px solid var(--acc);color:var(--t1);font-size:12.5px;box-shadow:var(--shadow-md)}
+.upd-bar strong{color:var(--t1)}
+.upd-bar .btn{font-weight:600}
+</style>
+<script data-module="ui/update-check">
+const UpdateCheck = (() => {
+  const URL_VERSION = 'version.json';
+  const EVERY_MS = 5 * 60 * 1000;
+  let shown = false, timer = null, busy = false;
+
+  // Qualquer diferença conta (inclusive voltar a uma versão anterior): o servidor é a referência
+  const differs = (running, published) => !!published && String(published) !== String(running);
+
+  async function check() {
+    if(busy || shown) return;
+    busy = true;
+    try {
+      const res = await fetch(URL_VERSION + '?t=' + Date.now(), { cache: 'no-store' });
+      if(!res.ok) return;
+      const info = await res.json();
+      if(differs(BRAND.version, info && info.version)) show(info.version);
+    } catch(e) { /* offline, arquivo local ou site fora do ar: tenta de novo na próxima */ }
+    finally { busy = false; }
+  }
+
+  function show(version) {
+    if(shown || typeof document === 'undefined') return;
+    shown = true;
+    const bar = document.createElement('div');
+    bar.className = 'upd-bar'; bar.id = 'upd-bar'; bar.setAttribute('role', 'status');
+    bar.innerHTML = `<span><strong>Há uma nova versão do ${BRAND.name} (${String(version).replace(/[^0-9A-Za-z.\-]/g, '')}).</strong> Atualize para receber as melhorias e correções — salve o que estiver editando antes.</span>`
+      + '<button type="button" class="btn btn-sm btn-acc" id="upd-go"><i class="ti ti-refresh"></i>Atualizar agora</button>';
+    document.body.appendChild(bar);
+    document.getElementById('upd-go').addEventListener('click', apply);
+  }
+
+  // Esvazia os caches do app e do service worker e recarrega: garante que o código novo seja o que roda
+  async function apply() {
+    const btn = document.getElementById('upd-go'); if(btn) { btn.disabled = true; btn.textContent = 'Atualizando…'; }
+    try {
+      if('serviceWorker' in navigator) { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.update().catch(() => {}))); }
+      if(window.caches) { const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); }
+    } catch(e) { /* mesmo se falhar, o recarregamento abaixo busca da rede (o service worker é network-first) */ }
+    location.reload();
+  }
+
+  function start() {
+    if(typeof document === 'undefined' || location.protocol === 'file:') return;
+    setTimeout(check, 4000);
+    timer = setInterval(check, EVERY_MS);
+    document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') check(); });
+    window.addEventListener('focus', check);
+    window.addEventListener('online', check);
+  }
+  if(typeof document !== 'undefined') {
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+  }
+  return { check, apply, differs };
 })();
 </script>
 

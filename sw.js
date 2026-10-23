@@ -3,7 +3,7 @@
 // com fallback para o cache quando estiver offline. Tudo que não é do app shell
 // (CDNs de ícones/fontes, chamadas às APIs de IA) passa direto, sem interferência.
 
-const CACHE_NAME = 'pmo-compass-v2.1';
+const CACHE_NAME = 'pmo-compass-v2.1.1';
 const APP_SHELL = [
   './PMO_Compass_v2.html',
   './manifest.json',
@@ -36,6 +36,8 @@ self.addEventListener('fetch', (event) => {
   // Só intercepta requisições do próprio app (mesma origem, GET).
   // Chamadas de terceiros (CDN de ícones/fontes, APIs de IA) seguem normalmente.
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+  // version.json é a fonte do aviso de nova versão: nunca passa pelo cache
+  if (new URL(req.url).pathname.endsWith('/version.json')) return;
 
   event.respondWith(
     fetch(req)
