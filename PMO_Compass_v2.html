@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.1.5'
+  version: '2.1.7'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -111,7 +111,7 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 html[data-theme="gray"] .b-neu{color:var(--t1)}
 .help-q{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--s3);color:var(--t3);font-size:10px;font-weight:700;line-height:1;cursor:pointer;flex-shrink:0;user-select:none;vertical-align:1px}
 .help-q:hover{background:var(--ab);color:var(--acc)}
-.help-tip-pop{position:fixed;z-index:600;max-width:260px;background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);box-shadow:0 4px 16px rgba(0,0,0,.18);padding:10px 12px;font-size:12px;color:var(--t2);line-height:1.55}
+.help-tip-pop{position:fixed;z-index:1200;max-width:260px;background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);box-shadow:0 4px 16px rgba(0,0,0,.18);padding:10px 12px;font-size:12px;color:var(--t2);line-height:1.55}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--r6);border:1px solid var(--b2);background:transparent;color:var(--t2);cursor:pointer;font-size:12px;font-weight:500;transition:all .14s;white-space:nowrap}
 .btn:hover{background:var(--s2);color:var(--t1);border-color:var(--b3)}
 .btn:active{transform:scale(.98)}
@@ -571,7 +571,7 @@ body[data-role="manutencao"] .role-badge{background:var(--amd);color:var(--amb)}
 .gantt-tab.on{background:var(--s3);color:var(--t1);border-color:var(--b2)}
 .gantt-tab:hover:not(.on){color:var(--t1)}
 .gantt-wrap{overflow-x:auto}
-.gantt-inner{min-width:760px;position:relative;--gl:200px}
+.gantt-inner{min-width:calc(var(--gl) + var(--gtw,560px));position:relative;--gl:200px}
 .gantt-rz{position:absolute;top:0;bottom:0;left:calc(var(--gl) - 4px);width:8px;cursor:col-resize;z-index:6;touch-action:none}
 .gantt-rz::after{content:'';position:absolute;left:3px;top:6px;bottom:6px;width:2px;border-radius:2px;background:var(--b2)}
 .gantt-rz:hover::after,.gantt-rz.on::after,.gantt-rz:focus-visible::after{background:var(--acc)}
@@ -634,7 +634,7 @@ body[data-role="manutencao"] .role-badge{background:var(--amd);color:var(--amb)}
 .wz-step.done .wz-num{background:var(--gd);border:1px solid var(--gb);color:var(--grn)}
 .wz-step:not(.active):not(.done) .wz-num{background:var(--s3);border:1px solid var(--b2);color:var(--t3)}
 .field-group{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
-.field-label{font-size:11.5px;font-weight:500;color:var(--t2)}
+.field-label{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;color:var(--t2)}
 .field-hint{font-size:10.5px;color:var(--t3)}
 </style>
 
@@ -1676,12 +1676,12 @@ body.icons-failed i[data-fb]::before{
   <div class="g4" id="rk-kpis"></div>
   <div class="rk-grid">
     <div class="card">
-      <div class="lbl"><i class="ti ti-grid-dots"></i>Matriz probabilidade × impacto</div>
+      <div class="lbl"><i class="ti ti-grid-dots"></i>Matriz probabilidade × impacto<span class="help-q" data-help="Cada célula mostra quantos riscos em aberto têm aquela combinação de probabilidade (linhas) e impacto (colunas). Cores: verde baixo, azul médio, laranja alto, vermelho crítico. Clique numa célula para filtrar a lista; clique de novo para limpar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
       <div id="rk-matrix-root"></div>
       <div class="rk-legend" id="rk-legend"></div>
     </div>
     <div class="card">
-      <div class="lbl"><i class="ti ti-list-details"></i>Riscos do projeto</div>
+      <div class="lbl"><i class="ti ti-list-details"></i>Riscos do projeto<span class="help-q" data-help="Lista ordenada pela nota (do mais grave ao menos grave). Busque por título, responsável ou categoria e filtre por situação ou faixa. Clique num risco para editar, mudar a situação ou registrar a revisão." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
       <div class="rk-toolbar">
         <input class="input rk-q" id="rk-q" type="search" placeholder="Buscar por título, dono ou categoria" aria-label="Buscar riscos" oninput="Risks.setQuery(this.value)">
         <select class="input" id="rk-f-status" aria-label="Filtrar por situação" onchange="Risks.setFilter('status', this.value)">
@@ -1720,7 +1720,7 @@ body.icons-failed i[data-fb]::before{
       <div id="hr-load-root"></div>
     </div>
     <div class="card">
-      <div class="lbl"><i class="ti ti-list-check"></i>Apontamentos</div>
+      <div class="lbl"><i class="ti ti-list-check"></i>Apontamentos<span class="help-q" data-help="Horas lançadas no período escolhido, agrupadas por dia. Clique numa linha para corrigir ou excluir. Use &quot;Importar planilha&quot; para trazer muitos lançamentos de uma vez." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
       <div id="hr-list-root"></div>
     </div>
   </div>
@@ -11004,14 +11004,20 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     const totalDays = dayDiff(minD, maxD);
     const pctPos = d => (dayDiff(minD, d) / totalDays) * 100;
 
-    let rulerHtml = '';
+    let rulerHtml = '', monthCount = 0;
     let cursor = new Date(minD.getFullYear(), minD.getMonth(), 1);
     while(cursor <= maxD) {
       const left = pctPos(cursor);
-      if(left >= 0) rulerHtml += `<div class="gantt-ruler-m" style="left:calc(var(--gl) + (100% - var(--gl)) * ${Math.max(left,0)/100})">${MES[cursor.getMonth()]}/${cursor.getFullYear()}</div>`;
+      monthCount++;
+      // A régua já começa depois da coluna de nomes (margin-left): a posição é só a % da própria régua
+      if(left >= 0) rulerHtml += `<div class="gantt-ruler-m" style="left:${Math.max(left,0)}%">${MES[cursor.getMonth()]}/${cursor.getFullYear()}</div>`;
       cursor = new Date(cursor.getFullYear(), cursor.getMonth()+1, 1);
     }
     ruler.innerHTML = rulerHtml;
+    // A linha do tempo mantém uma largura legível (~80 px por mês): alargar a coluna de nomes empurra o gráfico para o lado
+    // (a área rola na horizontal) em vez de espremê-lo
+    const ganttInner = document.getElementById('gantt-inner');
+    if(ganttInner) ganttInner.style.setProperty('--gtw', Math.max(560, monthCount * 80) + 'px');
 
     let rows = '';
     data.forEach(g => {
@@ -11887,22 +11893,22 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     </div>
     <div class="modal-sub">Descreva o que pode dar errado, estime probabilidade e impacto e defina quem cuida disso</div>
     <div style="display:flex;flex-direction:column;gap:12px">
-      <div><div class="field-label"><label for="rk-f-title">O que pode acontecer?</label></div><input class="input" id="rk-f-title" maxlength="200" placeholder="Ex: Fornecedor não entrega o módulo de integração no prazo"></div>
-      <div><div class="field-label"><label for="rk-f-desc">Detalhes (causa e consequência)</label></div><textarea class="input" id="rk-f-desc" rows="2" style="resize:vertical;font-family:inherit" placeholder="Por que pode acontecer e o que acontece com o projeto se acontecer"></textarea></div>
+      <div><div class="field-label"><label for="rk-f-title">O que pode acontecer?</label><span class="help-q" data-help="Escreva o risco como algo que PODE acontecer, com causa e efeito em poucas palavras. Ex.: &quot;Fornecedor atrasa a entrega e o go-live escorrega&quot;. Evite títulos genéricos como &quot;Atraso&quot;." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="rk-f-title" maxlength="200" placeholder="Ex: Fornecedor não entrega o módulo de integração no prazo"></div>
+      <div><div class="field-label"><label for="rk-f-desc">Detalhes (causa e consequência)</label><span class="help-q" data-help="Opcional. Explique por que o risco existe e o que acontece com o projeto se ele se concretizar. Ajuda quem for revisar depois." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><textarea class="input" id="rk-f-desc" rows="2" style="resize:vertical;font-family:inherit" placeholder="Por que pode acontecer e o que acontece com o projeto se acontecer"></textarea></div>
       <div class="g3" style="gap:10px">
-        <div><div class="field-label"><label for="rk-f-prob">Probabilidade</label></div><select class="input" id="rk-f-prob" onchange="Risks.previewScore()"></select></div>
-        <div><div class="field-label"><label for="rk-f-impact">Impacto</label></div><select class="input" id="rk-f-impact" onchange="Risks.previewScore()"></select></div>
-        <div><div class="field-label"><label for="rk-f-cat">Categoria</label></div><select class="input" id="rk-f-cat"></select></div>
+        <div><div class="field-label"><label for="rk-f-prob">Probabilidade</label><span class="help-q" data-help="Quão provável é acontecer, de 1 (muito baixa) a 5 (muito alta). Pense no que já aconteceu em projetos parecidos. A nota do risco é probabilidade × impacto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><select class="input" id="rk-f-prob" onchange="Risks.previewScore()"></select></div>
+        <div><div class="field-label"><label for="rk-f-impact">Impacto</label><span class="help-q" data-help="Tamanho do estrago se acontecer, de 1 (muito baixo) a 5 (muito alto): prazo, custo, qualidade ou imagem. A nota do risco é probabilidade × impacto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><select class="input" id="rk-f-impact" onchange="Risks.previewScore()"></select></div>
+        <div><div class="field-label"><label for="rk-f-cat">Categoria</label><span class="help-q" data-help="Tipo do risco, só para agrupar e filtrar. &quot;Colaboradores&quot; cobre falta, sobrecarga ou saída de pessoas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><select class="input" id="rk-f-cat"></select></div>
       </div>
       <div class="rk-prev" id="rk-f-preview" aria-live="polite">Escolha probabilidade e impacto para ver a nota.</div>
       <div class="g3" style="gap:10px">
-        <div><div class="field-label"><label for="rk-f-resp">Resposta</label></div><select class="input" id="rk-f-resp"></select></div>
-        <div><div class="field-label"><label for="rk-f-status-m">Situação</label></div><select class="input" id="rk-f-status-m"></select></div>
-        <div><div class="field-label"><label for="rk-f-review">Próxima revisão</label></div><input class="input" type="date" id="rk-f-review"></div>
+        <div><div class="field-label"><label for="rk-f-resp">Resposta</label><span class="help-q" data-help="O que você pretende fazer: Evitar (mudar o plano para o risco não existir), Mitigar (reduzir chance ou efeito), Transferir (passar a outro, como seguro ou fornecedor) ou Aceitar (conviver e vigiar)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><select class="input" id="rk-f-resp"></select></div>
+        <div><div class="field-label"><label for="rk-f-status-m">Situação</label><span class="help-q" data-help="Aberto e Mitigando entram na nota de saúde do projeto e nos avisos. Aceito e Encerrado saem dela. Marque Ocorrido se o risco virou problema real." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><select class="input" id="rk-f-status-m"></select></div>
+        <div><div class="field-label"><label for="rk-f-review">Próxima revisão</label><span class="help-q" data-help="Data para reavaliar probabilidade e impacto. Revisão vencida gera alerta no Dashboard. Risco crítico pede revisão semanal." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" type="date" id="rk-f-review"></div>
       </div>
-      <div><div class="field-label"><label for="rk-f-owner">Responsável</label></div><input class="input" id="rk-f-owner" list="rk-owner-list" maxlength="120" placeholder="Quem acompanha este risco"><datalist id="rk-owner-list"></datalist></div>
-      <div><div class="field-label"><label for="rk-f-mit">Ação para reduzir (mitigação)</label></div><textarea class="input" id="rk-f-mit" rows="2" style="resize:vertical;font-family:inherit" placeholder="O que será feito agora para diminuir a chance ou o impacto"></textarea></div>
-      <div><div class="field-label"><label for="rk-f-cont">Plano B (se acontecer)</label></div><textarea class="input" id="rk-f-cont" rows="2" style="resize:vertical;font-family:inherit" placeholder="O que fazer se o risco se concretizar"></textarea></div>
+      <div><div class="field-label"><label for="rk-f-owner">Responsável</label><span class="help-q" data-help="Quem acompanha este risco e cobra a ação. Pode digitar o nome ou escolher um colaborador da equipe. Risco sem responsável não anda." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="rk-f-owner" list="rk-owner-list" maxlength="120" placeholder="Quem acompanha este risco"><datalist id="rk-owner-list"></datalist></div>
+      <div><div class="field-label"><label for="rk-f-mit">Ação para reduzir (mitigação)</label><span class="help-q" data-help="O que será feito AGORA para diminuir a chance ou o efeito. Seja específico: ação, quem e quando." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><textarea class="input" id="rk-f-mit" rows="2" style="resize:vertical;font-family:inherit" placeholder="O que será feito agora para diminuir a chance ou o impacto"></textarea></div>
+      <div><div class="field-label"><label for="rk-f-cont">Plano B (se acontecer)</label><span class="help-q" data-help="O que fazer se o risco acontecer mesmo assim (plano B). Deixe pronto antes, para decidir rápido depois." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><textarea class="input" id="rk-f-cont" rows="2" style="resize:vertical;font-family:inherit" placeholder="O que fazer se o risco se concretizar"></textarea></div>
     </div>
     <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
       <button class="btn btn-sm btn-red" id="rk-f-delete-btn" style="display:none" onclick="Risks.deleteFromModal()"><i class="ti ti-trash"></i>Excluir</button>
@@ -11921,13 +11927,13 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     </div>
     <div class="modal-sub">Quem trabalhou, quando e em quê</div>
     <div style="display:flex;flex-direction:column;gap:12px">
-      <div><div class="field-label"><label for="hr-f-person-m">Pessoa</label></div><input class="input" id="hr-f-person-m" list="hr-person-list" maxlength="120" placeholder="Nome da pessoa"><datalist id="hr-person-list"></datalist></div>
+      <div><div class="field-label"><label for="hr-f-person-m">Pessoa</label><span class="help-q" data-help="Quem trabalhou. Escolha um colaborador da equipe ou digite o nome. O nome precisa ser igual ao da equipe para comparar com a carga declarada." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="hr-f-person-m" list="hr-person-list" maxlength="120" placeholder="Nome da pessoa"><datalist id="hr-person-list"></datalist></div>
       <div class="g2" style="gap:10px">
-        <div><div class="field-label"><label for="hr-f-date">Data</label></div><input class="input" type="date" id="hr-f-date"></div>
-        <div><div class="field-label"><label for="hr-f-hours">Horas</label></div><input class="input" type="number" id="hr-f-hours" min="0.25" max="24" step="0.25" placeholder="Ex: 7,5"></div>
+        <div><div class="field-label"><label for="hr-f-date">Data</label><span class="help-q" data-help="Dia em que o trabalho foi feito (não o dia do lançamento)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" type="date" id="hr-f-date"></div>
+        <div><div class="field-label"><label for="hr-f-hours">Horas</label><span class="help-q" data-help="Horas trabalhadas nesse dia, de 0,25 (15 min) a 24. A soma de um colaborador no mesmo dia não pode passar de 24 h." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" type="number" id="hr-f-hours" min="0.25" max="24" step="0.25" placeholder="Ex: 7,5"></div>
       </div>
-      <div><div class="field-label"><label for="hr-f-wbs">Entrega (opcional)</label></div><select class="input" id="hr-f-wbs"></select></div>
-      <div><div class="field-label"><label for="hr-f-note">Observação (opcional)</label></div><input class="input" id="hr-f-note" maxlength="300" placeholder="O que foi feito"></div>
+      <div><div class="field-label"><label for="hr-f-wbs">Entrega (opcional)</label><span class="help-q" data-help="Opcional. Em qual entrega do cronograma o esforço foi gasto, para ver para onde as horas estão indo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><select class="input" id="hr-f-wbs"></select></div>
+      <div><div class="field-label"><label for="hr-f-note">Observação (opcional)</label><span class="help-q" data-help="Opcional. O que foi feito, em uma frase." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="hr-f-note" maxlength="300" placeholder="O que foi feito"></div>
     </div>
     <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
       <button class="btn btn-sm btn-red" id="hr-f-delete-btn" style="display:none" onclick="Hours.deleteFromModal()"><i class="ti ti-trash"></i>Excluir</button>
@@ -11948,7 +11954,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     <div class="imp-steps" id="imp-steps"></div>
 
     <div id="imp-step-1">
-      <div class="field-label"><label for="imp-target">O que você está importando?</label></div>
+      <div class="field-label"><label for="imp-target">O que você está importando?</label><span class="help-q" data-help="Escolha para onde os dados vão. Cada destino reconhece colunas diferentes; a lista aparece logo abaixo. Nada que já existe é apagado ou duplicado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
       <select class="input" id="imp-target" onchange="ImportUi.changeTarget(this.value)" style="margin-bottom:10px"></select>
       <div class="imp-drop" id="imp-drop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');ImportUi.handleFiles(event.dataTransfer.files)">
         <i class="ti ti-file-spreadsheet" style="font-size:22px;display:block;margin-bottom:6px"></i>
@@ -11957,7 +11963,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
         <input type="file" id="imp-file" accept=".csv,.tsv,.txt,.xlsx,.xls" style="display:none" onchange="ImportUi.handleFiles(this.files);this.value=''">
         <div style="font-size:11px;color:var(--t3);margin-top:6px" id="imp-file-hint"></div>
       </div>
-      <div style="margin-top:12px"><div class="field-label"><label for="imp-paste">…ou cole as células copiadas do Excel</label></div>
+      <div style="margin-top:12px"><div class="field-label"><label for="imp-paste">…ou cole as células copiadas do Excel</label><span class="help-q" data-help="No Excel, selecione as células (com o cabeçalho), copie com Ctrl+C e cole aqui. Serve quando você não quer salvar um arquivo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
         <textarea class="input" id="imp-paste" rows="4" style="font-family:var(--font-mono);font-size:11.5px;resize:vertical" placeholder="Copie as linhas (com o cabeçalho) no Excel e cole aqui"></textarea>
         <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm btn-acc" onclick="ImportUi.usePasted()"><i class="ti ti-arrow-right"></i>Usar texto colado</button></div>
       </div>
@@ -11966,9 +11972,9 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
 
     <div id="imp-step-2" style="display:none">
       <div id="imp-sheet-pick" style="display:none;margin-bottom:10px"></div>
-      <div class="field-label" style="margin-bottom:6px">Qual coluna da planilha corresponde a cada campo?</div>
+      <div class="field-label" style="margin-bottom:6px">Qual coluna da planilha corresponde a cada campo? <span class="help-q" data-help="O sistema tenta reconhecer sozinho pelo nome do cabeçalho. Confira cada linha e troque se estiver errada; campos com * são obrigatórios. &quot;Não importar&quot; ignora a coluna." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
       <div class="imp-map" id="imp-map"></div>
-      <div class="field-label" style="margin:14px 0 6px">Prévia (primeiras linhas já interpretadas)</div>
+      <div class="field-label" style="margin:14px 0 6px">Prévia (primeiras linhas já interpretadas) <span class="help-q" data-help="Mostra como as primeiras linhas ficarão depois de lidas (datas, números, hierarquia). Linhas com problema aparecem em &quot;ignoradas&quot;; avisos indicam ajustes automáticos. Só importa quando você clicar em Importar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
       <div class="imp-prev" id="imp-preview"></div>
       <div id="imp-issues" style="margin-top:10px"></div>
     </div>
@@ -11993,26 +11999,26 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     <div class="modal-sub">Pessoa de fora do app (diretoria, patrocinador) que recebe avisos e pode perguntar sobre os projetos</div>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div class="g2" style="gap:10px">
-        <div><div class="field-label"><label for="rc-f-name">Nome</label></div><input class="input" id="rc-f-name" maxlength="120" placeholder="Nome completo"></div>
-        <div><div class="field-label"><label for="rc-f-role">Cargo ou papel (opcional)</label></div><input class="input" id="rc-f-role" maxlength="80" placeholder="Ex: Diretor financeiro"></div>
+        <div><div class="field-label"><label for="rc-f-name">Nome</label><span class="help-q" data-help="Nome da pessoa que vai receber avisos e perguntar sobre os projetos (diretoria, patrocinador). Ela não precisa ter login no sistema." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="rc-f-name" maxlength="120" placeholder="Nome completo"></div>
+        <div><div class="field-label"><label for="rc-f-role">Cargo ou papel (opcional)</label><span class="help-q" data-help="Opcional. Aparece nas conversas e ajuda a IA a falar no tom certo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="rc-f-role" maxlength="80" placeholder="Ex: Diretor financeiro"></div>
       </div>
       <div class="g2" style="gap:10px">
-        <div><div class="field-label"><label for="rc-f-wa">WhatsApp</label></div><input class="input" id="rc-f-wa" inputmode="tel" placeholder="(11) 99999-8888"><div style="font-size:11px;color:var(--t3);margin-top:4px">Com DDD. A pessoa precisa responder SIM para ativar.</div></div>
-        <div><div class="field-label"><label for="rc-f-email">E-mail</label></div><input class="input" id="rc-f-email" type="email" maxlength="200" placeholder="nome@empresa.com"></div>
+        <div><div class="field-label"><label for="rc-f-wa">WhatsApp</label><span class="help-q" data-help="Número com DDD, que será o canal de conversa. Depois de salvar, use &quot;Pedir confirmação por WhatsApp&quot;: a pessoa precisa responder SIM, e só então o canal fica ativo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="rc-f-wa" inputmode="tel" placeholder="(11) 99999-8888"><div style="font-size:11px;color:var(--t3);margin-top:4px">Com DDD. A pessoa precisa responder SIM para ativar.</div></div>
+        <div><div class="field-label"><label for="rc-f-email">E-mail</label><span class="help-q" data-help="Opcional se houver WhatsApp. Recebe os avisos por e-mail, com link para deixar de receber." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="rc-f-email" type="email" maxlength="200" placeholder="nome@empresa.com"></div>
       </div>
       <fieldset style="border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
-        <legend style="font-size:11.5px;color:var(--t2);padding:0 6px">Projetos que esta pessoa pode acompanhar</legend>
+        <legend style="font-size:11.5px;color:var(--t2);padding:0 6px">Projetos que esta pessoa pode acompanhar <span class="help-q" data-help="A IA e os avisos só tratam dos projetos marcados aqui. Se nenhum estiver marcado, a pessoa não recebe nada. Marque só o que ela tem direito de saber." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></legend>
         <div id="rc-projects" style="display:flex;flex-wrap:wrap;gap:6px 16px"></div>
         <div style="font-size:11px;color:var(--t3);margin-top:6px">A IA só responde sobre os projetos marcados aqui — nunca sobre os outros.</div>
       </fieldset>
       <fieldset style="border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
-        <legend style="font-size:11.5px;color:var(--t2);padding:0 6px">Avisos que recebe</legend>
+        <legend style="font-size:11.5px;color:var(--t2);padding:0 6px">Avisos que recebe <span class="help-q" data-help="Escolha quais acontecimentos geram mensagem: decisão crítica pendente, projeto que entra em risco, risco crítico novo e o resumo semanal. Menos é melhor: aviso demais é ignorado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></legend>
         <div id="rc-events" style="display:flex;flex-wrap:wrap;gap:6px 16px"></div>
       </fieldset>
       <div style="border:1px solid var(--ambb);background:var(--amd);border-radius:var(--r8);padding:10px 12px">
-        <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--t1);cursor:pointer"><input type="checkbox" id="rc-f-fin" style="margin-top:3px"><span><strong>Pode ver valores financeiros (R$)</strong><br><span style="font-size:11.5px;color:var(--t2)">Desmarcado, nenhum valor em reais chega a esta pessoa — nem nos avisos, nem nas respostas da IA. Marque só para quem tem direito de conhecer custos.</span></span></label>
+        <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--t1);cursor:pointer"><input type="checkbox" id="rc-f-fin" style="margin-top:3px"><span><strong>Pode ver valores financeiros (R$)</strong> <span class="help-q" data-help="Desmarcado (o padrão), nenhum valor em reais chega a esta pessoa, nem nos avisos nem nas respostas da IA. Marque só para quem tem direito de conhecer custos e orçamento." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span><br><span style="font-size:11.5px;color:var(--t2)">Desmarcado, nenhum valor em reais chega a esta pessoa — nem nos avisos, nem nas respostas da IA. Marque só para quem tem direito de conhecer custos.</span></span></label>
       </div>
-      <div><div class="field-label"><label for="rc-f-consent">Base do consentimento (obrigatório)</label></div>
+      <div><div class="field-label"><label for="rc-f-consent">Base do consentimento (obrigatório)</label><span class="help-q" data-help="Registre COMO e QUANDO a pessoa autorizou receber mensagens (e-mail, reunião, contrato). É exigência da LGPD e fica gravado no histórico." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
         <input class="input" id="rc-f-consent" maxlength="300" placeholder="Ex: Autorizou por e-mail em 20/10/2026 (patrocinador do contrato)">
         <div style="font-size:11px;color:var(--t3);margin-top:4px">Registra por que esta pessoa pode ser contatada (LGPD). Ela pode sair a qualquer momento respondendo PARAR.</div></div>
     </div>
@@ -12035,6 +12041,23 @@ const Messaging = (() => {
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const el = id => document.getElementById(id);
+  // Ícone (?) com "o que é e como usar" — mesmo padrão do resto do app (HelpTip)
+  const hq = t => '<span class="help-q" data-help="' + esc(t) + '" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>';
+  const HELP = {
+    status: 'Lista o que precisa estar pronto para as mensagens saírem. "Pronto" está configurado; "pendente" diz o que falta e onde configurar. Só envia quando a chave geral estiver ligada e houver ao menos um canal pronto.',
+    config: 'Liga ou desliga o envio e define os limites. Use a chave geral para pausar tudo de uma vez; os canais marcados só funcionam se estiverem "prontos" na lista acima. Lembre de clicar em Salvar configuração.',
+    ai: 'Qual inteligência artificial responde as perguntas dos destinatários. Ela usa a chave da SUA conta (Configurações → Provedor de IA), então o custo das respostas é seu. Sem escolher, o assistente avisa que está indisponível.',
+    limit: 'Quantas perguntas cada pessoa pode fazer por dia ao assistente. Protege contra abuso e custo de IA. 30 é um bom ponto de partida.',
+    wd: 'Dia da semana em que cada destinatário recebe o resumo dos projetos que acompanha (somente quem marcou "Resumo semanal").',
+    dh: 'Hora (de Brasília) em que o resumo semanal é enviado. Prefira o começo da manhã.',
+    qs: 'Início do horário de silêncio. Avisos de WhatsApp gerados nesse período ficam guardados e saem quando o silêncio acaba.',
+    qe: 'Fim do horário de silêncio. As mensagens que esperavam são enviadas a partir daqui.',
+    onoff: 'Chave geral. Desligada, nada é enviado e o assistente não responde. Use para pausar durante manutenção ou se algo sair errado.',
+    wa: 'Liga o canal WhatsApp. Exige conta WhatsApp Business conectada (veja a lista de situação) e que cada pessoa tenha confirmado com SIM.',
+    em: 'Liga o canal e-mail. Exige o serviço de e-mail conectado (veja a lista de situação). Cada e-mail leva um link para a pessoa deixar de receber.',
+    rcpt: 'Pessoas de fora do sistema que recebem avisos e podem perguntar sobre projetos. Para cada uma você define projetos, avisos, se vê valores e registra o consentimento. O WhatsApp só ativa quando a PRÓPRIA pessoa responde SIM.',
+    test: 'Simula uma pergunta como se fosse a pessoa escolhida, com o mesmo recorte de projetos e a mesma regra de valores. Nada é enviado nem gravado. Use para conferir o que ela veria antes de ativar.'
+  };
 
   // Telefone → E+número (padrão internacional). Sem "+", 10–11 dígitos = Brasil. Igual ao que o servidor valida.
   function normalizePhone(input) {
@@ -12090,7 +12113,7 @@ const Messaging = (() => {
   function cardStatus() {
     const sv = st.server, s = st.settings || {};
     const live = s.enabled && ((s.whatsapp_enabled && sv && sv.whatsapp) || (s.email_enabled && sv && sv.email));
-    return `<div class="card"><div class="lbl"><i class="ti ti-checklist"></i>Situação da integração</div>
+    return `<div class="card"><div class="lbl"><i class="ti ti-checklist"></i>Situação da integração${hq(HELP.status)}</div>
       <div style="margin-bottom:10px">${live ? '<span class="badge b-grn">Enviando mensagens</span>' : '<span class="badge b-amb">Ainda não está enviando</span>'}
       ${st.outbox ? `<span class="chip" style="margin-left:6px">${st.outbox.pending} na fila · ${st.outbox.failed} com falha</span>` : ''}</div>
       <ul style="list-style:none">
@@ -12105,18 +12128,18 @@ const Messaging = (() => {
 
   function cardSettings() {
     const s = st.settings || {};
-    const num = (id, v, min, max, label) => `<div><div class="field-label"><label for="${id}">${label}</label></div><input class="input" type="number" id="${id}" min="${min}" max="${max}" value="${esc(v)}"></div>`;
-    const hours = (id, v, label) => `<div><div class="field-label"><label for="${id}">${label}</label></div><select class="input" id="${id}">${Array.from({ length:24 }, (_, h) => `<option value="${h}"${h === v ? ' selected' : ''}>${String(h).padStart(2, '0')}h</option>`).join('')}</select></div>`;
-    return `<div class="card"><div class="lbl"><i class="ti ti-settings"></i>Configuração</div>
+    const num = (id, v, min, max, label) => `<div><div class="field-label"><label for="${id}">${label}</label>${hq(HELP.limit)}</div><input class="input" type="number" id="${id}" min="${min}" max="${max}" value="${esc(v)}"></div>`;
+    const hours = (id, v, label) => `<div><div class="field-label"><label for="${id}">${label}</label>${hq(HELP[{ 'ms-dh':'dh', 'ms-qs':'qs', 'ms-qe':'qe' }[id]])}</div><select class="input" id="${id}">${Array.from({ length:24 }, (_, h) => `<option value="${h}"${h === v ? ' selected' : ''}>${String(h).padStart(2, '0')}h</option>`).join('')}</select></div>`;
+    return `<div class="card"><div class="lbl"><i class="ti ti-settings"></i>Configuração${hq(HELP.config)}</div>
       <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px">
-        <label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input type="checkbox" id="ms-enabled"${s.enabled ? ' checked' : ''}> <strong>Ligar mensagens</strong></label>
-        <label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input type="checkbox" id="ms-wa"${s.whatsapp_enabled ? ' checked' : ''}> WhatsApp</label>
-        <label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input type="checkbox" id="ms-em"${s.email_enabled ? ' checked' : ''}> E-mail</label>
+        <label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input type="checkbox" id="ms-enabled"${s.enabled ? ' checked' : ''}> <strong>Ligar mensagens</strong>${hq(HELP.onoff)}</label>
+        <label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input type="checkbox" id="ms-wa"${s.whatsapp_enabled ? ' checked' : ''}> WhatsApp${hq(HELP.wa)}</label>
+        <label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input type="checkbox" id="ms-em"${s.email_enabled ? ' checked' : ''}> E-mail${hq(HELP.em)}</label>
       </div>
       <div class="g3" style="gap:10px;margin-bottom:10px">
-        <div><div class="field-label"><label for="ms-ai">IA que responde as perguntas</label></div><select class="input" id="ms-ai"><option value="">— escolher —</option>${[['anthropic','Claude'],['google','Gemini'],['openai','ChatGPT']].map(([k, l]) => `<option value="${k}"${s.ai_provider === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div><div class="field-label"><label for="ms-ai">IA que responde as perguntas</label>${hq(HELP.ai)}</div><select class="input" id="ms-ai"><option value="">— escolher —</option>${[['anthropic','Claude'],['google','Gemini'],['openai','ChatGPT']].map(([k, l]) => `<option value="${k}"${s.ai_provider === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
         ${num('ms-limit', s.daily_question_limit || 30, 1, 500, 'Perguntas por pessoa por dia')}
-        <div><div class="field-label"><label for="ms-wd">Resumo semanal</label></div><select class="input" id="ms-wd">${WD.map((d, i) => `<option value="${i}"${s.digest_weekday === i ? ' selected' : ''}>${d}</option>`).join('')}</select></div>
+        <div><div class="field-label"><label for="ms-wd">Resumo semanal</label>${hq(HELP.wd)}</div><select class="input" id="ms-wd">${WD.map((d, i) => `<option value="${i}"${s.digest_weekday === i ? ' selected' : ''}>${d}</option>`).join('')}</select></div>
       </div>
       <div class="g3" style="gap:10px">
         ${hours('ms-dh', s.digest_hour == null ? 8 : s.digest_hour, 'Hora do resumo')}
@@ -12147,7 +12170,7 @@ const Messaging = (() => {
           </div>
         </div></div>`;
     }).join('');
-    return `<div class="card"><div class="lbl"><i class="ti ti-users"></i>Destinatários (${st.recipients.length})</div>
+    return `<div class="card"><div class="lbl"><i class="ti ti-users"></i>Destinatários (${st.recipients.length})${hq(HELP.rcpt)}</div>
       <p style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:10px">Quem recebe avisos e pode perguntar sobre os projetos. O WhatsApp só fica ativo depois que a <strong>própria pessoa</strong> responde SIM — nem o administrador consegue ativar por ela.</p>
       ${rows || '<div class="rk-empty">Nenhum destinatário ainda.</div>'}
       <button class="btn btn-sm btn-acc" style="margin-top:6px" onclick="Messaging.openAdd()"><i class="ti ti-plus"></i>Adicionar destinatário</button></div>`;
@@ -12156,7 +12179,7 @@ const Messaging = (() => {
   function cardTest() {
     const opts = st.recipients.filter(r => r.active).map(r => `<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');
     const tr = st.testResult;
-    return `<div class="card"><div class="lbl"><i class="ti ti-message-chatbot"></i>Testar o assistente (não envia nada)</div>
+    return `<div class="card"><div class="lbl"><i class="ti ti-message-chatbot"></i>Testar o assistente (não envia nada)${hq(HELP.test)}</div>
       <p style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:10px">Simula uma pergunta como se fosse a pessoa escolhida — com o mesmo recorte de projetos e a mesma regra de valores em R$. Nada é enviado nem gravado.</p>
       <div class="rk-toolbar"><select class="input" id="ms-t-who" aria-label="Simular como"><option value="">— escolher pessoa —</option>${opts}</select>
         <input class="input rk-q" id="ms-t-q" maxlength="500" placeholder="Ex: como está o projeto Nexus? o que está atrasado?" aria-label="Pergunta" onkeydown="if(event.key==='Enter')Messaging.test()">
