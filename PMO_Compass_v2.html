@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.1.2'
+  version: '2.1.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -285,6 +285,21 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .pg-title{font-size:17px;font-weight:600;color:var(--t1);margin-bottom:2px}
 .pg-sub{font-size:12px;color:var(--t3);line-height:1.5}
 @media(max-width:900px){.sidebar,.sb-rz{display:none}.tb-nav{display:flex;justify-content:flex-start}}
+.sidebar.collapsed{width:56px;padding:12px 4px;align-items:stretch}
+.sidebar.collapsed .si,.sidebar.collapsed .sb-xray-btn,.sidebar.collapsed .sb-board-btn,.sidebar.collapsed .sb-exec-btn,.sidebar.collapsed .sb-group-hdr{font-size:0;justify-content:center;padding-left:0;padding-right:0;gap:0}
+.sidebar.collapsed .si i,.sidebar.collapsed .sb-xray-btn i,.sidebar.collapsed .sb-board-btn i,.sidebar.collapsed .sb-exec-btn i{font-size:17px}
+.sidebar.collapsed .sb-group-hdr i.sb-gico{font-size:17px}
+.sidebar.collapsed .sb-gchev,.sidebar.collapsed .sb-sec{display:none}
+.sidebar.collapsed .sb-group-body .si{padding-left:0}
+.sb-tg{position:absolute;top:10px;left:-8px;width:22px;height:22px;border-radius:50%;border:1px solid var(--b2);background:var(--s1);color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;z-index:31}
+.sb-tg:hover{background:var(--s3);color:var(--t1)}
+.sb-tg:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.sb-tg i{font-size:12px}
+.sp-rz{position:absolute;top:0;bottom:0;width:10px;margin-left:-5px;cursor:col-resize;z-index:5;touch-action:none}
+.sp-rz::after{content:'';position:absolute;left:4px;top:8px;bottom:8px;width:2px;border-radius:2px;background:var(--b2)}
+.sp-rz:hover::after,.sp-rz.on::after,.sp-rz:focus-visible::after{background:var(--acc)}
+.sp-rz:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+@media (max-width:900px){.sp-rz{display:none}}
 .sb-rz{flex:0 0 6px;margin:0 -3px;position:relative;z-index:30;cursor:col-resize;touch-action:none}
 .sb-rz::after{content:'';position:absolute;left:2px;top:0;bottom:0;width:2px;background:transparent}
 .sb-rz:hover::after,.sb-rz.on::after,.sb-rz:focus-visible::after{background:var(--acc)}
@@ -1590,8 +1605,8 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: pages/risks-hours-css ─ Estilos das telas Riscos, Horas e Importação -->
 <style data-module="pages/risks-hours-css">
-.rk-grid{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:12px;margin-top:12px;align-items:start}
-@media (max-width:900px){.rk-grid{grid-template-columns:minmax(0,1fr)}}
+.rk-grid{display:grid;grid-template-columns:var(--c1,minmax(300px,380px)) minmax(0,1fr);gap:12px;margin-top:12px;align-items:start;position:relative}
+@media (max-width:900px){.rk-grid{grid-template-columns:minmax(0,1fr)!important}}
 .rk-mx{border-collapse:separate;border-spacing:3px;width:100%;table-layout:fixed}
 .rk-mx th{font-size:10px;font-weight:600;color:var(--t3);text-align:center;padding:2px;line-height:1.2}
 .rk-mx th.rk-rowh{text-align:right;padding-right:6px;width:58px}
@@ -1637,8 +1652,8 @@ body.icons-failed i[data-fb]::before{
 .hr-row:hover{border-color:var(--b3)}
 .hr-row:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 .hr-h{flex:0 0 52px;font-weight:700;color:var(--t1);text-align:right}
-.hr-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px;margin-top:12px;align-items:start}
-@media (max-width:900px){.hr-grid{grid-template-columns:minmax(0,1fr)}}
+.hr-grid{display:grid;grid-template-columns:var(--c1,minmax(0,1.1fr)) minmax(0,1fr);gap:12px;margin-top:12px;align-items:start;position:relative}
+@media (max-width:900px){.hr-grid{grid-template-columns:minmax(0,1fr)!important}}
 .imp-steps{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
 .imp-step{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--b2);color:var(--t3)}
 .imp-step.on{background:var(--ad);border-color:var(--ab);color:var(--acc);font-weight:600}
@@ -7820,12 +7835,66 @@ const ColumnDrag = (() => {
     });
     rz.addEventListener('keydown', e => { if(e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); set(cur() + (e.key === 'ArrowRight' ? STEP : -STEP)); keep(); } });
     rz.addEventListener('dblclick', () => { root.style.removeProperty('--sbw'); try { localStorage.removeItem(K); } catch(e) {} });
+
+    // Recolher em ícones (o nome de cada item vira dica ao passar o mouse)
+    const KC = 'pmo_sidebar_collapsed_v1';
+    const tg = document.createElement('button');
+    tg.type = 'button'; tg.className = 'sb-tg'; tg.id = 'sb-tg';
+    rz.appendChild(tg);
+    const paint = on => {
+      sb.classList.toggle('collapsed', on);
+      root.style.setProperty('--sbw-eff', on ? '56px' : '');
+      tg.innerHTML = '<i class="ti ti-chevron-' + (on ? 'right' : 'left') + '"></i>';
+      tg.title = on ? 'Expandir o menu' : 'Recolher o menu em ícones';
+      tg.setAttribute('aria-label', tg.title); tg.setAttribute('aria-expanded', on ? 'false' : 'true');
+      sb.querySelectorAll('.si,.sb-xray-btn,.sb-board-btn,.sb-exec-btn,.sb-group-hdr').forEach(b => {
+        if(on) { if(!b.dataset.t0) b.dataset.t0 = b.getAttribute('title') || ''; b.title = b.textContent.trim(); }
+        else if(b.dataset.t0 != null) { if(b.dataset.t0) b.title = b.dataset.t0; else b.removeAttribute('title'); delete b.dataset.t0; }
+      });
+      rz.style.pointerEvents = '';
+    };
+    tg.addEventListener('pointerdown', e => e.stopPropagation());
+    tg.addEventListener('click', e => { e.stopPropagation(); const on = !sb.classList.contains('collapsed'); paint(on); try { localStorage.setItem(KC, on ? '1' : '0'); } catch(err) {} });
+    tg.addEventListener('dblclick', e => e.stopPropagation());
+    let was = false; try { was = localStorage.getItem(KC) === '1'; } catch(e) {}
+    paint(was);
   }
+
+  // Divisor entre dois painéis de uma grade: puxar muda a largura do primeiro (a escolha fica salva por tela)
+  function enableSplit(grid, key) {
+    if(!grid || grid.dataset.splitWired) return; grid.dataset.splitWired = '1';
+    const K = 'pmo_split_' + key + '_v1', MIN = 240, root = grid;
+    const first = grid.children[0];
+    const handle = document.createElement('div');
+    handle.className = 'sp-rz'; handle.tabIndex = 0; handle.setAttribute('role', 'separator'); handle.setAttribute('aria-orientation', 'vertical');
+    handle.setAttribute('aria-label', 'Largura do painel da esquerda: arraste ou use as setas esquerda e direita');
+    handle.title = 'Arraste para mudar a largura dos painéis (duplo clique restaura)';
+    grid.appendChild(handle);
+    const gap = () => parseFloat(getComputedStyle(grid).columnGap) || 12;
+    const place = () => { handle.style.left = (first.offsetLeft + first.offsetWidth + gap() / 2) + 'px'; };
+    const max = () => Math.max(MIN, grid.clientWidth - MIN - gap());
+    const set = w => { root.style.setProperty('--c1', Math.max(MIN, Math.min(max(), Math.round(w))) + 'px'); place(); };
+    const keep = () => { try { localStorage.setItem(K, String(Math.round(first.getBoundingClientRect().width))); } catch(e) {} };
+    try { const v = parseFloat(localStorage.getItem(K)); if(v >= MIN) set(v); } catch(e) {}
+    if(window.ResizeObserver) new ResizeObserver(place).observe(grid); else window.addEventListener('resize', place);
+    place();
+    handle.addEventListener('pointerdown', e => {
+      e.preventDefault(); handle.setPointerCapture(e.pointerId); handle.classList.add('on');
+      const x0 = e.clientX, w0 = first.getBoundingClientRect().width;
+      const mv = ev => set(w0 + ev.clientX - x0);
+      const up = () => { handle.classList.remove('on'); handle.removeEventListener('pointermove', mv); handle.removeEventListener('pointerup', up); keep(); };
+      handle.addEventListener('pointermove', mv); handle.addEventListener('pointerup', up);
+    });
+    handle.addEventListener('keydown', e => { if(e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); set(first.getBoundingClientRect().width + (e.key === 'ArrowRight' ? STEP : -STEP)); keep(); } });
+    handle.addEventListener('dblclick', () => { root.style.removeProperty('--c1'); try { localStorage.removeItem(K); } catch(e) {} setTimeout(place, 0); });
+  }
+  function enableSplits() { enableSplit(document.querySelector('.rk-grid'), 'riscos'); enableSplit(document.querySelector('.hr-grid'), 'horas'); }
   if(typeof document !== 'undefined') {
-    document.addEventListener('DOMContentLoaded', () => { enableGantt(); enableSidebar(); });
-    if(document.readyState !== 'loading') { enableGantt(); enableSidebar(); }
+    const boot = () => { enableGantt(); enableSidebar(); enableSplits(); };
+    document.addEventListener('DOMContentLoaded', boot);
+    if(document.readyState !== 'loading') boot();
   }
-  return { enable, reset, moveOrder, isPermutation, enableGantt, enableSidebar };
+  return { enable, reset, moveOrder, isPermutation, enableGantt, enableSidebar, enableSplit };
 })();
 </script>
 
