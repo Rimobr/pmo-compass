@@ -1,0 +1,39 @@
+name: Deploy do banco e das funções
+
+# Manual de propósito: mexe no banco de produção. O app (HTML) o Vercel publica sozinho a cada push.
+on:
+  workflow_dispatch:
+    inputs:
+      apply_migrations:
+        description: "Aplicar migrações pendentes"
+        type: boolean
+        default: true
+      deploy_functions:
+        description: "Publicar funções de borda"
+        type: boolean
+        default: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production   # exige aprovação configurada no GitHub (Settings → Environments)
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check:sql && npm run test:unit
+      - name: Ensaio das migrações (desfaz no fim)
+        if: inputs.apply_migrations
+        run: node scripts/db-apply.mjs --dry-run
+      - name: Aplicar migrações
+        if: inputs.apply_migrations
+        run: node scripts/db-apply.mjs
+      - name: Publicar funções
+        if: inputs.deploy_functions
+        run: node scripts/deploy-functions.mjs

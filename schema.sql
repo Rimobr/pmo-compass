@@ -1,4 +1,11 @@
 -- =========================================================================
+-- PMO Compass — esquema completo (GERADO por scripts/build-schema.mjs — não edite à mão)
+-- Fonte: supabase/migrations/ (8 arquivos). Para instalação do zero, rode este arquivo inteiro
+-- no SQL Editor; para um banco que já existe, use `node scripts/db-apply.mjs` (aplica só o que falta).
+-- =========================================================================
+
+-- ▼▼▼ 20260101000000_baseline.sql ▼▼▼
+-- =========================================================================
 -- PMO Compass — Schema Supabase (Postgres) + Row Level Security
 -- Rode este arquivo inteiro em: Supabase → SQL Editor → New query → Run
 -- =========================================================================
@@ -570,3 +577,447 @@ create index if not exists team_members_project_id_idx on public.team_members(pr
 --      update public.profiles set role = 'admin' where id = 'COLE_O_UUID_AQUI';
 --    (o UUID aparece em Authentication → Users, ao lado do e-mail)
 -- =========================================================================
+
+-- ▼▼▼ 20261023100000_projects_reference_date.sql ▼▼▼
+-- Data de referência por projeto — só para os projetos de DEMONSTRAÇÃO.
+-- Até aqui o "hoje" do app era 20/06/2026 fixo no código (herança da demo), o que distorcia atraso,
+-- previsão de entrega e SPI de qualquer projeto real. Agora o "hoje" é o dia real; um projeto só
+-- usa data fixa se tiver reference_date preenchida (os de demonstração, pra não parecerem atrasados).
+-- O servidor (assistente de status) usa a MESMA regra: reference_date ?? hoje em America/Sao_Paulo.
+alter table public.projects add column if not exists reference_date date;
+
+update public.projects
+   set reference_date = date '2026-06-20'
+ where id in ('nexus','valdori','beltrano') and reference_date is null;
+
+-- ▼▼▼ 20261023100100_scope_changes.sql ▼▼▼
+-- Mudanças de escopo na nuvem.
+-- Antes só existiam em localStorage: a caixa de decisões da Visão Executiva (e o assistente de status)
+-- só enxergavam projetos já abertos naquele navegador — o mesmo defeito que a equipe tinha.
+-- Chave composta: o id do app ("SC-005") é gerado por projeto e pode se repetir entre projetos.
+create table if not exists public.scope_changes (
+  project_id text not null references public.projects(id) on delete cascade,
+  id text not null,
+  title text not null check (char_length(title) between 1 and 300),
+  body text,
+  status text not null default 'pending' check (status in ('pending','analysis','approved','rejected','phase2')),
+  impact_days int not null default 0,
+  impact_cost numeric(14,2) not null default 0,
+  risk_note text,
+  created_on date,
+  updated_at timestamptz not null default now(),
+  primary key (project_id, id)
+);
+
+alter table public.scope_changes enable row level security;
+
+create policy "scope_changes_read" on public.scope_changes for select
+  using (auth.role() = 'authenticated' and public.has_project_access(project_id));
+create policy "scope_changes_write" on public.scope_changes for all
+  using (public.current_role() in ('admin','gerente') and public.has_project_access(project_id))
+  with check (public.current_role() in ('admin','gerente') and public.has_project_access(project_id));
+
+grant select, insert, update, delete on public.scope_changes to authenticated;
+revoke all on public.scope_changes from anon;
+
+-- ▼▼▼ 20261023100200_risks.sql ▼▼▼
+-- Registro formal de riscos (padrão PMI): probabilidade × impacto numa matriz 5×5.
+-- Até aqui "risco" no app era só decisão marcada como crítica — sem dono, resposta, plano nem nota.
+-- Faixas da matriz (score = probabilidade × impacto): 1–4 baixo · 5–9 médio · 10–14 alto · 15–25 crítico.
+create table if not exists public.risks (
+  project_id text not null references public.projects(id) on delete cascade,
+  id text not null,
+  title text not null check (char_length(title) between 3 and 200),
+  description text,
+  category text not null default 'outros'
+    check (category in ('prazo','custo','escopo','qualidade','recursos','tecnico','externo','legal','outros')),
+  probability smallint not null check (probability between 1 and 5),
+  impact smallint not null check (impact between 1 and 5),
+  score smallint generated always as (probability * impact) stored,
+  status text not null default 'aberto' check (status in ('aberto','mitigando','aceito','ocorrido','encerrado')),
+  response text not null default 'mitigar' check (response in ('evitar','mitigar','transferir','aceitar')),
+  mitigation text,
+  contingency text,
+  owner_name text,
+  review_on date,
+  identified_on date not null default current_date,
+  closed_on date,
+  created_by uuid default auth.uid() references auth.users(id) on delete set null,
+  updated_at timestamptz not null default now(),
+  primary key (project_id, id) -- o código (RK-001...) é por projeto, como em scope_changes
+);
+
+create index if not exists risks_project_id_idx on public.risks(project_id);
+create index if not exists risks_project_score_idx on public.risks(project_id, score desc);
+
+alter table public.risks enable row level security;
+
+create policy "risks_read" on public.risks for select
+  using (auth.role() = 'authenticated' and public.has_project_access(project_id));
+create policy "risks_write" on public.risks for all
+  using (public.current_role() in ('admin','gerente') and public.has_project_access(project_id))
+  with check (public.current_role() in ('admin','gerente') and public.has_project_access(project_id));
+
+grant select, insert, update, delete on public.risks to authenticated;
+revoke all on public.risks from anon;
+
+-- ▼▼▼ 20261023100300_time_entries.sql ▼▼▼
+-- Apontamento de horas (leve): quem trabalhou quanto, em qual projeto, em qual dia.
+-- Alimenta a capacidade com dado MEDIDO (hoje a carga de cada pessoa é digitada à mão).
+-- Escrita: administrador e gerente (apontam pela equipe) — o perfil "Consulta" é somente leitura.
+create table if not exists public.time_entries (
+  project_id text not null references public.projects(id) on delete cascade,
+  id text not null,
+  person_name text not null check (char_length(person_name) between 2 and 120),
+  member_id text,
+  work_date date not null,
+  hours numeric(5,2) not null check (hours > 0 and hours <= 24),
+  wbs_ref text,
+  note text check (note is null or char_length(note) <= 500),
+  created_by uuid default auth.uid() references auth.users(id) on delete set null,
+  updated_at timestamptz not null default now(),
+  primary key (project_id, id)
+);
+
+create index if not exists time_entries_project_date_idx on public.time_entries(project_id, work_date);
+create index if not exists time_entries_person_date_idx on public.time_entries(lower(person_name), work_date);
+
+alter table public.time_entries enable row level security;
+
+create policy "time_entries_read" on public.time_entries for select
+  using (auth.role() = 'authenticated' and public.has_project_access(project_id));
+create policy "time_entries_write" on public.time_entries for all
+  using (public.current_role() in ('admin','gerente') and public.has_project_access(project_id))
+  with check (public.current_role() in ('admin','gerente') and public.has_project_access(project_id));
+
+grant select, insert, update, delete on public.time_entries to authenticated;
+revoke all on public.time_entries from anon;
+
+-- ▼▼▼ 20261023100400_messaging.sql ▼▼▼
+-- Mensagens para diretoria e stakeholders (WhatsApp e e-mail) + assistente de status por IA.
+--
+-- Desenho (resumo):
+--  * message_recipients: QUEM recebe/pergunta (pessoa externa, sem login no app). Dado pessoal de terceiro
+--    (telefone, e-mail) — por isso só o administrador lê e escreve, e o consentimento é evidência obrigatória.
+--  * message_recipient_projects: de QUAIS projetos a pessoa pode receber alertas e fazer perguntas. É a
+--    fronteira de autorização do assistente: a IA só recebe os fatos desses projetos, nunca os outros.
+--  * notification_outbox: fila de envio (alertas/resumo). Preenchida por gatilhos do banco e pelas funções.
+--  * message_log: trilha das mensagens (texto já com dados pessoais redigidos), retenção de 90 dias.
+--  * messaging_settings: chaves gerais, limites e a conta cuja chave de IA responde as perguntas.
+-- Escrita no banco pelos fluxos automáticos (webhook, despacho) é sempre com a chave de serviço, nunca pelo navegador.
+
+create table if not exists public.messaging_settings (
+  id int primary key default 1 check (id = 1),
+  enabled boolean not null default false,
+  whatsapp_enabled boolean not null default false,
+  email_enabled boolean not null default false,
+  ai_owner_user_id uuid references auth.users(id) on delete set null,
+  ai_provider text check (ai_provider in ('anthropic','openai','google')),
+  daily_question_limit int not null default 30 check (daily_question_limit between 1 and 500),
+  digest_weekday int not null default 1 check (digest_weekday between 0 and 6),
+  digest_hour int not null default 8 check (digest_hour between 0 and 23),
+  quiet_start int not null default 21 check (quiet_start between 0 and 23),
+  quiet_end int not null default 7 check (quiet_end between 0 and 23),
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users(id) on delete set null
+);
+insert into public.messaging_settings (id) values (1) on conflict do nothing;
+
+create table if not exists public.message_recipients (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(name) between 2 and 120),
+  role_label text check (role_label is null or char_length(role_label) <= 80),
+  whatsapp text check (whatsapp is null or whatsapp ~ '^\+[1-9][0-9]{9,14}$'),
+  email text check (email is null or email ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'),
+  events text[] not null default '{decisao_critica,farol_vermelho,resumo_semanal}'
+    check (events <@ array['decisao_critica','farol_vermelho','risco_alto','resumo_semanal']::text[]),
+  can_see_financials boolean not null default false,
+  owner_user_id uuid references auth.users(id) on delete set null default auth.uid(),
+  consent_basis text check (consent_basis is null or char_length(consent_basis) <= 300),
+  consent_recorded_at timestamptz,
+  consent_recorded_by uuid references auth.users(id) on delete set null,
+  whatsapp_status text not null default 'sem_whatsapp'
+    check (whatsapp_status in ('sem_whatsapp','aguardando_confirmacao','ativo','descadastrado')),
+  whatsapp_confirmed_at timestamptz,
+  email_status text not null default 'sem_email' check (email_status in ('sem_email','ativo','descadastrado')),
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint recipients_has_channel check (whatsapp is not null or email is not null),
+  -- sem evidência de consentimento, nenhum canal fica ativo nem aguardando confirmação
+  constraint recipients_consent_required check (
+    (whatsapp_status in ('sem_whatsapp','descadastrado') or consent_recorded_at is not null)
+    and (email_status in ('sem_email','descadastrado') or consent_recorded_at is not null)
+  )
+);
+create unique index if not exists message_recipients_whatsapp_uq on public.message_recipients(whatsapp) where whatsapp is not null;
+create unique index if not exists message_recipients_email_uq on public.message_recipients(lower(email)) where email is not null;
+
+create table if not exists public.message_recipient_projects (
+  recipient_id uuid not null references public.message_recipients(id) on delete cascade,
+  project_id text not null references public.projects(id) on delete cascade,
+  primary key (recipient_id, project_id)
+);
+create index if not exists message_recipient_projects_project_idx on public.message_recipient_projects(project_id);
+
+create table if not exists public.notification_outbox (
+  id bigint generated always as identity primary key,
+  recipient_id uuid not null references public.message_recipients(id) on delete cascade,
+  channel text not null check (channel in ('whatsapp','email')),
+  event_type text not null,
+  project_id text references public.projects(id) on delete set null,
+  title text not null,
+  detail text,
+  dedupe_key text not null,
+  status text not null default 'pending' check (status in ('pending','sending','sent','failed','skipped')),
+  attempts int not null default 0,
+  last_error text,
+  scheduled_at timestamptz not null default now(),
+  sent_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (recipient_id, channel, dedupe_key)
+);
+create index if not exists notification_outbox_pending_idx on public.notification_outbox(scheduled_at) where status in ('pending','failed');
+
+create table if not exists public.message_log (
+  id bigint generated always as identity primary key,
+  recipient_id uuid references public.message_recipients(id) on delete set null,
+  channel text not null check (channel in ('whatsapp','email','app')),
+  direction text not null check (direction in ('in','out')),
+  kind text not null,
+  external_id text,
+  body_redacted text,
+  project_ids text[] not null default '{}',
+  ai_provider text,
+  ai_ms int,
+  error text,
+  created_at timestamptz not null default now()
+);
+-- idempotência: o WhatsApp reentrega a mesma mensagem se a resposta demorar — uma só vez entra
+create unique index if not exists message_log_inbound_uq on public.message_log(channel, external_id)
+  where direction = 'in' and external_id is not null;
+create index if not exists message_log_recipient_idx on public.message_log(recipient_id, created_at desc);
+create index if not exists message_log_created_idx on public.message_log(created_at desc);
+
+-- RLS: tudo só do administrador; fila e trilha são somente leitura (quem escreve é a função com chave de serviço).
+alter table public.messaging_settings enable row level security;
+alter table public.message_recipients enable row level security;
+alter table public.message_recipient_projects enable row level security;
+alter table public.notification_outbox enable row level security;
+alter table public.message_log enable row level security;
+
+create policy "messaging_settings_admin" on public.messaging_settings for all
+  using (public.current_role() = 'admin') with check (public.current_role() = 'admin');
+create policy "message_recipients_admin" on public.message_recipients for all
+  using (public.current_role() = 'admin') with check (public.current_role() = 'admin');
+create policy "message_recipient_projects_admin" on public.message_recipient_projects for all
+  using (public.current_role() = 'admin') with check (public.current_role() = 'admin');
+create policy "notification_outbox_admin_read" on public.notification_outbox for select
+  using (public.current_role() = 'admin');
+create policy "message_log_admin_read" on public.message_log for select
+  using (public.current_role() = 'admin');
+
+grant select, insert, update, delete on public.messaging_settings, public.message_recipients, public.message_recipient_projects to authenticated;
+grant select on public.notification_outbox, public.message_log to authenticated;
+revoke all on public.messaging_settings, public.message_recipients, public.message_recipient_projects,
+  public.notification_outbox, public.message_log from anon;
+
+-- Guarda de status: o WhatsApp só vira "ativo" quando a PESSOA responde SIM (função com chave de serviço) —
+-- nem o administrador consegue marcar como ativo pela tela/API. Trocar o número exige confirmar de novo.
+create or replace function public.trg_recipient_guard() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  new.updated_at := now();
+  if auth.role() = 'authenticated' then
+    if tg_op = 'INSERT' then
+      new.whatsapp_status := case when new.whatsapp is null then 'sem_whatsapp' else 'aguardando_confirmacao' end;
+      new.whatsapp_confirmed_at := null;
+      new.owner_user_id := auth.uid();
+    else
+      if new.whatsapp is distinct from old.whatsapp then
+        new.whatsapp_status := case when new.whatsapp is null then 'sem_whatsapp' else 'aguardando_confirmacao' end;
+        new.whatsapp_confirmed_at := null;
+      elsif new.whatsapp_status = 'ativo' and old.whatsapp_status is distinct from 'ativo' then
+        raise exception 'O WhatsApp só fica ativo quando a própria pessoa confirma respondendo SIM.' using errcode = '42501';
+      elsif new.whatsapp_status = 'aguardando_confirmacao' and old.whatsapp_status = 'ativo' then
+        new.whatsapp_status := 'ativo'; -- reenviar confirmação não derruba quem já confirmou
+      end if;
+    end if;
+    if new.whatsapp is null then new.whatsapp_status := 'sem_whatsapp'; end if;
+    if new.email is null then new.email_status := 'sem_email'; end if;
+  end if;
+  return new;
+end $$;
+drop trigger if exists recipient_guard on public.message_recipients;
+create trigger recipient_guard before insert or update on public.message_recipients
+  for each row execute function public.trg_recipient_guard();
+
+-- Auditoria no servidor: toda mudança de destinatário/canal fica no audit_log mesmo se vier direto pela API.
+create or replace function public.trg_recipient_audit() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare d text; who text;
+begin
+  select email into who from auth.users where id = auth.uid();
+  if tg_op = 'DELETE' then
+    d := 'Destinatário removido: ' || old.name;
+  elsif tg_op = 'INSERT' then
+    d := 'Destinatário criado: ' || new.name || ' (canais: ' || concat_ws(', ',
+         case when new.whatsapp is not null then 'WhatsApp ***' || right(new.whatsapp, 4) end,
+         case when new.email is not null then 'e-mail' end) || ')';
+  else
+    if new.whatsapp_status is distinct from old.whatsapp_status then
+      d := 'WhatsApp de ' || new.name || ': ' || old.whatsapp_status || ' → ' || new.whatsapp_status;
+    elsif new.email_status is distinct from old.email_status then
+      d := 'E-mail de ' || new.name || ': ' || old.email_status || ' → ' || new.email_status;
+    elsif new.can_see_financials is distinct from old.can_see_financials then
+      d := 'Acesso a valores financeiros de ' || new.name || ': ' || old.can_see_financials || ' → ' || new.can_see_financials;
+    elsif new.active is distinct from old.active then
+      d := 'Destinatário ' || new.name || (case when new.active then ' reativado' else ' desativado' end);
+    else
+      d := 'Destinatário atualizado: ' || new.name;
+    end if;
+  end if;
+  insert into public.audit_log (project_id, actor_id, actor_email, actor_role, action, description, metadata)
+  values ('_global', auth.uid(), coalesce(who, 'sistema (WhatsApp/e-mail)'), public.current_role(),
+          'recipient_change', d, '{}'::jsonb);
+  return null; -- gatilho AFTER: o retorno é ignorado
+end $$;
+drop trigger if exists recipient_audit on public.message_recipients;
+create trigger recipient_audit after insert or update or delete on public.message_recipients
+  for each row execute function public.trg_recipient_audit();
+
+revoke all on function public.trg_recipient_guard() from public, anon, authenticated;
+revoke all on function public.trg_recipient_audit() from public, anon, authenticated;
+
+-- ▼▼▼ 20261023100500_messaging_triggers.sql ▼▼▼
+-- Eventos que geram notificação: decisão crítica pendente, projeto que entra "Em risco" e risco crítico.
+-- Os gatilhos só ENFILEIRAM (notification_outbox); quem envia é a função notify-dispatch, que também
+-- aplica horário de silêncio e remove valores em R$ de quem não pode ver finanças.
+-- Duplicata é impossível: (recipient_id, channel, dedupe_key) é único.
+
+create or replace function public.enqueue_notification(
+  p_event text, p_project text, p_title text, p_detail text, p_key text
+) returns int
+language plpgsql security definer set search_path = public as $$
+declare s public.messaging_settings; r public.message_recipients; n int := 0;
+begin
+  select * into s from public.messaging_settings where id = 1;
+  if s.id is null or not s.enabled then return 0; end if;
+  for r in
+    select mr.* from public.message_recipients mr
+      join public.message_recipient_projects mp on mp.recipient_id = mr.id and mp.project_id = p_project
+     where mr.active and p_event = any(mr.events)
+  loop
+    if s.whatsapp_enabled and r.whatsapp is not null and r.whatsapp_status = 'ativo' then
+      insert into public.notification_outbox (recipient_id, channel, event_type, project_id, title, detail, dedupe_key)
+      values (r.id, 'whatsapp', p_event, p_project, p_title, p_detail, p_key) on conflict do nothing;
+      if found then n := n + 1; end if;
+    end if;
+    if s.email_enabled and r.email is not null and r.email_status = 'ativo' then
+      insert into public.notification_outbox (recipient_id, channel, event_type, project_id, title, detail, dedupe_key)
+      values (r.id, 'email', p_event, p_project, p_title, p_detail, p_key) on conflict do nothing;
+      if found then n := n + 1; end if;
+    end if;
+  end loop;
+  return n;
+end $$;
+revoke all on function public.enqueue_notification(text, text, text, text, text) from public, anon, authenticated;
+
+-- 1) Decisão crítica pendente (nova, ou que passou a ser crítica/pendente)
+create or replace function public.trg_decisions_notify() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.status = 'pending' and new.severity = 'crit'
+     and (tg_op = 'INSERT' or old.status is distinct from 'pending' or old.severity is distinct from 'crit') then
+    perform public.enqueue_notification('decisao_critica', new.project_id, 'Decisão crítica pendente',
+      left(new.title, 160), 'dec:' || new.id);
+  end if;
+  return null;
+end $$;
+drop trigger if exists decisions_notify on public.decisions;
+create trigger decisions_notify after insert or update of status, severity on public.decisions
+  for each row execute function public.trg_decisions_notify();
+
+-- 2) Projeto que ENTRA em "Em risco" (leitura anterior era outra) — no máximo 1 aviso por dia por projeto
+create or replace function public.trg_snapshot_notify() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare prev text;
+begin
+  if new.health_status = 'Em risco' then
+    select health_status into prev from public.project_snapshots
+     where project_id = new.project_id and captured_at < new.captured_at
+     order by captured_at desc limit 1;
+    if prev is distinct from 'Em risco' then
+      perform public.enqueue_notification('farol_vermelho', new.project_id, 'Projeto entrou em risco',
+        'Saúde geral ' || coalesce(new.health_score::text, '?') || '/100',
+        'farol:' || new.project_id || ':' || to_char(new.captured_at at time zone 'America/Sao_Paulo', 'YYYY-MM-DD'));
+    end if;
+  end if;
+  return null;
+end $$;
+drop trigger if exists snapshot_notify on public.project_snapshots;
+create trigger snapshot_notify after insert on public.project_snapshots
+  for each row execute function public.trg_snapshot_notify();
+
+-- 3) Risco que chega à faixa crítica (score >= 15) e está em aberto
+create or replace function public.trg_risks_notify() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.score >= 15 and new.status in ('aberto','mitigando')
+     and (tg_op = 'INSERT' or old.score < 15 or old.status not in ('aberto','mitigando')) then
+    perform public.enqueue_notification('risco_alto', new.project_id, 'Risco crítico no projeto',
+      left(new.title, 160) || ' (probabilidade ' || new.probability || ' × impacto ' || new.impact || ')', 'risk:' || new.project_id || ':' || new.id);
+  end if;
+  return null;
+end $$;
+drop trigger if exists risks_notify on public.risks;
+create trigger risks_notify after insert or update of probability, impact, status on public.risks
+  for each row execute function public.trg_risks_notify();
+
+revoke all on function public.trg_decisions_notify() from public, anon, authenticated;
+revoke all on function public.trg_snapshot_notify() from public, anon, authenticated;
+revoke all on function public.trg_risks_notify() from public, anon, authenticated;
+
+-- ▼▼▼ 20261023100600_messaging_cron.sql ▼▼▼
+-- Agendamento do envio (pg_cron + pg_net). Os segredos NÃO moram aqui: a URL das funções e o segredo do
+-- agendador ficam em private.cron_config (esquema "private" não é exposto pela API), preenchidos por
+-- scripts/db-apply.mjs --setup-cron a partir do .env.deploy.
+create extension if not exists pg_cron with schema pg_catalog;
+create extension if not exists pg_net with schema extensions;
+
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+
+create table if not exists private.cron_config (
+  key text primary key,
+  value text not null
+);
+revoke all on private.cron_config from public, anon, authenticated;
+
+create or replace function private.call_function(p_name text) returns void
+language plpgsql security definer set search_path = private, extensions, public as $$
+declare base text; secret text;
+begin
+  select value into base from private.cron_config where key = 'functions_url';
+  select value into secret from private.cron_config where key = 'cron_secret';
+  if base is null or secret is null then return; end if; -- ainda não configurado: não faz nada
+  perform net.http_post(
+    url := base || '/' || p_name,
+    headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer ' || secret),
+    body := '{}'::jsonb
+  );
+end $$;
+revoke all on function private.call_function(text) from public, anon, authenticated;
+
+-- Retenção (LGPD, minimização): trilha de mensagens 90 dias; fila já enviada 30 dias.
+create or replace function private.purge_messaging() returns void
+language sql security definer set search_path = public as $$
+  delete from public.message_log where created_at < now() - interval '90 days';
+  delete from public.notification_outbox where status in ('sent','skipped') and created_at < now() - interval '30 days';
+$$;
+revoke all on function private.purge_messaging() from public, anon, authenticated;
+
+select cron.unschedule(jobid) from cron.job where jobname in ('pmo-dispatch', 'pmo-digest', 'pmo-purge');
+select cron.schedule('pmo-dispatch', '*/2 * * * *', $$select private.call_function('notify-dispatch')$$);
+select cron.schedule('pmo-digest',   '5 * * * *',   $$select private.call_function('notify-digest')$$);
+select cron.schedule('pmo-purge',    '30 6 * * *',  $$select private.purge_messaging()$$);

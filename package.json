@@ -1,14 +1,17 @@
 {
   "name": "pmo-compass",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "scripts": {
-    "test:unit": "node tests/run.js",
+    "test:unit": "node tests/run.js && node --test tests/unit/*.test.mjs",
     "test:e2e": "playwright test",
+    "check:sql": "node scripts/check-sql.mjs",
+    "check:schema": "node scripts/build-schema.mjs --check",
     "test:e2e:ui": "playwright test --ui"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.1",
+    "@libpg-query/parser": "^17.6.10",
     "@playwright/test": "^1.48.0",
     "@supabase/supabase-js": "^2.45.0",
     "dotenv": "^16.4.5",

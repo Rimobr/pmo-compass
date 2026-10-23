@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Sintaxe das migrações (parser real do PostgreSQL)
+        run: npm run check:sql
+      - name: schema.sql em dia com as migrações
+        run: npm run check:schema
+      - name: Testes unitários (app + servidor + paridade)
+        run: npm run test:unit

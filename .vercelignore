@@ -1,0 +1,19 @@
+# Publicar só o app. O Vercel publica a pasta inteira: tudo que é trabalho, SQL, teste,
+# documentação interna ou credencial fica de fora (e a conferência de 404 está em scripts/check-public.mjs).
+.claude
+.github
+docs
+scripts
+supabase
+tests
+node_modules
+test-results
+playwright-report
+*.md
+*.sql
+*.zip
+*.mjs
+package.json
+package-lock.json
+playwright.config.js
+.env*
