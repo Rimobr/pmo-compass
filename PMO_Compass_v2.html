@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.1.4'
+  version: '2.1.5'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -784,7 +784,7 @@ body.icons-failed i[data-fb]::before{
       <button class="ntab" data-p="estimates" onclick="R.go('estimates')"><i class="ti ti-ruler"></i>Estimativas</button>
       <button class="ntab" data-p="whatif" onclick="R.go('whatif')"><i class="ti ti-arrows-split"></i>What-If</button>
       <button class="ntab" data-p="burnout" onclick="R.go('burnout')"><i class="ti ti-heartbeat"></i>Burnout</button>
-      <button class="ntab" data-p="resources" onclick="R.go('resources')"><i class="ti ti-users-group"></i>Recursos</button>
+      <button class="ntab" data-p="resources" onclick="R.go('resources')"><i class="ti ti-users-group"></i>Colaboradores</button>
       <button class="ntab" data-p="stakeholders" onclick="R.go('stakeholders')"><i class="ti ti-users"></i>Stakeholders</button>
       <button class="ntab" data-p="lessons" onclick="R.go('lessons')"><i class="ti ti-books"></i>Lições</button>
       <button class="ntab" data-p="meetings" onclick="R.go('meetings')"><i class="ti ti-notes"></i>Atas</button>
@@ -848,7 +848,7 @@ body.icons-failed i[data-fb]::before{
     <div class="sb-group-body">
       <button class="si" data-p="burnout" onclick="R.go('burnout')"><i class="ti ti-heartbeat"></i>Burnout Radar</button>
       <button class="si" data-p="hours" onclick="R.go('hours')"><i class="ti ti-clock-hour-4"></i>Horas</button>
-      <button class="si" data-p="resources" onclick="R.go('resources')"><i class="ti ti-users-group"></i>Recursos</button>
+      <button class="si" data-p="resources" onclick="R.go('resources')"><i class="ti ti-users-group"></i>Colaboradores</button>
       <button class="si" data-p="stakeholders" onclick="R.go('stakeholders')"><i class="ti ti-users"></i>Stakeholders</button>
     </div>
   </div>
@@ -985,19 +985,19 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: pages/burnout -->
 <section class="page" id="p-burnout" data-module="pages/burnout">
-  <div class="pg-hdr"><div><div class="pg-title">Burnout Radar — Saúde da equipe<span class="help-q" data-help="Mostra quem da equipe está sobrecarregado, antes que isso vire atraso no projeto ou alguém pedir pra sair." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">IA detecta padrões de sobrecarga antes que virem queda de produtividade.</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Burnout.openAdd()"><i class="ti ti-plus"></i>Adicionar membro</button><button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('team')"><i class="ti ti-table-import"></i>Importar planilha</button></div></div>
+  <div class="pg-hdr"><div><div class="pg-title">Burnout Radar — Saúde da equipe<span class="help-q" data-help="Mostra quem da equipe está sobrecarregado, antes que isso vire atraso no projeto ou alguém pedir pra sair." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">IA detecta padrões de sobrecarga antes que virem queda de produtividade.</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Burnout.openAdd()"><i class="ti ti-plus"></i>Adicionar colaborador</button><button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('team')"><i class="ti ti-table-import"></i>Importar planilha</button></div></div>
   <div class="fi-note" style="margin-bottom:14px">
     <i class="ti ti-shield-lock"></i>
     <div>Este painel <strong style="color:var(--t1)">não monitora atividade, tela ou comunicação</strong> de ninguém automaticamente — os percentuais de carga são lançados manualmente pelo gestor do projeto (alocação/horas por pessoa). Base legal: legítimo interesse do controlador na gestão de carga de trabalho (LGPD art. 7º, IX). Cada colaborador cadastrado tem o direito de saber que está sendo monitorado aqui e de solicitar a exclusão do próprio registro.</div>
   </div>
   <div id="burnout-alert-root"></div>
   <div id="burnout-list-root"></div>
-  <div class="btn-row"><button class="btn" onclick="R.go('resources')"><i class="ti ti-users-group"></i>Ver recursos e alocação real</button></div>
+  <div class="btn-row"><button class="btn" onclick="R.go('resources')"><i class="ti ti-users-group"></i>Ver colaboradores e alocação real</button></div>
 </section>
 
 <!-- ■ MODULE: pages/resources -->
 <section class="page" id="p-resources" data-module="pages/resources">
-  <div class="pg-hdr"><div><div class="pg-title">Gestão de recursos e capacidade<span class="help-q" data-help="Mostra quem está alocado em mais de um projeto ao mesmo tempo, e se essa soma passou do que uma pessoa consegue dar conta." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Conflitos em múltiplos projetos causam mais atrasos que falta de pessoas (PMI 2025).</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" onclick="R.go('whatif')"><i class="ti ti-arrows-split"></i>What-If IA</button></div></div>
+  <div class="pg-hdr"><div><div class="pg-title">Gestão de colaboradores e capacidade<span class="help-q" data-help="Mostra quem está alocado em mais de um projeto ao mesmo tempo, e se essa soma passou do que uma pessoa consegue dar conta." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Conflitos em múltiplos projetos causam mais atrasos que falta de pessoas (PMI 2025).</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" onclick="R.go('whatif')"><i class="ti ti-arrows-split"></i>What-If IA</button></div></div>
   <div class="card" id="res-portfolio-card">
     <div class="lbl"><i class="ti ti-affiliate"></i>Alocação real entre projetos</div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Soma a alocação (%) de cada pessoa em todos os projetos do portfólio, casando por nome — só aparece quem está em mais de um projeto.</p>
@@ -1390,7 +1390,7 @@ body.icons-failed i[data-fb]::before{
     <div class="set-row"><div><div class="set-lbl">Sugestões automáticas de decisão</div><div class="set-sub">O Raio-X do Projeto propõe decisões a partir do que a IA extrai do documento</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Sugestões automáticas de decisão" data-pref="autoSuggestDecisions" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
     <div class="set-row"><div><div class="set-lbl">Detecção de riscos em novos documentos</div><div class="set-sub">O Raio-X do Projeto inclui os riscos futuros que a IA identificar no documento</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Detecção de riscos em novos documentos" data-pref="autoRiskDetection" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
     <div class="set-row"><div><div class="set-lbl">Comparação com projetos históricos</div><div class="set-sub">Lições Aprendidas entram no contexto enviado à IA (Chat e Decisões)</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Comparação com projetos históricos" data-pref="useHistoricalContext" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
-    <div class="set-row"><div><div class="set-lbl">Burnout Radar automático</div><div class="set-sub">Mostra no Dashboard quando algum membro da equipe atinge 80%+ de carga</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Burnout Radar automático" data-pref="autoBurnoutRadar" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Burnout Radar automático</div><div class="set-sub">Mostra no Dashboard quando algum colaborador atinge 80%+ de carga</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Burnout Radar automático" data-pref="autoBurnoutRadar" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
   </div>
   </div><!-- /settings-panel-cloud -->
 
@@ -1432,7 +1432,7 @@ body.icons-failed i[data-fb]::before{
     </div>
     <div style="margin-top:12px;padding:10px 12px;background:var(--s2);border-radius:var(--r8);font-size:11.5px;color:var(--t3)">
       <i class="ti ti-keyboard" style="font-size:13px"></i> <strong style="color:var(--t2)">Atalhos:</strong>
-      D=Dashboard &nbsp;E=Decisões &nbsp;B=Burnout &nbsp;R=Recursos &nbsp;W=What-If &nbsp;L=Lições &nbsp;A=Atas &nbsp;T=Trilha &nbsp;P=Report &nbsp;C=Chat &nbsp;F=Repositório &nbsp;K=Stakeholders &nbsp;X=Scope &nbsp;I=Estimativas &nbsp;J=Loop &nbsp;Z=WBS &nbsp;?=Ajuda
+      D=Dashboard &nbsp;E=Decisões &nbsp;B=Burnout &nbsp;R=Colaboradores &nbsp;W=What-If &nbsp;L=Lições &nbsp;A=Atas &nbsp;T=Trilha &nbsp;P=Report &nbsp;C=Chat &nbsp;F=Repositório &nbsp;K=Stakeholders &nbsp;X=Scope &nbsp;I=Estimativas &nbsp;J=Loop &nbsp;Z=WBS &nbsp;?=Ajuda
     </div>
   </div>
   </div><!-- /settings-panel-notif -->
@@ -1735,7 +1735,7 @@ body.icons-failed i[data-fb]::before{
 
   <div class="g2">
     <div class="card">
-      <div class="lbl"><i class="ti ti-history"></i>Precisão histórica por membro</div>
+      <div class="lbl"><i class="ti ti-history"></i>Precisão histórica por colaborador</div>
       <div style="font-size:12px;color:var(--t2);margin-bottom:12px">Barras: <span style="color:var(--acc)">■ Real</span> vs <span style="color:var(--t3)">■ Planejado</span>. IA alerta quando há padrão de subestimação.</div>
       <div id="estimates-list-root"></div>
       <div id="estimates-alert-root"></div>
@@ -1931,7 +1931,7 @@ body.icons-failed i[data-fb]::before{
     <div class="lbl"><i class="ti ti-brain"></i>Decisão &amp; Acompanhamento</div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Decisões IA</strong> — aceitar, adiar, discordar ou registrar decisão manual: tudo persiste, com histórico de decisões resolvidas e badge do menu contando as pendentes de verdade.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Loop de Ação</strong> — mostra a decisão crítica pendente real (não um cenário fixo). "Aprovar" resolve a decisão de verdade e o loop avança para o próximo risco.</div></div>
-    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Trilha</strong> — log de auditoria automático: toda ação relevante em qualquer módulo (WBS, Decisões, Repositório, Atas, Recursos etc.) gera um registro aqui sozinha.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Trilha</strong> — log de auditoria automático: toda ação relevante em qualquer módulo (WBS, Decisões, Repositório, Atas, Colaboradores etc.) gera um registro aqui sozinha.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Relatório</strong> — agregador real: resumo, pontos de atenção, conquistas e top-ações são calculados a partir de todos os módulos. "Regenerar" recalcula na hora e pode refinar o texto com IA, se configurada.</div></div>
   </div>
 
@@ -1948,8 +1948,8 @@ body.icons-failed i[data-fb]::before{
 
   <div class="card">
     <div class="lbl"><i class="ti ti-users-group"></i>Equipe</div>
-    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Burnout Radar</strong> — CRUD de membros da equipe; o alerta "X em zona crítica" é calculado, não fixo.</div></div>
-    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Recursos</strong> — usa a mesma base de dados do Burnout Radar (números sempre batem entre as duas telas). "Aplicar redistribuição" muda a carga de verdade e registra na Trilha.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Burnout Radar</strong> — CRUD de colaboradores da equipe; o alerta "X em zona crítica" é calculado, não fixo.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Colaboradores</strong> — usa a mesma base de dados do Burnout Radar (números sempre batem entre as duas telas). "Aplicar redistribuição" muda a carga de verdade e registra na Trilha.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Horas</strong> — apontamento leve (pessoa, dia, horas, entrega) e comparação da carga medida nos últimos 7 dias com a carga declarada no Burnout Radar. Não é folha de ponto e não altera a carga declarada sozinho.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Stakeholders</strong> — CRUD completo; alerta de "sem contato há X dias" calculado a partir da data real do último contato.</div></div>
   </div>
@@ -4156,7 +4156,7 @@ const Nav = (() => {
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
     wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas',
-    burnout:'Burnout Radar', resources:'Recursos', stakeholders:'Stakeholders',
+    burnout:'Burnout Radar', resources:'Colaboradores', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
     portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
   };
@@ -4213,7 +4213,7 @@ const CmdK = (() => {
     { label:'Estimativas IA', page:'estimates', icon:'ruler', group:'Planejamento' },
     { label:'What-If', page:'whatif', icon:'arrows-split', group:'Planejamento' },
     { label:'Burnout Radar', page:'burnout', icon:'heartbeat', group:'Equipe' },
-    { label:'Recursos', page:'resources', icon:'users-group', group:'Equipe' },
+    { label:'Colaboradores', page:'resources', icon:'users-group', group:'Equipe' },
     { label:'Horas', page:'hours', icon:'clock-hour-4', group:'Equipe' },
     { label:'Stakeholders', page:'stakeholders', icon:'users', group:'Equipe' },
     { label:'Lições Aprendidas', page:'lessons', icon:'books', group:'Conhecimento' },
@@ -4700,7 +4700,7 @@ const PmoProfiles = (() => {
       resumo:'Exige conformidade com metodologias, ferramentas e padrões definidos, monitorando de perto o andamento dos trabalhos.',
       guidance:'Seja rigoroso sobre aderência a processo, prazos e padrões. Aponte desvios de forma direta e sugira medidas corretivas concretas e mensuráveis.' },
     diretivo:      { label:'PMO Diretivo',        icon:'gavel',        controlLevel:'Alto',
-      resumo:'Assume o gerenciamento direto — designa gerentes de projeto, controla recursos ativamente e decide sobre o portfólio.',
+      resumo:'Assume o gerenciamento direto — designa gerentes de projeto, controla a alocação de colaboradores ativamente e decide sobre o portfólio.',
       guidance:'Seja assertivo e prescritivo: recomende decisões de alocação, cronograma e prioridade com autoridade, como quem decide pelo portfólio, não apenas sugere.' },
     estrategico:   { label:'PMO Estratégico',     icon:'target',       controlLevel:'Alto (foco corporativo)',
       resumo:'Alinha o portfólio de projetos aos objetivos de longo prazo e à alta gestão da empresa.',
@@ -4856,7 +4856,7 @@ const ContextBuilder = (() => {
 
     const teamLines = team.length
       ? team.map(m => `- ${m.name} (${m.role}): ${m.workloadPct}% de carga${(m.signals&&m.signals.length) ? ' — ' + m.signals.join('; ') : ''}`).join('\n')
-      : '(nenhum membro cadastrado)';
+      : '(nenhum colaborador cadastrado)';
 
     const scopeLines = scope.length
       ? scope.map(s => `- ${s.title} (+${s.impactDays||0}d, ${fmtMoney(s.impactCost)})`).join('\n')
@@ -6640,7 +6640,7 @@ const Dashboard = (() => {
     if(!bodyEl) return;
     if(!team.length) {
       if(statusEl) statusEl.innerHTML = '<span class="sdot sdot-acc"></span>Sem dados';
-      bodyEl.innerHTML = '<div class="kpi" style="grid-column:1/-1"><div class="kpi-lbl">Nenhum membro de equipe cadastrado ainda</div></div>';
+      bodyEl.innerHTML = '<div class="kpi" style="grid-column:1/-1"><div class="kpi-lbl">Nenhum colaborador cadastrado ainda</div></div>';
       return;
     }
     const emRisco = team.filter(m => (m.workloadPct||0) >= 80);
@@ -6657,7 +6657,7 @@ const Dashboard = (() => {
       <div ${kl('burnout','Ver Burnout Radar')}><div class="kpi-lbl"><span class="sdot ${emRisco.length?'sdot-red':'sdot-grn'}"></span>Risco burnout</div><div class="kpi-val">${emRisco.length}</div><div class="kpi-delta ${emRisco.length?'c-dn':'c-ne'}">${emRisco.length ? emRisco.map(m=>m.name+' — '+m.workloadPct+'%').join(', ') : 'Nenhum'}</div></div>
       <div ${kl('burnout','Ver Burnout Radar')}><div class="kpi-lbl"><span class="sdot ${mediaCarga>=70?'sdot-amb':'sdot-grn'}"></span>Sobrecarga média</div><div class="kpi-val">${mediaCarga}<span class="kpi-unit">%</span></div><div class="kpi-delta c-ne">Meta: 70%</div></div>
       <div ${kl('meetings','Ver Atas e Ações')}><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Reuniões (7 dias)</div><div class="kpi-val">${reunioes7d}</div><div class="kpi-delta c-ne">registradas em Atas e Ações</div></div>
-      <div ${kl('resources','Ver Recursos')}><div class="kpi-lbl"><span class="sdot ${conflitos?'sdot-amb':'sdot-grn'}"></span>Conflito de recursos</div><div class="kpi-val">${conflitos}</div><div class="kpi-delta ${conflitos?'c-wa':'c-ne'}">${conflitos ? 'Alocação dupla' : 'Nenhum'}</div></div>`;
+      <div ${kl('resources','Ver Colaboradores')}><div class="kpi-lbl"><span class="sdot ${conflitos?'sdot-amb':'sdot-grn'}"></span>Conflito de alocação</div><div class="kpi-val">${conflitos}</div><div class="kpi-delta ${conflitos?'c-wa':'c-ne'}">${conflitos ? 'Alocação dupla' : 'Nenhum'}</div></div>`;
   }
 
   // Idem — "Padrões IA: 3 detectados" e "+3 esta sprint" eram texto fixo sem tabela nenhuma
@@ -6940,7 +6940,7 @@ const RiskMatrix = (() => {
   const PROB = { 1:'Muito baixa', 2:'Baixa', 3:'Média', 4:'Alta', 5:'Muito alta' };
   const IMPACT = { 1:'Muito baixo', 2:'Baixo', 3:'Médio', 4:'Alto', 5:'Muito alto' };
   // Ordem alfabética (Outros por último, como "o resto")
-  const CATEGORIES = [['custo','Custo'],['escopo','Escopo'],['externo','Externo'],['legal','Legal'],['prazo','Prazo'],['qualidade','Qualidade'],['recursos','Recursos'],['tecnico','Técnico'],['outros','Outros']];
+  const CATEGORIES = [['recursos','Colaboradores'],['custo','Custo'],['escopo','Escopo'],['externo','Externo'],['legal','Legal'],['prazo','Prazo'],['qualidade','Qualidade'],['tecnico','Técnico'],['outros','Outros']];
   const RESPONSES = [['aceitar','Aceitar'],['evitar','Evitar'],['mitigar','Mitigar'],['transferir','Transferir']];
   const STATUSES = [['aberto','Aberto'],['aceito','Aceito'],['encerrado','Encerrado'],['mitigando','Mitigando'],['ocorrido','Ocorrido']];
   // Faixas da nota (probabilidade × impacto) — as MESMAS do banco (migração de riscos) e do assistente de mensagens
@@ -8719,13 +8719,13 @@ const Burnout = (() => {
     const criticalMembers = data.filter(m => statusOf(m.workloadPct) === 'critico');
     if(alertRoot) {
       alertRoot.innerHTML = criticalMembers.length
-        ? `<div class="card card-danger"><div style="display:flex;align-items:center;gap:12px"><i class="ti ti-alert-triangle" style="color:var(--red);font-size:22px;flex-shrink:0"></i><div><div style="font-size:14px;font-weight:600">${criticalMembers.length} membro(s) em zona crítica</div><div style="font-size:12px;color:var(--t2);margin-top:2px">${criticalMembers.map(m=>escapeHtml(m.name)).join(', ')} — carga de trabalho acima de 85%.</div></div></div></div>`
+        ? `<div class="card card-danger"><div style="display:flex;align-items:center;gap:12px"><i class="ti ti-alert-triangle" style="color:var(--red);font-size:22px;flex-shrink:0"></i><div><div style="font-size:14px;font-weight:600">${criticalMembers.length} colaborador(es) em zona crítica</div><div style="font-size:12px;color:var(--t2);margin-top:2px">${criticalMembers.map(m=>escapeHtml(m.name)).join(', ')} — carga de trabalho acima de 85%.</div></div></div></div>`
         : '';
     }
     const listRoot = document.getElementById('burnout-list-root');
     if(!listRoot) return;
     if(!data.length) {
-      listRoot.innerHTML = `<div style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12.5px">Nenhum membro cadastrado ainda.</div>`;
+      listRoot.innerHTML = `<div style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12.5px">Nenhum colaborador cadastrado ainda.</div>`;
       return;
     }
     const sorted = [...data].sort((a,b) => b.workloadPct - a.workloadPct);
@@ -8744,7 +8744,7 @@ const Burnout = (() => {
           ${sigs ? `<div class="burn-sigs">${sigs}</div>` : ''}
           ${m.recommendation ? `<p style="font-size:12px;color:var(--t2);margin-top:9px;line-height:1.55">${escapeHtml(m.recommendation)}</p>` : ''}
           <div class="btn-row" style="margin-top:6px">
-            ${m.actionPage ? `<button class="link-a" onclick="R.go('${m.actionPage}')"><i class="ti ti-arrow-right"></i>Ver recursos</button>` : ''}
+            ${m.actionPage ? `<button class="link-a" onclick="R.go('${m.actionPage}')"><i class="ti ti-arrow-right"></i>Ver colaboradores</button>` : ''}
             <button class="wbs-ic-btn" data-perm="business" title="Editar" onclick="Burnout.openEdit('${m.id}')"><i class="ti ti-edit"></i></button>
           </div>
         </div>
@@ -8766,7 +8766,7 @@ const Burnout = (() => {
   function openAdd() {
     if(!Auth.guard('business')) return;
     modalCtx = { mode:'add', id:null };
-    document.getElementById('burnout-modal-title').textContent = 'Novo membro';
+    document.getElementById('burnout-modal-title').textContent = 'Novo colaborador';
     document.getElementById('burnout-f-delete-btn').style.display = 'none';
     fill('', '', 100, '', [], '');
     openModal();
@@ -8780,7 +8780,7 @@ const Burnout = (() => {
     // Snapshot do estado no momento em que abriu — comparado no save pra detectar se alguém
     // mais mexeu neste membro enquanto o modal estava aberto (edição concorrente).
     modalCtx = { mode:'edit', id, snapshot:{ name:m.name, role:m.role||'', allocationPct:m.allocationPct, workloadPct:m.workloadPct, signals:m.signals||[], recommendation:m.recommendation||'' } };
-    document.getElementById('burnout-modal-title').textContent = 'Editar membro';
+    document.getElementById('burnout-modal-title').textContent = 'Editar colaborador';
     document.getElementById('burnout-f-delete-btn').style.display = '';
     fill(m.name, m.role, m.allocationPct, m.workloadPct, m.signals, m.recommendation);
     openModal();
@@ -8795,7 +8795,7 @@ const Burnout = (() => {
     const pct = Math.max(0, parseInt(document.getElementById('burnout-f-pct').value, 10) || 0);
     const signals = document.getElementById('burnout-f-signals').value.split(',').map(s=>s.trim()).filter(Boolean);
     const rec = document.getElementById('burnout-f-rec').value.trim();
-    if(!name) { T.show('⚠️ Dê um nome para o membro.'); return; }
+    if(!name) { T.show('⚠️ Dê um nome para o colaborador.'); return; }
 
     let saved;
     const wasAdd = modalCtx.mode === 'add';
@@ -8819,7 +8819,7 @@ const Burnout = (() => {
     if(wasAdd) {
       saved = { id:genId(), name, role, allocationPct:alloc, workloadPct:pct, signals, recommendation:rec, actionPage:'' };
       data.push(saved);
-      T.show('✅ Membro adicionado!');
+      T.show('✅ Colaborador adicionado!');
     } else {
       saved = data.find(x => x.id === modalCtx.id);
       if(saved) { saved.name=name; saved.role=role; saved.allocationPct=alloc; saved.workloadPct=pct; saved.signals=signals; saved.recommendation=rec; }
@@ -8831,7 +8831,7 @@ const Burnout = (() => {
       Cloud.pushTeamMember(saved);
       // Sobrealocação e burnout afetam decisão de alocação de recursos — vira evento de
       // auditoria igual troca de perfil, não só um toast que some (gap apontado na revisão).
-      Cloud.pushAuditEvent('team_member_change', `${wasAdd?'Adicionou':'Editou'} membro da equipe: ${name} (${alloc}% alocado, ${pct}% de carga)`, { memberId:saved.id, allocationPct:alloc, workloadPct:pct });
+      Cloud.pushAuditEvent('team_member_change', `${wasAdd?'Adicionou':'Editou'} colaborador da equipe: ${name} (${alloc}% alocado, ${pct}% de carga)`, { memberId:saved.id, allocationPct:alloc, workloadPct:pct });
     }
     render();
     closeModal();
@@ -8840,18 +8840,18 @@ const Burnout = (() => {
   function deleteFromModal() {
     if(!Auth.guard('business')) return;
     ensureLoaded();
-    if(!confirm('Remover este membro do radar?')) return;
+    if(!confirm('Remover este colaborador do radar?')) return;
     const removedId = modalCtx.id;
     const removedName = (data.find(x => x.id === removedId) || {}).name || removedId;
     data = data.filter(x => x.id !== removedId);
     persist();
     if(typeof Cloud !== 'undefined') {
       Cloud.deleteTeamMember(removedId);
-      Cloud.pushAuditEvent('team_member_change', `Removeu membro da equipe: ${removedName}`, { memberId:removedId });
+      Cloud.pushAuditEvent('team_member_change', `Removeu colaborador da equipe: ${removedName}`, { memberId:removedId });
     }
     render();
     closeModal();
-    T.show('🗑️ Membro removido.');
+    T.show('🗑️ Colaborador removido.');
   }
 
   return { render, openAdd, openEdit, saveFromModal, deleteFromModal, closeModal, resetCache };
@@ -9091,7 +9091,7 @@ const Report = (() => {
     // Resumo executivo
     let resumo = `O projeto está com saúde geral estimada de <strong>${d.saude}/100</strong>, aderência de cronograma (WBS) de <strong>${d.aderencia}%</strong>. `;
     if(d.criticasPendentes.length) resumo += `<strong>Risco crítico:</strong> ${d.criticasPendentes.length} decisão(ões) crítica(s) pendente(s) — ${escapeHtml(d.criticasPendentes[0].title)}. `;
-    if(d.membrosCriticos.length) resumo += `Burnout detectado em ${d.membrosCriticos.length} membro(s) da equipe exige atenção imediata. `;
+    if(d.membrosCriticos.length) resumo += `Burnout detectado em ${d.membrosCriticos.length} colaborador(es) exige atenção imediata. `;
     if(!d.criticasPendentes.length && !d.membrosCriticos.length) resumo += `Sem riscos críticos abertos no momento.`;
 
     // Pontos de atenção
@@ -9141,7 +9141,7 @@ const Report = (() => {
     const prompt = `Reescreva o resumo executivo de um status report de projeto em tom profissional, 3-4 frases, com base nestes dados reais:
 - Saúde geral: ${d.saude}/100, aderência de cronograma: ${d.aderencia}%
 - Decisões críticas pendentes: ${d.criticasPendentes.length}
-- Membros em burnout: ${d.membrosCriticos.length}
+- Colaboradores em burnout: ${d.membrosCriticos.length}
 - Mudanças de escopo abertas: ${d.scopeAbertos.length} (impacto +${d.scopeImpactoDias} dias, +${fmtMoney(d.scopeImpactoCusto)})
 Responda só com o parágrafo, sem título.`;
     const r = await AI.send([{ role:'user', content:prompt }]);
@@ -10453,7 +10453,7 @@ const Resources = (() => {
     const root = document.getElementById('res-list-root');
     if(root) {
       if(!team.length) {
-        root.innerHTML = `<div style="text-align:center;padding:20px 10px;color:var(--t3);font-size:12.5px">Nenhum membro cadastrado ainda — adicione pelo Burnout Radar.</div>`;
+        root.innerHTML = `<div style="text-align:center;padding:20px 10px;color:var(--t3);font-size:12.5px">Nenhum colaborador cadastrado ainda — adicione pelo Burnout Radar.</div>`;
       } else {
         root.innerHTML = team.map(m => {
           const status = statusOf(m.workloadPct||0);
@@ -11302,7 +11302,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     const page = shortcuts[e.key.toLowerCase()];
     if(page) { R.go(page); T.show('Navegando para ' + page + ' (' + e.key + ')'); }
     if(e.key === '?') {
-      T.show('Atalhos: D=Dashboard E=Decisões B=Burnout R=Recursos W=What-If L=Lições A=Atas T=Trilha P=Report C=Chat', 5000);
+      T.show('Atalhos: D=Dashboard E=Decisões B=Burnout R=Colaboradores W=What-If L=Lições A=Atas T=Trilha P=Report C=Chat', 5000);
     }
   });
 })();
@@ -11396,14 +11396,14 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
 
     <!-- Step 2: Team -->
     <div id="wz-panel-2" style="display:none">
-      <p style="font-size:12.5px;color:var(--t2);margin-bottom:12px">Adicione os membros da equipe. A IA vai monitorar carga e burnout automaticamente.</p>
+      <p style="font-size:12.5px;color:var(--t2);margin-bottom:12px">Adicione os colaboradores da equipe. A IA vai monitorar carga e burnout automaticamente.</p>
       <div id="wz-members" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
         <div class="g2" style="gap:8px">
-          <input class="input" type="text" placeholder="Nome do membro">
+          <input class="input" type="text" placeholder="Nome do colaborador">
           <input class="input" type="text" placeholder="Papel / função">
         </div>
       </div>
-      <button class="btn btn-sm" onclick="Wizard.addMember()"><i class="ti ti-plus"></i>Adicionar membro</button>
+      <button class="btn btn-sm" onclick="Wizard.addMember()"><i class="ti ti-plus"></i>Adicionar colaborador</button>
     </div>
 
     <!-- Step 3: AI Context -->
@@ -12324,14 +12324,14 @@ const Messaging = (() => {
 <div class="modal-ov hidden" id="modal-burnout" onclick="if(event.target===this)Burnout.closeModal()">
   <div class="modal-box" style="width:460px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <div class="modal-title" id="burnout-modal-title">Novo membro</div>
+      <div class="modal-title" id="burnout-modal-title">Novo colaborador</div>
       <button class="btn btn-sm" onclick="Burnout.closeModal()"><i class="ti ti-x"></i></button>
     </div>
     <div class="modal-sub">Carga de trabalho e sinais de sobrecarga</div>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><div class="field-label">Nome</div><input class="input" id="burnout-f-name" placeholder="Ex: Ana Souza"></div>
       <div><div class="field-label">Papel</div><input class="input" id="burnout-f-role" placeholder="Ex: Desenvolvedor Sênior"></div>
-      <div><div class="field-label">Alocação neste projeto (%)</div><input class="input" type="number" min="0" max="150" id="burnout-f-alloc" placeholder="Ex: 100 (tempo integral)"><div style="font-size:11px;color:var(--t3);margin-top:4px">Usado para calcular alocação real entre projetos em <a href="#" onclick="R.go('resources');return false" style="color:var(--acc)">Recursos</a> — casa pelo nome em todos os projetos deste navegador.</div></div>
+      <div><div class="field-label">Alocação neste projeto (%)</div><input class="input" type="number" min="0" max="150" id="burnout-f-alloc" placeholder="Ex: 100 (tempo integral)"><div style="font-size:11px;color:var(--t3);margin-top:4px">Usado para calcular alocação real entre projetos em <a href="#" onclick="R.go('resources');return false" style="color:var(--acc)">Colaboradores</a> — casa pelo nome em todos os projetos deste navegador.</div></div>
       <div><div class="field-label">Carga de trabalho / burnout (%)</div><input class="input" type="number" min="0" max="150" id="burnout-f-pct" placeholder="0-150"><div style="font-size:11px;color:var(--t3);margin-top:4px">Indicador subjetivo de esgotamento — pode ser maior ou menor que a alocação (ex: 100% alocado mas trabalhando tranquilo = carga baixa).</div></div>
       <div><div class="field-label">Sinais de alerta (separados por vírgula)</div><input class="input" id="burnout-f-signals" placeholder="Ex: 14 dias sem folga, +3h extras/dia"></div>
       <div><div class="field-label">Recomendação da IA</div><textarea class="input" id="burnout-f-rec" rows="2" style="resize:vertical;font-family:inherit" placeholder="Ex: Redistribuir tarefa X para Y"></textarea></div>
@@ -12498,7 +12498,7 @@ const Privacy = (() => {
 const Wizard = (() => {
   let step = 1;
   const total = 3;
-  const subtitles = ['Configure os dados básicos do projeto','Adicione os membros da equipe','Configure o contexto inicial da IA'];
+  const subtitles = ['Configure os dados básicos do projeto','Adicione os colaboradores da equipe','Configure o contexto inicial da IA'];
 
   function open() {
     step = 1;
@@ -12548,7 +12548,7 @@ const Wizard = (() => {
     const div = document.createElement('div');
     div.className = 'g2';
     div.style.gap = '8px';
-    div.innerHTML = '<input class="input" type="text" placeholder="Nome do membro"><input class="input" type="text" placeholder="Papel / função">';
+    div.innerHTML = '<input class="input" type="text" placeholder="Nome do colaborador"><input class="input" type="text" placeholder="Papel / função">';
     wrap.appendChild(div);
   }
   function create() {

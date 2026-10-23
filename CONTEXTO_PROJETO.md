@@ -139,6 +139,12 @@ A página **Ajuda** dentro do próprio app (`R.go('help')`) tem a lista completa
   `tests/unit/parity.test.mjs` garante que servidor e app calculam os mesmos números.
 - **Testes**: `npm run test:unit` (app + servidor + paridade), E2E em `tests/e2e/` (`messaging-rls.spec.js` exige as migrações aplicadas).
 
+## Regra de vocabulário (dono, 23/10/2026)
+Pessoas são sempre **"colaborador(es)"** (termo de RH); "recurso" só para ferramentas/equipamentos; "membro" só para acesso ao projeto. Vale também para IA, WhatsApp e e-mail.
+
+## Publicação (aviso de nova versão)
+A cada publicação suba a versão nos 4 lugares (`version.json`, `BRAND.version`, `package.json`, `CACHE_NAME` do `sw.js`); o teste confere. É isso que dispara a faixa "Atualizar agora" nos usuários.
+
 ## 11. Como retomar numa conversa nova
 
 O projeto agora vive num repositório git com deploy automático — **não precisa mais colar os arquivos**, é só apontar para o repositório (https://github.com/Rimobr/pmo-compass) ou abrir a pasta local. Este arquivo mais o `git log` já dão contexto suficiente para continuar sem re-explorar o app do zero.

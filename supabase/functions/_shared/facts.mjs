@@ -167,7 +167,7 @@ export function factsToText(f, { canSeeFinancials = false } = {}) {
   L.push(f.scope.openCount
     ? `Mudanças de escopo sem aprovação: ${f.scope.openCount} (impacto de +${f.scope.daysImpact} dia(s)${canSeeFinancials && f.scope.costImpact ? `, +${money(f.scope.costImpact)}` : ''})`
     : 'Mudanças de escopo sem aprovação: nenhuma');
-  L.push(`Equipe: ${f.team.size} pessoa(s)${f.team.size ? `; ${f.team.overallocated} sobrealocada(s) entre projetos; ${f.team.highLoad} com carga muito alta` : ''}`);
+  L.push(`Equipe: ${f.team.size} colaborador(es)${f.team.size ? `; ${f.team.overallocated} sobrealocado(s) entre projetos; ${f.team.highLoad} com carga muito alta` : ''}`);
   if (f.lastBoardDecision) L.push(`Última decisão da diretoria: ${f.lastBoardDecision.decision} em ${fmtDateBr(f.lastBoardDecision.decidedAt)}`);
   return L.join('\n');
 }
