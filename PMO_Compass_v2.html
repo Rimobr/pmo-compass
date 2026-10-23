@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.1.8'
+  version: '2.2.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -829,6 +829,7 @@ body.icons-failed i[data-fb]::before{
       <button class="si" data-p="loop" onclick="R.go('loop')"><i class="ti ti-refresh-alert"></i>Loop de Ação</button>
       <button class="si" data-p="trail" onclick="R.go('trail')"><i class="ti ti-git-branch"></i>Trilha</button>
       <button class="si" data-p="report" onclick="R.go('report')"><i class="ti ti-file-report"></i>Relatório</button>
+      <button class="si" data-p="statusmsg" onclick="R.go('statusmsg')"><i class="ti ti-brand-whatsapp"></i>Mensagem de status</button>
     </div>
   </div>
 
@@ -1727,6 +1728,520 @@ body.icons-failed i[data-fb]::before{
   </div>
 </section>
 
+<!-- ■ MODULE: pages/statusmsg ─ Mensagem de status pronta para copiar e colar (WhatsApp / e-mail), sem depender de integração -->
+<style data-module="pages/statusmsg-css">
+.sm-grid{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:12px;margin-top:12px;align-items:start}
+@media (max-width:900px){.sm-grid{grid-template-columns:minmax(0,1fr)}}
+.sm-opt{display:flex;flex-direction:column;gap:12px}
+.sm-checks{display:flex;flex-direction:column;gap:6px;max-height:190px;overflow:auto;padding:2px}
+.sm-check{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--t1);cursor:pointer}
+.sm-text{width:100%;min-height:380px;resize:vertical;font-family:var(--font-mono);font-size:12.5px;line-height:1.55;background:var(--s2);color:var(--t1);border:1px solid var(--b1);border-radius:var(--r8);padding:12px 14px;outline:none}
+.sm-text:focus{border-color:var(--ab)}
+.sm-meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--t3);margin:6px 0 10px}
+</style>
+<section class="page" id="p-statusmsg" data-module="pages/statusmsg">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Mensagem de status<span class="help-q" data-help="Monta um texto pronto com a situação dos projetos escolhidos — prazo, entregas atrasadas, decisões críticas, riscos e orçamento — para você copiar e colar no WhatsApp ou e-mail. Os números são calculados do mesmo jeito que o assistente de WhatsApp usa. Nada é enviado por aqui: você revisa, ajusta o texto e envia." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Texto pronto para a diretoria, gerado dos dados reais dos projetos. Revise, copie e envie.</div></div>
+  </div>
+  <div class="sm-grid">
+    <div class="card sm-opt">
+      <div class="lbl"><i class="ti ti-adjustments"></i>Opções</div>
+      <div>
+        <div class="field-label"><label for="sm-mode">Nível de detalhe</label><span class="help-q" data-help="Resumo: uma linha por projeto (cabe numa mensagem curta). Detalhado: prazo, entregas atrasadas, próximas entregas, decisões críticas, riscos, escopo e orçamento de cada projeto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+        <select class="input" id="sm-mode" onchange="StatusMsg.render()"><option value="detalhado">Detalhado</option><option value="resumo">Resumo (uma linha por projeto)</option></select>
+      </div>
+      <div>
+        <div class="field-label">Projetos<span class="help-q" data-help="Marque os projetos que entram na mensagem. Atenção: projetos que você ainda não abriu neste navegador podem estar desatualizados. Abra o projeto antes (ou entre com sua conta da nuvem) para garantir os dados mais recentes." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+        <div class="sm-checks" id="sm-projects"></div>
+      </div>
+      <label class="sm-check" style="align-items:flex-start"><input type="checkbox" id="sm-money" onchange="StatusMsg.render()" style="margin-top:3px"><span><strong>Incluir valores em R$</strong><span class="help-q" style="margin-left:6px" data-help="Desmarcado (o padrão), a mensagem traz só percentuais e índices, sem nenhum valor em reais. Marque apenas se o destinatário tem direito de conhecer custos e orçamento." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span><br><span style="font-size:11.5px;color:var(--t2)">Só para quem pode ver custos.</span></span></label>
+      <div>
+        <div class="field-label"><label for="sm-greet">Saudação (opcional)</label><span class="help-q" data-help="Linha de abertura, por exemplo o nome de quem vai receber. Fica no começo da mensagem." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+        <input class="input" id="sm-greet" maxlength="80" placeholder="Ex: Olá, Marina!" oninput="StatusMsg.render()">
+      </div>
+      <div>
+        <div class="field-label"><label for="sm-phone">WhatsApp do destinatário (opcional)</label><span class="help-q" data-help="Se preencher, o botão &quot;Abrir no WhatsApp&quot; já abre a conversa com essa pessoa e o texto preenchido. Em branco, o WhatsApp deixa você escolher o contato. O número só é usado para montar o link, não é guardado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+        <input class="input" id="sm-phone" inputmode="tel" placeholder="(11) 99999-8888">
+      </div>
+    </div>
+    <div class="card">
+      <div class="lbl"><i class="ti ti-message-2"></i>Mensagem pronta<span class="help-q" data-help="Você pode editar o texto à vontade antes de copiar. Mudar as opções ao lado gera o texto de novo (as edições feitas à mão se perdem). Negrito e itálico seguem o padrão do WhatsApp (*assim* e _assim_)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+      <textarea class="sm-text" id="sm-text" aria-label="Mensagem de status para copiar" oninput="StatusMsg.count()"></textarea>
+      <div class="sm-meta"><span id="sm-count"></span><span id="sm-note"></span></div>
+      <div class="btn-row">
+        <button class="btn btn-sm btn-acc" onclick="StatusMsg.copy()"><i class="ti ti-copy"></i>Copiar mensagem</button>
+        <button class="btn btn-sm" onclick="StatusMsg.openWhatsapp()"><i class="ti ti-brand-whatsapp"></i>Abrir no WhatsApp</button>
+        <button class="btn btn-sm" onclick="StatusMsg.openEmail()"><i class="ti ti-mail"></i>Abrir e-mail</button>
+        <button class="btn btn-sm" onclick="StatusMsg.render()"><i class="ti ti-refresh"></i>Gerar de novo</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ■ MODULE: services/shared-facts ─ cópia GERADA da lógica de fatos do servidor (ver scripts/sync-facts-client.mjs) -->
+<script data-module="services/shared-facts">
+/* ▼▼▼ GERADO por scripts/sync-facts-client.mjs a partir de supabase/functions/_shared/{util,facts}.mjs — NÃO edite aqui ▼▼▼ */
+const SharedFacts = (() => {
+// Utilitários puros compartilhados pelas funções de borda (Deno) e pelos testes (Node).
+// Sem dependência de rede nem de banco: tudo aqui é testável de forma isolada.
+
+// ── Dados pessoais (LGPD) ───────────────────────────────────────────────────────────────────────
+// Mesmos padrões e decisões de design de anonymize() em PMO_Compass_v2.html e de redactPii() em
+// ai-proxy: CEP/RG sem contexto não são redigidos (falso-positivo demais).
+const PII_PATTERNS = [
+  [/\b\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2}\b/g, '[CPF REDACTADO]'],
+  [/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g, '[CNPJ REDACTADO]'],
+  [/(?<=RG[:\s]{0,3})\d{1,2}[.\s]?\d{3}[.\s]?\d{3}-?[\dXx]\b/gi, '[RG REDACTADO]'],
+  [/[\w.+-]+@[\w-]+\.[\w.-]+/g, '[E-MAIL REDACTADO]'],
+  [/\(?\d{2}\)?\s?9?\d{4}-?\d{4}/g, '[TELEFONE REDACTADO]'],
+  [/\b\d{5}-\d{3}\b/g, '[CEP REDACTADO]'],
+  [/(?<=CEP[:\s]{0,3})\b\d{8}\b/gi, '[CEP REDACTADO]'],
+];
+function redactPii(text) {
+  if (!text) return text || '';
+  let out = String(text);
+  for (const [re, tag] of PII_PATTERNS) out = out.replace(re, tag);
+  return out;
+}
+
+// ── Valores em R$ ───────────────────────────────────────────────────────────────────────────────
+// Quem não pode ver finanças nunca recebe valor monetário — nem no alerta, nem na resposta da IA
+// (a IA recebe fatos sem valores, e esta máscara é a segunda barreira sobre o texto final).
+const MONEY_PATTERNS = [
+  /R\$\s*\d[\d.,]*(?:\s*(?:mil|milh(?:ão|ões|ao|oes)|bilh(?:ão|ões|ao|oes)|mi|bi|k|m|b)\b)?/gi,
+  /\b\d[\d.,]*\s*(?:mil\s+)?reais\b/gi,
+  /\bUS\$\s*\d[\d.,]*/gi,
+];
+function maskMoney(text, replacement = '[valor restrito]') {
+  if (!text) return text || '';
+  let out = String(text);
+  for (const re of MONEY_PATTERNS) out = out.replace(re, replacement);
+  return out;
+}
+
+// ── Texto ───────────────────────────────────────────────────────────────────────────────────────
+function normalizeText(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function truncate(text, max) {
+  const t = String(text || '');
+  return t.length <= max ? t : t.slice(0, Math.max(0, max - 1)).trimEnd() + '…';
+}
+// O WhatsApp aceita 4096 caracteres por mensagem; respostas de status devem ser curtas, mas se passarem
+// do limite quebram em blocos nos parágrafos (nunca no meio de uma palavra).
+function splitMessage(text, max = 1500) {
+  const t = String(text || '').trim();
+  if (t.length <= max) return t ? [t] : [];
+  const parts = []; let cur = '';
+  for (const para of t.split(/\n{2,}/)) {
+    if ((cur + '\n\n' + para).trim().length > max && cur) { parts.push(cur.trim()); cur = para; }
+    else cur = cur ? cur + '\n\n' + para : para;
+    while (cur.length > max) {
+      const cut = cur.lastIndexOf(' ', max); const at = cut > max * 0.5 ? cut : max;
+      parts.push(cur.slice(0, at).trim()); cur = cur.slice(at).trim();
+    }
+  }
+  if (cur) parts.push(cur.trim());
+  return parts;
+}
+
+// ── Telefone ────────────────────────────────────────────────────────────────────────────────────
+// Devolve E.164 ("+5511999998888") ou null. Sem "+" e com 10–11 dígitos, assume Brasil.
+function normalizePhone(input) {
+  const raw = String(input || '').trim();
+  let digits = raw.replace(/\D/g, '');
+  if (!digits) return null;
+  if (!raw.startsWith('+')) {
+    if (digits.length === 10 || digits.length === 11) digits = '55' + digits;
+  }
+  if (!/^[1-9]\d{9,14}$/.test(digits)) return null;
+  if (digits.startsWith('55') && digits.length !== 12 && digits.length !== 13) return null;
+  return '+' + digits;
+}
+// O WhatsApp entrega números móveis brasileiros às vezes com e às vezes sem o 9º dígito; casar o remetente
+// com o cadastro precisa aceitar as duas formas. Devolve as variantes só com dígitos (como o "wa_id").
+function phoneVariants(e164) {
+  const d = String(e164 || '').replace(/\D/g, '');
+  const set = new Set([d]);
+  if (d.startsWith('55')) {
+    if (d.length === 13 && d[4] === '9') set.add(d.slice(0, 4) + d.slice(5));
+    if (d.length === 12 && '6789'.includes(d[4])) set.add(d.slice(0, 4) + '9' + d.slice(4));
+  }
+  return [...set];
+}
+function maskPhone(e164) {
+  const d = String(e164 || '');
+  return d.length > 4 ? '***' + d.slice(-4) : '***';
+}
+
+// ── Assinatura (HMAC) ───────────────────────────────────────────────────────────────────────────
+async function hmacSha256Hex(secret, data) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(data));
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function timingSafeEqualStr(a, b) {
+  const x = String(a), y = String(b);
+  let diff = x.length ^ y.length;
+  for (let i = 0; i < Math.max(x.length, y.length); i++) diff |= (x.charCodeAt(i) || 0) ^ (y.charCodeAt(i) || 0);
+  return diff === 0;
+}
+
+// ── Datas (sempre em America/Sao_Paulo) ─────────────────────────────────────────────────────────
+const WD = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+function saoPauloParts(date = new Date()) {
+  const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short', hour: '2-digit', hour12: false });
+  const p = Object.fromEntries(f.formatToParts(date).map(x => [x.type, x.value]));
+  const hour = Number(p.hour) % 24;
+  return { year: +p.year, month: +p.month, day: +p.day, weekday: WD[p.weekday], hour, iso: `${p.year}-${p.month}-${p.day}` };
+}
+function parseIsoDate(s) { const [y, m, d] = String(s).split('-').map(Number); return new Date(y, (m || 1) - 1, d || 1); }
+function isoDate(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+// Mesma regra do app (Clock.today): data de referência do projeto, se houver; senão o dia real em Brasília.
+function projectToday(project, now = new Date()) {
+  if (project && /^\d{4}-\d{2}-\d{2}$/.test(project.reference_date || '')) return parseIsoDate(project.reference_date);
+  const sp = saoPauloParts(now);
+  return new Date(sp.year, sp.month - 1, sp.day);
+}
+function isoWeekKey(date = new Date()) {
+  const sp = saoPauloParts(date);
+  const d = new Date(Date.UTC(sp.year, sp.month - 1, sp.day));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+// Dentro da janela de silêncio (ex.: 21h às 7h)? A janela pode atravessar a meia-noite.
+function inQuietHours(hour, start, end) {
+  if (start === end) return false;
+  return start < end ? (hour >= start && hour < end) : (hour >= start || hour < end);
+}
+function fmtDateBr(iso) { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; }
+
+// Motor de "fatos" do projeto — o que o assistente (WhatsApp) e o resumo semanal podem afirmar.
+// A regra de ouro: a IA NUNCA calcula nem inventa número; ela só reformula os fatos produzidos aqui,
+// a partir das linhas do banco. As fórmulas espelham o app (Budget.computeMetrics, Dashboard,
+// ratioCode do Farol) — tests/unit/facts.parity.test.mjs compara as duas implementações com os mesmos dados.
+
+function riskLevel(score) { return score >= 15 ? 'crítico' : score >= 10 ? 'alto' : score >= 5 ? 'médio' : 'baixo'; }
+
+// Mesma leitura do Farol da Diretoria: 1,00 = no combinado; fora de 0,5–1,3 quase sempre é erro de lançamento.
+function ratioCode(v) {
+  if (v == null) return null;
+  if (v > 1.3 || v < 0.5) return 'amb';
+  if (v >= 1) return 'grn';
+  if (v >= 0.9) return 'amb';
+  return 'red';
+}
+const CODE_WORD = { grn: 'verde', amb: 'amarelo', red: 'vermelho' };
+const STATUS_TO_FAROL = { 'Saudável': 'verde', 'Atenção': 'amarelo', 'Em risco': 'vermelho' };
+
+function expectedPct(start, end, today) {
+  if (!start || !end) return null;
+  const s = parseIsoDate(start).getTime(), e = parseIsoDate(end).getTime(), t = today.getTime();
+  if (e <= s) return null;
+  if (t <= s) return 0;
+  if (t >= e) return 100;
+  return Math.round(((t - s) / (e - s)) * 100);
+}
+const num = v => (v == null || v === '' ? 0 : Number(v) || 0);
+
+// Pessoas cuja soma de alocação entre TODOS os projetos passa de 100% (mesma regra de
+// DB.computePortfolioAllocation: casa por nome, alocação ausente conta 100).
+function overallocatedNames(allTeamRows) {
+  const sum = new Map();
+  for (const m of allTeamRows || []) {
+    const k = String(m.name || '').trim().toLowerCase();
+    if (!k) continue;
+    sum.set(k, (sum.get(k) || 0) + (m.allocation_pct != null ? num(m.allocation_pct) : 100));
+  }
+  return new Set([...sum].filter(([, v]) => v > 100).map(([k]) => k));
+}
+
+function computeFacts(input, nowDate = new Date()) {
+  const { project } = input;
+  const today = projectToday(project, nowDate);
+  const wbs = input.wbs || [], lines = input.budgetLines || [], actuals = input.costActuals || [];
+  const decisions = input.decisions || [], risks = input.risks || [], scope = input.scope || [], team = input.team || [];
+  const snapshot = input.snapshot || null;
+
+  // ── Prazo ──
+  const moduleCount = wbs.length;
+  const avgPct = moduleCount ? Math.round(wbs.reduce((s, m) => s + num(m.pct), 0) / moduleCount) : null;
+  const delayed = wbs
+    .filter(m => m.status !== 'grn' && m.end_date && parseIsoDate(m.end_date) < today)
+    .map(m => ({ label: m.label, daysLate: Math.round((today - parseIsoDate(m.end_date)) / 86400000) }))
+    .sort((a, b) => b.daysLate - a.daysLate);
+  const next = wbs
+    .filter(m => m.status !== 'grn' && m.end_date && parseIsoDate(m.end_date) >= today)
+    .sort((a, b) => (a.end_date < b.end_date ? -1 : 1)).slice(0, 3)
+    .map(m => ({ label: m.label, end: m.end_date }));
+
+  // ── Custo e prazo em valor (EVM) ──
+  const base = lines.filter(l => !l.is_reserve), reserve = lines.filter(l => l.is_reserve);
+  const BAC = base.reduce((s, l) => s + num(l.planned_value), 0);
+  const reserveInitial = reserve.reduce((s, l) => s + num(l.planned_value), 0);
+  const AC = actuals.filter(a => a.kind === 'real').reduce((s, a) => s + num(a.amount), 0);
+  let EV = 0, PV = 0;
+  for (const l of base) {
+    if (!l.wbs_module_id) continue;
+    const m = wbs.find(x => x.id === l.wbs_module_id);
+    if (!m) continue;
+    EV += num(l.planned_value) * (num(m.pct) / 100);
+    const exp = expectedPct(m.start_date, m.end_date, today);
+    PV += num(l.planned_value) * ((exp == null ? num(m.pct) : exp) / 100);
+  }
+  const CPI = AC > 0 ? EV / AC : null;
+  const SPI = PV > 0 ? EV / PV : null;
+  const EAC = (CPI && CPI > 0) ? AC + (BAC - EV) / CPI : BAC;
+  const consumoPct = BAC > 0 ? Math.round((AC / BAC) * 100) : null;
+
+  // ── Semáforo: a leitura do app (mais completa) se for recente; senão estimativa pelos índices ──
+  let farol = { color: null, source: null, asOf: null, healthScore: null };
+  const snapAge = snapshot ? Math.round((today - parseIsoDate(String(snapshot.captured_at).slice(0, 10))) / 86400000) : null;
+  if (snapshot && STATUS_TO_FAROL[snapshot.health_status] && (project.reference_date || snapAge <= 14)) {
+    farol = { color: STATUS_TO_FAROL[snapshot.health_status], source: 'leitura', asOf: String(snapshot.captured_at).slice(0, 10), healthScore: snapshot.health_score ?? null };
+  } else {
+    const codes = [ratioCode(SPI), ratioCode(CPI)].filter(Boolean);
+    if (codes.length) farol = { color: CODE_WORD[codes.includes('red') ? 'red' : codes.includes('amb') ? 'amb' : 'grn'], source: 'indices', asOf: isoDate(today), healthScore: null };
+  }
+
+  // ── Decisões, riscos, escopo, equipe ──
+  const pendingCritical = decisions.filter(d => d.status === 'pending' && d.severity === 'crit').map(d => d.title);
+  const openRisks = risks.filter(r => r.status === 'aberto' || r.status === 'mitigando').sort((a, b) => num(b.score) - num(a.score));
+  const byLevel = { crítico: 0, alto: 0, médio: 0, baixo: 0 };
+  openRisks.forEach(r => { byLevel[riskLevel(num(r.score))]++; });
+  const openScope = scope.filter(s => s.status === 'pending' || s.status === 'analysis');
+  const over = input.overallocated || new Set();
+  const overCount = team.filter(m => over.has(String(m.name || '').trim().toLowerCase())).length;
+  const lb = (input.boardDecisions || []).filter(b => b.board_decision).sort((a, b) => (a.decided_at < b.decided_at ? 1 : -1))[0] || null;
+
+  return {
+    project: { id: project.id, name: project.name, client: project.client || '' },
+    asOf: isoDate(today), usesReferenceDate: !!project.reference_date,
+    farol,
+    schedule: { moduleCount, avgPct, doneCount: wbs.filter(m => m.status === 'grn').length, delayedCount: delayed.length, delayed: delayed.slice(0, 5), next, spi: SPI },
+    budget: {
+      hasBudget: BAC > 0, consumoPct, cpi: CPI, spi: SPI,
+      eacPctOfBac: BAC > 0 ? Math.round((EAC / BAC) * 100) : null,
+      amounts: { bac: BAC, ac: AC, eac: EAC, reserveInitial },
+    },
+    decisions: { pendingCritical: pendingCritical.slice(0, 5), pendingCriticalCount: pendingCritical.length },
+    risks: { openCount: openRisks.length, byLevel, top: openRisks.slice(0, 5).map(r => ({ title: r.title, score: num(r.score), level: riskLevel(num(r.score)), status: r.status, owner: r.owner_name || '' })) },
+    scope: { openCount: openScope.length, daysImpact: openScope.reduce((s, x) => s + num(x.impact_days), 0), costImpact: openScope.reduce((s, x) => s + num(x.impact_cost), 0) },
+    team: { size: team.length, overallocated: overCount, highLoad: team.filter(m => num(m.workload_pct) >= 85).length },
+    lastBoardDecision: lb ? { decision: lb.board_decision, decidedAt: String(lb.decided_at || '').slice(0, 10) } : null,
+  };
+}
+
+// Remove tudo que é dinheiro quando a pessoa não pode ver finanças (a regra mora aqui, no servidor).
+function restrictFacts(facts, canSeeFinancials) {
+  const f = JSON.parse(JSON.stringify(facts));
+  if (!canSeeFinancials) { delete f.budget.amounts; delete f.scope.costImpact; }
+  return f;
+}
+
+const fmt1 = v => (v == null ? '—' : v.toFixed(2).replace('.', ','));
+const money = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+const safe = s => '«' + truncate(redactPii(String(s || '')).replace(/[\r\n\t]+/g, ' ').replace(/[«»]/g, '"'), 120) + '»';
+function ratioWord(v, kind) {
+  const c = ratioCode(v);
+  if (v == null) return 'sem dado suficiente';
+  if (v > 1.3 || v < 0.5) return 'valor atípico — conferir os lançamentos';
+  if (c === 'grn') return kind === 'spi' ? 'no prazo ou adiantado' : 'dentro do orçamento';
+  if (c === 'amb') return 'atenção (um pouco abaixo do combinado)';
+  return kind === 'spi' ? 'atrasado em relação ao planejado' : 'gastando acima do previsto pelo que já foi entregue';
+}
+
+// Texto que vai para a IA (ou para a resposta determinística). Títulos digitados por usuários vão entre « »
+// e truncados: são DADOS, nunca instruções.
+function factsToText(f, { canSeeFinancials = false } = {}) {
+  const L = [];
+  L.push(`PROJETO: ${f.project.name}${f.project.client ? ` (${f.project.client})` : ''}`);
+  L.push(`Data de referência dos números: ${fmtDateBr(f.asOf)}${f.usesReferenceDate ? ' (projeto de demonstração)' : ''}`);
+  if (f.farol.color) {
+    L.push(`Semáforo geral: ${f.farol.color} — ${f.farol.source === 'leitura'
+      ? `leitura do aplicativo em ${fmtDateBr(f.farol.asOf)}${f.farol.healthScore != null ? `, saúde ${f.farol.healthScore}/100` : ''}`
+      : 'estimado pelos índices de prazo e custo (não há leitura recente do aplicativo)'}`);
+  } else L.push('Semáforo geral: sem dados suficientes');
+  const s = f.schedule;
+  if (s.moduleCount) {
+    L.push(`Prazo: ${s.avgPct}% concluído em média; ${s.doneCount} de ${s.moduleCount} entregas concluídas; ${s.delayedCount} atrasada(s)${s.delayed.length ? ': ' + s.delayed.map(d => `${safe(d.label)} (${d.daysLate} dia(s))`).join(', ') : ''}`);
+    if (s.next.length) L.push(`Próximas entregas: ${s.next.map(n => `${safe(n.label)} até ${fmtDateBr(n.end)}`).join('; ')}`);
+  } else L.push('Prazo: nenhuma entrega cadastrada na WBS');
+  const b = f.budget;
+  if (b.hasBudget) {
+    L.push(`Índice de prazo (SPI): ${fmt1(b.spi)} — ${ratioWord(b.spi, 'spi')}`);
+    L.push(`Índice de custo (CPI): ${fmt1(b.cpi)} — ${ratioWord(b.cpi, 'cpi')}`);
+    L.push(`Orçamento: ${b.consumoPct}% do orçado já consumido; previsão no término = ${b.eacPctOfBac}% do orçado`);
+    if (canSeeFinancials && b.amounts) L.push(`Valores: orçado ${money(b.amounts.bac)}, gasto ${money(b.amounts.ac)}, previsão no término ${money(b.amounts.eac)}`);
+  } else L.push('Orçamento: nenhuma linha de orçamento lançada');
+  L.push(f.decisions.pendingCriticalCount
+    ? `Decisões críticas pendentes (${f.decisions.pendingCriticalCount}): ${f.decisions.pendingCritical.map(safe).join('; ')}`
+    : 'Decisões críticas pendentes: nenhuma');
+  const r = f.risks;
+  L.push(r.openCount
+    ? `Riscos abertos: ${r.openCount} (${r.byLevel.crítico} crítico(s), ${r.byLevel.alto} alto(s), ${r.byLevel.médio} médio(s), ${r.byLevel.baixo} baixo(s)). Principais: ${r.top.map(x => `${safe(x.title)} [${x.level}, nota ${x.score}${x.owner ? ', dono ' + safe(x.owner) : ''}]`).join('; ')}`
+    : 'Riscos abertos: nenhum registrado');
+  L.push(f.scope.openCount
+    ? `Mudanças de escopo sem aprovação: ${f.scope.openCount} (impacto de +${f.scope.daysImpact} dia(s)${canSeeFinancials && f.scope.costImpact ? `, +${money(f.scope.costImpact)}` : ''})`
+    : 'Mudanças de escopo sem aprovação: nenhuma');
+  L.push(`Equipe: ${f.team.size} colaborador(es)${f.team.size ? `; ${f.team.overallocated} sobrealocado(s) entre projetos; ${f.team.highLoad} com carga muito alta` : ''}`);
+  if (f.lastBoardDecision) L.push(`Última decisão da diretoria: ${f.lastBoardDecision.decision} em ${fmtDateBr(f.lastBoardDecision.decidedAt)}`);
+  return L.join('\n');
+}
+
+// Frase curta de uma linha por projeto (comando "projetos" e resumo semanal) — determinística, sem IA.
+function oneLineStatus(f) {
+  const emoji = { verde: '🟢', amarelo: '🟡', vermelho: '🔴' }[f.farol.color] || '⚪';
+  const bits = [];
+  if (f.schedule.moduleCount) bits.push(`${f.schedule.avgPct}% concluído`);
+  if (f.schedule.delayedCount) bits.push(`${f.schedule.delayedCount} atrasada(s)`);
+  if (f.decisions.pendingCriticalCount) bits.push(`${f.decisions.pendingCriticalCount} decisão(ões) crítica(s)`);
+  if (f.risks.byLevel['crítico']) bits.push(`${f.risks.byLevel['crítico']} risco(s) crítico(s)`);
+  return `${emoji} ${f.project.name}${bits.length ? ' — ' + bits.join(', ') : ''}`;
+}
+
+return { computeFacts, restrictFacts, factsToText, oneLineStatus, riskLevel, ratioCode, overallocatedNames, redactPii, maskMoney, fmtDateBr, projectToday, isoDate };
+})();
+/* ▲▲▲ fim do trecho gerado ▲▲▲ */
+</script>
+
+<!-- ■ MODULE: pages/statusmsg-js -->
+<script data-module="pages/statusmsg-js">
+const StatusMsg = (() => {
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const el = id => document.getElementById(id);
+  let selected = null; // ids marcados (null = ainda não escolhido: todos)
+
+  // Dados do app (formato do navegador) → formato do servidor (colunas do banco), para usar o MESMO cálculo
+  function factsInput(pid, overallocated) {
+    const g = t => DB.getForProject(pid, t) || [];
+    const proj = DB.listProjects().find(p => p.id === pid) || { id: pid, name: pid };
+    const wbs = g('wbs');
+    let snapshot = null;
+    // Projeto sem nenhuma entrega nem orçamento não tem o que avaliar: "sem dados", nunca um verde enganoso
+    if(typeof HealthScore !== 'undefined' && (wbs.length || g('budgetLines').length)) {
+      const score = HealthScore.calculate(HealthScore.computeMetrics(pid));
+      snapshot = { captured_at: Clock.iso(Clock.today(pid)), health_status: HealthScore.getStatus(score).label, health_score: score };
+    }
+    return {
+      project: { id: pid, name: proj.name, client: proj.client || '', reference_date: proj.refDate || null },
+      wbs: wbs.map(m => ({ id: m.id, label: m.label, status: m.status, pct: m.pct, start_date: m.start || null, end_date: m.end || null })),
+      budgetLines: g('budgetLines').map(l => ({ id: l.id, planned_value: l.plannedValue, wbs_module_id: l.wbsModuleId || null, is_reserve: !!l.isReserve })),
+      costActuals: g('costActuals').map(a => ({ amount: a.amount, kind: a.kind })),
+      decisions: g('decisions').map(d => ({ title: d.title, status: d.status, severity: d.severity })),
+      risks: g('risks').map(r => ({ title: r.title, status: r.status, score: (Number(r.probability) || 0) * (Number(r.impact) || 0), owner_name: r.owner || '' })),
+      scope: g('scopeChanges').map(s => ({ status: s.status, impact_days: s.impactDays || 0, impact_cost: s.impactCost || 0 })),
+      team: g('team').map(m => ({ name: m.name, workload_pct: m.workloadPct })),
+      snapshot, overallocated
+    };
+  }
+
+  const fmtMoney = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+  const ratio = v => v == null ? '—' : v.toFixed(2).replace('.', ',');
+  const clean = (t, n = 90) => { const x = SharedFacts.redactPii(String(t || '')).replace(/[\r\n\t]+/g, ' ').trim(); return x.length > n ? x.slice(0, n - 1).trimEnd() + '…' : x; };
+  const EMOJI = { verde: '🟢', amarelo: '🟡', vermelho: '🔴' };
+
+  // Linhas de detalhe de UM projeto (já sem valores se a pessoa não pode vê-los)
+  function detailLines(f, money) {
+    const L = [], s = f.schedule, b = f.budget;
+    if(s.moduleCount) {
+      let t = `• Prazo: ${s.avgPct}% concluído (${s.doneCount} de ${s.moduleCount} entregas)`;
+      if(s.delayedCount) t += `; ${s.delayedCount} atrasada(s): ` + s.delayed.slice(0, 3).map(d => `${clean(d.label, 50)} (${d.daysLate} dia(s))`).join(', ');
+      L.push(t);
+      if(s.next.length) L.push('• Próximas entregas: ' + s.next.slice(0, 2).map(n => `${clean(n.label, 50)} até ${SharedFacts.fmtDateBr(n.end)}`).join('; '));
+    } else L.push('• Prazo: nenhuma entrega cadastrada');
+    if(b.hasBudget) {
+      let t = `• Orçamento: ${b.consumoPct}% do orçado consumido; previsão no término ${b.eacPctOfBac}% do orçado`;
+      if(money && b.amounts) t += ` (gasto ${fmtMoney(b.amounts.ac)} de ${fmtMoney(b.amounts.bac)})`;
+      L.push(t);
+      L.push(`• Ritmo: prazo ${ratio(b.spi)} · custo ${ratio(b.cpi)} (1,00 = no combinado)`);
+    }
+    const dc = f.decisions;
+    L.push(dc.pendingCriticalCount ? `• Decisões críticas pendentes (${dc.pendingCriticalCount}): ` + dc.pendingCritical.slice(0, 3).map(t => `“${clean(t)}”`).join('; ') : '• Decisões críticas pendentes: nenhuma');
+    const r = f.risks;
+    if(r.openCount) {
+      const hot = r.top.filter(x => x.level === 'crítico' || x.level === 'alto').slice(0, 2);
+      L.push(`• Riscos em aberto: ${r.openCount} (${r.byLevel['crítico']} crítico(s), ${r.byLevel.alto} alto(s))` + (hot.length ? '. Principais: ' + hot.map(x => `“${clean(x.title, 70)}”`).join('; ') : ''));
+    }
+    if(f.scope.openCount) L.push(`• Mudanças de escopo sem aprovação: ${f.scope.openCount} (+${f.scope.daysImpact} dia(s)` + (money && f.scope.costImpact ? `, +${fmtMoney(f.scope.costImpact)}` : '') + ')');
+    if(f.team.overallocated) L.push(`• Equipe: ${f.team.overallocated} colaborador(es) sobrealocado(s) entre projetos`);
+    return L;
+  }
+
+  // factsList: saída de SharedFacts.computeFacts. opts: { mode, money, greeting, today:'dd/mm/aaaa' }
+  function buildMessage(factsList, opts) {
+    const o = Object.assign({ mode: 'detalhado', money: false, greeting: '', today: '' }, opts);
+    const list = factsList.map(f => SharedFacts.restrictFacts(f, o.money));
+    const out = [];
+    if(o.greeting) out.push(o.greeting.trim(), '');
+    out.push(`*PMO Compass — Situação dos projetos*`, `_Posição de ${o.today}_`, '');
+    if(!list.length) { out.push('Nenhum projeto selecionado.'); return out.join('\n'); }
+    if(o.mode === 'resumo') {
+      list.forEach(f => out.push(SharedFacts.oneLineStatus(f) + (f.usesReferenceDate ? ` _(demonstração, posição de ${SharedFacts.fmtDateBr(f.asOf)})_` : '')));
+    } else {
+      list.forEach((f, i) => {
+        if(i) out.push('');
+        out.push(`${EMOJI[f.farol.color] || '⚪'} *${f.project.name}*${f.usesReferenceDate ? ` _(demonstração, posição de ${SharedFacts.fmtDateBr(f.asOf)})_` : ''}`);
+        detailLines(f, o.money).forEach(l => out.push(l));
+      });
+    }
+    out.push('', '🟢 no caminho · 🟡 atenção · 🔴 em risco');
+    return out.join('\n');
+  }
+
+  function projectsChecks() {
+    const box = el('sm-projects'); if(!box) return;
+    const all = DB.listProjects();
+    if(!selected) selected = all.map(p => p.id);
+    box.innerHTML = all.map(p => `<label class="sm-check"><input type="checkbox" data-pid="${esc(p.id)}"${selected.includes(p.id) ? ' checked' : ''} onchange="StatusMsg.pick()"> ${esc(p.name)}</label>`).join('');
+  }
+  function pick() { selected = [...document.querySelectorAll('#sm-projects input:checked')].map(i => i.dataset.pid); render(true); }
+
+  function generate() {
+    const alloc = new Set(DB.computePortfolioAllocation().filter(p => p.overallocated).map(p => p.name.trim().toLowerCase()));
+    const ids = (selected || []).filter(id => DB.listProjects().some(p => p.id === id));
+    const facts = ids.map(id => SharedFacts.computeFacts(factsInput(id, alloc), new Date()));
+    const now = SharedFacts.fmtDateBr(SharedFacts.isoDate(SharedFacts.projectToday(null, new Date())));
+    return buildMessage(facts, { mode: el('sm-mode').value, money: el('sm-money').checked, greeting: el('sm-greet').value, today: now });
+  }
+
+  function count() {
+    const t = el('sm-text').value;
+    el('sm-count').textContent = `${t.length.toLocaleString('pt-BR')} caracteres · ${t.split('\n').length} linhas`;
+    el('sm-note').textContent = t.length > 3500 ? 'Longa para o WhatsApp: considere o nível "Resumo".' : '';
+  }
+  function render(keepChecks) {
+    if(!el('sm-text')) return;
+    if(!keepChecks) projectsChecks();
+    el('sm-text').value = generate();
+    count();
+  }
+
+  async function copy() {
+    const t = el('sm-text').value;
+    try { await navigator.clipboard.writeText(t); }
+    catch(e) { el('sm-text').select(); try { document.execCommand('copy'); } catch(e2) { T.show('⚠️ Não consegui copiar automaticamente: selecione o texto e use Ctrl+C.'); return; } }
+    T.show('📋 Mensagem copiada! Cole no WhatsApp ou no e-mail.');
+  }
+  function openWhatsapp() {
+    const raw = el('sm-phone').value.trim();
+    let digits = '';
+    if(raw) { const n = (typeof Messaging !== 'undefined') ? Messaging.normalizePhone(raw) : null; if(!n) { T.show('⚠️ Número de WhatsApp inválido. Use DDD + número.'); el('sm-phone').focus(); return; } digits = n.replace(/\D/g, ''); }
+    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(el('sm-text').value)}`, '_blank', 'noopener');
+  }
+  function openEmail() {
+    const body = el('sm-text').value.replace(/[*_]/g, '');
+    location.href = `mailto:?subject=${encodeURIComponent('Situação dos projetos — ' + SharedFacts.fmtDateBr(SharedFacts.isoDate(SharedFacts.projectToday(null, new Date()))))}&body=${encodeURIComponent(body.slice(0, 1800))}`;
+  }
+  function resetCache() { selected = null; }
+  return { render, pick, copy, openWhatsapp, openEmail, count, resetCache, buildMessage };
+})();
+</script>
+
 <!-- ■ MODULE: pages/estimates -->
 <section class="page" id="p-estimates" data-module="pages/estimates">
   <div class="pg-hdr">
@@ -1933,6 +2448,7 @@ body.icons-failed i[data-fb]::before{
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Decisões IA</strong> — aceitar, adiar, discordar ou registrar decisão manual: tudo persiste, com histórico de decisões resolvidas e badge do menu contando as pendentes de verdade.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Loop de Ação</strong> — mostra a decisão crítica pendente real (não um cenário fixo). "Aprovar" resolve a decisão de verdade e o loop avança para o próximo risco.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Trilha</strong> — log de auditoria automático: toda ação relevante em qualquer módulo (WBS, Decisões, Repositório, Atas, Colaboradores etc.) gera um registro aqui sozinha.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Mensagem de status</strong> — monta um texto pronto com a situação dos projetos (prazo, atrasos, decisões críticas, riscos, orçamento) para copiar e colar no WhatsApp ou e-mail, ou abrir o WhatsApp já com o texto. Você revisa e envia; nada sai sozinho. Usa o mesmo cálculo do assistente de WhatsApp e, por padrão, não traz valores em R$.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Relatório</strong> — agregador real: resumo, pontos de atenção, conquistas e top-ações são calculados a partir de todos os módulos. "Regenerar" recalcula na hora e pode refinar o texto com IA, se configurada.</div></div>
   </div>
 
@@ -3609,7 +4125,7 @@ const DB = (() => {
     cache = null;
     load();
     // Cada módulo de página guarda os dados numa variável própria — precisa ser avisado da troca
-    [WBS, Repo, Decisions, Trail, Stakeholders, Lessons, Scope, Burnout, Meetings, Estimates, WI, Budget, Risks, Hours].forEach(mod => {
+    [WBS, Repo, Decisions, Trail, Stakeholders, Lessons, Scope, Burnout, Meetings, Estimates, WI, Budget, Risks, Hours, StatusMsg].forEach(mod => {
       if(typeof mod !== 'undefined' && mod && typeof mod.resetCache === 'function') mod.resetCache();
     });
     if(typeof renderAllModules === 'function') renderAllModules();
@@ -4035,7 +4551,7 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','help','xray'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','help','xray'];
   function go(id) {
     pages.forEach(p => {
       const el = document.getElementById('p-'+p);
@@ -4057,6 +4573,7 @@ const R = (() => {
     if(id === 'resources' && typeof Resources !== 'undefined') Resources.render();
     if(id === 'budget' && typeof Budget !== 'undefined') Budget.render();
     if(id === 'risks' && typeof Risks !== 'undefined') Risks.render();
+    if(id === 'statusmsg' && typeof StatusMsg !== 'undefined') StatusMsg.render();
     if(id === 'hours' && typeof Hours !== 'undefined') Hours.render();
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
     if(id === 'settings' && typeof PmoProfiles !== 'undefined') PmoProfiles.render();
@@ -4080,7 +4597,7 @@ const R = (() => {
 const Nav = (() => {
   // Mapa página → grupo, usado para abrir automaticamente o grupo certo ao navegar
   const GROUP_OF = {
-    decisions:'sbg-decisao', loop:'sbg-decisao', trail:'sbg-decisao', report:'sbg-decisao',
+    decisions:'sbg-decisao', loop:'sbg-decisao', trail:'sbg-decisao', report:'sbg-decisao', statusmsg:'sbg-decisao',
     wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento', risks:'sbg-planejamento',
     burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe', hours:'sbg-equipe',
     lessons:'sbg-conhecimento', meetings:'sbg-conhecimento', repository:'sbg-conhecimento', chat:'sbg-conhecimento',
@@ -4156,7 +4673,7 @@ const Nav = (() => {
   };
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
-    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas',
+    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status',
     burnout:'Burnout Radar', resources:'Colaboradores', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
     portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
@@ -4208,6 +4725,7 @@ const CmdK = (() => {
     { label:'Loop de Ação', page:'loop', icon:'refresh-alert', group:'Decisão & Acompanhamento' },
     { label:'Trilha', page:'trail', icon:'git-branch', group:'Decisão & Acompanhamento' },
     { label:'Relatório', page:'report', icon:'file-report', group:'Decisão & Acompanhamento' },
+    { label:'Mensagem de status', page:'statusmsg', icon:'brand-whatsapp', group:'Decisão & Acompanhamento' },
     { label:'WBS', page:'wbs', icon:'sitemap', group:'Planejamento' },
     { label:'Scope Changes', page:'scope', icon:'git-diff', group:'Planejamento' },
     { label:'Riscos', page:'risks', icon:'shield-exclamation', group:'Planejamento' },

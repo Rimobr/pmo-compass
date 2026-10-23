@@ -1,12 +1,13 @@
 {
   "name": "pmo-compass",
-  "version": "2.1.8",
+  "version": "2.2.0",
   "private": true,
   "scripts": {
     "test:unit": "node tests/run.js && node --test tests/unit/*.test.mjs",
     "test:e2e": "playwright test",
     "check:sql": "node scripts/check-sql.mjs",
     "check:schema": "node scripts/build-schema.mjs --check",
+    "check:facts": "node scripts/sync-facts-client.mjs --check",
     "test:e2e:ui": "playwright test --ui"
   },
   "devDependencies": {
