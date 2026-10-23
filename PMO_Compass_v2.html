@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.2.0'
+  version: '2.3.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -837,6 +837,7 @@ body.icons-failed i[data-fb]::before{
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-planejamento')"><i class="ti ti-sitemap sb-gico"></i>Planejamento<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
       <button class="si" data-p="wbs" onclick="R.go('wbs')"><i class="ti ti-sitemap"></i>WBS</button>
+      <button class="si" data-p="baseline" onclick="R.go('baseline')"><i class="ti ti-camera"></i>Linha de base</button>
       <button class="si" data-p="budget" onclick="R.go('budget')"><i class="ti ti-wallet"></i>Orçamento e Custos</button>
       <button class="si" data-p="risks" onclick="R.go('risks')"><i class="ti ti-shield-exclamation"></i>Riscos</button>
       <button class="si" data-p="scope" onclick="R.go('scope')"><i class="ti ti-git-diff"></i>Scope Changes</button>
@@ -2242,6 +2243,161 @@ const StatusMsg = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: pages/baseline -->
+<style data-module="pages/baseline-css">
+.gantt-base{position:absolute;bottom:-5px;height:4px;border-radius:2px;background:var(--t2);pointer-events:none}
+.bl-var{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
+.bl-sel{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 4px}
+.bl-sel .input{width:auto;min-width:260px;max-width:100%}
+</style>
+<section class="page" id="p-baseline" data-module="pages/baseline">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Linha de Base<span class="help-q" data-help="A linha de base é uma &quot;foto&quot; do plano aprovado (entregas, datas e orçamento) guardada com data e nome. Depois, mesmo que o cronograma seja replanejado, você compara o plano atual com o original e vê quanto cada entrega e o projeto desviaram. Uma linha de base salva não pode ser alterada: se o plano mudar por decisão formal, salve uma nova." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">O plano aprovado congelado, para medir quanto o projeto se afastou dele.</div></div>
+    <div class="btn-row">
+      <button class="btn btn-sm btn-acc" data-perm="business" onclick="Baselines.openSave()"><i class="ti ti-camera"></i>Salvar linha de base</button>
+    </div>
+  </div>
+  <div id="bl-empty" class="card" style="display:none"></div>
+  <div id="bl-main">
+    <div class="bl-sel">
+      <label for="bl-sel" style="font-size:12px;color:var(--t2)">Comparar o plano atual com</label>
+      <span class="help-q" data-help="Escolha qual linha de base usar na comparação. Por padrão vale a mais recente. O Gantt do WBS mostra a barra original em cinza sob a barra atual." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>
+      <select class="input" id="bl-sel" onchange="Baselines.select(this.value)"></select>
+      <button class="btn btn-sm btn-red" id="bl-del" style="display:none" onclick="Baselines.remove()"><i class="ti ti-trash"></i>Excluir</button>
+    </div>
+    <div id="bl-note" style="font-size:11.5px;color:var(--t3);margin-bottom:10px"></div>
+    <div class="g4" id="bl-kpis"></div>
+    <div class="card" style="margin-top:12px">
+      <div class="lbl"><i class="ti ti-timeline"></i>Entregas: plano original × plano atual<span class="help-q" data-help="Desvio = término atual − término da linha de base, em dias. Positivo (vermelho) atrasou; negativo (verde) adiantou. O término atual é o real quando a entrega já terminou, senão o planejado vigente. &quot;Nova&quot; e &quot;removida&quot; são entregas que entraram ou saíram do plano depois da linha de base." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+      <div style="overflow-x:auto" id="bl-table-root"></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="lbl"><i class="ti ti-wallet"></i>Orçamento: plano original × plano atual<span class="help-q" data-help="Compara o orçamento aprovado (sem a reserva) da linha de base com o de hoje. A diferença mostra quanto o escopo ou as estimativas cresceram depois do plano original." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+      <div id="bl-budget-root"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ■ MODULE: ui/baseline-modal -->
+<div class="modal-ov hidden" id="modal-baseline" onclick="if(event.target===this)Baselines.closeModal()">
+  <div class="modal-box" style="width:460px" role="dialog" aria-modal="true" aria-labelledby="bl-modal-title">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" id="bl-modal-title">Salvar linha de base</div>
+      <button class="btn btn-sm" onclick="Baselines.closeModal()" aria-label="Fechar"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-sub">Guarda uma foto do plano de hoje. Depois de salva, não pode ser alterada.</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><div class="field-label"><label for="bl-f-name">Nome</label><span class="help-q" data-help="Um nome que explique o momento, por exemplo &quot;Plano aprovado em contrato&quot; ou &quot;Replanejamento após mudança de escopo&quot;." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="bl-f-name" maxlength="80" placeholder="Ex: Plano aprovado em contrato"></div>
+      <div><div class="field-label"><label for="bl-f-note">Motivo ou observação (opcional)</label><span class="help-q" data-help="Por que esta linha de base foi criada: aprovação inicial, mudança formal de escopo, decisão do comitê... Fica registrado junto com data e autor." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><textarea class="input" id="bl-f-note" rows="2" maxlength="500" style="resize:vertical;font-family:inherit" placeholder="Ex: Aprovada pelo comitê em 15/07"></textarea></div>
+      <div class="rk-prev" id="bl-f-preview"></div>
+    </div>
+    <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
+      <button class="btn btn-sm" onclick="Baselines.closeModal()">Cancelar</button>
+      <button class="btn btn-sm btn-acc" onclick="Baselines.saveFromModal()"><i class="ti ti-camera"></i>Salvar linha de base</button>
+    </div>
+  </div>
+</div>
+
+<!-- ■ MODULE: pages/baseline-js -->
+<script data-module="pages/baseline-js">
+const Baselines = (() => {
+  let data = null, selectedId = null;
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const el = id => document.getElementById(id);
+  const ensureLoaded = () => { if(!data) data = DB.get('baselines'); return data; };
+  const resetCache = () => { data = null; selectedId = null; };
+  const persist = () => DB.set('baselines', data);
+  const fmtDate = s => { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : '—'; };
+  const fmtMoney = v => 'R$ ' + Math.round(v || 0).toLocaleString('pt-BR');
+  const current = () => { const l = ensureLoaded(); return l.find(b => b.id === selectedId) || l[l.length - 1] || null; };
+  function nextId() { const n = ensureLoaded().map(b => parseInt(String(b.id).replace(/\D/g, ''), 10)).filter(x => !isNaN(x)); return 'BL-' + String((n.length ? Math.max(...n) : 0) + 1).padStart(3, '0'); }
+  const varText = d => d == null ? '—' : d === 0 ? '0 d' : (d > 0 ? '+' : '') + d + ' d';
+  const varColor = d => d == null || d === 0 ? 'var(--t2)' : d > 0 ? 'var(--red)' : 'var(--grn)';
+  const STATUS = { atrasado: ['b-red', 'Atrasada'], adiantado: ['b-grn', 'Adiantada'], no_prazo: ['b-neu', 'No prazo'], novo: ['b-acc', 'Nova'], removido: ['b-amb', 'Removida'], sem_data: ['b-neu', 'Sem data'] };
+
+  function render() {
+    if(!el('bl-main')) return;
+    const list = ensureLoaded(), b = current();
+    el('bl-empty').style.display = b ? 'none' : '';
+    el('bl-main').style.display = b ? '' : 'none';
+    if(!b) {
+      el('bl-empty').innerHTML = '<div style="font-size:12.5px;color:var(--t2);line-height:1.65"><i class="ti ti-info-circle"></i> Este projeto ainda não tem linha de base. Quando o plano estiver aprovado (entregas, datas e orçamento cadastrados), clique em <strong>Salvar linha de base</strong>: a foto do plano fica guardada e todo replanejamento passa a ser medido contra ela.</div>';
+      return;
+    }
+    el('bl-sel').innerHTML = list.slice().reverse().map(x => `<option value="${esc(x.id)}"${x.id === b.id ? ' selected' : ''}>${esc(x.id)} · ${esc(x.name)} · ${fmtDate(x.createdOn)}</option>`).join('');
+    el('bl-del').style.display = (typeof Auth !== 'undefined' && Auth.getRole() === 'admin') ? '' : 'none';
+    el('bl-note').textContent = b.note ? 'Motivo: ' + b.note : '';
+    const c = BaselineCalc.compare(b.snapshot, DB.get('wbs') || [], DB.get('budgetLines') || []);
+    const s = c.summary, bd = c.budget;
+    const k = (l, v, sub, dot, col) => `<div class="kpi"><div class="kpi-lbl"><span class="sdot ${dot}"></span>${l}</div><div class="kpi-val"${col ? ` style="color:${col}"` : ''}>${v}</div><div class="kpi-delta">${sub}</div></div>`;
+    el('bl-kpis').innerHTML =
+      k('Desvio do término do projeto', varText(s.finishVar), s.finishVar == null ? 'sem datas para comparar' : s.finishVar > 0 ? 'terminará depois do plano original' : s.finishVar < 0 ? 'terminará antes do plano original' : 'no plano original', s.finishVar > 0 ? 'sdot-red' : 'sdot-grn', varColor(s.finishVar)) +
+      k('Entregas atrasadas', s.delayed, s.delayed ? `pior desvio ${s.worstSlip} d · média ${s.avgSlip} d` : 'nenhuma atrasada', s.delayed ? 'sdot-amb' : 'sdot-grn') +
+      k('Entradas e saídas do plano', `+${s.added} / −${s.removed}`, 'entregas novas / removidas', s.added || s.removed ? 'sdot-amb' : 'sdot-grn') +
+      k('Variação do orçamento', bd.bacVarPct == null ? '—' : (bd.bacVar > 0 ? '+' : '') + bd.bacVarPct.toLocaleString('pt-BR') + '%', bd.baseBAC ? `${fmtMoney(bd.baseBAC)} → ${fmtMoney(bd.curBAC)}` : 'sem orçamento na linha de base', bd.bacVar > 0 ? 'sdot-amb' : 'sdot-grn');
+    const rows = c.rows.map(r => {
+      const [cls, lbl] = STATUS[r.status] || STATUS.sem_data;
+      return `<tr><td style="${r.level === 2 ? 'padding-left:22px' : 'font-weight:600'}">${esc(r.label)}</td><td style="white-space:nowrap">${fmtDate(r.baseStart)}</td><td style="white-space:nowrap">${fmtDate(r.baseEnd)}</td><td style="white-space:nowrap">${fmtDate(r.curStart)}</td><td style="white-space:nowrap">${fmtDate(r.curEnd)}</td><td class="bl-var" style="color:${varColor(r.endVar)}">${varText(r.endVar)}</td><td><span class="badge ${cls}">${lbl}</span></td></tr>`;
+    }).join('');
+    el('bl-table-root').innerHTML = `<table class="hr-tbl"><thead><tr><th scope="col">Entrega</th><th scope="col">Início (base)</th><th scope="col">Término (base)</th><th scope="col">Início (atual)</th><th scope="col">Término (atual)</th><th scope="col">Desvio</th><th scope="col">Situação</th></tr></thead><tbody>${rows}</tbody></table>`;
+    if(typeof ColumnDrag !== 'undefined') ColumnDrag.enable(el('bl-table-root').querySelector('table'), 'baseline-entregas');
+    el('bl-budget-root').innerHTML = bd.baseBAC || bd.curBAC
+      ? `<div class="g4"><div class="kpi"><div class="kpi-lbl">Orçado (base)</div><div class="kpi-val" style="font-size:17px">${fmtMoney(bd.baseBAC)}</div></div><div class="kpi"><div class="kpi-lbl">Orçado (atual)</div><div class="kpi-val" style="font-size:17px">${fmtMoney(bd.curBAC)}</div></div><div class="kpi"><div class="kpi-lbl">Variação</div><div class="kpi-val" style="font-size:17px;color:${bd.bacVar > 0 ? 'var(--red)' : bd.bacVar < 0 ? 'var(--grn)' : 'var(--t1)'}">${bd.bacVar > 0 ? '+' : ''}${fmtMoney(bd.bacVar)}</div></div><div class="kpi"><div class="kpi-lbl">Reserva (base → atual)</div><div class="kpi-val" style="font-size:17px">${fmtMoney(bd.baseReserve)} → ${fmtMoney(bd.curReserve)}</div></div></div><div style="font-size:11.5px;color:var(--t3);margin-top:8px">${bd.changedLines} linha(s) de orçamento diferente(s) da linha de base.</div>`
+      : '<div class="rk-empty">Sem orçamento cadastrado na linha de base nem hoje.</div>';
+  }
+  function select(id) { selectedId = id; render(); if(typeof WBS !== 'undefined') WBS.render(); }
+
+  function openSave() {
+    if(!Auth.guard('business')) return;
+    const wbs = DB.get('wbs') || [];
+    if(!wbs.length) { T.show('⚠️ Cadastre as entregas (WBS) antes de salvar a linha de base.'); return; }
+    const sem = [];
+    wbs.forEach(m => { if(!m.start || !m.end) sem.push(m.label); (m.children || []).forEach(t => { if(!t.start || !t.end) sem.push(t.label); }); });
+    const items = wbs.reduce((n, m) => n + 1 + (m.children || []).length, 0);
+    el('bl-f-name').value = 'Linha de base ' + (ensureLoaded().length + 1);
+    el('bl-f-note').value = '';
+    el('bl-f-preview').innerHTML = `<span>Será guardado: <strong>${items} entrega(s)/subtarefa(s)</strong>, <strong>${(DB.get('budgetLines') || []).length} linha(s) de orçamento</strong>.${sem.length ? ` <span class="c-wa">${sem.length} sem data completa — não terão desvio calculado.</span>` : ''}</span>`;
+    el('modal-baseline').classList.remove('hidden');
+    el('bl-f-name').focus();
+  }
+  function closeModal() { el('modal-baseline').classList.add('hidden'); }
+  function saveFromModal() {
+    if(!Auth.guard('business')) return;
+    const name = el('bl-f-name').value.trim();
+    if(name.length < 2) { T.show('⚠️ Dê um nome para a linha de base.'); el('bl-f-name').focus(); return; }
+    ensureLoaded();
+    const item = { id: nextId(), name, note: el('bl-f-note').value.trim(), createdOn: Clock.iso(Clock.today()),
+      snapshot: BaselineCalc.capture(DB.get('wbs') || [], DB.get('budgetLines') || [], DB.get('scopeChanges') || []) };
+    data.push(item); persist(); selectedId = item.id;
+    Cloud.pushRow('baselines', item);
+    Cloud.pushAuditEvent('baseline_created', `Linha de base ${item.id} salva: ${name}`, { baselineId: item.id });
+    Trail.log(`Linha de base ${item.id} salva: ${name}`, Auth.getName(), 'Linha de base', 'b-acc');
+    closeModal(); render();
+    if(typeof WBS !== 'undefined') WBS.render();
+    T.show(`✅ ${esc(item.id)} salva. O plano atual passa a ser comparado com ela.`);
+  }
+  function remove() {
+    if(!Auth.guard('settings') || Auth.getRole() !== 'admin') { T.show('🔒 Só o Administrador exclui uma linha de base.'); return; }
+    const b = current(); if(!b) return;
+    if(!confirm(`Excluir a linha de base ${b.id} (${b.name})? Não dá para desfazer; as comparações com ela deixam de existir.`)) return;
+    data = ensureLoaded().filter(x => x.id !== b.id); persist(); selectedId = null;
+    Cloud.deleteRow('baselines', b.id);
+    Cloud.pushAuditEvent('baseline_deleted', `Linha de base ${b.id} excluída: ${b.name}`, { baselineId: b.id });
+    Trail.log(`Linha de base ${b.id} excluída`, Auth.getName(), 'Excluída', 'b-neu');
+    render(); if(typeof WBS !== 'undefined') WBS.render();
+    T.show('🗑️ Linha de base excluída.');
+  }
+  // Para o Gantt do WBS: id → datas da linha de base escolhida
+  function gantt() {
+    const b = current(); if(!b) return null;
+    const map = new Map();
+    (b.snapshot.wbs || []).forEach(m => { map.set(m.id, { start: m.start, end: m.end }); (m.children || []).forEach(t => map.set(t.id, { start: t.start, end: t.end })); });
+    return { map, name: b.name, id: b.id };
+  }
+  return { render, resetCache, select, openSave, closeModal, saveFromModal, remove, gantt };
+})();
+</script>
+
 <!-- ■ MODULE: pages/estimates -->
 <section class="page" id="p-estimates" data-module="pages/estimates">
   <div class="pg-hdr">
@@ -2392,6 +2548,7 @@ const StatusMsg = (() => {
         </div>
       </div>
       <div class="gantt-legend">
+        <span><span class="gantt-leg-sw" style="background:var(--t2);height:4px;vertical-align:2px"></span>Linha de base (plano original)</span>
         <span><span class="gantt-leg-sw" style="background:var(--grn)"></span>Concluído</span>
         <span><span class="gantt-leg-sw" style="background:var(--amb)"></span>Em andamento</span>
         <span><span class="gantt-leg-sw gantt-bar-stripe" style="background:var(--red)"></span>Bloqueado / risco crítico</span>
@@ -2455,6 +2612,7 @@ const StatusMsg = (() => {
   <div class="card">
     <div class="lbl"><i class="ti ti-sitemap"></i>Planejamento</div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>WBS</strong> — CRUD completo de entregas e subtarefas, com visualização em árvore e em Gantt (mesma base de dados nas duas).</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Linha de base</strong> — salva uma “foto” do plano aprovado (entregas, datas, orçamento) e compara com o plano de hoje: desvio do término do projeto, entregas atrasadas ou adiantadas, entregas novas ou removidas e variação do orçamento. O Gantt do WBS mostra a barra original em cinza sob a atual. Uma linha de base salva não pode ser alterada (nem pelo administrador); só o administrador exclui.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Scope Changes</strong> — registro de mudanças com impacto em dias/custo, fluxo de aprovar, rejeitar ou mover para Fase 2.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Estimativas IA</strong> — o calibrador calcula o ajuste a partir do desvio histórico real de cada responsável (não é um número fixo).</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>What-If</strong> — cenários com CRUD completo; "Adotar" registra a escolha na Trilha de verdade.</div></div>
@@ -2750,7 +2908,7 @@ const Cloud = (() => {
   // Tabelas de dados do PROJETO (têm project_id e são apagadas por "Zerar base"/"Limpar projeto"). Fonte única:
   // clearProjectData e resetForNewUsers percorrem esta lista — tabela nova entra aqui, nunca em lista escrita à mão.
   // A ordem respeita chaves estrangeiras (filhas antes das mães). tests/run.js confere esta lista contra o schema.sql.
-  const PROJECT_DATA_TABLES = ['wbs_tasks','cost_actuals','budget_lines','wbs_modules','decisions','documents','scope_changes','risks','time_entries'];
+  const PROJECT_DATA_TABLES = ['wbs_tasks','cost_actuals','budget_lines','wbs_modules','decisions','documents','scope_changes','risks','time_entries','baselines'];
   // Mapeadores local ⇄ nuvem das tabelas novas (um só lugar para push, pull e importação em lote)
   const ROW = {
     scope_changes: {
@@ -2762,6 +2920,11 @@ const Cloud = (() => {
       toDb: (x, pid) => ({ project_id:pid, id:x.id, title:x.title, description:x.description||null, category:x.category||'outros', probability:x.probability, impact:x.impact, status:x.status||'aberto', response:x.response||'mitigar', mitigation:x.mitigation||null, contingency:x.contingency||null, owner_name:x.owner||null, review_on:x.reviewOn||null, identified_on:x.identifiedOn||new Date().toISOString().slice(0,10), closed_on:x.closedOn||null, updated_at:new Date().toISOString() }),
       fromDb: r => ({ id:r.id, title:r.title, description:r.description||'', category:r.category, probability:r.probability, impact:r.impact, status:r.status, response:r.response, mitigation:r.mitigation||'', contingency:r.contingency||'', owner:r.owner_name||'', reviewOn:r.review_on||'', identifiedOn:r.identified_on||'', closedOn:r.closed_on||'' }),
       local: 'risks'
+    },
+    baselines: {
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, name:x.name, note:x.note||null, created_on:x.createdOn, snapshot:x.snapshot }),
+      fromDb: r => ({ id:r.id, name:r.name, note:r.note||'', createdOn:r.created_on, snapshot:r.snapshot }),
+      local: 'baselines'
     },
     time_entries: {
       toDb: (x, pid) => ({ project_id:pid, id:x.id, person_name:x.person, member_id:x.memberId||null, work_date:x.date, hours:x.hours, wbs_ref:x.wbsRef||null, note:x.note||null, updated_at:new Date().toISOString() }),
@@ -3106,7 +3269,7 @@ const Cloud = (() => {
     // de um projeto na tela de outro. Antes disso não existia esse filtro: era um pool só.
     const pid = DB.getActiveProjectId();
     try {
-      const [mods, tasks, decs, docs, budLines, costActs, settings, team, scopeRows, riskRows, timeRows] = await Promise.all([
+      const [mods, tasks, decs, docs, budLines, costActs, settings, team, scopeRows, riskRows, timeRows, baseRows] = await Promise.all([
         client.from('wbs_modules').select('*').eq('project_id', pid),
         client.from('wbs_tasks').select('*').eq('project_id', pid),
         client.from('decisions').select('*').eq('project_id', pid),
@@ -3117,13 +3280,15 @@ const Cloud = (() => {
         client.from('team_members').select('*').eq('project_id', pid),
         client.from('scope_changes').select('*').eq('project_id', pid),
         client.from('risks').select('*').eq('project_id', pid),
-        client.from('time_entries').select('*').eq('project_id', pid).order('work_date', { ascending:false }).limit(5000)
+        client.from('time_entries').select('*').eq('project_id', pid).order('work_date', { ascending:false }).limit(5000),
+        client.from('baselines').select('*').eq('project_id', pid).order('created_on', { ascending:true }).order('id', { ascending:true })
       ]);
       // Tabelas que antes só existiam neste navegador: se a nuvem ainda está vazia e há dado local, SOBE o local
       // (migração única, sem perder nada); se a nuvem já tem dado, ela manda.
       [['scope_changes', scopeRows, () => typeof Scope !== 'undefined' && Scope.resetCache(), () => typeof Scope !== 'undefined' && Scope.render()],
        ['risks', riskRows, () => typeof Risks !== 'undefined' && Risks.resetCache(), () => typeof Risks !== 'undefined' && Risks.render()],
-       ['time_entries', timeRows, () => typeof Hours !== 'undefined' && Hours.resetCache(), () => typeof Hours !== 'undefined' && Hours.render()]
+       ['time_entries', timeRows, () => typeof Hours !== 'undefined' && Hours.resetCache(), () => typeof Hours !== 'undefined' && Hours.render()],
+       ['baselines', baseRows, () => typeof Baselines !== 'undefined' && Baselines.resetCache(), () => typeof Baselines !== 'undefined' && Baselines.render()]
       ].forEach(([table, res, reset, draw]) => {
         if(!res || res.error || !res.data) return;
         const m = ROW[table];
@@ -3908,7 +4073,7 @@ const DB = (() => {
   function storageKeyFor(projectId) { return projectId === 'nexus' ? 'pmo_db_v1' : ('pmo_db_v1__' + projectId); }
 
   function seedEmpty() {
-    return { version:1, wbs:[], decisions:[], repository:[], stakeholders:[], trail:[], lessons:[], scopeChanges:[], team:[], meetings:[], estimateHistory:[], scenarios:[], budgetLines:[], costActuals:[], risks:[], timeEntries:[], pmoProfile:null };
+    return { version:1, wbs:[], decisions:[], repository:[], stakeholders:[], trail:[], lessons:[], scopeChanges:[], team:[], meetings:[], estimateHistory:[], scenarios:[], budgetLines:[], costActuals:[], risks:[], timeEntries:[], baselines:[], pmoProfile:null };
   }
 
   function seed() {
@@ -4088,6 +4253,7 @@ const DB = (() => {
     if(!Array.isArray(c.costActuals)) c.costActuals = defaults.costActuals;
     if(!Array.isArray(c.risks)) c.risks = defaults.risks;
     if(!Array.isArray(c.timeEntries)) c.timeEntries = defaults.timeEntries;
+    if(!Array.isArray(c.baselines)) c.baselines = defaults.baselines || [];
     if(c.pmoProfile === undefined) c.pmoProfile = defaults.pmoProfile;
     return c;
   }
@@ -4125,7 +4291,7 @@ const DB = (() => {
     cache = null;
     load();
     // Cada módulo de página guarda os dados numa variável própria — precisa ser avisado da troca
-    [WBS, Repo, Decisions, Trail, Stakeholders, Lessons, Scope, Burnout, Meetings, Estimates, WI, Budget, Risks, Hours, StatusMsg].forEach(mod => {
+    [WBS, Repo, Decisions, Trail, Stakeholders, Lessons, Scope, Burnout, Meetings, Estimates, WI, Budget, Risks, Hours, StatusMsg, Baselines].forEach(mod => {
       if(typeof mod !== 'undefined' && mod && typeof mod.resetCache === 'function') mod.resetCache();
     });
     if(typeof renderAllModules === 'function') renderAllModules();
@@ -4551,7 +4717,7 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','help','xray'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','help','xray'];
   function go(id) {
     pages.forEach(p => {
       const el = document.getElementById('p-'+p);
@@ -4573,6 +4739,7 @@ const R = (() => {
     if(id === 'resources' && typeof Resources !== 'undefined') Resources.render();
     if(id === 'budget' && typeof Budget !== 'undefined') Budget.render();
     if(id === 'risks' && typeof Risks !== 'undefined') Risks.render();
+    if(id === 'baseline' && typeof Baselines !== 'undefined') Baselines.render();
     if(id === 'statusmsg' && typeof StatusMsg !== 'undefined') StatusMsg.render();
     if(id === 'hours' && typeof Hours !== 'undefined') Hours.render();
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
@@ -4598,7 +4765,7 @@ const Nav = (() => {
   // Mapa página → grupo, usado para abrir automaticamente o grupo certo ao navegar
   const GROUP_OF = {
     decisions:'sbg-decisao', loop:'sbg-decisao', trail:'sbg-decisao', report:'sbg-decisao', statusmsg:'sbg-decisao',
-    wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento', risks:'sbg-planejamento',
+    wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento', risks:'sbg-planejamento', baseline:'sbg-planejamento',
     burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe', hours:'sbg-equipe',
     lessons:'sbg-conhecimento', meetings:'sbg-conhecimento', repository:'sbg-conhecimento', chat:'sbg-conhecimento',
     portfolio:'sbg-projetos', prioritization:'sbg-projetos'
@@ -4673,7 +4840,7 @@ const Nav = (() => {
   };
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
-    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status',
+    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base',
     burnout:'Burnout Radar', resources:'Colaboradores', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
     portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
@@ -4727,6 +4894,7 @@ const CmdK = (() => {
     { label:'Relatório', page:'report', icon:'file-report', group:'Decisão & Acompanhamento' },
     { label:'Mensagem de status', page:'statusmsg', icon:'brand-whatsapp', group:'Decisão & Acompanhamento' },
     { label:'WBS', page:'wbs', icon:'sitemap', group:'Planejamento' },
+    { label:'Linha de base', page:'baseline', icon:'camera', group:'Planejamento' },
     { label:'Scope Changes', page:'scope', icon:'git-diff', group:'Planejamento' },
     { label:'Riscos', page:'risks', icon:'shield-exclamation', group:'Planejamento' },
     { label:'Estimativas IA', page:'estimates', icon:'ruler', group:'Planejamento' },
@@ -6550,6 +6718,7 @@ function renderAllModules() {
   Lessons.render();
   Scope.render();
   Risks.render();
+  Baselines.render();
   Hours.render();
   Burnout.render();
   Meetings.render();
@@ -8485,6 +8654,67 @@ const UpdateCheck = (() => {
     if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
   }
   return { check, apply, differs };
+})();
+</script>
+
+<!-- ■ MODULE: services/baseline ─ Linha de base: captura do plano aprovado e comparação com o plano atual. Lógica pura, sem DOM -->
+<script data-module="services/baseline">
+const BaselineCalc = (() => {
+  const ISO = /^\d{4}-\d{2}-\d{2}$/;
+  const day = s => { const [y, m, d] = String(s).split('-').map(Number); return Date.UTC(y, m - 1, d); };
+  // diferença em dias inteiros (b − a); datas ausentes/inválidas → null
+  const diff = (a, b) => (ISO.test(a || '') && ISO.test(b || '')) ? Math.round((day(b) - day(a)) / 86400000) : null;
+  const sum = (arr, f) => arr.reduce((s, x) => s + (Number(f(x)) || 0), 0);
+
+  // Foto do plano: entregas e subtarefas (datas planejadas e %), linhas de orçamento e mudanças de escopo já aprovadas
+  function capture(wbs, budgetLines, scopeChanges) {
+    return {
+      v: 1,
+      wbs: (wbs || []).map(m => ({ id: m.id, label: m.label, start: m.start || null, end: m.end || null, pct: m.pct || 0,
+        children: (m.children || []).map(t => ({ id: t.id, label: t.label, start: t.start || null, end: t.end || null })) })),
+      budget: (budgetLines || []).map(l => ({ id: l.id, label: l.label, plannedValue: Number(l.plannedValue) || 0, wbsModuleId: l.wbsModuleId || '', isReserve: !!l.isReserve })),
+      approvedScope: (scopeChanges || []).filter(s => s.status === 'approved').map(s => ({ id: s.id, title: s.title, impactDays: s.impactDays || 0, impactCost: s.impactCost || 0 }))
+    };
+  }
+
+  const flat = wbs => { const out = []; (wbs || []).forEach(m => { out.push({ id: m.id, label: m.label, start: m.start, end: m.end, level: 1, item: m }); (m.children || []).forEach(t => out.push({ id: t.id, label: t.label, start: t.start, end: t.end, level: 2, item: t })); }); return out; };
+  // O término "atual" é o real, se a entrega já terminou, senão o planejado vigente
+  const curEnd = it => it.item.endActual || it.end;
+
+  // Compara o plano atual com uma linha de base (snapshot). Desvio > 0 = atrasou em relação ao plano aprovado.
+  function compare(snapshot, wbs, budgetLines) {
+    const base = flat(snapshot.wbs), cur = flat(wbs);
+    const baseById = new Map(base.map(b => [b.id, b])), curIds = new Set(cur.map(c => c.id));
+    const rows = cur.map(c => {
+      const b = baseById.get(c.id);
+      if(!b) return { id: c.id, label: c.label, level: c.level, status: 'novo', baseStart: null, baseEnd: null, curStart: c.start || null, curEnd: curEnd(c) || null, startVar: null, endVar: null };
+      const endVar = diff(b.end, curEnd(c)), startVar = diff(b.start, c.start);
+      return { id: c.id, label: c.label, level: c.level, baseStart: b.start || null, baseEnd: b.end || null, curStart: c.start || null, curEnd: curEnd(c) || null, startVar, endVar,
+        status: endVar == null ? 'sem_data' : endVar > 0 ? 'atrasado' : endVar < 0 ? 'adiantado' : 'no_prazo' };
+    });
+    base.filter(b => !curIds.has(b.id)).forEach(b => rows.push({ id: b.id, label: b.label, level: b.level, status: 'removido', baseStart: b.start || null, baseEnd: b.end || null, curStart: null, curEnd: null, startVar: null, endVar: null }));
+
+    const ends = arr => arr.filter(x => ISO.test(x || '')).sort();
+    const bEnds = ends(base.map(b => b.end)), cEnds = ends(cur.map(c => curEnd(c)));
+    const finishVar = (bEnds.length && cEnds.length) ? diff(bEnds[bEnds.length - 1], cEnds[cEnds.length - 1]) : null;
+    const count = s => rows.filter(r => r.status === s).length;
+    const delayed = rows.filter(r => r.status === 'atrasado');
+
+    const baseBAC = sum(snapshot.budget.filter(l => !l.isReserve), l => l.plannedValue);
+    const curBAC = sum((budgetLines || []).filter(l => !l.isReserve), l => l.plannedValue);
+    const baseReserve = sum(snapshot.budget.filter(l => l.isReserve), l => l.plannedValue);
+    const curReserve = sum((budgetLines || []).filter(l => l.isReserve), l => l.plannedValue);
+    const bl = new Map(snapshot.budget.map(l => [l.id, l.plannedValue]));
+    const changedLines = (budgetLines || []).filter(l => !bl.has(l.id) || bl.get(l.id) !== (Number(l.plannedValue) || 0)).length + snapshot.budget.filter(l => !(budgetLines || []).some(x => x.id === l.id)).length;
+
+    return {
+      rows,
+      summary: { finishVar, delayed: delayed.length, onTime: count('no_prazo'), early: count('adiantado'), added: count('novo'), removed: count('removido'),
+        worstSlip: delayed.length ? Math.max(...delayed.map(r => r.endVar)) : 0, avgSlip: delayed.length ? Math.round(delayed.reduce((s, r) => s + r.endVar, 0) / delayed.length) : 0 },
+      budget: { baseBAC, curBAC, bacVar: curBAC - baseBAC, bacVarPct: baseBAC > 0 ? Math.round((curBAC - baseBAC) / baseBAC * 1000) / 10 : null, baseReserve, curReserve, changedLines }
+    };
+  }
+  return { capture, compare, diff };
 })();
 </script>
 
@@ -11519,11 +11749,14 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     if(!data.length) { ruler.innerHTML=''; body.innerHTML = '<div style="padding:20px;color:var(--t3);font-size:12.5px">Nenhuma entrega cadastrada ainda.</div>'; return; }
 
     let minD = todayRef(), maxD = todayRef();
+    const base = (typeof Baselines !== 'undefined') ? Baselines.gantt() : null; // plano original (linha de base escolhida)
     data.forEach(g => {
       const s = parseDate(g.start), e = parseDate(g.end);
       if(s < minD) minD = s;
       if(e > maxD) maxD = e;
     });
+    if(base) base.map.forEach(b => { if(b.start && b.end) { const bs = parseDate(b.start), be = parseDate(b.end); if(bs < minD) minD = bs; if(be > maxD) maxD = be; } });
+    const baseBar = id => { const b = base && base.map.get(id); return (b && b.start && b.end) ? `<div class="gantt-base" style="left:${pctPos(parseDate(b.start))}%;width:${Math.max(pctPos(parseDate(b.end)) - pctPos(parseDate(b.start)), 0.6)}%" title="Linha de base (${escapeHtml(base.name)}): ${fmtDate(parseDate(b.start))}–${fmtDate(parseDate(b.end))}"></div>` : ''; };
     minD = new Date(minD.getTime() - 4*86400000);
     maxD = new Date(maxD.getTime() + 4*86400000);
     const totalDays = dayDiff(minD, maxD);
@@ -11553,6 +11786,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
       rows += `<div class="gantt-row gantt-row-l1">
         <div class="gantt-lbl" title="${escapeHtml(g.label)}">${escapeHtml(g.label)}</div>
         <div class="gantt-track">
+          ${baseBar(g.id)}
           <div class="gantt-bar${stripe}" style="left:${left}%;width:${width}%;border-color:${STATUS_COLOR[g.status]};${gOutline}" title="${escapeHtml(g.label)} · ${fmtDate(gs)}–${fmtDate(ge)} · ${g.pct}%${isCritical(g.id)||moduleHasCriticalChild(g)?' · Caminho crítico':''}">
             <div class="gantt-bar-fill" style="width:${g.pct}%;background:${STATUS_COLOR[g.status]}"></div>
           </div>
@@ -11566,6 +11800,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
         rows += `<div class="gantt-row gantt-row-l2">
           <div class="gantt-lbl" title="${escapeHtml(c.label)}">${escapeHtml(c.label)}</div>
           <div class="gantt-track">
+            ${baseBar(c.id)}
             <div class="gantt-bar${cstripe}" style="left:${cl}%;width:${cw}%;background:${STATUS_COLOR[c.status]};opacity:.85;${cOutline}" title="${escapeHtml(c.label)} · ${fmtDate(cs)}–${fmtDate(ce)}${isCritical(c.id)?' · Caminho crítico':''}"></div>
           </div>
         </div>`;
