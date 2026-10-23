@@ -25,6 +25,7 @@ test.describe('Acessibilidade WCAG 2.1 AA', () => {
         await page.evaluate((t) => { if (typeof Theme !== 'undefined') Theme.set(t); }, theme);
         await page.goto(p.hash);
         await page.waitForTimeout(600); // deixa o render assíncrono (Cloud/DB) terminar
+        await page.evaluate(() => document.querySelectorAll('#toast-wrap .toast').forEach(t => t.remove())); // aviso (toast) em transição de opacidade não é conteúdo da tela
 
         const results = await new AxeBuilder({ page })
           .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])

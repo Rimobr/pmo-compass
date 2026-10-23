@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.1.7'
+  version: '2.1.8'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -284,7 +284,7 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .pg-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .pg-title{font-size:17px;font-weight:600;color:var(--t1);margin-bottom:2px}
 .pg-sub{font-size:12px;color:var(--t3);line-height:1.5}
-@media(max-width:900px){.sidebar,.sb-rz{display:none}.tb-nav{display:flex;justify-content:flex-start}}
+@media(max-width:900px){.sidebar,.sb-rzw{display:none}.tb-nav{display:flex;justify-content:flex-start}}
 .sidebar.collapsed{width:56px;padding:12px 4px;align-items:stretch}
 .sidebar.collapsed .si,.sidebar.collapsed .sb-xray-btn,.sidebar.collapsed .sb-board-btn,.sidebar.collapsed .sb-exec-btn,.sidebar.collapsed .sb-group-hdr{font-size:0;justify-content:center;padding-left:0;padding-right:0;gap:0}
 .sidebar.collapsed .si i,.sidebar.collapsed .sb-xray-btn i,.sidebar.collapsed .sb-board-btn i,.sidebar.collapsed .sb-exec-btn i{font-size:17px}
@@ -300,7 +300,8 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .sp-rz:hover::after,.sp-rz.on::after,.sp-rz:focus-visible::after{background:var(--acc)}
 .sp-rz:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
 @media (max-width:900px){.sp-rz{display:none}}
-.sb-rz{flex:0 0 6px;margin:0 -3px;position:relative;z-index:30;cursor:col-resize;touch-action:none}
+.sb-rzw{flex:0 0 6px;margin:0 -3px;position:relative;z-index:30}
+.sb-rz{position:absolute;top:0;bottom:0;left:0;right:0;cursor:col-resize;touch-action:none}
 .sb-rz::after{content:'';position:absolute;left:2px;top:0;bottom:0;width:2px;background:transparent}
 .sb-rz:hover::after,.sb-rz.on::after,.sb-rz:focus-visible::after{background:var(--acc)}
 .sb-rz:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
@@ -7797,8 +7798,9 @@ const ColumnDrag = (() => {
     const inner = document.getElementById('gantt-inner'), rz = document.getElementById('gantt-rz');
     if(!inner || !rz || rz.dataset.wired) return; rz.dataset.wired = '1';
     const K = 'pmo_gantt_lbl_v1', MIN = 90, MAX = 420;
-    const set = w => inner.style.setProperty('--gl', Math.max(MIN, Math.min(MAX, Math.round(w))) + 'px');
     const cur = () => parseFloat(getComputedStyle(inner).getPropertyValue('--gl')) || 200;
+    const set = w => { const v = Math.max(MIN, Math.min(MAX, Math.round(w))); inner.style.setProperty('--gl', v + 'px'); rz.setAttribute('aria-valuenow', String(v)); };
+    rz.setAttribute('aria-valuemin', String(MIN)); rz.setAttribute('aria-valuemax', String(MAX)); rz.setAttribute('aria-valuenow', '200');
     const keep = () => { try { localStorage.setItem(K, String(cur())); } catch(e) {} };
     try { const v = parseFloat(localStorage.getItem(K)); if(v >= MIN && v <= MAX) set(v); } catch(e) {}
     rz.addEventListener('pointerdown', e => {
@@ -7809,15 +7811,15 @@ const ColumnDrag = (() => {
       rz.addEventListener('pointermove', mv); rz.addEventListener('pointerup', up);
     });
     rz.addEventListener('keydown', e => { if(e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); set(cur() + (e.key === 'ArrowRight' ? STEP : -STEP)); keep(); } });
-    rz.addEventListener('dblclick', () => { inner.style.removeProperty('--gl'); try { localStorage.removeItem(K); } catch(e) {} });
+    rz.addEventListener('dblclick', () => { inner.style.removeProperty('--gl'); rz.setAttribute('aria-valuenow', String(Math.round(cur()))); try { localStorage.removeItem(K); } catch(e) {} });
   }
   // Menu lateral: a largura é da pessoa (arrastar a borda, ou setas com a borda em foco; duplo clique volta a 192 px)
   function enableSidebar() {
     const sb = document.querySelector('aside.sidebar');
     if(!sb || document.getElementById('sb-rz')) return;
     const K = 'pmo_sidebar_w_v1', MIN = 150, MAX = 420, DEF = 192, root = document.documentElement;
-    const set = w => root.style.setProperty('--sbw', Math.max(MIN, Math.min(MAX, Math.round(w))) + 'px');
     const cur = () => sb.getBoundingClientRect().width || DEF;
+    const set = w => { const v = Math.max(MIN, Math.min(MAX, Math.round(w))); root.style.setProperty('--sbw', v + 'px'); const r = document.getElementById('sb-rz'); if(r) r.setAttribute('aria-valuenow', String(v)); };
     const keep = () => { try { localStorage.setItem(K, String(Math.round(cur()))); } catch(e) {} };
     try { const v = parseFloat(localStorage.getItem(K)); if(v >= MIN && v <= MAX) set(v); } catch(e) {}
     const rz = document.createElement('div');
@@ -7825,7 +7827,10 @@ const ColumnDrag = (() => {
     rz.setAttribute('role', 'separator'); rz.setAttribute('aria-orientation', 'vertical');
     rz.setAttribute('aria-label', 'Largura do menu lateral: arraste ou use as setas esquerda e direita');
     rz.title = 'Arraste para mudar a largura do menu (duplo clique restaura)';
-    sb.insertAdjacentElement('afterend', rz);
+    rz.setAttribute('aria-valuemin', String(MIN)); rz.setAttribute('aria-valuemax', String(MAX));
+    const wrap = document.createElement('div'); wrap.className = 'sb-rzw';
+    wrap.appendChild(rz);
+    sb.insertAdjacentElement('afterend', wrap);
     rz.addEventListener('pointerdown', e => {
       e.preventDefault(); rz.setPointerCapture(e.pointerId); rz.classList.add('on');
       const x0 = e.clientX, w0 = cur();
@@ -7834,13 +7839,14 @@ const ColumnDrag = (() => {
       rz.addEventListener('pointermove', mv); rz.addEventListener('pointerup', up);
     });
     rz.addEventListener('keydown', e => { if(e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); set(cur() + (e.key === 'ArrowRight' ? STEP : -STEP)); keep(); } });
-    rz.addEventListener('dblclick', () => { root.style.removeProperty('--sbw'); try { localStorage.removeItem(K); } catch(e) {} });
+    rz.addEventListener('dblclick', () => { root.style.removeProperty('--sbw'); rz.setAttribute('aria-valuenow', String(DEF)); try { localStorage.removeItem(K); } catch(e) {} });
+    rz.setAttribute('aria-valuenow', String(Math.round(cur())));
 
     // Recolher em ícones (o nome de cada item vira dica ao passar o mouse)
     const KC = 'pmo_sidebar_collapsed_v1';
     const tg = document.createElement('button');
     tg.type = 'button'; tg.className = 'sb-tg'; tg.id = 'sb-tg';
-    rz.appendChild(tg);
+    wrap.appendChild(tg);
     const paint = on => {
       sb.classList.toggle('collapsed', on);
       root.style.setProperty('--sbw-eff', on ? '56px' : '');
@@ -7873,7 +7879,8 @@ const ColumnDrag = (() => {
     const gap = () => parseFloat(getComputedStyle(grid).columnGap) || 12;
     const place = () => { handle.style.left = (first.offsetLeft + first.offsetWidth + gap() / 2) + 'px'; };
     const max = () => Math.max(MIN, grid.clientWidth - MIN - gap());
-    const set = w => { root.style.setProperty('--c1', Math.max(MIN, Math.min(max(), Math.round(w))) + 'px'); place(); };
+    const set = w => { const v = Math.max(MIN, Math.min(max(), Math.round(w))); root.style.setProperty('--c1', v + 'px'); handle.setAttribute('aria-valuenow', String(v)); handle.setAttribute('aria-valuemax', String(max())); place(); };
+    handle.setAttribute('aria-valuemin', String(MIN)); handle.setAttribute('aria-valuemax', String(max())); handle.setAttribute('aria-valuenow', String(Math.round(first.getBoundingClientRect().width)));
     const keep = () => { try { localStorage.setItem(K, String(Math.round(first.getBoundingClientRect().width))); } catch(e) {} };
     try { const v = parseFloat(localStorage.getItem(K)); if(v >= MIN) set(v); } catch(e) {}
     if(window.ResizeObserver) new ResizeObserver(place).observe(grid); else window.addEventListener('resize', place);
@@ -7886,7 +7893,7 @@ const ColumnDrag = (() => {
       handle.addEventListener('pointermove', mv); handle.addEventListener('pointerup', up);
     });
     handle.addEventListener('keydown', e => { if(e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); set(first.getBoundingClientRect().width + (e.key === 'ArrowRight' ? STEP : -STEP)); keep(); } });
-    handle.addEventListener('dblclick', () => { root.style.removeProperty('--c1'); try { localStorage.removeItem(K); } catch(e) {} setTimeout(place, 0); });
+    handle.addEventListener('dblclick', () => { root.style.removeProperty('--c1'); try { localStorage.removeItem(K); } catch(e) {} setTimeout(() => { place(); handle.setAttribute('aria-valuenow', String(Math.round(first.getBoundingClientRect().width))); }, 0); });
   }
   function enableSplits() { enableSplit(document.querySelector('.rk-grid'), 'riscos'); enableSplit(document.querySelector('.hr-grid'), 'horas'); }
   if(typeof document !== 'undefined') {
