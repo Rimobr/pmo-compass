@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.3.0'
+  version: '2.4.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -873,6 +873,7 @@ body.icons-failed i[data-fb]::before{
     <div class="sb-group-body" id="sbg-projetos-list">
       <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
       <button class="si" data-p="prioritization" onclick="R.go('prioritization')"><i class="ti ti-sort-descending-2"></i>Priorização</button>
+      <button class="si" data-p="pfkpi" onclick="R.go('pfkpi')"><i class="ti ti-chart-donut-3"></i>Indicadores</button>
       <div id="sb-projects-root"></div>
       <button class="si" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
     </div>
@@ -2239,7 +2240,7 @@ const StatusMsg = (() => {
     location.href = `mailto:?subject=${encodeURIComponent('Situação dos projetos — ' + SharedFacts.fmtDateBr(SharedFacts.isoDate(SharedFacts.projectToday(null, new Date()))))}&body=${encodeURIComponent(body.slice(0, 1800))}`;
   }
   function resetCache() { selected = null; }
-  return { render, pick, copy, openWhatsapp, openEmail, count, resetCache, buildMessage };
+  return { render, pick, copy, openWhatsapp, openEmail, count, resetCache, buildMessage, factsInput };
 })();
 </script>
 
@@ -2395,6 +2396,178 @@ const Baselines = (() => {
     return { map, name: b.name, id: b.id };
   }
   return { render, resetCache, select, openSave, closeModal, saveFromModal, remove, gantt };
+})();
+</script>
+
+<!-- ■ MODULE: services/portfolio-kpi ─ Indicadores de portfólio (no prazo / no custo / no escopo, por área). Lógica pura, sem DOM -->
+<script data-module="services/portfolio-kpi">
+const PortfolioKpi = (() => {
+  const pct = (n, d) => d > 0 ? Math.round(n / d * 100) : null;
+  // Critério de cada dimensão para UM projeto (saída de computeFacts). null = sem dados para julgar (fica fora das taxas).
+  //  prazo : nenhuma entrega atrasada e ritmo de prazo (SPI) fora da faixa vermelha (< 0,90)
+  //  custo : ritmo de custo (CPI) fora da faixa vermelha e previsão no término até 105% do orçado
+  //  escopo: nenhuma mudança de escopo aguardando decisão
+  function evaluate(f) {
+    const s = f.schedule, b = f.budget;
+    const prazo = s.moduleCount ? (s.delayedCount === 0 && SharedFacts.ratioCode(b.spi) !== 'red') : null;
+    const custo = b.hasBudget ? (SharedFacts.ratioCode(b.cpi) !== 'red' && (b.eacPctOfBac == null || b.eacPctOfBac <= 105)) : null;
+    const escopo = (s.moduleCount || f.scope.openCount) ? f.scope.openCount === 0 : null;
+    const dims = [prazo, custo, escopo].filter(x => x !== null);
+    return { prazo, custo, escopo, saudavel: dims.length === 3 ? dims.every(Boolean) : null, farol: f.farol.color || null,
+      atrasadas: s.delayedCount, decisoesCriticas: f.decisions.pendingCriticalCount, riscosCriticos: f.risks.byLevel['crítico'] || 0, consumoPct: b.consumoPct };
+  }
+  const rate = (rows, k) => { const known = rows.filter(r => r.ev[k] !== null), ok = known.filter(r => r.ev[k]).length; return { ok, known: known.length, unknown: rows.length - known.length, pct: pct(ok, known.length) }; };
+  // rows: [{ id, name, area, ev }] → taxas do portfólio, distribuição do farol e quadro por área
+  function aggregate(rows) {
+    const farol = { verde: 0, amarelo: 0, vermelho: 0, semDados: 0 };
+    rows.forEach(r => { const c = r.ev.farol; if(c === 'verde' || c === 'amarelo' || c === 'vermelho') farol[c]++; else farol.semDados++; });
+    const sumry = list => ({ projetos: list.length, prazo: rate(list, 'prazo'), custo: rate(list, 'custo'), escopo: rate(list, 'escopo'), saudavel: rate(list, 'saudavel'),
+      emRisco: list.filter(r => r.ev.farol === 'vermelho').length, atrasadas: list.reduce((s, r) => s + r.ev.atrasadas, 0),
+      decisoesCriticas: list.reduce((s, r) => s + r.ev.decisoesCriticas, 0), riscosCriticos: list.reduce((s, r) => s + r.ev.riscosCriticos, 0) });
+    const byArea = new Map();
+    rows.forEach(r => { const a = (r.area || '').trim() || 'Sem área'; if(!byArea.has(a)) byArea.set(a, []); byArea.get(a).push(r); });
+    const areas = [...byArea].map(([area, list]) => ({ area, ...sumry(list) })).sort((a, b) => a.area === 'Sem área' ? 1 : b.area === 'Sem área' ? -1 : a.area.localeCompare(b.area, 'pt-BR'));
+    return { total: sumry(rows), farol, areas };
+  }
+  return { evaluate, aggregate };
+})();
+</script>
+
+<!-- ■ MODULE: pages/pfkpi -->
+<section class="page" id="p-pfkpi" data-module="pages/pfkpi">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Indicadores do Portfólio<span class="help-q" data-help="Quantos projetos estão no prazo, no custo e no escopo, e como isso se divide por área. É a visão do PMO sobre o conjunto, calculada dos dados de cada projeto com as mesmas regras do assistente de WhatsApp. Projetos sem dados suficientes ficam fora das taxas e aparecem contados à parte." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Taxa de projetos no prazo, no custo e no escopo, por área, com a situação de cada projeto.</div></div>
+    <div class="btn-row"><button class="btn btn-sm" onclick="PfKpi.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button></div>
+  </div>
+  <div class="rk-toolbar">
+    <label for="pk-area" style="font-size:12px;color:var(--t2)">Área</label>
+    <span class="help-q" data-help="Filtra os indicadores e a tabela por área/departamento. Defina a área de cada projeto em &quot;Editar&quot; (na tabela abaixo) ou ao criar o projeto. Útil para o PMO Departamental ver só a sua área." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>
+    <select class="input" id="pk-area" onchange="PfKpi.setArea(this.value)"><option value="">Todas as áreas</option></select>
+  </div>
+  <div class="g4" id="pk-kpis"></div>
+  <div class="card" style="margin-top:12px">
+    <div class="lbl"><i class="ti ti-traffic-lights"></i>Situação geral (farol)<span class="help-q" data-help="Quantos projetos estão em cada cor do farol. Verde: saudável; amarelo: atenção; vermelho: em risco; cinza: sem dados para avaliar (projeto sem entregas nem orçamento)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div id="pk-farol"></div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <div class="lbl"><i class="ti ti-building"></i>Por área<span class="help-q" data-help="Cada linha é uma área. As taxas mostram, entre os projetos da área que têm dados, quantos estão no prazo, no custo, no escopo e nos três ao mesmo tempo (saudáveis). &quot;em risco&quot; conta o farol vermelho." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div style="overflow-x:auto" id="pk-areas"></div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <div class="lbl"><i class="ti ti-list-details"></i>Por projeto<span class="help-q" data-help="✓ cumpre o critério, ✗ não cumpre, – sem dados. Prazo: nenhuma entrega atrasada e ritmo de prazo ≥ 0,90. Custo: ritmo de custo ≥ 0,90 e previsão no término até 105% do orçado. Escopo: nenhuma mudança de escopo aguardando decisão. &quot;Atualizado há&quot; é o tempo desde a última edição do projeto: passar de 14 dias indica status desatualizado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div style="overflow-x:auto" id="pk-projects"></div>
+  </div>
+</section>
+
+<!-- ■ MODULE: ui/project-modal -->
+<div class="modal-ov hidden" id="modal-project" onclick="if(event.target===this)PfKpi.closeEdit()">
+  <div class="modal-box" style="width:440px" role="dialog" aria-modal="true" aria-labelledby="pj-modal-title">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" id="pj-modal-title">Editar projeto</div>
+      <button class="btn btn-sm" onclick="PfKpi.closeEdit()" aria-label="Fechar"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-sub">Dados de identificação do projeto</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><div class="field-label"><label for="pj-f-name">Nome</label><span class="help-q" data-help="Nome do projeto como aparece no menu, nos painéis e nas mensagens." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="pj-f-name" maxlength="120"></div>
+      <div><div class="field-label"><label for="pj-f-client">Cliente / empresa</label><span class="help-q" data-help="Para quem o projeto é feito (cliente externo ou área solicitante)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="pj-f-client" maxlength="120"></div>
+      <div><div class="field-label"><label for="pj-f-area">Área / departamento</label><span class="help-q" data-help="Departamento responsável (TI, Engenharia, Marketing...). Projetos da mesma área são somados nos Indicadores do Portfólio. Digite uma nova ou escolha uma já usada; escreva sempre do mesmo jeito." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="pj-f-area" maxlength="80" list="pj-area-list" placeholder="Ex: TI"><datalist id="pj-area-list"></datalist></div>
+    </div>
+    <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
+      <button class="btn btn-sm" onclick="PfKpi.closeEdit()">Cancelar</button>
+      <button class="btn btn-sm btn-acc" onclick="PfKpi.saveEdit()"><i class="ti ti-device-floppy"></i>Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ■ MODULE: pages/pfkpi-js -->
+<script data-module="pages/pfkpi-js">
+const PfKpi = (() => {
+  let areaFilter = '', editingId = null, lastRows = [];
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const el = id => document.getElementById(id);
+  const MARK = v => v === null ? '<span style="color:var(--t3)" title="sem dados">–</span>' : v ? '<span style="color:var(--grn);font-weight:700" title="cumpre">✓</span>' : '<span style="color:var(--red);font-weight:700" title="não cumpre">✗</span>';
+  const FAROL = { verde: ['b-grn', 'Saudável'], amarelo: ['b-amb', 'Atenção'], vermelho: ['b-red', 'Em risco'] };
+  const rateText = r => r.pct == null ? '—' : r.pct + '%';
+  const rateSub = r => r.known ? `${r.ok} de ${r.known}${r.unknown ? ` · ${r.unknown} sem dados` : ''}` : 'sem dados';
+
+  // Dias desde a última edição do projeto (trilha ou WBS), medidos na data de "hoje" do próprio projeto
+  function daysSinceUpdate(pid) {
+    const dates = [];
+    (DB.getForProject(pid, 'trail') || []).forEach(t => { if(t.date) dates.push(t.date); });
+    (DB.getForProject(pid, 'wbs') || []).forEach(m => { if(m.lastEditedAt) dates.push(String(m.lastEditedAt).slice(0, 10)); (m.children || []).forEach(t => { if(t.lastEditedAt) dates.push(String(t.lastEditedAt).slice(0, 10)); }); });
+    const last = dates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().pop();
+    // nunca negativo: projeto de demonstração tem "hoje" fixo no passado e a trilha usa a data real
+    return last ? Math.max(0, BaselineCalc.diff(last, Clock.iso(Clock.today(pid)))) : null;
+  }
+
+  function compute() {
+    const alloc = new Set(DB.computePortfolioAllocation().filter(p => p.overallocated).map(p => p.name.trim().toLowerCase()));
+    return DB.listProjects().map(p => {
+      const f = SharedFacts.computeFacts(StatusMsg.factsInput(p.id, alloc), new Date());
+      return { id: p.id, name: p.name, area: p.area || '', ev: PortfolioKpi.evaluate(f), days: daysSinceUpdate(p.id), usesRef: f.usesReferenceDate };
+    });
+  }
+
+  function render() {
+    if(!el('pk-kpis')) return;
+    const all = compute();
+    const areas = [...new Set(all.map(r => (r.area || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    if(areaFilter && !areas.includes(areaFilter) && areaFilter !== 'Sem área') areaFilter = '';
+    el('pk-area').innerHTML = '<option value="">Todas as áreas</option>' + areas.map(a => `<option value="${esc(a)}"${a === areaFilter ? ' selected' : ''}>${esc(a)}</option>`).join('') + (all.some(r => !(r.area || '').trim()) ? `<option value="Sem área"${areaFilter === 'Sem área' ? ' selected' : ''}>Sem área</option>` : '');
+    const rows = all.filter(r => !areaFilter || ((r.area || '').trim() || 'Sem área') === areaFilter);
+    lastRows = rows;
+    const g = PortfolioKpi.aggregate(rows), t = g.total;
+    const k = (l, r, tip) => `<div class="kpi"><div class="kpi-lbl">${l}</div><div class="kpi-val">${rateText(r)}</div><div class="kpi-delta">${rateSub(r)}</div></div>`;
+    el('pk-kpis').innerHTML = k('No prazo', t.prazo) + k('No custo', t.custo) + k('No escopo', t.escopo) + k('Nos três (saudáveis)', t.saudavel);
+    const tot = Math.max(1, rows.length);
+    const seg = (n, color, fg, lbl) => n ? `<div style="flex:${n};background:${color};color:${fg};text-align:center;font-size:11px;font-weight:700;padding:6px 0;min-width:28px" title="${lbl}: ${n}">${n}</div>` : '';
+    el('pk-farol').innerHTML = rows.length
+      ? `<div style="display:flex;border-radius:6px;overflow:hidden;margin-bottom:8px">${seg(g.farol.verde, 'var(--grn)', 'var(--bg)', 'Saudável')}${seg(g.farol.amarelo, 'var(--amb)', 'var(--bg)', 'Atenção')}${seg(g.farol.vermelho, 'var(--red)', 'var(--bg)', 'Em risco')}${seg(g.farol.semDados, 'var(--s3)', 'var(--t1)', 'Sem dados')}</div><div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--t2)"><span><span class="sdot sdot-grn"></span> Saudável ${g.farol.verde}</span><span><span class="sdot sdot-amb"></span> Atenção ${g.farol.amarelo}</span><span><span class="sdot sdot-red"></span> Em risco ${g.farol.vermelho}</span><span>⚪ Sem dados ${g.farol.semDados}</span></div>`
+      : '<div class="rk-empty">Nenhum projeto neste filtro.</div>';
+    el('pk-areas').innerHTML = `<table class="hr-tbl"><thead><tr><th scope="col">Área</th><th scope="col" class="num">Projetos</th><th scope="col" class="num">No prazo</th><th scope="col" class="num">No custo</th><th scope="col" class="num">No escopo</th><th scope="col" class="num">Saudáveis</th><th scope="col" class="num">Em risco</th><th scope="col" class="num">Entregas atrasadas</th><th scope="col" class="num">Decisões críticas</th><th scope="col" class="num">Riscos críticos</th></tr></thead><tbody>${g.areas.map(a => `<tr><td>${esc(a.area)}</td><td class="num">${a.projetos}</td><td class="num">${rateText(a.prazo)}</td><td class="num">${rateText(a.custo)}</td><td class="num">${rateText(a.escopo)}</td><td class="num">${rateText(a.saudavel)}</td><td class="num">${a.emRisco}</td><td class="num">${a.atrasadas}</td><td class="num">${a.decisoesCriticas}</td><td class="num">${a.riscosCriticos}</td></tr>`).join('')}</tbody></table>`;
+    el('pk-projects').innerHTML = `<table class="hr-tbl"><thead><tr><th scope="col">Projeto</th><th scope="col">Área</th><th scope="col">Farol</th><th scope="col" class="num">Prazo</th><th scope="col" class="num">Custo</th><th scope="col" class="num">Escopo</th><th scope="col" class="num">Atrasadas</th><th scope="col" class="num">Decisões críticas</th><th scope="col" class="num">Riscos críticos</th><th scope="col">Atualizado há</th><th scope="col"><span style="position:absolute;left:-9999px">Ações</span></th></tr></thead><tbody>${rows.map(r => {
+      const f = FAROL[r.ev.farol];
+      const d = r.days;
+      const stale = d != null && d > 14;
+      return `<tr><td style="font-weight:600">${esc(r.name)}${r.usesRef ? ' <span class="chip" title="Projeto de demonstração: números na data de referência">demo</span>' : ''}</td><td>${esc(r.area || '—')}</td><td>${f ? `<span class="badge ${f[0]}">${f[1]}</span>` : '<span class="badge b-neu">sem dados</span>'}</td><td class="num">${MARK(r.ev.prazo)}</td><td class="num">${MARK(r.ev.custo)}</td><td class="num">${MARK(r.ev.escopo)}</td><td class="num">${r.ev.atrasadas}</td><td class="num">${r.ev.decisoesCriticas}</td><td class="num">${r.ev.riscosCriticos}</td><td style="white-space:nowrap">${d == null ? '—' : d + ' dia(s)'}${stale ? ' <span class="badge b-amb">desatualizado</span>' : ''}</td><td><button class="btn btn-sm" data-perm="business" data-id="${esc(r.id)}" onclick="PfKpi.openEditEl(this)"><i class="ti ti-edit"></i>Editar</button></td></tr>`;
+    }).join('')}</tbody></table>`;
+    if(typeof ColumnDrag !== 'undefined') { ColumnDrag.enable(el('pk-areas').querySelector('table'), 'pfkpi-areas'); ColumnDrag.enable(el('pk-projects').querySelector('table'), 'pfkpi-projetos'); }
+  }
+  const setArea = v => { areaFilter = v; render(); };
+
+  function openEditEl(btn) {
+    if(!Auth.guard('business')) return;
+    const p = DB.listProjects().find(x => x.id === btn.dataset.id); if(!p) return;
+    editingId = p.id;
+    el('pj-f-name').value = p.name; el('pj-f-client').value = p.client || ''; el('pj-f-area').value = p.area || '';
+    el('pj-area-list').innerHTML = [...new Set(DB.listProjects().map(x => (x.area || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(a => `<option value="${esc(a)}">`).join('');
+    el('modal-project').classList.remove('hidden'); el('pj-f-name').focus();
+  }
+  function closeEdit() { el('modal-project').classList.add('hidden'); }
+  function saveEdit() {
+    if(!Auth.guard('business')) return;
+    const name = el('pj-f-name').value.trim();
+    if(name.length < 2) { T.show('⚠️ Informe o nome do projeto.'); el('pj-f-name').focus(); return; }
+    const p = DB.updateProject(editingId, { name, client: el('pj-f-client').value.trim(), area: el('pj-f-area').value.trim() });
+    if(!p) return;
+    Cloud.pushAuditEvent('project_edited', `Projeto "${name}" editado (área: ${p.area || 'sem área'})`, { projectId: p.id });
+    closeEdit(); render();
+    if(typeof Nav !== 'undefined') Nav.renderProjects();
+    T.show('✅ Projeto atualizado.');
+  }
+
+  // CSV com proteção contra injeção de fórmula
+  function exportCsv() {
+    const q = v => { let s = String(v == null ? '' : v); if(/^[=+\-@\t\r]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
+    const yn = v => v === null ? 'sem dados' : v ? 'sim' : 'não';
+    const lines = [['Projeto', 'Área', 'Farol', 'No prazo', 'No custo', 'No escopo', 'Entregas atrasadas', 'Decisões críticas', 'Riscos críticos', 'Atualizado há (dias)'],
+      ...lastRows.map(r => [r.name, r.area, r.ev.farol || 'sem dados', yn(r.ev.prazo), yn(r.ev.custo), yn(r.ev.escopo), r.ev.atrasadas, r.ev.decisoesCriticas, r.ev.riscosCriticos, r.days == null ? '' : r.days])];
+    const blob = new Blob(['﻿' + lines.map(l => l.map(q).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'indicadores-portfolio-' + Clock.iso(new Date()) + '.csv';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    T.show('📥 CSV dos indicadores exportado.');
+  }
+  return { render, setArea, openEditEl, closeEdit, saveEdit, exportCsv, resetCache: () => {} };
 })();
 </script>
 
@@ -2640,6 +2813,7 @@ const Baselines = (() => {
   <div class="card">
     <div class="lbl"><i class="ti ti-layout-grid"></i>Projetos</div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Múltiplos projetos com dados isolados</strong> — cada projeto (Portal Nexus, Valdori Dist., Grupo Beltrano ou qualquer um novo) tem sua própria WBS, decisões, repositório, equipe etc., guardados separadamente. Trocar de projeto troca o app inteiro na hora.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Indicadores do Portfólio</strong> — quantos projetos estão no prazo, no custo e no escopo (e nos três), distribuição do farol e quadro por área/departamento, com a situação de cada projeto, entregas atrasadas, decisões e riscos críticos e há quantos dias o projeto foi atualizado. Projetos sem dados ficam fora das taxas. Exporta em CSV. Defina a área do projeto em “Editar”.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Portfólio</strong> — os cards de todos os projetos mostram números reais (prazo, escopo, documentos, decisões pendentes), calculados a partir dos dados de cada um.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Novo projeto</strong> — o assistente cria um projeto de verdade, com base de dados própria e vazia, e já deixa ele como o projeto ativo.</div></div>
   </div>
@@ -3241,16 +3415,16 @@ const Cloud = (() => {
     if(!client || !session || typeof DB === 'undefined') return;
     try {
       const local = DB.listProjects();
-      await Promise.all(local.map(p => client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', created_by:session.user.id, ...(p.refDate ? { reference_date:p.refDate } : {}) }).then(()=>{}).catch(()=>{})));
+      await Promise.all(local.map(p => client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', created_by:session.user.id, area:p.area||null, ...(p.refDate ? { reference_date:p.refDate } : {}) }).then(()=>{}).catch(()=>{})));
       const { data, error } = await client.from('projects').select('*').order('created_at', { ascending:true });
       if(error || !data) return;
-      DB.setProjectsFromCloud(data.map(p => ({ id:p.id, name:p.name, client:p.client||'', icon:p.icon||'compass', refDate:p.reference_date||'' })));
+      DB.setProjectsFromCloud(data.map(p => ({ id:p.id, name:p.name, client:p.client||'', icon:p.icon||'compass', area:p.area||'', refDate:p.reference_date||'' })));
     } catch(e) { console.warn('Supabase: falha ao sincronizar projetos', e); }
   }
 
   function pushProject(p) {
     if(!client || !session) return;
-    track(client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', created_by:session.user.id }).then(()=>{}).catch(cloudSyncFailed));
+    track(client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', area:p.area||null, created_by:session.user.id }).then(()=>{}).catch(cloudSyncFailed));
   }
   // Quem cria o projeto precisa conseguir vê-lo — a policy "project_access_self_grant" só deixa
   // conceder acesso PRA SI MESMO, nunca pra outra pessoa (isso continua exigindo um admin).
@@ -4306,10 +4480,22 @@ const DB = (() => {
     }
   }
 
-  function createProject(name, client) {
+  // Edita identificação do projeto (nome, cliente, área). Devolve o projeto atualizado ou null.
+  function updateProject(projectId, patch) {
+    if(!Auth.guard('business')) return null;
+    const p = loadProjects().find(x => x.id === projectId); if(!p) return null;
+    if(patch.name != null) p.name = String(patch.name).slice(0, 120) || p.name;
+    if(patch.client != null) p.client = String(patch.client).slice(0, 120);
+    if(patch.area != null) p.area = String(patch.area).trim().slice(0, 80);
+    persistProjects();
+    if(typeof Cloud !== 'undefined') Cloud.pushProject(p);
+    return p;
+  }
+
+  function createProject(name, client, area) {
     if(!Auth.guard('business')) return null;
     const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
-    const p = { id, name: name || 'Novo projeto', client: client || '', icon:'compass' };
+    const p = { id, name: name || 'Novo projeto', client: client || '', area: (area || '').trim().slice(0, 80), icon:'compass' };
     loadProjects().push(p);
     persistProjects();
     switchProject(id);
@@ -4473,7 +4659,7 @@ const DB = (() => {
     })).sort((a,b) => b.total - a.total);
   }
 
-  return { get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, factoryReset, listProjects, getActiveProjectId, switchProject, createProject, computePortfolioAllocation, setProjectsFromCloud };
+  return { get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, factoryReset, listProjects, getActiveProjectId, switchProject, createProject, updateProject, computePortfolioAllocation, setProjectsFromCloud };
 })();
 </script>
 
@@ -4717,7 +4903,7 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','help','xray'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','help','xray'];
   function go(id) {
     pages.forEach(p => {
       const el = document.getElementById('p-'+p);
@@ -4739,6 +4925,7 @@ const R = (() => {
     if(id === 'resources' && typeof Resources !== 'undefined') Resources.render();
     if(id === 'budget' && typeof Budget !== 'undefined') Budget.render();
     if(id === 'risks' && typeof Risks !== 'undefined') Risks.render();
+    if(id === 'pfkpi' && typeof PfKpi !== 'undefined') PfKpi.render();
     if(id === 'baseline' && typeof Baselines !== 'undefined') Baselines.render();
     if(id === 'statusmsg' && typeof StatusMsg !== 'undefined') StatusMsg.render();
     if(id === 'hours' && typeof Hours !== 'undefined') Hours.render();
@@ -4768,7 +4955,7 @@ const Nav = (() => {
     wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento', risks:'sbg-planejamento', baseline:'sbg-planejamento',
     burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe', hours:'sbg-equipe',
     lessons:'sbg-conhecimento', meetings:'sbg-conhecimento', repository:'sbg-conhecimento', chat:'sbg-conhecimento',
-    portfolio:'sbg-projetos', prioritization:'sbg-projetos'
+    portfolio:'sbg-projetos', prioritization:'sbg-projetos', pfkpi:'sbg-projetos'
   };
 
   // Comportamento sanfona: só um menu fica aberto por vez — todo menu sem
@@ -4840,7 +5027,7 @@ const Nav = (() => {
   };
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
-    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base',
+    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores do Portfólio',
     burnout:'Burnout Radar', resources:'Colaboradores', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
     portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
@@ -4909,6 +5096,7 @@ const CmdK = (() => {
     { label:'Chat contextual', page:'chat', icon:'message-2', group:'Conhecimento' },
     { label:'Portfólio', page:'portfolio', icon:'layout-grid', group:'Projetos' },
     { label:'Priorização', page:'prioritization', icon:'sort-descending-2', group:'Projetos' },
+    { label:'Indicadores do Portfólio', page:'pfkpi', icon:'chart-donut-3', group:'Projetos' },
     { label:'Painel da Diretoria', page:'board', icon:'presentation-analytics', group:'Projetos' },
     { label:'Visão Executiva', page:'execview', icon:'chart-infographic', group:'Projetos' },
     { label:'Configurações', page:'settings', icon:'settings', group:'' },
@@ -12140,6 +12328,10 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
         <div class="field-label">Cliente / empresa</div>
         <input class="input" id="wz-client" type="text" placeholder="Ex: Grupo Faria Lima Ltda">
       </div>
+      <div class="field-group">
+        <div class="field-label">Área / departamento<span class="help-q" data-help="Departamento responsável (TI, Engenharia, Marketing...). Projetos da mesma área são somados nos Indicadores do Portfólio. Opcional; pode ser definida depois em Indicadores → Editar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+        <input class="input" id="wz-area" type="text" maxlength="80" placeholder="Ex: TI">
+      </div>
       <div class="g2" style="gap:10px">
         <div class="field-group">
           <div class="field-label">Data de início</div>
@@ -13337,8 +13529,9 @@ const Wizard = (() => {
   function create() {
     const name = document.getElementById('wz-name')?.value.trim() || 'Novo projeto';
     const client = document.getElementById('wz-client')?.value.trim() || '';
+    const area = document.getElementById('wz-area')?.value.trim() || '';
     close();
-    const id = DB.createProject(name, client);
+    const id = DB.createProject(name, client, area);
     if(id) {
       T.show('✅ Projeto "' + name + '" criado e ativo! Repositório vazio — adicione documentos para habilitar a IA.', 5000);
       R.go('dashboard');

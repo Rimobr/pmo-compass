@@ -1,6 +1,6 @@
 -- =========================================================================
 -- PMO Compass — esquema completo (GERADO por scripts/build-schema.mjs — não edite à mão)
--- Fonte: supabase/migrations/ (9 arquivos). Para instalação do zero, rode este arquivo inteiro
+-- Fonte: supabase/migrations/ (10 arquivos). Para instalação do zero, rode este arquivo inteiro
 -- no SQL Editor; para um banco que já existe, use `node scripts/db-apply.mjs` (aplica só o que falta).
 -- =========================================================================
 
@@ -1053,3 +1053,9 @@ create policy "baselines_delete" on public.baselines for delete
 
 grant select, insert, delete on public.baselines to authenticated;
 revoke all on public.baselines from anon;
+
+-- ▼▼▼ 20261023100800_projects_area.sql ▼▼▼
+-- Área / departamento do projeto (TI, Engenharia, Marketing...). Permite agrupar os indicadores do portfólio por área
+-- e é o que um PMO Departamental precisa para filtrar a sua visão. Texto livre curto, opcional.
+alter table public.projects add column if not exists area text
+  check (area is null or char_length(area) <= 80);
