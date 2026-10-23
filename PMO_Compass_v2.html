@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.0.0'
+  version: '2.1.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -108,6 +108,7 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 .b-acc{background:var(--ad);color:var(--acc);border:1px solid var(--ab)}
 .b-pur{background:var(--pd);color:var(--pur);border:1px solid var(--pb)}
 .b-neu{background:var(--s3);color:var(--t2);border:1px solid var(--b2)}
+html[data-theme="gray"] .b-neu{color:var(--t1)}
 .help-q{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--s3);color:var(--t3);font-size:10px;font-weight:700;line-height:1;cursor:pointer;flex-shrink:0;user-select:none;vertical-align:1px}
 .help-q:hover{background:var(--ab);color:var(--acc)}
 .help-tip-pop{position:fixed;z-index:600;max-width:260px;background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);box-shadow:0 4px 16px rgba(0,0,0,.18);padding:10px 12px;font-size:12px;color:var(--t2);line-height:1.55}
@@ -230,7 +231,7 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 .ico-btn i{font-size:15px;color:var(--t2)}
 .ico-btn:hover{background:var(--s2);border-color:var(--b2)}
 .ico-btn .bdot{width:7px;height:7px;border-radius:50%;background:var(--red);position:absolute;top:4px;right:4px;border:1.5px solid var(--s1)}
-.ava{width:30px;height:30px;border-radius:50%;background:var(--pd);border:1px solid var(--pb);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--pur);cursor:pointer;flex-shrink:0}
+.ava{width:30px;height:30px;border-radius:50%;background:var(--pd);border:1px solid var(--pb);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--t1);cursor:pointer;flex-shrink:0}
 .app-body{flex:1;display:flex;overflow:hidden}
 .sidebar{width:192px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--b1);padding:12px 8px;display:flex;flex-direction:column;gap:1px;overflow-y:auto}
 .sb-sec{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);padding:8px 10px 4px;margin-top:6px}
@@ -551,12 +552,16 @@ body[data-role="manutencao"] .role-badge{background:var(--amd);color:var(--amb)}
 .gantt-tab.on{background:var(--s3);color:var(--t1);border-color:var(--b2)}
 .gantt-tab:hover:not(.on){color:var(--t1)}
 .gantt-wrap{overflow-x:auto}
-.gantt-inner{min-width:760px;position:relative}
-.gantt-ruler{display:flex;position:relative;height:24px;margin-left:200px;border-bottom:1px solid var(--b1);margin-bottom:6px}
+.gantt-inner{min-width:760px;position:relative;--gl:200px}
+.gantt-rz{position:absolute;top:0;bottom:0;left:calc(var(--gl) - 4px);width:8px;cursor:col-resize;z-index:6;touch-action:none}
+.gantt-rz::after{content:'';position:absolute;left:3px;top:6px;bottom:6px;width:2px;border-radius:2px;background:var(--b2)}
+.gantt-rz:hover::after,.gantt-rz.on::after,.gantt-rz:focus-visible::after{background:var(--acc)}
+.gantt-rz:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+.gantt-ruler{display:flex;position:relative;height:24px;margin-left:var(--gl);border-bottom:1px solid var(--b1);margin-bottom:6px}
 .gantt-ruler-m{position:absolute;top:0;height:100%;font-size:10.5px;color:var(--t3);border-left:1px solid var(--b1);padding-left:5px;display:flex;align-items:center;white-space:nowrap}
 .gantt-row{display:flex;align-items:center;min-height:28px}
 .gantt-row-l1{margin-top:8px}
-.gantt-lbl{width:200px;flex-shrink:0;font-size:12px;color:var(--t1);padding-right:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gantt-lbl{width:var(--gl);flex-shrink:0;font-size:12px;color:var(--t1);padding-right:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gantt-row-l1 .gantt-lbl{font-weight:600;font-size:12.5px}
 .gantt-row-l2 .gantt-lbl{font-size:11.5px;color:var(--t2);padding-left:16px}
 .gantt-track{flex:1;position:relative;height:18px;background:var(--s2);border-radius:4px}
@@ -569,7 +574,7 @@ body[data-role="manutencao"] .role-badge{background:var(--amd);color:var(--amb)}
 .gantt-today-tag{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:9.5px;color:var(--acc);font-weight:700;background:var(--ad);padding:1px 5px;border-radius:3px;white-space:nowrap}
 .gantt-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;font-size:11px;color:var(--t2)}
 .gantt-leg-sw{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
-@media(max-width:900px){.gantt-lbl{width:120px;font-size:11px}.gantt-ruler{margin-left:120px}}
+@media(max-width:900px){.gantt-inner{--gl:120px}.gantt-lbl{font-size:11px}}
 </style>
 
 <!-- ■ MODULE: core/print-pwa -->
@@ -812,6 +817,7 @@ body.icons-failed i[data-fb]::before{
     <div class="sb-group-body">
       <button class="si" data-p="wbs" onclick="R.go('wbs')"><i class="ti ti-sitemap"></i>WBS</button>
       <button class="si" data-p="budget" onclick="R.go('budget')"><i class="ti ti-wallet"></i>Orçamento e Custos</button>
+      <button class="si" data-p="risks" onclick="R.go('risks')"><i class="ti ti-shield-exclamation"></i>Riscos</button>
       <button class="si" data-p="scope" onclick="R.go('scope')"><i class="ti ti-git-diff"></i>Scope Changes</button>
       <button class="si" data-p="estimates" onclick="R.go('estimates')"><i class="ti ti-ruler"></i>Estimativas IA</button>
       <button class="si" data-p="whatif" onclick="R.go('whatif')"><i class="ti ti-arrows-split"></i>What-If</button>
@@ -822,6 +828,7 @@ body.icons-failed i[data-fb]::before{
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-equipe')"><i class="ti ti-users-group sb-gico"></i>Equipe<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
       <button class="si" data-p="burnout" onclick="R.go('burnout')"><i class="ti ti-heartbeat"></i>Burnout Radar</button>
+      <button class="si" data-p="hours" onclick="R.go('hours')"><i class="ti ti-clock-hour-4"></i>Horas</button>
       <button class="si" data-p="resources" onclick="R.go('resources')"><i class="ti ti-users-group"></i>Recursos</button>
       <button class="si" data-p="stakeholders" onclick="R.go('stakeholders')"><i class="ti ti-users"></i>Stakeholders</button>
     </div>
@@ -926,6 +933,7 @@ body.icons-failed i[data-fb]::before{
       <div class="hbar"><span class="hbar-lbl">Equipe/Burnout</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-team-fill" style="width:0%;background:var(--amb)"></div></div><span class="hbar-pct" id="hs-hbar-team-pct">—</span></div>
       <div class="hbar"><span class="hbar-lbl">Qualidade</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-quality-fill" style="width:0%;background:var(--acc)"></div></div><span class="hbar-pct" id="hs-hbar-quality-pct">—</span></div>
       <div class="hbar"><span class="hbar-lbl">Aprendizado</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-learning-fill" style="width:0%;background:var(--pur)"></div></div><span class="hbar-pct" id="hs-hbar-learning-pct">—</span></div>
+      <div class="hbar"><span class="hbar-lbl">Riscos</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-risks-fill" style="width:0%;background:var(--acc)"></div></div><span class="hbar-pct" id="hs-hbar-risks-pct">—</span></div>
       <div class="hbar"><span class="hbar-lbl">Scope control</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-scope-fill" style="width:0%;background:var(--red)"></div></div><span class="hbar-pct" id="hs-hbar-scope-pct">—</span></div>
       <div id="hs-raiox-accuracy" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--b1)"></div>
     </div>
@@ -958,7 +966,7 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: pages/burnout -->
 <section class="page" id="p-burnout" data-module="pages/burnout">
-  <div class="pg-hdr"><div><div class="pg-title">Burnout Radar — Saúde da equipe<span class="help-q" data-help="Mostra quem da equipe está sobrecarregado, antes que isso vire atraso no projeto ou alguém pedir pra sair." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">IA detecta padrões de sobrecarga antes que virem queda de produtividade.</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Burnout.openAdd()"><i class="ti ti-plus"></i>Adicionar membro</button></div></div>
+  <div class="pg-hdr"><div><div class="pg-title">Burnout Radar — Saúde da equipe<span class="help-q" data-help="Mostra quem da equipe está sobrecarregado, antes que isso vire atraso no projeto ou alguém pedir pra sair." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">IA detecta padrões de sobrecarga antes que virem queda de produtividade.</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Burnout.openAdd()"><i class="ti ti-plus"></i>Adicionar membro</button><button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('team')"><i class="ti ti-table-import"></i>Importar planilha</button></div></div>
   <div class="fi-note" style="margin-bottom:14px">
     <i class="ti ti-shield-lock"></i>
     <div>Este painel <strong style="color:var(--t1)">não monitora atividade, tela ou comunicação</strong> de ninguém automaticamente — os percentuais de carga são lançados manualmente pelo gestor do projeto (alocação/horas por pessoa). Base legal: legítimo interesse do controlador na gestão de carga de trabalho (LGPD art. 7º, IX). Cada colaborador cadastrado tem o direito de saber que está sendo monitorado aqui e de solicitar a exclusão do próprio registro.</div>
@@ -1238,6 +1246,7 @@ body.icons-failed i[data-fb]::before{
     <button class="settings-tab" id="stab-pmo" onclick="SettingsTabs.show('pmo')"><i class="ti ti-sitemap"></i>Perfil de PMO</button>
     <button class="settings-tab" id="stab-cloud" onclick="SettingsTabs.show('cloud')"><i class="ti ti-cloud"></i>Nuvem &amp; Automação</button>
     <button class="settings-tab" id="stab-notif" onclick="SettingsTabs.show('notif')"><i class="ti ti-bell"></i>Notificações &amp; Dados</button>
+    <button class="settings-tab" id="stab-msg" onclick="SettingsTabs.show('msg')"><i class="ti ti-brand-whatsapp"></i>WhatsApp &amp; E-mail</button>
   </div>
 
   <div id="settings-panel-ia">
@@ -1365,6 +1374,10 @@ body.icons-failed i[data-fb]::before{
     <div class="set-row"><div><div class="set-lbl">Burnout Radar automático</div><div class="set-sub">Mostra no Dashboard quando algum membro da equipe atinge 80%+ de carga</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Burnout Radar automático" data-pref="autoBurnoutRadar" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
   </div>
   </div><!-- /settings-panel-cloud -->
+
+  <div id="settings-panel-msg" style="display:none">
+    <div id="msg-root"></div>
+  </div>
 
   <div id="settings-panel-notif" style="display:none">
   <div class="card">
@@ -1532,6 +1545,7 @@ body.icons-failed i[data-fb]::before{
     <div class="btn-row">
       <button class="btn btn-sm btn-acc" data-perm="business" onclick="Budget.openAddLine()"><i class="ti ti-plus"></i>Linha de orçamento</button>
       <button class="btn btn-sm btn-acc" data-perm="business" onclick="Budget.openAddActual()"><i class="ti ti-receipt"></i>Lançar custo</button>
+      <button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('costs')"><i class="ti ti-table-import"></i>Importar planilha</button>
     </div>
   </div>
 
@@ -1568,6 +1582,129 @@ body.icons-failed i[data-fb]::before{
 
   <div id="scope-summary-root"></div>
   <div id="scope-list-root"></div>
+</section>
+
+<!-- ■ MODULE: pages/risks-hours-css ─ Estilos das telas Riscos, Horas e Importação -->
+<style data-module="pages/risks-hours-css">
+.rk-grid{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:12px;margin-top:12px;align-items:start}
+@media (max-width:900px){.rk-grid{grid-template-columns:minmax(0,1fr)}}
+.rk-mx{border-collapse:separate;border-spacing:3px;width:100%;table-layout:fixed}
+.rk-mx th{font-size:10px;font-weight:600;color:var(--t3);text-align:center;padding:2px;line-height:1.2}
+.rk-mx th.rk-rowh{text-align:right;padding-right:6px;width:58px}
+.rk-mx td{padding:0}
+.rk-cell{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;border-radius:var(--r6);border:1px solid var(--b1);font-size:14px;font-weight:700;color:var(--t1);cursor:pointer;background:var(--s2)}
+.rk-cell.rk-L-critico{background:var(--rd);border-color:var(--rb)}
+.rk-cell.rk-L-alto{background:var(--amd);border-color:var(--ambb)}
+.rk-cell.rk-L-medio{background:var(--ad);border-color:var(--ab)}
+.rk-cell.rk-L-baixo{background:var(--gd);border-color:var(--gb)}
+.rk-cell .rk-zero{font-weight:400;color:var(--t3);font-size:11px}
+.rk-cell.sel{outline:2px solid var(--acc);outline-offset:1px}
+.rk-cell:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.rk-axis{font-size:10.5px;color:var(--t3);text-align:center;margin-top:6px}
+.rk-legend{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.rk-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.rk-toolbar .input{width:auto;min-width:130px}
+.rk-toolbar .rk-q{flex:1 1 180px}
+.rk-item{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border:1px solid var(--b1);border-radius:var(--r8);background:var(--s2);margin-bottom:8px;cursor:pointer}
+.rk-item:hover{border-color:var(--b3)}
+.rk-item:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.rk-item.rk-dim{opacity:1;background:transparent}
+.rk-score{flex:0 0 54px;text-align:center;border-radius:var(--r6);padding:6px 4px;border:1px solid var(--b1)}
+.rk-score b{display:block;font-size:18px;line-height:1.1;color:var(--t1)}
+.rk-score span{display:block;font-size:10px;color:var(--t1);margin-top:2px}
+.rk-score.rk-L-critico{background:var(--rd);border-color:var(--rb)}
+.rk-score.rk-L-alto{background:var(--amd);border-color:var(--ambb)}
+.rk-score.rk-L-medio{background:var(--ad);border-color:var(--ab)}
+.rk-score.rk-L-baixo{background:var(--gd);border-color:var(--gb)}
+.rk-main{flex:1;min-width:0}
+.rk-title{font-size:13px;font-weight:600;color:var(--t1);overflow-wrap:anywhere}
+.rk-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:5px}
+.rk-note{font-size:12px;color:var(--t2);margin-top:6px;overflow-wrap:anywhere}
+.rk-empty{text-align:center;padding:26px 10px;color:var(--t3);font-size:12.5px}
+.rk-prev{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r8);border:1px solid var(--b1);background:var(--s2);font-size:12px;color:var(--t2)}
+.rk-prev b{font-size:20px;color:var(--t1)}
+.hr-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.hr-tbl th{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--b2)}
+.hr-tbl td{padding:8px;border-bottom:1px solid var(--b1);color:var(--t1);vertical-align:top;overflow-wrap:anywhere}
+.hr-tbl .num{text-align:right;white-space:nowrap}
+.hr-tbl td:first-child{min-width:104px}
+.hr-day{font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 6px;display:flex;justify-content:space-between}
+.hr-row{display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r8);background:var(--s2);margin-bottom:6px;cursor:pointer}
+.hr-row:hover{border-color:var(--b3)}
+.hr-row:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.hr-h{flex:0 0 52px;font-weight:700;color:var(--t1);text-align:right}
+.hr-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px;margin-top:12px;align-items:start}
+@media (max-width:900px){.hr-grid{grid-template-columns:minmax(0,1fr)}}
+.imp-steps{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.imp-step{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--b2);color:var(--t3)}
+.imp-step.on{background:var(--ad);border-color:var(--ab);color:var(--acc);font-weight:600}
+.imp-drop{border:1.5px dashed var(--b3);border-radius:var(--r10);padding:16px;text-align:center;color:var(--t2);font-size:12.5px}
+.imp-drop.over{border-color:var(--acc);background:var(--ad)}
+.imp-map{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:8px 12px;align-items:center}
+.imp-prev{max-height:220px;overflow:auto;border:1px solid var(--b1);border-radius:var(--r8)}
+.imp-list{max-height:140px;overflow:auto;font-size:12px;color:var(--t2);padding-left:18px}
+</style>
+
+<!-- ■ MODULE: pages/risks -->
+<section class="page" id="p-risks" data-module="pages/risks">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Registro de Riscos<span class="help-q" data-help="Cada risco tem probabilidade (1 a 5) e impacto (1 a 5). A nota é a multiplicação: 1–4 baixo, 5–9 médio, 10–14 alto, 15–25 crítico. Os riscos em aberto entram no índice de saúde do projeto e riscos críticos geram aviso para a diretoria." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Riscos com dono, nota e plano de resposta. Clique numa célula da matriz para filtrar a lista.</div></div>
+    <div class="btn-row">
+      <button class="btn btn-sm btn-acc" data-perm="business" onclick="Risks.openAdd()"><i class="ti ti-plus"></i>Registrar risco</button>
+      <button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('risks')"><i class="ti ti-table-import"></i>Importar planilha</button>
+    </div>
+  </div>
+  <div class="g4" id="rk-kpis"></div>
+  <div class="rk-grid">
+    <div class="card">
+      <div class="lbl"><i class="ti ti-grid-dots"></i>Matriz probabilidade × impacto</div>
+      <div id="rk-matrix-root"></div>
+      <div class="rk-legend" id="rk-legend"></div>
+    </div>
+    <div class="card">
+      <div class="lbl"><i class="ti ti-list-details"></i>Riscos do projeto</div>
+      <div class="rk-toolbar">
+        <input class="input rk-q" id="rk-q" type="search" placeholder="Buscar por título, dono ou categoria" aria-label="Buscar riscos" oninput="Risks.setQuery(this.value)">
+        <select class="input" id="rk-f-status" aria-label="Filtrar por situação" onchange="Risks.setFilter('status', this.value)">
+          <option value="abertos">Em aberto</option><option value="encerrados">Aceitos e encerrados</option><option value="ocorridos">Ocorridos</option><option value="todos">Todos</option>
+        </select>
+        <select class="input" id="rk-f-level" aria-label="Filtrar por faixa" onchange="Risks.setFilter('level', this.value)">
+          <option value="">Todas as faixas</option><option value="alto">Alto</option><option value="baixo">Baixo</option><option value="critico">Crítico</option><option value="medio">Médio</option>
+        </select>
+      </div>
+      <div id="rk-filter-note" style="font-size:11.5px;color:var(--t3);margin-bottom:8px"></div>
+      <div id="rk-list-root"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ■ MODULE: pages/hours -->
+<section class="page" id="p-hours" data-module="pages/hours">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Apontamento de Horas<span class="help-q" data-help="Registro leve de quem trabalhou quantas horas e em quê. Serve para comparar a carga medida com a carga declarada no Burnout Radar e para enxergar para onde o esforço está indo. Não é folha de ponto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Horas por pessoa, dia e entrega. Compara a carga medida na última semana com a carga declarada na equipe.</div></div>
+    <div class="btn-row">
+      <button class="btn btn-sm btn-acc" data-perm="business" onclick="Hours.openAdd()"><i class="ti ti-plus"></i>Apontar horas</button>
+      <button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('hours')"><i class="ti ti-table-import"></i>Importar planilha</button>
+      <button class="btn btn-sm" onclick="Hours.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button>
+    </div>
+  </div>
+  <div class="rk-toolbar">
+    <select class="input" id="hr-f-period" aria-label="Período" onchange="Hours.setFilter('period', this.value)">
+      <option value="semana">Esta semana</option><option value="mes">Este mês</option><option value="passada">Semana passada</option><option value="tudo">Todo o período</option>
+    </select>
+    <select class="input" id="hr-f-person" aria-label="Pessoa" onchange="Hours.setFilter('person', this.value)"><option value="">Todas as pessoas</option></select>
+  </div>
+  <div class="g4" id="hr-kpis"></div>
+  <div class="hr-grid">
+    <div class="card">
+      <div class="lbl"><i class="ti ti-scale"></i>Carga medida × declarada (últimos 7 dias)<span class="help-q" data-help="Carga medida = horas apontadas nos últimos 7 dias ÷ (40 h × % de alocação da pessoa). Carga declarada = o que está no Burnout Radar. Diferença grande indica que um dos dois números está desatualizado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+      <div id="hr-load-root"></div>
+    </div>
+    <div class="card">
+      <div class="lbl"><i class="ti ti-list-check"></i>Apontamentos</div>
+      <div id="hr-list-root"></div>
+    </div>
+  </div>
 </section>
 
 <!-- ■ MODULE: pages/estimates -->
@@ -1681,6 +1818,7 @@ body.icons-failed i[data-fb]::before{
     <div><div class="pg-title">WBS — Work Breakdown Structure<span class="help-q" data-help="A estrutura de entregas do projeto — o que precisa ser feito, quem é o responsável, quando deveria terminar (planejado) e quando terminou de verdade (real)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Hierarquia de entregas com rastreamento de progresso · "Quem tem a versão mais recente?" — respondida aqui.</div></div>
     <div class="btn-row">
       <button class="btn btn-sm btn-acc" data-perm="business" onclick="WBS.openAddModule()"><i class="ti ti-plus"></i>Nova entrega</button>
+      <button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('wbs')"><i class="ti ti-table-import"></i>Importar planilha</button>
       <button class="btn btn-sm" data-perm="business" onclick="WBS.openReplan()"><i class="ti ti-calendar-time"></i>Replanejar cronograma<span class="help-q" data-help="Recalcula as datas de tudo que ainda não terminou, começando a contar a partir de hoje — o que já foi entregue não muda. Você revisa e escolhe o que aplicar antes de qualquer data mudar de verdade." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
       <button class="btn btn-sm" onclick="T.show('Exportando WBS…')"><i class="ti ti-download"></i>Exportar</button>
       <button class="btn btn-sm" data-perm="business" onclick="WBS.openAiSuggest()"><i class="ti ti-brain"></i>IA: sugerir<span class="help-q" data-help="A IA sugere de 3 a 6 subtarefas pra decompor uma entrega, só com base no nome dela — sem inventar data, responsável ou %. Você escolhe quais aceitar antes de qualquer uma virar tarefa real." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
@@ -1712,7 +1850,8 @@ body.icons-failed i[data-fb]::before{
     <div class="card">
       <div class="lbl"><i class="ti ti-timeline"></i>Cronograma — modelo Gráfico de Gantt</div>
       <div class="gantt-wrap">
-        <div class="gantt-inner">
+        <div class="gantt-inner" id="gantt-inner">
+          <div class="gantt-rz" id="gantt-rz" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Largura da coluna de nomes: arraste ou use as setas esquerda e direita" title="Arraste para mudar a largura dos nomes (duplo clique restaura)"></div>
           <div class="gantt-ruler" id="gantt-ruler"></div>
           <div class="gantt-body" id="gantt-body"></div>
         </div>
@@ -1783,12 +1922,16 @@ body.icons-failed i[data-fb]::before{
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Scope Changes</strong> — registro de mudanças com impacto em dias/custo, fluxo de aprovar, rejeitar ou mover para Fase 2.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Estimativas IA</strong> — o calibrador calcula o ajuste a partir do desvio histórico real de cada responsável (não é um número fixo).</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>What-If</strong> — cenários com CRUD completo; "Adotar" registra a escolha na Trilha de verdade.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Riscos</strong> — registro formal com probabilidade × impacto (1 a 5), dono, ação de mitigação e plano B. A matriz 5×5 filtra a lista; a nota define a faixa (baixo, médio, alto, crítico), entra no índice de saúde do projeto e gera alerta no Dashboard. Com a nuvem conectada, riscos críticos também avisam a diretoria (veja WhatsApp &amp; E-mail).</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Colunas do jeito que você prefere</strong> — nas tabelas (WBS em Tabela, carga de horas, painel da diretoria, mensagens) arraste o título de uma coluna para mudar a ordem e puxe a borda para mudar a largura; no Gantt, puxe a barra vertical ao lado dos nomes. Pelo teclado: Alt+← → move a coluna e Alt+Shift+← → muda a largura. A escolha fica salva neste navegador e “Restaurar colunas” volta ao padrão.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Importar planilha</strong> — cronograma (inclusive exportação do MS Project), equipe, custos, riscos e horas, a partir de CSV, Excel ou células coladas. Você confere as colunas e uma prévia antes de importar; nada que já existe é apagado nem duplicado, e a importação fica registrada na Trilha e no log de auditoria. Arquivos .xlsx exigem internet (leitor carregado sob demanda); CSV funciona sempre.</div></div>
   </div>
 
   <div class="card">
     <div class="lbl"><i class="ti ti-users-group"></i>Equipe</div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Burnout Radar</strong> — CRUD de membros da equipe; o alerta "X em zona crítica" é calculado, não fixo.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Recursos</strong> — usa a mesma base de dados do Burnout Radar (números sempre batem entre as duas telas). "Aplicar redistribuição" muda a carga de verdade e registra na Trilha.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Horas</strong> — apontamento leve (pessoa, dia, horas, entrega) e comparação da carga medida nos últimos 7 dias com a carga declarada no Burnout Radar. Não é folha de ponto e não altera a carga declarada sozinho.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Stakeholders</strong> — CRUD completo; alerta de "sem contato há X dias" calculado a partir da data real do último contato.</div></div>
   </div>
 
@@ -1824,7 +1967,8 @@ body.icons-failed i[data-fb]::before{
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Backend em nuvem (Supabase)</strong> — schema, sincronização e perfis via banco de dados, validados de ponta a ponta com um projeto Supabase real (múltiplos projetos, RBAC reforçado pelo banco, Raio-X com IA). Ver <code>SETUP.md</code> para provisionar uma instância nova.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Instalação como app (PWA)</strong> — testado com servidor real. Requer hospedagem — não ativa abrindo o arquivo direto do computador.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Preferências de IA e notificações</strong> — os 6 controles de "IA e análise"/"Notificações" (sugestões automáticas, detecção de risco, uso de histórico, Burnout Radar, alertas críticos, lembrete de decisão parada) persistem de verdade e afetam o que a IA e o Dashboard mostram — só dentro do app, quando você abre.</div></div>
-    <div class="help-item"><span class="badge b-amb">Versão futura</span><div><strong>Integrações e envio externo</strong> — Google Drive, Microsoft Teams, Slack, e-mail de status report e "status report semanal automático" dependem de infraestrutura ainda não construída (OAuth de terceiro, ou um processo agendado no servidor) — os botões dizem isso claramente em vez de fingir que funcionam.</div></div>
+    <div class="help-item"><span class="badge b-amb">Precisa de configuração</span><div><strong>WhatsApp &amp; E-mail</strong> — avisos para diretoria e stakeholders (decisão crítica pendente, projeto em risco, risco crítico e resumo semanal) e um assistente que responde perguntas de status por WhatsApp, só sobre os projetos liberados para cada pessoa e sem valores em R$ a menos que o administrador permita. A parte do app e do servidor está construída e testada com simulações; para enviar de verdade é preciso conectar uma conta WhatsApp Business (Meta) e um serviço de e-mail — passo a passo em docs/WHATSAPP_GO_LIVE.md. Exige a nuvem (Supabase) conectada e perfil de Administrador.</div></div>
+    <div class="help-item"><span class="badge b-amb">Versão futura</span><div><strong>Google Drive, Microsoft Teams e Slack</strong> — dependem de autorização (OAuth) de terceiro ainda não construída; os botões dizem isso claramente em vez de fingir que funcionam.</div></div>
   </div>
 
   <div class="card" style="border-color:var(--rb)">
@@ -2067,6 +2211,28 @@ const Auth = (() => {
 <script data-module="core/cloud">
 const Cloud = (() => {
   const KEY = 'pmo_cloud_v1';
+  // Tabelas de dados do PROJETO (têm project_id e são apagadas por "Zerar base"/"Limpar projeto"). Fonte única:
+  // clearProjectData e resetForNewUsers percorrem esta lista — tabela nova entra aqui, nunca em lista escrita à mão.
+  // A ordem respeita chaves estrangeiras (filhas antes das mães). tests/run.js confere esta lista contra o schema.sql.
+  const PROJECT_DATA_TABLES = ['wbs_tasks','cost_actuals','budget_lines','wbs_modules','decisions','documents','scope_changes','risks','time_entries'];
+  // Mapeadores local ⇄ nuvem das tabelas novas (um só lugar para push, pull e importação em lote)
+  const ROW = {
+    scope_changes: {
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, title:x.title, body:x.body||null, status:x.status, impact_days:x.impactDays||0, impact_cost:x.impactCost||0, risk_note:x.riskNote||null, created_on:x.createdAt||null }),
+      fromDb: r => ({ id:r.id, title:r.title, body:r.body||'', status:r.status, impactDays:r.impact_days||0, impactCost:Number(r.impact_cost)||0, riskNote:r.risk_note||'', createdAt:r.created_on||'' }),
+      local: 'scopeChanges'
+    },
+    risks: {
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, title:x.title, description:x.description||null, category:x.category||'outros', probability:x.probability, impact:x.impact, status:x.status||'aberto', response:x.response||'mitigar', mitigation:x.mitigation||null, contingency:x.contingency||null, owner_name:x.owner||null, review_on:x.reviewOn||null, identified_on:x.identifiedOn||new Date().toISOString().slice(0,10), closed_on:x.closedOn||null, updated_at:new Date().toISOString() }),
+      fromDb: r => ({ id:r.id, title:r.title, description:r.description||'', category:r.category, probability:r.probability, impact:r.impact, status:r.status, response:r.response, mitigation:r.mitigation||'', contingency:r.contingency||'', owner:r.owner_name||'', reviewOn:r.review_on||'', identifiedOn:r.identified_on||'', closedOn:r.closed_on||'' }),
+      local: 'risks'
+    },
+    time_entries: {
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, person_name:x.person, member_id:x.memberId||null, work_date:x.date, hours:x.hours, wbs_ref:x.wbsRef||null, note:x.note||null, updated_at:new Date().toISOString() }),
+      fromDb: r => ({ id:r.id, person:r.person_name, memberId:r.member_id||'', date:r.work_date, hours:Number(r.hours), wbsRef:r.wbs_ref||'', note:r.note||'' }),
+      local: 'timeEntries'
+    }
+  };
   let cfg = { url:'', anonKey:'' };
   let client = null;
   let session = null;
@@ -2376,10 +2542,10 @@ const Cloud = (() => {
     if(!client || !session || typeof DB === 'undefined') return;
     try {
       const local = DB.listProjects();
-      await Promise.all(local.map(p => client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', created_by:session.user.id }).then(()=>{}).catch(()=>{})));
+      await Promise.all(local.map(p => client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', created_by:session.user.id, ...(p.refDate ? { reference_date:p.refDate } : {}) }).then(()=>{}).catch(()=>{})));
       const { data, error } = await client.from('projects').select('*').order('created_at', { ascending:true });
       if(error || !data) return;
-      DB.setProjectsFromCloud(data.map(p => ({ id:p.id, name:p.name, client:p.client||'', icon:p.icon||'compass' })));
+      DB.setProjectsFromCloud(data.map(p => ({ id:p.id, name:p.name, client:p.client||'', icon:p.icon||'compass', refDate:p.reference_date||'' })));
     } catch(e) { console.warn('Supabase: falha ao sincronizar projetos', e); }
   }
 
@@ -2404,7 +2570,7 @@ const Cloud = (() => {
     // de um projeto na tela de outro. Antes disso não existia esse filtro: era um pool só.
     const pid = DB.getActiveProjectId();
     try {
-      const [mods, tasks, decs, docs, budLines, costActs, settings, team] = await Promise.all([
+      const [mods, tasks, decs, docs, budLines, costActs, settings, team, scopeRows, riskRows, timeRows] = await Promise.all([
         client.from('wbs_modules').select('*').eq('project_id', pid),
         client.from('wbs_tasks').select('*').eq('project_id', pid),
         client.from('decisions').select('*').eq('project_id', pid),
@@ -2412,8 +2578,23 @@ const Cloud = (() => {
         client.from('budget_lines').select('*').eq('project_id', pid),
         client.from('cost_actuals').select('*').eq('project_id', pid),
         client.from('project_settings').select('*').eq('project_id', pid),
-        client.from('team_members').select('*').eq('project_id', pid)
+        client.from('team_members').select('*').eq('project_id', pid),
+        client.from('scope_changes').select('*').eq('project_id', pid),
+        client.from('risks').select('*').eq('project_id', pid),
+        client.from('time_entries').select('*').eq('project_id', pid).order('work_date', { ascending:false }).limit(5000)
       ]);
+      // Tabelas que antes só existiam neste navegador: se a nuvem ainda está vazia e há dado local, SOBE o local
+      // (migração única, sem perder nada); se a nuvem já tem dado, ela manda.
+      [['scope_changes', scopeRows, () => typeof Scope !== 'undefined' && Scope.resetCache(), () => typeof Scope !== 'undefined' && Scope.render()],
+       ['risks', riskRows, () => typeof Risks !== 'undefined' && Risks.resetCache(), () => typeof Risks !== 'undefined' && Risks.render()],
+       ['time_entries', timeRows, () => typeof Hours !== 'undefined' && Hours.resetCache(), () => typeof Hours !== 'undefined' && Hours.render()]
+      ].forEach(([table, res, reset, draw]) => {
+        if(!res || res.error || !res.data) return;
+        const m = ROW[table];
+        if(res.data.length) DB.set(m.local, res.data.map(m.fromDb));
+        else { const local = DB.get(m.local) || []; if(local.length) pushMany(table, local); }
+        reset(); draw();
+      });
       if(mods.data) {
         const wbs = mods.data.map(m => ({
           id:m.id, label:m.label, status:m.status, pct:m.pct, start:m.start_date, end:m.end_date, startActual:m.start_actual||null, endActual:m.end_actual||null, responsavel:m.responsavel||'', lastEditedBy:m.last_edited_by||'', lastEditedAt:m.last_edited_at||null, critical:m.critical, predecessors:m.predecessors||[], origin:m.origin||undefined,
@@ -2541,6 +2722,43 @@ const Cloud = (() => {
     } catch(e) { console.warn('Supabase: falha ao buscar decisões da diretoria', e); return []; }
   }
 
+  // Tabelas novas (escopo, riscos, horas): upsert/delete por linha e em lote (importação de planilha)
+  function pushRow(table, x) {
+    if(!client || !session || !ROW[table]) return;
+    track(client.from(table).upsert(ROW[table].toDb(x, DB.getActiveProjectId())).then(r => { if(r && r.error) cloudSyncFailed(r.error); }).catch(cloudSyncFailed));
+  }
+  function pushMany(table, rows) {
+    if(!client || !session || !ROW[table] || !rows.length) return;
+    const pid = DB.getActiveProjectId();
+    for(let i = 0; i < rows.length; i += 200) {
+      track(client.from(table).upsert(rows.slice(i, i + 200).map(x => ROW[table].toDb(x, pid))).then(r => { if(r && r.error) cloudSyncFailed(r.error); }).catch(cloudSyncFailed));
+    }
+  }
+  function deleteRow(table, id) {
+    if(!client || !session || !ROW[table]) return;
+    track(client.from(table).delete().eq('project_id', DB.getActiveProjectId()).eq('id', id).then(()=>{}).catch(cloudSyncFailed));
+  }
+
+  // Mensagens (WhatsApp/e-mail): tabelas só do administrador (RLS) e funções de borda. Sem sessão devolvem um erro tratável.
+  const NO_SESSION = { data:null, error:{ message:'Não conectado ao Supabase.' } };
+  function msgTable(name) {
+    if(!client || !session) { const t = { then:(res) => Promise.resolve(NO_SESSION).then(res) }; ['select','insert','update','upsert','delete','eq','in','order','limit','single','maybeSingle'].forEach(k => { t[k] = () => t; }); return t; }
+    return client.from(name);
+  }
+  async function invokeFn(name, body) {
+    if(!client || !session) return { error:'Não conectado ao Supabase.' };
+    try {
+      const { data, error } = await client.functions.invoke(name, { body });
+      if(error) {
+        let detail = '';
+        try { if(error.context && typeof error.context.json === 'function') { const b = await error.context.json(); detail = (b && b.error) || ''; } } catch(e2) {}
+        return { error: detail || error.message || 'Falha ao chamar a função.' };
+      }
+      if(data && data.error) return { error: data.error };
+      return { data };
+    } catch(e) { return { error: e.message || 'Falha ao chamar a função.' }; }
+  }
+
   function pushDecision(d) {
     if(!client || !session) return;
     track(client.from('decisions').upsert({ id:d.id, severity:d.severity, pct:d.pct, title:d.title, body:d.body, sources:d.sources, status:d.status, actions:d.actions, resolved_at:d.resolvedAt||null, project_id:DB.getActiveProjectId(), origin:d.origin||null }).then(()=>{}).catch(cloudSyncFailed));
@@ -2622,12 +2840,10 @@ const Cloud = (() => {
   async function clearProjectData(projectId) {
     if(!client || !session || !projectId) return;
     try {
-      await client.from('wbs_tasks').delete().eq('project_id', projectId);
-      await client.from('wbs_modules').delete().eq('project_id', projectId);
-      await client.from('decisions').delete().eq('project_id', projectId);
-      await client.from('documents').delete().eq('project_id', projectId);
-      await client.from('cost_actuals').delete().eq('project_id', projectId);
-      await client.from('budget_lines').delete().eq('project_id', projectId);
+      for(const t of PROJECT_DATA_TABLES) {
+        const { error } = await client.from(t).delete().eq('project_id', projectId);
+        if(error) throw new Error(t + ': ' + error.message);
+      }
       pushAuditEvent('project_data_cleared', `Dados do projeto "${projectId}" apagados da nuvem`, { projectId });
     } catch(e) { console.warn('Falha ao limpar dados do projeto na nuvem', e); }
   }
@@ -2657,13 +2873,11 @@ const Cloud = (() => {
     }).then(()=>{}).catch(()=>{});
     T.show('🗑️ Apagando dados compartilhados na nuvem…');
     try {
-      // tasks/actuals antes de módulos/linhas por causa das foreign keys
-      await client.from('wbs_tasks').delete().not('id', 'is', null);
-      await client.from('wbs_modules').delete().not('id', 'is', null);
-      await client.from('decisions').delete().not('id', 'is', null);
-      await client.from('documents').delete().not('id', 'is', null);
-      await client.from('cost_actuals').delete().not('id', 'is', null);
-      await client.from('budget_lines').delete().not('id', 'is', null);
+      // Ordem da lista central: filhas antes das mães (chaves estrangeiras)
+      for(const t of PROJECT_DATA_TABLES) {
+        const { error } = await client.from(t).delete().not('id', 'is', null);
+        if(error) throw new Error(t + ': ' + error.message);
+      }
     } catch(e) { T.show('❌ Falha ao apagar dados da nuvem: ' + (e.message || e)); return; }
     if(typeof DB !== 'undefined' && DB.factoryReset) DB.factoryReset();
     T.show('✅ Reset completo! Recarregando…');
@@ -2674,7 +2888,7 @@ const Cloud = (() => {
     saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, doSignUp, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
-    pushDecision, deleteDecision, pushDocument, deleteDocument,
+    pushDecision, deleteDecision, pushDocument, deleteDocument, pushRow, pushMany, deleteRow, msgTable, invokeFn,
     pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual, resetForNewUsers, clearProjectData,
     pushAuditEvent, fetchAuditLog, pushSnapshot, fetchSnapshots, fetchAllSnapshots, pushProjectSetting,
     pushBoardDecision, deleteBoardDecision, pullBoardDecisions, pushProject, grantSelfProjectAccess,
@@ -2756,7 +2970,6 @@ const Forecast = (() => {
     return max;
   }
 
-  const SF_TODAY = new Date(2026, 5, 20); // mesma data-referência fixa usada no Gantt/WBS/Dashboard
   function sfParseDate(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
   function sfFmtIso(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
   function sfEffectivePct(it) { return it.status === 'grn' ? 100 : (typeof it.pct === 'number' ? it.pct : 0); }
@@ -2767,6 +2980,7 @@ const Forecast = (() => {
   // entregas de primeiro nível) — nunca a IA "adivinhando o futuro", é extrapolação linear do
   // ritmo atual, deixada explícita como tal em qualquer texto que mostre este resultado.
   function scheduleForecast(projectId) {
+    const SF_TODAY = Clock.today(projectId);
     const wbs = (typeof DB !== 'undefined') ? (DB.getForProject(projectId, 'wbs') || []) : [];
     const valid = wbs.filter(m => m.start && m.end);
     if(valid.length < 2) return null; // dado insuficiente pra medir ritmo — não inventa previsão
@@ -3076,6 +3290,28 @@ const AuditLog = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: core/clock ─ "Hoje" do app. Antes era 20/06/2026 fixo em 6 lugares (herança da
+     demonstração): para dado real distorcia atraso, previsão de entrega e SPI. Agora é o dia real;
+     só um projeto com data de referência própria (refDate — os de demonstração) usa uma data fixa. -->
+<script data-module="core/clock">
+const Clock = (() => {
+  function parseIso(s) { const [y,m,d] = String(s).split('-').map(Number); return new Date(y, (m||1)-1, d||1); }
+  function iso(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+  function today(projectId) {
+    try {
+      if(typeof DB !== 'undefined') {
+        const pid = projectId || DB.getActiveProjectId();
+        const p = DB.listProjects().find(x => x.id === pid);
+        if(p && /^\d{4}-\d{2}-\d{2}$/.test(p.refDate || '')) return parseIso(p.refDate);
+      }
+    } catch(e) { /* sem projeto/DB ainda: cai no dia real */ }
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  }
+  return { today, iso, parseIso };
+})();
+</script>
+
 <script data-module="core/db">
 const DB = (() => {
   const PROJECTS_KEY = 'pmo_projects_v1';
@@ -3086,9 +3322,9 @@ const DB = (() => {
 
   function defaultProjects() {
     return [
-      { id:'nexus', name:'Portal Nexus', client:'Controle de estoque', icon:'compass' },
-      { id:'valdori', name:'Valdori Dist.', client:'Autoatendimento financeiro', icon:'building' },
-      { id:'beltrano', name:'Grupo Beltrano', client:'Gestão de frota', icon:'truck' }
+      { id:'nexus', name:'Portal Nexus', client:'Controle de estoque', icon:'compass', refDate:'2026-06-20' },
+      { id:'valdori', name:'Valdori Dist.', client:'Autoatendimento financeiro', icon:'building', refDate:'2026-06-20' },
+      { id:'beltrano', name:'Grupo Beltrano', client:'Gestão de frota', icon:'truck', refDate:'2026-06-20' }
     ];
   }
 
@@ -3097,6 +3333,10 @@ const DB = (() => {
     try { const raw = localStorage.getItem(PROJECTS_KEY); projects = raw ? JSON.parse(raw) : defaultProjects(); }
     catch(e) { projects = defaultProjects(); }
     if(!Array.isArray(projects) || !projects.length) projects = defaultProjects();
+    // Lista salva antes de existir a data de referência: os 3 projetos de DEMONSTRAÇÃO a recebem (a mesma regra da migração do banco)
+    let migrated = false;
+    projects.forEach(p => { if(!p.refDate && ['nexus','valdori','beltrano'].includes(p.id)) { p.refDate = '2026-06-20'; migrated = true; } });
+    if(migrated) persistProjects();
     return projects;
   }
   function persistProjects() { try { localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects)); } catch(e){} }
@@ -3132,7 +3372,7 @@ const DB = (() => {
   function storageKeyFor(projectId) { return projectId === 'nexus' ? 'pmo_db_v1' : ('pmo_db_v1__' + projectId); }
 
   function seedEmpty() {
-    return { version:1, wbs:[], decisions:[], repository:[], stakeholders:[], trail:[], lessons:[], scopeChanges:[], team:[], meetings:[], estimateHistory:[], scenarios:[], budgetLines:[], costActuals:[], pmoProfile:null };
+    return { version:1, wbs:[], decisions:[], repository:[], stakeholders:[], trail:[], lessons:[], scopeChanges:[], team:[], meetings:[], estimateHistory:[], scenarios:[], budgetLines:[], costActuals:[], risks:[], timeEntries:[], pmoProfile:null };
   }
 
   function seed() {
@@ -3276,6 +3516,18 @@ const DB = (() => {
         { id:'ca6', label:'Inventário e trilha de auditoria — sprint 1', amount:15000, date:'2026-06-08', budgetLineId:'bl4', kind:'real' },
         { id:'ca7', label:'Perfis de acesso e logs — implementação', amount:16000, date:'2026-05-25', budgetLineId:'bl5', kind:'real' }
       ],
+      risks: [
+        { id:'RK-001', title:'Atraso na homologação do leitor de código de barras pelo fornecedor', category:'externo', probability:4, impact:4, status:'mitigando', response:'mitigar', mitigation:'Antecipar o envio do kit de homologação e manter fornecedor alternativo em contato.', contingency:'Usar conferência manual por matrícula até a homologação.', owner:'Carla Nogueira', reviewOn:'2026-06-27', identifiedOn:'2026-05-12' },
+        { id:'RK-002', title:'Dependência de uma única pessoa para as integrações com o ERP', category:'recursos', probability:3, impact:4, status:'aberto', response:'mitigar', mitigation:'Documentar as integrações e incluir um segundo desenvolvedor nas próximas entregas.', contingency:'', owner:'Rafael Duarte', reviewOn:'2026-07-04', identifiedOn:'2026-05-20' },
+        { id:'RK-003', title:'Mudanças de escopo acumuladas sem aprovação formal', category:'escopo', probability:4, impact:3, status:'aberto', response:'evitar', mitigation:'Comitê semanal para decidir cada solicitação antes de entrar no plano.', contingency:'', owner:'Carla Nogueira', reviewOn:'2026-06-24', identifiedOn:'2026-06-02' },
+        { id:'RK-004', title:'Perda de dados na migração do cadastro de matrículas', category:'tecnico', probability:2, impact:5, status:'aberto', response:'mitigar', mitigation:'Ensaio de migração em ambiente de teste com conferência por amostragem.', contingency:'Restaurar do backup e repetir fora do horário comercial.', owner:'Marina Costa', reviewOn:'2026-07-01', identifiedOn:'2026-05-28' }
+      ],
+      timeEntries: [
+        { id:'te1', person:'Marina Costa', date:'2026-06-15', hours:7.5, wbsRef:'1. Rastreabilidade por matrícula', note:'Integração com NF de entrada' },
+        { id:'te2', person:'Marina Costa', date:'2026-06-16', hours:8, wbsRef:'1. Rastreabilidade por matrícula', note:'' },
+        { id:'te3', person:'Diego Almeida', date:'2026-06-16', hours:6, wbsRef:'', note:'Reunião e revisão de código' },
+        { id:'te4', person:'Diego Almeida', date:'2026-06-17', hours:8.5, wbsRef:'', note:'' }
+      ],
       pmoProfile: { type:'controle', setAt:'2026-06-01T00:00:00.000Z' }
     };
   }
@@ -3298,6 +3550,8 @@ const DB = (() => {
     if(!Array.isArray(c.scenarios)) c.scenarios = defaults.scenarios;
     if(!Array.isArray(c.budgetLines)) c.budgetLines = defaults.budgetLines;
     if(!Array.isArray(c.costActuals)) c.costActuals = defaults.costActuals;
+    if(!Array.isArray(c.risks)) c.risks = defaults.risks;
+    if(!Array.isArray(c.timeEntries)) c.timeEntries = defaults.timeEntries;
     if(c.pmoProfile === undefined) c.pmoProfile = defaults.pmoProfile;
     return c;
   }
@@ -3335,7 +3589,7 @@ const DB = (() => {
     cache = null;
     load();
     // Cada módulo de página guarda os dados numa variável própria — precisa ser avisado da troca
-    [WBS, Repo, Decisions, Trail, Stakeholders, Lessons, Scope, Burnout, Meetings, Estimates, WI, Budget].forEach(mod => {
+    [WBS, Repo, Decisions, Trail, Stakeholders, Lessons, Scope, Burnout, Meetings, Estimates, WI, Budget, Risks, Hours].forEach(mod => {
       if(typeof mod !== 'undefined' && mod && typeof mod.resetCache === 'function') mod.resetCache();
     });
     if(typeof renderAllModules === 'function') renderAllModules();
@@ -3761,7 +4015,7 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','help','xray'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','help','xray'];
   function go(id) {
     pages.forEach(p => {
       const el = document.getElementById('p-'+p);
@@ -3782,6 +4036,8 @@ const R = (() => {
     if(id === 'execview' && typeof ExecView !== 'undefined') ExecView.render();
     if(id === 'resources' && typeof Resources !== 'undefined') Resources.render();
     if(id === 'budget' && typeof Budget !== 'undefined') Budget.render();
+    if(id === 'risks' && typeof Risks !== 'undefined') Risks.render();
+    if(id === 'hours' && typeof Hours !== 'undefined') Hours.render();
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
     if(id === 'settings' && typeof PmoProfiles !== 'undefined') PmoProfiles.render();
     if(id === 'settings' && typeof ProjectMembers !== 'undefined') ProjectMembers.render();
@@ -3805,8 +4061,8 @@ const Nav = (() => {
   // Mapa página → grupo, usado para abrir automaticamente o grupo certo ao navegar
   const GROUP_OF = {
     decisions:'sbg-decisao', loop:'sbg-decisao', trail:'sbg-decisao', report:'sbg-decisao',
-    wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento',
-    burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe',
+    wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento', risks:'sbg-planejamento',
+    burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe', hours:'sbg-equipe',
     lessons:'sbg-conhecimento', meetings:'sbg-conhecimento', repository:'sbg-conhecimento', chat:'sbg-conhecimento',
     portfolio:'sbg-projetos', prioritization:'sbg-projetos'
   };
@@ -3880,7 +4136,7 @@ const Nav = (() => {
   };
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
-    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos',
+    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas',
     burnout:'Burnout Radar', resources:'Recursos', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
     portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
@@ -3908,8 +4164,9 @@ const Nav = (() => {
 })();
 
 const SettingsTabs = (() => {
-  const TABS = ['ia','pmo','cloud','notif'];
+  const TABS = ['ia','pmo','cloud','notif','msg'];
   function show(tab) {
+    if(tab === 'msg' && typeof Messaging !== 'undefined') Messaging.render();
     TABS.forEach(t => {
       const panel = document.getElementById('settings-panel-' + t);
       const btn = document.getElementById('stab-' + t);
@@ -3933,10 +4190,12 @@ const CmdK = (() => {
     { label:'Relatório', page:'report', icon:'file-report', group:'Decisão & Acompanhamento' },
     { label:'WBS', page:'wbs', icon:'sitemap', group:'Planejamento' },
     { label:'Scope Changes', page:'scope', icon:'git-diff', group:'Planejamento' },
+    { label:'Riscos', page:'risks', icon:'shield-exclamation', group:'Planejamento' },
     { label:'Estimativas IA', page:'estimates', icon:'ruler', group:'Planejamento' },
     { label:'What-If', page:'whatif', icon:'arrows-split', group:'Planejamento' },
     { label:'Burnout Radar', page:'burnout', icon:'heartbeat', group:'Equipe' },
     { label:'Recursos', page:'resources', icon:'users-group', group:'Equipe' },
+    { label:'Horas', page:'hours', icon:'clock-hour-4', group:'Equipe' },
     { label:'Stakeholders', page:'stakeholders', icon:'users', group:'Equipe' },
     { label:'Lições Aprendidas', page:'lessons', icon:'books', group:'Conhecimento' },
     { label:'Atas e Ações', page:'meetings', icon:'notes', group:'Conhecimento' },
@@ -5752,6 +6011,8 @@ function renderAllModules() {
   Stakeholders.render();
   Lessons.render();
   Scope.render();
+  Risks.render();
+  Hours.render();
   Burnout.render();
   Meetings.render();
   Report.render();
@@ -6152,7 +6413,7 @@ const Dashboard = (() => {
     const decisions = DB.get('decisions') || [];
     const repository = DB.get('repository') || [];
     const stakeholders = DB.get('stakeholders') || [];
-    const today = new Date(2026, 5, 20); // mesma data-referência usada no Gantt ("hoje" do projeto de exemplo
+    const today = Clock.today();
 
     setText('dash-doc-count', repository.length);
     const pendentes = decisions.filter(d => d.status === 'pending');
@@ -6264,6 +6525,15 @@ const Dashboard = (() => {
         alerts.push({ sev:'Crítico', cls:'b-red', title: d.title, sub:'Decisão crítica pendente', page:'decisions', label:'Ver decisão' });
       });
     }
+    // Riscos críticos em aberto (nota 15–25 no registro de riscos) e revisões de risco vencidas
+    if(P.get('criticalRiskAlerts') && typeof RiskMatrix !== 'undefined') {
+      const todayD = Clock.today();
+      (DB.get('risks') || []).filter(r => RiskMatrix.isOpen(r) && RiskMatrix.scoreOf(r) >= 15).forEach(r => {
+        alerts.push({ sev:'Crítico', cls:'b-red', title: `${r.title} — risco crítico (nota ${RiskMatrix.scoreOf(r)})`, sub: r.owner ? `Responsável: ${r.owner}` : 'Sem responsável definido', page:'risks', label:'Ver riscos' });
+      });
+      const vencidas = (DB.get('risks') || []).filter(r => RiskMatrix.isOpen(r) && r.reviewOn && r.reviewOn < Clock.iso(todayD)).length;
+      if(vencidas) alerts.push({ sev:'Médio', cls:'b-amb', title: `${vencidas} risco(s) com revisão vencida`, sub:'Reavalie probabilidade e impacto', page:'risks', label:'Revisar' });
+    }
     // "Lembrete de decisões pendentes" — desligado por padrão (Configurações → Notificações);
     // só existe cadência de "mais de 5 dias" pra decisões que têm createdAt (criadas depois
     // desta preferência existir, ou puxadas do Supabase — decisões antigas sem essa data ficam
@@ -6282,7 +6552,7 @@ const Dashboard = (() => {
     // Caminho crítico em risco — entrega que está no caminho crítico (folga zero, CPM real) E já
     // com prazo vencido, não só "está atrasada" (que já vira KPI, não alerta) — é a combinação das
     // duas coisas que torna crítico: atraso em algo que NÃO tem folga atrasa o projeto inteiro.
-    const today = new Date(2026, 5, 20); // mesma data-referência fixa usada no Gantt/WBS/Dashboard
+    const today = Clock.today();
     const wbs = DB.get('wbs') || [];
     const cpmItems = [];
     wbs.forEach(m => { cpmItems.push({ id:m.id, label:m.label, start:m.start, end:m.end, predecessors:m.predecessors||[], status:m.status });
@@ -6358,7 +6628,7 @@ const Dashboard = (() => {
     const mediaCarga = Math.round(team.reduce((s,m) => s + (m.workloadPct||0), 0) / team.length);
     const teamNames = new Set(team.map(m => (m.name||'').trim().toLowerCase()).filter(Boolean));
     const conflitos = DB.computePortfolioAllocation().filter(p => p.overallocated && teamNames.has(p.name.trim().toLowerCase())).length;
-    const today = new Date(2026, 5, 20);
+    const today = Clock.today();
     const seteDiasAtras = new Date(today); seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
     const reunioes7d = (DB.get('meetings')||[]).filter(mt => { const d = mt.date ? new Date(mt.date) : null; return d && d >= seteDiasAtras && d <= today; }).length;
 
@@ -6645,6 +6915,310 @@ const Lessons = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: services/risk-matrix ─ Matriz de riscos 5×5 (PMI): probabilidade × impacto. Lógica pura, sem DOM -->
+<script data-module="services/risk-matrix">
+const RiskMatrix = (() => {
+  const PROB = { 1:'Muito baixa', 2:'Baixa', 3:'Média', 4:'Alta', 5:'Muito alta' };
+  const IMPACT = { 1:'Muito baixo', 2:'Baixo', 3:'Médio', 4:'Alto', 5:'Muito alto' };
+  // Ordem alfabética (Outros por último, como "o resto")
+  const CATEGORIES = [['custo','Custo'],['escopo','Escopo'],['externo','Externo'],['legal','Legal'],['prazo','Prazo'],['qualidade','Qualidade'],['recursos','Recursos'],['tecnico','Técnico'],['outros','Outros']];
+  const RESPONSES = [['aceitar','Aceitar'],['evitar','Evitar'],['mitigar','Mitigar'],['transferir','Transferir']];
+  const STATUSES = [['aberto','Aberto'],['aceito','Aceito'],['encerrado','Encerrado'],['mitigando','Mitigando'],['ocorrido','Ocorrido']];
+  // Faixas da nota (probabilidade × impacto) — as MESMAS do banco (migração de riscos) e do assistente de mensagens
+  const LEVELS = {
+    critico: { key:'critico', label:'Crítico', badge:'b-red', min:15 },
+    alto:    { key:'alto',    label:'Alto',    badge:'b-amb', min:10 },
+    medio:   { key:'medio',   label:'Médio',   badge:'b-acc', min:5 },
+    baixo:   { key:'baixo',   label:'Baixo',   badge:'b-grn', min:1 }
+  };
+  const label = (list, key) => (list.find(x => x[0] === key) || [key, key])[1];
+  const score = (p, i) => (Number(p) || 0) * (Number(i) || 0);
+  function level(sc) { return sc >= 15 ? LEVELS.critico : sc >= 10 ? LEVELS.alto : sc >= 5 ? LEVELS.medio : LEVELS.baixo; }
+  // "Em aberto" = ainda exige gestão. Aceito/encerrado/ocorrido saem do semáforo (ocorrido virou problema real).
+  const isOpen = r => r.status === 'aberto' || r.status === 'mitigando';
+  const scoreOf = r => score(r.probability, r.impact);
+
+  // today: Date. Revisão vencida = data de revisão anterior a hoje, em risco ainda aberto.
+  function summarize(risks, today) {
+    const open = (risks || []).filter(isOpen);
+    const byLevel = { critico:0, alto:0, medio:0, baixo:0 };
+    open.forEach(r => { byLevel[level(scoreOf(r)).key]++; });
+    const t = today ? today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0') : '';
+    const overdue = open.filter(r => r.reviewOn && t && r.reviewOn < t).length;
+    return { open: open.length, byLevel, overdueReviews: overdue, total: (risks || []).length };
+  }
+  // Dimensão "Riscos" do índice de saúde (0–100): cada risco aberto tira pontos conforme a faixa.
+  function healthScore(risks) {
+    const s = summarize(risks, null);
+    return Math.max(0, Math.min(100, 100 - s.byLevel.critico * 25 - s.byLevel.alto * 10 - s.byLevel.medio * 3));
+  }
+  function cellRisks(risks, p, i) { return (risks || []).filter(r => isOpen(r) && Number(r.probability) === p && Number(r.impact) === i); }
+  return { PROB, IMPACT, CATEGORIES, RESPONSES, STATUSES, LEVELS, label, score, scoreOf, level, isOpen, summarize, healthScore, cellRisks };
+})();
+</script>
+
+<!-- ■ MODULE: services/sheet-import ─ Leitura de planilhas (CSV/Excel/MS Project) → linhas validadas. Lógica pura, sem DOM -->
+<script data-module="services/sheet-import">
+const SheetParse = (() => {
+  const norm = s => String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9%]+/g, ' ').trim();
+
+  // CSV/TSV com aspas, vírgula/ponto e vírgula/tabulação (detecta pelo cabeçalho). Tolera \r\n e aspas escapadas ("").
+  function parseDelimited(text) {
+    text = String(text || '').replace(/^﻿/, '');
+    const firstLine = text.split(/\r?\n/, 1)[0] || '';
+    const counts = { '\t': 0, ';': 0, ',': 0 };
+    let q = false;
+    for(const ch of firstLine) { if(ch === '"') q = !q; else if(!q && ch in counts) counts[ch]++; }
+    const delim = counts['\t'] >= counts[';'] && counts['\t'] >= counts[','] && counts['\t'] > 0 ? '\t' : (counts[';'] >= counts[','] && counts[';'] > 0 ? ';' : ',');
+    const rows = []; let row = [], cell = '', inQ = false;
+    for(let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if(inQ) {
+        if(ch === '"') { if(text[i + 1] === '"') { cell += '"'; i++; } else inQ = false; }
+        else cell += ch;
+      } else if(ch === '"') inQ = true;
+      else if(ch === delim) { row.push(cell); cell = ''; }
+      else if(ch === '\n' || ch === '\r') { if(ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); cell = ''; rows.push(row); row = []; }
+      else cell += ch;
+    }
+    if(cell !== '' || row.length) { row.push(cell); rows.push(row); }
+    return rows.filter(r => r.some(c => String(c).trim() !== ''));
+  }
+
+  const pad = n => String(n).padStart(2, '0');
+  const validYmd = (y, m, d) => { const dt = new Date(y, m - 1, d); return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d; };
+  // Aceita 2026-05-05, 05/05/2026, 5/5/26, "seg 05/05/26", 05-05-2026 e número serial do Excel (ex.: 46147)
+  function parseDate(v) {
+    if(v == null || v === '') return null;
+    if(v instanceof Date && !isNaN(v)) return v.getFullYear() + '-' + pad(v.getMonth() + 1) + '-' + pad(v.getDate());
+    if(typeof v === 'number' && v > 20000 && v < 80000) { const d = new Date(Math.round((v - 25569) * 86400000)); return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()); }
+    const s = String(v).trim();
+    let m = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if(m && validYmd(+m[1], +m[2], +m[3])) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+    m = s.match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
+    if(m) { let y = +m[3]; if(y < 100) y += 2000; if(validYmd(y, +m[2], +m[1])) return `${y}-${pad(m[2])}-${pad(m[1])}`; }
+    return null;
+  }
+  // "1.234,56", "R$ 1.234,56", "1234.56", "45%", "-3" → número (ou null)
+  function parseNumber(v) {
+    if(v == null || v === '') return null;
+    if(typeof v === 'number') return isFinite(v) ? v : null;
+    let s = String(v).trim().replace(/[R$\s%]/g, '').replace(/[^\d.,\-]/g, '');
+    if(!/\d/.test(s)) return null;
+    const lastC = s.lastIndexOf(','), lastD = s.lastIndexOf('.');
+    if(lastC >= 0 && lastD >= 0) s = lastC > lastD ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+    else if(lastC >= 0) s = s.replace(',', '.');
+    else if(lastD >= 0 && /^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, ''); // "1.234" / "1.234.567" = milhar no padrão brasileiro
+    const n = parseFloat(s);
+    return isFinite(n) ? n : null;
+  }
+  // "7:30" → 7.5 ; "7,5" → 7.5 ; "8h" → 8 ; "1h30" → 1.5
+  function parseHours(v) {
+    if(v == null || v === '') return null;
+    if(typeof v === 'number') return isFinite(v) ? v : null;
+    const s = String(v).trim().toLowerCase();
+    let m = s.match(/^(\d{1,2}):(\d{2})$/); if(m) return +m[1] + (+m[2]) / 60;
+    m = s.match(/^(\d{1,2})\s*h\s*(\d{1,2})?\s*(?:min|m)?$/); if(m) return +m[1] + (m[2] ? (+m[2]) / 60 : 0);
+    return parseNumber(s.replace(/h$/, ''));
+  }
+  return { norm, parseDelimited, parseDate, parseNumber, parseHours };
+})();
+
+const SheetImport = (() => {
+  // Campos de cada destino: key, rótulo, obrigatório e sinônimos (já normalizados: minúsculo, sem acento).
+  // Cobre colunas de exportação do MS Project (pt/en), Excel livre e do próprio PMO Compass.
+  const TARGETS = {
+    wbs: { label:'Cronograma (entregas e subtarefas)', fields:[
+      { key:'name', label:'Nome da entrega/tarefa', req:true, syn:['nome da tarefa','tarefa','task name','name','nome','entrega','atividade','descricao','titulo'] },
+      { key:'start', label:'Início', syn:['inicio','start','data de inicio','data inicio','inicio planejado'] },
+      { key:'end', label:'Término', syn:['termino','fim','finish','end','data de termino','data fim','termino planejado'] },
+      { key:'pct', label:'% concluído', syn:['% concluida','% concluido','% complete','% completo','percentual','progresso','avanco','% de conclusao','% conclusao'] },
+      { key:'level', label:'Nível (hierarquia)', syn:['nivel da estrutura de topicos','nivel','outline level','nivel eap','nivel da eap'] },
+      { key:'id', label:'ID da linha', syn:['id','n','numero','no'] },
+      { key:'pred', label:'Predecessoras', syn:['predecessoras','predecessora','predecessors','depende de','dependencias'] },
+      { key:'owner', label:'Responsável', syn:['nomes dos recursos','recursos','resource names','responsavel','dono','owner'] } ] },
+    team: { label:'Equipe', fields:[
+      { key:'name', label:'Nome', req:true, syn:['nome','pessoa','colaborador','membro','name','recurso'] },
+      { key:'role', label:'Função', syn:['funcao','cargo','papel','role'] },
+      { key:'allocation', label:'Alocação no projeto (%)', syn:['alocacao','% alocacao','alocacao %','allocation'] },
+      { key:'workload', label:'Carga de trabalho (%)', syn:['carga','% carga','carga de trabalho','workload','utilizacao'] } ] },
+    costs: { label:'Custos lançados', fields:[
+      { key:'label', label:'Descrição', req:true, syn:['descricao','historico','lancamento','item','despesa','label','nome'] },
+      { key:'amount', label:'Valor (R$)', req:true, syn:['valor','custo','total','montante','amount','valor r$','r$'] },
+      { key:'date', label:'Data', syn:['data','data do lancamento','date','vencimento','competencia'] },
+      { key:'kind', label:'Tipo (real/comprometido)', syn:['tipo','natureza','kind','status'] } ] },
+    risks: { label:'Riscos', fields:[
+      { key:'title', label:'Risco', req:true, syn:['risco','titulo','descricao do risco','nome','risk'] },
+      { key:'probability', label:'Probabilidade (1–5)', req:true, syn:['probabilidade','prob','p','likelihood','probability'] },
+      { key:'impact', label:'Impacto (1–5)', req:true, syn:['impacto','imp','i','impact','severidade'] },
+      { key:'category', label:'Categoria', syn:['categoria','tipo','category'] },
+      { key:'owner', label:'Responsável', syn:['responsavel','dono','owner'] },
+      { key:'response', label:'Resposta', syn:['resposta','estrategia','response'] },
+      { key:'mitigation', label:'Ação de mitigação', syn:['mitigacao','plano de mitigacao','acao','plano de acao','mitigation'] },
+      { key:'status', label:'Situação', syn:['situacao','status'] } ] },
+    hours: { label:'Horas apontadas', fields:[
+      { key:'person', label:'Pessoa', req:true, syn:['pessoa','nome','colaborador','recurso','person','resource'] },
+      { key:'date', label:'Data', req:true, syn:['data','dia','date'] },
+      { key:'hours', label:'Horas', req:true, syn:['horas','hs','h','tempo','hours','duracao','esforco'] },
+      { key:'wbsRef', label:'Entrega/atividade', syn:['entrega','atividade','tarefa','task','projeto','fase'] },
+      { key:'note', label:'Observação', syn:['observacao','obs','nota','comentario','note','descricao'] } ] }
+  };
+
+  // Escolhe, para cada campo, a coluna cujo cabeçalho melhor combina (igualdade vence "contém"); uma coluna só atende um campo.
+  function autoMap(headers, target) {
+    const t = TARGETS[target]; const map = {}; const used = new Set();
+    const hs = headers.map(SheetParse.norm);
+    const tryMatch = pred => t.fields.forEach(f => {
+      if(map[f.key] != null) return;
+      const idx = hs.findIndex((h, i) => !used.has(i) && h && f.syn.some(s => pred(h, s)));
+      if(idx >= 0) { map[f.key] = idx; used.add(idx); }
+    });
+    tryMatch((h, s) => h === s);
+    tryMatch((h, s) => s.length > 3 && (h.startsWith(s + ' ') || h.endsWith(' ' + s)));
+    return map;
+  }
+
+  // Procura a linha de cabeçalho nas primeiras 15 linhas (planilhas costumam ter título acima da tabela).
+  function detectHeaderRow(matrix, target) {
+    let best = 0, bestScore = -1;
+    for(let r = 0; r < Math.min(matrix.length, 15); r++) {
+      const score = Object.keys(autoMap(matrix[r].map(String), target)).length;
+      if(score > bestScore) { bestScore = score; best = r; }
+    }
+    return best;
+  }
+
+  const clampInt = (n, lo, hi) => Math.max(lo, Math.min(hi, Math.round(n)));
+  const MAX_TEXT = 300;
+  const cell = (row, map, key) => (map[key] == null || map[key] < 0) ? '' : String(row[map[key]] == null ? '' : row[map[key]]).trim();
+  const raw = (row, map, key) => (map[key] == null || map[key] < 0) ? null : row[map[key]];
+  // Texto que vira célula de planilha ao exportar não deve poder executar fórmula (CSV injection)
+  const safeText = s => String(s).slice(0, MAX_TEXT);
+
+  const KIND = { real:'real', realizado:'real', pago:'real', gasto:'real', comprometido:'comprometido', previsto:'comprometido', empenhado:'comprometido' };
+  const CATEGORY = Object.fromEntries([['custo','custo'],['cost','custo'],['escopo','escopo'],['scope','escopo'],['externo','externo'],['external','externo'],['legal','legal'],['juridico','legal'],['prazo','prazo'],['schedule','prazo'],['cronograma','prazo'],['qualidade','qualidade'],['quality','qualidade'],['recursos','recursos'],['equipe','recursos'],['pessoas','recursos'],['tecnico','tecnico'],['tecnologia','tecnico'],['technical','tecnico']]);
+  const RESPONSE = { aceitar:'aceitar', accept:'aceitar', evitar:'evitar', avoid:'evitar', mitigar:'mitigar', mitigate:'mitigar', transferir:'transferir', transfer:'transferir' };
+  const RSTATUS = { aberto:'aberto', open:'aberto', mitigando:'mitigando', aceito:'aceito', ocorrido:'ocorrido', encerrado:'encerrado', fechado:'encerrado', closed:'encerrado' };
+
+  // Converte a matriz (linhas já sem o cabeçalho) em registros do app. Nunca lança: problemas vão para errors/warnings
+  // (linha 1-based da planilha original = rowOffset + índice + 1). ctx.today: 'YYYY-MM-DD'.
+  function build(target, rows, map, ctx = {}, rowOffset = 0) {
+    const out = [], errors = [], warnings = [];
+    const T = TARGETS[target];
+    const err = (i, msg) => errors.push({ line: rowOffset + i + 1, msg });
+    const warn = (i, msg) => warnings.push({ line: rowOffset + i + 1, msg });
+    T.fields.filter(f => f.req && map[f.key] == null).forEach(f => errors.push({ line: 0, msg: `Falta mapear a coluna obrigatória: ${f.label}.` }));
+    if(errors.length) return { rows: out, errors, warnings };
+
+    if(target === 'wbs') {
+      let mod = null; let seq = 0;
+      const idByRow = new Map(); const pending = [];
+      rows.forEach((r, i) => {
+        const name = safeText(cell(r, map, 'name'));
+        if(!name) { if(r.some(c => String(c).trim())) err(i, 'Linha sem nome — ignorada.'); return; }
+        const start = SheetParse.parseDate(raw(r, map, 'start')), end = SheetParse.parseDate(raw(r, map, 'end'));
+        if(cell(r, map, 'start') && !start) warn(i, `"${name}": data de início não reconhecida — deixada em branco.`);
+        if(cell(r, map, 'end') && !end) warn(i, `"${name}": data de término não reconhecida — deixada em branco.`);
+        if(start && end && end < start) { warn(i, `"${name}": término antes do início — datas trocadas.`); }
+        const [s, e] = (start && end && end < start) ? [end, start] : [start, end];
+        let pct = SheetParse.parseNumber(raw(r, map, 'pct'));
+        if(pct != null && pct > 0 && pct <= 1 && String(raw(r, map, 'pct')).indexOf('%') < 0 && String(raw(r, map, 'pct')).indexOf('.') >= 0) pct = pct * 100; // 0,45 = 45%
+        pct = pct == null ? 0 : clampInt(pct, 0, 100);
+        const lvl = map.level != null ? (parseInt(cell(r, map, 'level'), 10) || 1) : 1;
+        const rowId = cell(r, map, 'id');
+        const owner = safeText(cell(r, map, 'owner'));
+        const id = (lvl <= 1 || !mod) ? 'w' + (ctx.idSeed || Date.now().toString(36)) + (++seq) : 't' + (ctx.idSeed || Date.now().toString(36)) + (++seq);
+        if(rowId) idByRow.set(rowId, id);
+        const preds = cell(r, map, 'pred');
+        if(preds) pending.push({ id, preds });
+        if(lvl <= 1 || !mod) {
+          mod = { id, label: name, status: pct >= 100 ? 'grn' : 'neu', pct, start: s || '', end: e || '', critical: false, predecessors: [], children: [], responsavel: owner };
+          out.push(mod);
+        } else {
+          mod.children.push({ id, label: name, status: pct >= 100 ? 'grn' : 'neu', start: s || '', end: e || '', predecessors: [], responsavel: owner, _pct: pct });
+        }
+      });
+      // Predecessoras do MS Project referenciam o ID da linha (ex.: "3;5FS+2d"); só vale se a linha de origem foi importada
+      const all = out.flatMap(m => [m, ...m.children]);
+      pending.forEach(p => {
+        const item = all.find(x => x.id === p.id); if(!item) return;
+        // só o número de cada item da lista ("3FS+2d" = linha 3, com defasagem que o app não usa)
+        const ids = p.preds.split(/[;,]/).map(tok => (tok.trim().match(/^\d+/) || [])[0]).map(n => idByRow.get(n)).filter(x => x && x !== p.id);
+        item.predecessors = [...new Set(ids)];
+      });
+      // Módulo cujo % não veio mas tem subtarefas: média das subtarefas (mesma regra do WBS do app)
+      out.forEach(m => {
+        if(m.children.length && !m.pct) m.pct = clampInt(m.children.reduce((a, c) => a + (c._pct || 0), 0) / m.children.length, 0, 100);
+        m.children.forEach(c => { delete c._pct; });
+      });
+    }
+
+    else if(target === 'team') {
+      const seen = new Set((ctx.existingNames || []).map(SheetParse.norm));
+      rows.forEach((r, i) => {
+        const name = safeText(cell(r, map, 'name')); if(!name) { if(r.some(c => String(c).trim())) err(i, 'Linha sem nome — ignorada.'); return; }
+        if(seen.has(SheetParse.norm(name))) { warn(i, `"${name}" já existe na equipe — não duplicado.`); return; }
+        seen.add(SheetParse.norm(name));
+        const al = SheetParse.parseNumber(raw(r, map, 'allocation')), wl = SheetParse.parseNumber(raw(r, map, 'workload'));
+        out.push({ name, role: safeText(cell(r, map, 'role')), allocationPct: al == null ? 100 : clampInt(al, 0, 200), workloadPct: wl == null ? 50 : clampInt(wl, 0, 200), signals: [], recommendation: '', actionPage: '' });
+      });
+    }
+
+    else if(target === 'costs') {
+      const seen = new Set((ctx.existingKeys || []));
+      rows.forEach((r, i) => {
+        const label = safeText(cell(r, map, 'label')); if(!label && !r.some(c => String(c).trim())) return;
+        if(!label) { err(i, 'Linha sem descrição — ignorada.'); return; }
+        const amount = SheetParse.parseNumber(raw(r, map, 'amount'));
+        if(amount == null || amount < 0) { err(i, `"${label}": valor inválido — ignorada.`); return; }
+        const date = SheetParse.parseDate(raw(r, map, 'date')) || ctx.today || '';
+        if(cell(r, map, 'date') && !SheetParse.parseDate(raw(r, map, 'date'))) warn(i, `"${label}": data não reconhecida — usada a data de hoje.`);
+        const kind = KIND[SheetParse.norm(cell(r, map, 'kind'))] || 'real';
+        const key = SheetParse.norm(label) + '|' + amount + '|' + date;
+        if(seen.has(key)) { warn(i, `"${label}" (mesmo valor e data) já existe — não duplicado.`); return; }
+        seen.add(key);
+        out.push({ label, amount: Math.round(amount * 100) / 100, date, budgetLineId: '', kind });
+      });
+    }
+
+    else if(target === 'risks') {
+      const seen = new Set((ctx.existingTitles || []).map(SheetParse.norm));
+      rows.forEach((r, i) => {
+        const title = safeText(cell(r, map, 'title')); if(!title && !r.some(c => String(c).trim())) return;
+        if(title.length < 3) { err(i, 'Risco sem título (mínimo 3 letras) — ignorado.'); return; }
+        const p = SheetParse.parseNumber(raw(r, map, 'probability')), im = SheetParse.parseNumber(raw(r, map, 'impact'));
+        if(p == null || im == null || p < 1 || p > 5 || im < 1 || im > 5) { err(i, `"${title}": probabilidade e impacto devem estar entre 1 e 5 — ignorado.`); return; }
+        if(seen.has(SheetParse.norm(title))) { warn(i, `"${title}" já existe — não duplicado.`); return; }
+        seen.add(SheetParse.norm(title));
+        out.push({ title, category: CATEGORY[SheetParse.norm(cell(r, map, 'category'))] || 'outros', probability: Math.round(p), impact: Math.round(im),
+          owner: safeText(cell(r, map, 'owner')), response: RESPONSE[SheetParse.norm(cell(r, map, 'response'))] || 'mitigar',
+          mitigation: safeText(cell(r, map, 'mitigation')), status: RSTATUS[SheetParse.norm(cell(r, map, 'status'))] || 'aberto', description: '', contingency: '', reviewOn: '' });
+      });
+    }
+
+    else if(target === 'hours') {
+      const seen = new Set(ctx.existingKeys || []);
+      rows.forEach((r, i) => {
+        const person = safeText(cell(r, map, 'person')); if(!person && !r.some(c => String(c).trim())) return;
+        if(person.length < 2) { err(i, 'Linha sem nome da pessoa — ignorada.'); return; }
+        const date = SheetParse.parseDate(raw(r, map, 'date'));
+        if(!date) { err(i, `${person}: data inválida — ignorada.`); return; }
+        const hours = SheetParse.parseHours(raw(r, map, 'hours'));
+        if(hours == null || hours <= 0 || hours > 24) { err(i, `${person} em ${date}: horas devem estar entre 0 e 24 — ignorada.`); return; }
+        const h = Math.round(hours * 100) / 100;
+        const key = SheetParse.norm(person) + '|' + date + '|' + h + '|' + SheetParse.norm(cell(r, map, 'wbsRef'));
+        if(seen.has(key)) { warn(i, `${person} em ${date} (${h} h) já existe — não duplicado.`); return; }
+        seen.add(key);
+        out.push({ person, date, hours: h, wbsRef: safeText(cell(r, map, 'wbsRef')), note: safeText(cell(r, map, 'note')), memberId: '' });
+      });
+    }
+    return { rows: out, errors, warnings };
+  }
+
+  return { TARGETS, autoMap, detectHeaderRow, build };
+})();
+</script>
+
 <!-- ■ MODULE: pages/scope-js -->
 <script data-module="pages/scope-js">
 const Scope = (() => {
@@ -6758,18 +7332,21 @@ const Scope = (() => {
     const cost = parseFloat(document.getElementById('scope-f-cost').value) || 0;
     const risk = document.getElementById('scope-f-risk').value.trim();
     if(!title) { T.show('⚠️ Dê um título para a mudança.'); return; }
+    let savedItem = null;
 
     if(modalCtx.mode === 'add') {
       const id = genId();
-      data.unshift({ id, status:'pending', title, body, impactDays:days, impactCost:cost, riskNote:risk, createdAt:new Date().toISOString().slice(0,10) });
+      data.unshift({ id, status:'pending', title, body, impactDays:days, impactCost:cost, riskNote:risk, createdAt:Clock.iso(Clock.today()) });
+      savedItem = data[0];
       T.show(`✅ ${id} registrada!`);
       Trail.log(`Nova mudança de escopo: ${title} (${id})`, Auth.getName(), 'Aguardando aprovação', 'b-amb');
     } else {
       const x = data.find(i => i.id === modalCtx.id);
-      if(x) { x.title=title; x.body=body; x.impactDays=days; x.impactCost=cost; x.riskNote=risk; }
+      if(x) { x.title=title; x.body=body; x.impactDays=days; x.impactCost=cost; x.riskNote=risk; savedItem = x; }
       T.show('✅ Mudança atualizada!');
     }
     persist();
+    if(savedItem && typeof Cloud !== 'undefined') Cloud.pushRow('scope_changes', savedItem);
     render();
     closeModal();
   }
@@ -6780,6 +7357,7 @@ const Scope = (() => {
     if(!confirm('Excluir este registro de mudança de escopo?')) return;
     data = data.filter(x => x.id !== modalCtx.id);
     persist();
+    if(typeof Cloud !== 'undefined') Cloud.deleteRow('scope_changes', modalCtx.id);
     render();
     closeModal();
     T.show('🗑️ Registro excluído.');
@@ -6792,6 +7370,7 @@ const Scope = (() => {
     if(!x) return;
     x.status = status;
     persist();
+    if(typeof Cloud !== 'undefined') Cloud.pushRow('scope_changes', x);
     render();
     const s = STATUS[status];
     Trail.log(`${id} — ${x.title}: ${s.label.toLowerCase()}`, Auth.getName(), s.label, s.cls);
@@ -6799,6 +7378,830 @@ const Scope = (() => {
   }
 
   return { render, openAdd, openEdit, saveFromModal, deleteFromModal, setStatus, closeModal, resetCache };
+})();
+</script>
+
+<!-- ■ MODULE: pages/risks-js -->
+<script data-module="pages/risks-js">
+const Risks = (() => {
+  let data = null;
+  let modalCtx = { mode:null, id:null };
+  const filter = { q:'', status:'abertos', level:'', cell:null };
+
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const ensureLoaded = () => { if(!data) data = DB.get('risks'); return data; };
+  const resetCache = () => { data = null; };
+  const persist = () => DB.set('risks', data);
+  const today = () => Clock.today();
+  const todayIso = () => Clock.iso(today());
+  const fmtDate = iso => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
+  const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  function nextId() {
+    const nums = ensureLoaded().map(r => parseInt(String(r.id).replace(/\D/g, ''), 10)).filter(n => !isNaN(n));
+    return 'RK-' + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, '0');
+  }
+  const levelOf = r => RiskMatrix.level(RiskMatrix.scoreOf(r));
+
+  function matches(r) {
+    const open = RiskMatrix.isOpen(r);
+    if(filter.status === 'abertos' && !open) return false;
+    if(filter.status === 'encerrados' && !(r.status === 'aceito' || r.status === 'encerrado')) return false;
+    if(filter.status === 'ocorridos' && r.status !== 'ocorrido') return false;
+    if(filter.level && levelOf(r).key !== filter.level) return false;
+    if(filter.cell && !(Number(r.probability) === filter.cell.p && Number(r.impact) === filter.cell.i)) return false;
+    if(filter.q) {
+      const hay = norm([r.title, r.owner, r.description, RiskMatrix.label(RiskMatrix.CATEGORIES, r.category)].join(' '));
+      if(!hay.includes(norm(filter.q))) return false;
+    }
+    return true;
+  }
+
+  function renderKpis() {
+    const root = document.getElementById('rk-kpis'); if(!root) return;
+    const s = RiskMatrix.summarize(ensureLoaded(), today());
+    const k = (lbl, val, sub, dot) => `<div class="kpi"><div class="kpi-lbl"><span class="sdot ${dot}"></span>${lbl}</div><div class="kpi-val">${val}</div><div class="kpi-delta">${sub}</div></div>`;
+    root.innerHTML =
+      k('Críticos (nota 15–25)', s.byLevel.critico, s.byLevel.critico ? 'exigem ação imediata' : 'nenhum em aberto', s.byLevel.critico ? 'sdot-red' : 'sdot-grn') +
+      k('Altos (nota 10–14)', s.byLevel.alto, s.byLevel.alto ? 'acompanhar de perto' : 'nenhum em aberto', s.byLevel.alto ? 'sdot-amb' : 'sdot-grn') +
+      k('Riscos em aberto', s.open, `de ${s.total} registrados`, 'sdot-acc') +
+      k('Revisões vencidas', s.overdueReviews, s.overdueReviews ? 'passaram da data de revisão' : 'tudo em dia', s.overdueReviews ? 'sdot-amb' : 'sdot-grn');
+  }
+
+  function renderMatrix() {
+    const root = document.getElementById('rk-matrix-root'); if(!root) return;
+    const risks = ensureLoaded();
+    let html = '<table class="rk-mx" role="grid" aria-label="Matriz de riscos: probabilidade nas linhas, impacto nas colunas"><thead><tr><th class="rk-rowh" scope="col"><span style="position:absolute;left:-9999px">Probabilidade por impacto</span></th>';
+    for(let i = 1; i <= 5; i++) html += `<th scope="col">${RiskMatrix.IMPACT[i]}</th>`;
+    html += '</tr></thead><tbody>';
+    for(let p = 5; p >= 1; p--) {
+      html += `<tr><th class="rk-rowh" scope="row">${RiskMatrix.PROB[p]}</th>`;
+      for(let i = 1; i <= 5; i++) {
+        const n = RiskMatrix.cellRisks(risks, p, i).length;
+        const lv = RiskMatrix.level(p * i);
+        const sel = filter.cell && filter.cell.p === p && filter.cell.i === i;
+        const aria = `Probabilidade ${RiskMatrix.PROB[p].toLowerCase()}, impacto ${RiskMatrix.IMPACT[i].toLowerCase()}, nota ${p * i}, faixa ${lv.label.toLowerCase()}: ${n} risco(s) em aberto`;
+        html += `<td><button type="button" class="rk-cell rk-L-${lv.key}${sel ? ' sel' : ''}" data-p="${p}" data-i="${i}" aria-label="${aria}" aria-pressed="${sel ? 'true' : 'false'}" onclick="Risks.pickCell(this)">${n ? n : '<span class="rk-zero">·</span>'}</button></td>`;
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table><div class="rk-axis">Impacto → (colunas) · Probabilidade ↑ (linhas)</div>';
+    root.innerHTML = html;
+    const lg = document.getElementById('rk-legend');
+    if(lg) lg.innerHTML = ['critico','alto','medio','baixo'].map(k => { const L = RiskMatrix.LEVELS[k]; return `<span class="badge ${L.badge}">${L.label} · ${L.min}${k === 'critico' ? '–25' : k === 'alto' ? '–14' : k === 'medio' ? '–9' : '–4'}</span>`; }).join('');
+  }
+
+  function renderList() {
+    const root = document.getElementById('rk-list-root'); if(!root) return;
+    const all = ensureLoaded();
+    const list = all.filter(matches).sort((a, b) => RiskMatrix.scoreOf(b) - RiskMatrix.scoreOf(a) || String(a.id).localeCompare(String(b.id)));
+    const note = document.getElementById('rk-filter-note');
+    if(note) {
+      const parts = [];
+      if(filter.cell) parts.push(`célula: probabilidade ${RiskMatrix.PROB[filter.cell.p].toLowerCase()} × impacto ${RiskMatrix.IMPACT[filter.cell.i].toLowerCase()}`);
+      note.innerHTML = `${list.length} de ${all.length} risco(s)` + (parts.length ? ` · filtrando por ${esc(parts.join(', '))} <button class="link-a" onclick="Risks.clearCell()">limpar</button>` : '');
+    }
+    if(!all.length) { root.innerHTML = '<div class="rk-empty">Nenhum risco registrado. Use “Registrar risco” ou importe uma planilha.</div>'; return; }
+    if(!list.length) { root.innerHTML = '<div class="rk-empty">Nenhum risco com esses filtros.</div>'; return; }
+    const t = todayIso();
+    root.innerHTML = list.map(r => {
+      const sc = RiskMatrix.scoreOf(r), L = RiskMatrix.level(sc);
+      const overdue = RiskMatrix.isOpen(r) && r.reviewOn && r.reviewOn < t;
+      const stBadge = r.status === 'ocorrido' ? 'b-red' : (RiskMatrix.isOpen(r) ? 'b-acc' : 'b-grn');
+      return `<div class="rk-item${RiskMatrix.isOpen(r) ? '' : ' rk-dim'}" role="button" tabindex="0" data-id="${esc(r.id)}" onclick="Risks.openEditEl(this)" onkeydown="Risks.keyEl(event,this)" aria-label="Risco ${esc(r.id)}: ${esc(r.title)}. Nota ${sc}, faixa ${L.label.toLowerCase()}. Abrir para editar">
+        <div class="rk-score rk-L-${L.key}"><b>${sc}</b><span>P${esc(r.probability)} × I${esc(r.impact)}</span></div>
+        <div class="rk-main">
+          <div class="rk-title">${esc(r.title)}</div>
+          <div class="rk-meta">
+            <span class="badge ${L.badge}">${L.label}</span>
+            <span class="badge ${stBadge}">${esc(RiskMatrix.label(RiskMatrix.STATUSES, r.status))}</span>
+            <span class="chip">${esc(RiskMatrix.label(RiskMatrix.CATEGORIES, r.category))}</span>
+            <span class="chip">${esc(RiskMatrix.label(RiskMatrix.RESPONSES, r.response))}</span>
+            ${r.owner ? `<span class="chip"><i class="ti ti-user"></i>${esc(r.owner)}</span>` : '<span class="chip c-wa"><i class="ti ti-user-question"></i>sem responsável</span>'}
+            ${r.reviewOn ? `<span class="chip${overdue ? ' c-wa' : ''}"><i class="ti ti-calendar"></i>revisão ${fmtDate(r.reviewOn)}${overdue ? ' · vencida' : ''}</span>` : ''}
+          </div>
+          ${r.mitigation ? `<div class="rk-note"><strong>Ação:</strong> ${esc(r.mitigation)}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function render() { renderKpis(); renderMatrix(); renderList(); }
+
+  // ── filtros (a busca redesenha só a lista, para não perder o foco do campo) ──
+  function setQuery(v) { filter.q = v; renderList(); }
+  function setFilter(k, v) { filter[k] = v; renderList(); }
+  function pickCell(btn) {
+    const p = +btn.dataset.p, i = +btn.dataset.i;
+    filter.cell = (filter.cell && filter.cell.p === p && filter.cell.i === i) ? null : { p, i };
+    if(filter.cell && filter.status !== 'abertos') { filter.status = 'abertos'; const s = document.getElementById('rk-f-status'); if(s) s.value = 'abertos'; }
+    renderMatrix(); renderList();
+  }
+  function clearCell() { filter.cell = null; renderMatrix(); renderList(); }
+  function keyEl(e, el) { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEditEl(el); } }
+  function openEditEl(el) { openEdit(el.dataset.id); }
+
+  // ── modal ──
+  function fillSelects() {
+    const opts = (list, sel) => list.map(([k, l]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${l}</option>`).join('');
+    const scale = labels => '<option value="">Selecione…</option>' + [1,2,3,4,5].map(n => `<option value="${n}">${n} — ${labels[n]}</option>`).join('');
+    document.getElementById('rk-f-prob').innerHTML = scale(RiskMatrix.PROB);
+    document.getElementById('rk-f-impact').innerHTML = scale(RiskMatrix.IMPACT);
+    document.getElementById('rk-f-cat').innerHTML = opts(RiskMatrix.CATEGORIES);
+    document.getElementById('rk-f-resp').innerHTML = opts(RiskMatrix.RESPONSES, 'mitigar');
+    document.getElementById('rk-f-status-m').innerHTML = opts(RiskMatrix.STATUSES, 'aberto');
+    const names = [...new Set((DB.get('team') || []).map(m => m.name).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    document.getElementById('rk-owner-list').innerHTML = names.map(n => `<option value="${esc(n)}">`).join('');
+  }
+  function previewScore() {
+    const p = +document.getElementById('rk-f-prob').value, i = +document.getElementById('rk-f-impact').value;
+    const box = document.getElementById('rk-f-preview'); if(!box) return;
+    if(!p || !i) { box.textContent = 'Escolha probabilidade e impacto para ver a nota.'; return; }
+    const L = RiskMatrix.level(p * i);
+    box.innerHTML = `<b>${p * i}</b><span>${p} (probabilidade) × ${i} (impacto) = nota ${p * i} → <span class="badge ${L.badge}">${L.label}</span></span>`;
+  }
+  const val = id => document.getElementById(id).value;
+  function fill(r) {
+    fillSelects();
+    document.getElementById('rk-f-title').value = r ? r.title : '';
+    document.getElementById('rk-f-desc').value = r ? (r.description || '') : '';
+    document.getElementById('rk-f-prob').value = r ? String(r.probability) : '';
+    document.getElementById('rk-f-impact').value = r ? String(r.impact) : '';
+    document.getElementById('rk-f-cat').value = r ? (r.category || 'outros') : 'tecnico';
+    document.getElementById('rk-f-resp').value = r ? (r.response || 'mitigar') : 'mitigar';
+    document.getElementById('rk-f-status-m').value = r ? (r.status || 'aberto') : 'aberto';
+    document.getElementById('rk-f-review').value = r ? (r.reviewOn || '') : '';
+    document.getElementById('rk-f-owner').value = r ? (r.owner || '') : '';
+    document.getElementById('rk-f-mit').value = r ? (r.mitigation || '') : '';
+    document.getElementById('rk-f-cont').value = r ? (r.contingency || '') : '';
+    previewScore();
+  }
+  function openAdd() {
+    if(!Auth.guard('business')) return;
+    modalCtx = { mode:'add', id:null };
+    document.getElementById('rk-modal-title').textContent = 'Registrar risco';
+    document.getElementById('rk-f-delete-btn').style.display = 'none';
+    fill(null);
+    document.getElementById('modal-risk').classList.remove('hidden');
+    document.getElementById('rk-f-title').focus();
+  }
+  function openEdit(id) {
+    if(!Auth.guard('business')) return;
+    const r = ensureLoaded().find(x => x.id === id); if(!r) return;
+    modalCtx = { mode:'edit', id };
+    document.getElementById('rk-modal-title').textContent = id + ' — editar risco';
+    document.getElementById('rk-f-delete-btn').style.display = '';
+    fill(r);
+    document.getElementById('modal-risk').classList.remove('hidden');
+    document.getElementById('rk-f-title').focus();
+  }
+  function closeModal() { document.getElementById('modal-risk').classList.add('hidden'); }
+
+  function saveFromModal() {
+    if(!Auth.guard('business')) return;
+    ensureLoaded();
+    const title = val('rk-f-title').trim();
+    const p = +val('rk-f-prob'), i = +val('rk-f-impact');
+    if(title.length < 3) { T.show('⚠️ Descreva o risco (mínimo 3 letras).'); document.getElementById('rk-f-title').focus(); return; }
+    if(!p || !i) { T.show('⚠️ Escolha a probabilidade e o impacto.'); return; }
+    const status = val('rk-f-status-m');
+    const fields = { title, description: val('rk-f-desc').trim(), probability: p, impact: i, category: val('rk-f-cat'), response: val('rk-f-resp'), status,
+      reviewOn: val('rk-f-review'), owner: val('rk-f-owner').trim(), mitigation: val('rk-f-mit').trim(), contingency: val('rk-f-cont').trim() };
+    let item, logText;
+    if(modalCtx.mode === 'add') {
+      item = { id: nextId(), identifiedOn: todayIso(), closedOn: '', ...fields };
+      data.unshift(item);
+      logText = `Novo risco ${item.id}: ${title} (nota ${p * i})`;
+    } else {
+      item = data.find(x => x.id === modalCtx.id); if(!item) return;
+      const prev = { score: RiskMatrix.scoreOf(item), status: item.status };
+      Object.assign(item, fields);
+      if(status === 'encerrado' && !item.closedOn) item.closedOn = todayIso();
+      if(status !== 'encerrado') item.closedOn = '';
+      logText = `Risco ${item.id} atualizado: ${title}` + (prev.score !== p * i ? ` (nota ${prev.score} → ${p * i})` : '') + (prev.status !== status ? ` · situação: ${RiskMatrix.label(RiskMatrix.STATUSES, status).toLowerCase()}` : '');
+    }
+    persist();
+    Cloud.pushRow('risks', item);
+    const L = RiskMatrix.level(p * i);
+    Trail.log(logText, Auth.getName(), L.label, L.badge);
+    render();
+    closeModal();
+    T.show(`✅ ${esc(item.id)} salvo — nota ${p * i} (${L.label.toLowerCase()})`);
+    if(typeof Dashboard !== 'undefined') Dashboard.render();
+  }
+
+  function deleteFromModal() {
+    if(!Auth.guard('business')) return;
+    ensureLoaded();
+    const r = data.find(x => x.id === modalCtx.id); if(!r) return;
+    if(!confirm('Excluir este risco? Prefira marcar como "Encerrado" para manter o histórico.')) return;
+    data = data.filter(x => x.id !== modalCtx.id);
+    persist();
+    Cloud.deleteRow('risks', r.id);
+    Trail.log(`Risco ${r.id} excluído: ${r.title}`, Auth.getName(), 'Excluído', 'b-neu');
+    render();
+    closeModal();
+    T.show('🗑️ Risco excluído.');
+    if(typeof Dashboard !== 'undefined') Dashboard.render();
+  }
+
+  // Usado pela importação de planilha: recebe registros novos já validados
+  function addMany(items) {
+    ensureLoaded();
+    const created = items.map(x => { const item = { id: nextId(), identifiedOn: todayIso(), closedOn: '', description: '', contingency: '', reviewOn: '', ...x }; data.unshift(item); return item; });
+    persist();
+    Cloud.pushMany('risks', created);
+    render();
+    return created.length;
+  }
+  function listOpen(projectId) { return (projectId ? DB.getForProject(projectId, 'risks') : ensureLoaded()).filter(RiskMatrix.isOpen); }
+
+  return { render, resetCache, openAdd, openEdit, openEditEl, keyEl, saveFromModal, deleteFromModal, closeModal, previewScore, setQuery, setFilter, pickCell, clearCell, addMany, listOpen, titles: () => ensureLoaded().map(r => r.title) };
+})();
+</script>
+
+<!-- ■ MODULE: ui/column-drag-css ─ Colunas de tabela que o usuário reorganiza e redimensiona com o mouse -->
+<style data-module="ui/column-drag-css">
+table[data-col-key] th{position:relative;cursor:grab;user-select:none}
+table[data-col-key] th:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+table[data-col-key] th.col-dragging{background:var(--ad);cursor:grabbing}
+table[data-col-key] th.col-over-l{box-shadow:inset 3px 0 0 var(--acc)}
+table[data-col-key] th.col-over-r{box-shadow:inset -3px 0 0 var(--acc)}
+.col-rz{position:absolute;top:0;right:-3px;width:8px;height:100%;cursor:col-resize;z-index:2}
+.col-rz:hover,.col-rz.on{background:var(--ab)}
+.col-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--t3);margin-top:6px}
+</style>
+
+<!-- ■ MODULE: ui/column-drag ─ Arrastar o título da coluna para mudar a ordem; puxar a borda para mudar a largura.
+     A escolha fica salva neste navegador (preferência de cada pessoa, por tabela). Alternativa de teclado: Alt+←/→ move,
+     Alt+Shift+←/→ muda a largura. Funciona em qualquer <table> com <thead>; linhas com células mescladas (colspan) são ignoradas. -->
+<script data-module="ui/column-drag">
+const ColumnDrag = (() => {
+  const KEY = 'pmo_columns_v1';
+  const MIN_W = 48, MAX_W = 600, STEP = 16;
+  const wired = new WeakSet();
+  let dragCi = null;
+
+  const load = () => { try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); return (o && typeof o === 'object') ? o : {}; } catch(e) { return {}; } };
+  const save = s => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch(e) {} };
+
+  const isPermutation = (o, n) => Array.isArray(o) && o.length === n && [...o].sort((a, b) => a - b).every((v, i) => v === i);
+  // Move a coluna "from" para antes ("after"=false) ou depois ("after"=true) da coluna "to"; devolve a nova ordem
+  function moveOrder(order, from, to, after) {
+    if(from === to) return order.slice();
+    const o = order.filter(c => c !== from);
+    const at = o.indexOf(to);
+    if(at < 0) return order.slice();
+    o.splice(after ? at + 1 : at, 0, from);
+    return o;
+  }
+
+  function stateFor(table, n) {
+    const s = load()[table.dataset.colKey] || {};
+    return { order: isPermutation(s.order, n) ? s.order : null, widths: (s.widths && typeof s.widths === 'object') ? s.widths : {} };
+  }
+  function persist(table, st) {
+    const all = load(), n = table.tHead.rows[0].cells.length;
+    const isDefault = (!st.order || st.order.every((v, i) => v === i)) && !Object.keys(st.widths).length;
+    if(isDefault) delete all[table.dataset.colKey]; else all[table.dataset.colKey] = { order: st.order, widths: st.widths, n };
+    save(all);
+  }
+
+  function allRows(table) { return [...table.tHead.rows].concat([...table.tBodies].flatMap(b => [...b.rows])); }
+  function apply(table) {
+    const head = table.tHead.rows[0], n = head.cells.length;
+    const st = stateFor(table, n);
+    const order = st.order || Array.from({ length: n }, (_, i) => i);
+    allRows(table).forEach(r => {
+      const cells = [...r.cells];
+      if(cells.length !== n || cells.some(c => c.dataset.ci == null)) return;
+      const byCi = new Map(cells.map(c => [+c.dataset.ci, c]));
+      order.forEach(ci => { const c = byCi.get(ci); if(c) r.appendChild(c); });
+    });
+    [...head.cells].forEach(th => {
+      const w = st.widths[th.dataset.ci];
+      th.style.width = w ? w + 'px' : ''; th.style.minWidth = w ? w + 'px' : '';
+    });
+    const tools = table.nextElementSibling && table.nextElementSibling.classList.contains('col-tools') ? table.nextElementSibling : null;
+    if(tools) tools.querySelector('button').style.display = (st.order || Object.keys(st.widths).length) ? '' : 'none';
+  }
+
+  function move(table, from, to, after) {
+    const n = table.tHead.rows[0].cells.length, st = stateFor(table, n);
+    const cur = st.order || Array.from({ length: n }, (_, i) => i);
+    st.order = moveOrder(cur, from, to, after);
+    persist(table, st); apply(table);
+  }
+  function resize(table, ci, w) {
+    const n = table.tHead.rows[0].cells.length, st = stateFor(table, n);
+    st.widths[ci] = Math.max(MIN_W, Math.min(MAX_W, Math.round(w)));
+    persist(table, st); apply(table);
+  }
+  function reset(table) {
+    const all = load(); delete all[table.dataset.colKey]; save(all);
+    [...table.tHead.rows[0].cells].forEach(th => { th.style.width = ''; th.style.minWidth = ''; });
+    const n = table.tHead.rows[0].cells.length;
+    allRows(table).forEach(r => { const cells = [...r.cells]; if(cells.length !== n || cells.some(c => c.dataset.ci == null)) return; cells.sort((a, b) => a.dataset.ci - b.dataset.ci).forEach(c => r.appendChild(c)); });
+    apply(table);
+  }
+
+  function wire(table) {
+    if(wired.has(table)) return; wired.add(table);
+    table.addEventListener('dragstart', e => {
+      const th = e.target.closest && e.target.closest('th'); if(!th || !table.tHead.contains(th)) return;
+      dragCi = +th.dataset.ci; th.classList.add('col-dragging');
+      e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', th.textContent.trim()); } catch(err) {}
+    });
+    table.addEventListener('dragover', e => {
+      const th = e.target.closest && e.target.closest('th'); if(dragCi == null || !th || !table.tHead.contains(th)) return;
+      e.preventDefault();
+      const r = th.getBoundingClientRect(), right = e.clientX > r.left + r.width / 2;
+      [...table.tHead.rows[0].cells].forEach(c => c.classList.remove('col-over-l', 'col-over-r'));
+      if(+th.dataset.ci !== dragCi) th.classList.add(right ? 'col-over-r' : 'col-over-l');
+    });
+    table.addEventListener('drop', e => {
+      const th = e.target.closest && e.target.closest('th'); if(dragCi == null || !th) return;
+      e.preventDefault();
+      const r = th.getBoundingClientRect();
+      move(table, dragCi, +th.dataset.ci, e.clientX > r.left + r.width / 2);
+      dragCi = null;
+    });
+    table.addEventListener('dragend', () => { dragCi = null; [...table.tHead.rows[0].cells].forEach(c => c.classList.remove('col-dragging', 'col-over-l', 'col-over-r')); });
+    // Redimensionar: puxar a borda direita do título
+    table.addEventListener('pointerdown', e => {
+      const h = e.target.closest && e.target.closest('.col-rz'); if(!h) return;
+      e.preventDefault(); e.stopPropagation();
+      const th = h.parentElement, ci = +th.dataset.ci, startX = e.clientX, startW = th.getBoundingClientRect().width;
+      h.classList.add('on'); h.setPointerCapture(e.pointerId);
+      const onMove = ev => { th.style.width = th.style.minWidth = Math.max(MIN_W, Math.min(MAX_W, startW + ev.clientX - startX)) + 'px'; };
+      const onUp = ev => { h.classList.remove('on'); h.removeEventListener('pointermove', onMove); h.removeEventListener('pointerup', onUp); resize(table, ci, startW + ev.clientX - startX); };
+      h.addEventListener('pointermove', onMove); h.addEventListener('pointerup', onUp);
+    });
+    // O arraste nasce no título, nunca na alça de redimensionar
+    table.addEventListener('mousedown', e => { if(e.target.closest && e.target.closest('.col-rz')) { const th = e.target.closest('th'); th.draggable = false; setTimeout(() => { th.draggable = true; }, 0); } });
+    table.addEventListener('keydown', e => {
+      const th = e.target.closest && e.target.closest('th'); if(!th || !e.altKey || !/^Arrow(Left|Right)$/.test(e.key) || !table.tHead.contains(th)) return;
+      e.preventDefault();
+      const ci = +th.dataset.ci, dir = e.key === 'ArrowRight' ? 1 : -1;
+      if(e.shiftKey) resize(table, ci, th.getBoundingClientRect().width + dir * STEP);
+      else {
+        const cells = [...table.tHead.rows[0].cells], pos = cells.indexOf(th), nb = cells[pos + dir];
+        if(nb) move(table, ci, +nb.dataset.ci, dir > 0);
+      }
+      const again = [...table.tHead.rows[0].cells].find(c => +c.dataset.ci === ci); if(again) again.focus();
+    });
+  }
+
+  // Chamar DEPOIS de cada renderização da tabela (o HTML novo perde as marcas; a ordem salva é reaplicada)
+  function enable(table, key) {
+    if(!table || !table.tHead || !table.tHead.rows.length || !key) return;
+    const head = table.tHead.rows[0], n = head.cells.length;
+    if(n < 2 || [...head.cells].some(c => c.colSpan > 1)) return;
+    table.dataset.colKey = key;
+    if(head.cells[0].dataset.ci != null) { apply(table); return; } // mesma renderização: já marcada (marcar de novo trocaria a ordem original pela atual)
+    [...head.cells].forEach((th, i) => {
+      th.dataset.ci = i; th.draggable = true; th.tabIndex = 0;
+      if(!th.querySelector('.col-rz')) { const rz = document.createElement('span'); rz.className = 'col-rz'; rz.setAttribute('aria-hidden', 'true'); th.appendChild(rz); }
+      th.title = (th.getAttribute('title') ? th.getAttribute('title') + ' — ' : '') + 'Arraste para mover; Alt+← → move, Alt+Shift+← → muda a largura';
+    });
+    table.tBodies.length && [...table.tBodies].forEach(b => [...b.rows].forEach(r => { if(r.cells.length === n && ![...r.cells].some(c => c.colSpan > 1)) [...r.cells].forEach((c, i) => { c.dataset.ci = i; }); }));
+    wire(table);
+    if(!(table.nextElementSibling && table.nextElementSibling.classList.contains('col-tools'))) {
+      const tools = document.createElement('div'); tools.className = 'col-tools';
+      tools.innerHTML = '<span>Dica: arraste o título de uma coluna para mudar a ordem; puxe a borda para mudar a largura.</span><button type="button" class="btn btn-sm" style="display:none"><i class="ti ti-restore"></i>Restaurar colunas</button>';
+      tools.querySelector('button').addEventListener('click', () => reset(table));
+      table.insertAdjacentElement('afterend', tools);
+    }
+    apply(table);
+  }
+  // Gantt: a coluna de nomes tem largura própria (variável CSS --gl) que a pessoa ajusta puxando a alça; fica salva neste navegador
+  function enableGantt() {
+    const inner = document.getElementById('gantt-inner'), rz = document.getElementById('gantt-rz');
+    if(!inner || !rz || rz.dataset.wired) return; rz.dataset.wired = '1';
+    const K = 'pmo_gantt_lbl_v1', MIN = 90, MAX = 420;
+    const set = w => inner.style.setProperty('--gl', Math.max(MIN, Math.min(MAX, Math.round(w))) + 'px');
+    const cur = () => parseFloat(getComputedStyle(inner).getPropertyValue('--gl')) || 200;
+    const keep = () => { try { localStorage.setItem(K, String(cur())); } catch(e) {} };
+    try { const v = parseFloat(localStorage.getItem(K)); if(v >= MIN && v <= MAX) set(v); } catch(e) {}
+    rz.addEventListener('pointerdown', e => {
+      e.preventDefault(); rz.setPointerCapture(e.pointerId); rz.classList.add('on');
+      const x0 = e.clientX, w0 = cur();
+      const mv = ev => set(w0 + ev.clientX - x0);
+      const up = () => { rz.classList.remove('on'); rz.removeEventListener('pointermove', mv); rz.removeEventListener('pointerup', up); keep(); };
+      rz.addEventListener('pointermove', mv); rz.addEventListener('pointerup', up);
+    });
+    rz.addEventListener('keydown', e => { if(e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); set(cur() + (e.key === 'ArrowRight' ? STEP : -STEP)); keep(); } });
+    rz.addEventListener('dblclick', () => { inner.style.removeProperty('--gl'); try { localStorage.removeItem(K); } catch(e) {} });
+  }
+  if(typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', enableGantt);
+    if(document.readyState !== 'loading') enableGantt();
+  }
+  return { enable, reset, moveOrder, isPermutation, enableGantt };
+})();
+</script>
+
+<!-- ■ MODULE: pages/hours-js -->
+<script data-module="pages/hours-js">
+const Hours = (() => {
+  let data = null;
+  let modalCtx = { mode:null, id:null };
+  const filter = { period:'semana', person:'' };
+  const SHOW = 60;
+  let showAll = false;
+
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const ensureLoaded = () => { if(!data) data = DB.get('timeEntries'); return data; };
+  const resetCache = () => { data = null; showAll = false; };
+  const persist = () => DB.set('timeEntries', data);
+  const iso = d => Clock.iso(d);
+  const today = () => Clock.today();
+  const fmtDate = s => { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
+  const WD = ['dom','seg','ter','qua','qui','sex','sáb'];
+  const fmtDay = s => { const d = Clock.parseIso(s); return `${WD[d.getDay()]}, ${fmtDate(s)}`; };
+  const fmtH = h => (Math.round(h * 100) / 100).toLocaleString('pt-BR') + ' h';
+  const nameKey = s => String(s || '').trim().toLowerCase();
+  const genId = () => 'te' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+  // Semana = segunda a domingo (calendário brasileiro de trabalho)
+  function range(period) {
+    const t = today();
+    const mon = new Date(t); mon.setDate(t.getDate() - ((t.getDay() + 6) % 7));
+    if(period === 'semana') { const e = new Date(mon); e.setDate(mon.getDate() + 6); return [iso(mon), iso(e)]; }
+    if(period === 'passada') { const s = new Date(mon); s.setDate(mon.getDate() - 7); const e = new Date(mon); e.setDate(mon.getDate() - 1); return [iso(s), iso(e)]; }
+    if(period === 'mes') return [iso(new Date(t.getFullYear(), t.getMonth(), 1)), iso(new Date(t.getFullYear(), t.getMonth() + 1, 0))];
+    return ['0000-01-01', '9999-12-31'];
+  }
+  function inRange(e, r) { return e.date >= r[0] && e.date <= r[1]; }
+  function filtered() {
+    const r = range(filter.period);
+    return ensureLoaded().filter(e => inRange(e, r) && (!filter.person || nameKey(e.person) === nameKey(filter.person)));
+  }
+
+  function peopleList() {
+    const set = new Map();
+    (DB.get('team') || []).forEach(m => { if(m.name) set.set(nameKey(m.name), m.name); });
+    ensureLoaded().forEach(e => { if(e.person && !set.has(nameKey(e.person))) set.set(nameKey(e.person), e.person); });
+    return [...set.values()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
+  function fillPersonFilter() {
+    const sel = document.getElementById('hr-f-person'); if(!sel) return;
+    const list = peopleList();
+    sel.innerHTML = '<option value="">Todas as pessoas</option>' + list.map(n => `<option value="${esc(n)}"${nameKey(n) === nameKey(filter.person) ? ' selected' : ''}>${esc(n)}</option>`).join('');
+  }
+
+  function renderKpis(list) {
+    const root = document.getElementById('hr-kpis'); if(!root) return;
+    const total = list.reduce((s, e) => s + e.hours, 0);
+    const people = new Set(list.map(e => nameKey(e.person)));
+    const days = new Set(list.map(e => e.date));
+    const k = (l, v, sub) => `<div class="kpi"><div class="kpi-lbl">${l}</div><div class="kpi-val">${v}</div><div class="kpi-delta">${sub}</div></div>`;
+    root.innerHTML = k('Horas no período', fmtH(total), `${list.length} apontamento(s)`) + k('Pessoas', people.size, 'com horas no período') +
+      k('Média por pessoa', people.size ? fmtH(total / people.size) : '—', 'no período') + k('Dias com apontamento', days.size, 'distintos');
+  }
+
+  // Carga medida (7 dias) × declarada (Burnout Radar). Capacidade = 40 h × % de alocação.
+  function loadRows() {
+    const t = today(); const from = new Date(t); from.setDate(t.getDate() - 6);
+    const r = [iso(from), iso(t)];
+    const hoursBy = new Map();
+    ensureLoaded().filter(e => inRange(e, r)).forEach(e => hoursBy.set(nameKey(e.person), (hoursBy.get(nameKey(e.person)) || 0) + e.hours));
+    const team = DB.get('team') || [];
+    const rows = team.map(m => {
+      const h = hoursBy.get(nameKey(m.name)) || 0;
+      const cap = 40 * ((m.allocationPct != null ? m.allocationPct : 100) / 100);
+      return { name: m.name, hours: h, measured: cap > 0 ? Math.round(h / cap * 100) : null, declared: m.workloadPct };
+    });
+    const known = new Set(team.map(m => nameKey(m.name)));
+    hoursBy.forEach((h, k) => { if(!known.has(k)) rows.push({ name: (ensureLoaded().find(e => nameKey(e.person) === k) || {}).person || k, hours: h, measured: null, declared: null }); });
+    return rows.sort((a, b) => String(a.name).localeCompare(String(b.name), 'pt-BR'));
+  }
+  function renderLoad() {
+    const root = document.getElementById('hr-load-root'); if(!root) return;
+    const rows = loadRows();
+    if(!rows.length) { root.innerHTML = '<div class="rk-empty">Cadastre a equipe (Burnout Radar) para comparar.</div>'; return; }
+    root.innerHTML = `<div style="overflow-x:auto"><table class="hr-tbl"><thead><tr><th scope="col">Pessoa</th><th scope="col" class="num">Horas (7 dias)</th><th scope="col" class="num">Medida</th><th scope="col" class="num">Declarada</th><th scope="col">Leitura</th></tr></thead><tbody>` +
+      rows.map(r => {
+        let read = '<span class="badge b-neu">sem comparação</span>';
+        if(r.measured != null && r.declared != null) {
+          const d = r.measured - r.declared;
+          read = Math.abs(d) >= 20 ? `<span class="badge b-amb">${d > 0 ? 'acima do declarado' : 'abaixo do declarado'}</span>` : '<span class="badge b-grn">coerente</span>';
+        }
+        return `<tr><td>${esc(r.name)}</td><td class="num">${fmtH(r.hours)}</td><td class="num">${r.measured == null ? '—' : r.measured + '%'}</td><td class="num">${r.declared == null ? '—' : r.declared + '%'}</td><td>${read}</td></tr>`;
+      }).join('') + '</tbody></table></div><div style="font-size:11.5px;color:var(--t3);margin-top:8px">Medida = horas ÷ (40 h × alocação). Declarada = carga cadastrada no Burnout Radar. Ajuste a carga lá se a diferença persistir.</div>';
+    ColumnDrag.enable(root.querySelector('table'), 'horas-carga');
+  }
+
+  function renderList(list) {
+    const root = document.getElementById('hr-list-root'); if(!root) return;
+    if(!ensureLoaded().length) { root.innerHTML = '<div class="rk-empty">Nenhuma hora apontada ainda. Use “Apontar horas” ou importe uma planilha.</div>'; return; }
+    if(!list.length) { root.innerHTML = '<div class="rk-empty">Sem apontamentos neste filtro.</div>'; return; }
+    const sorted = [...list].sort((a, b) => b.date.localeCompare(a.date) || a.person.localeCompare(b.person, 'pt-BR'));
+    const shown = showAll ? sorted : sorted.slice(0, SHOW);
+    let html = '', day = '', dayTotal = {};
+    sorted.forEach(e => { dayTotal[e.date] = (dayTotal[e.date] || 0) + e.hours; });
+    shown.forEach(e => {
+      if(e.date !== day) { day = e.date; html += `<div class="hr-day"><span>${fmtDay(day)}</span><span>${fmtH(dayTotal[day])}</span></div>`; }
+      html += `<div class="hr-row" role="button" tabindex="0" data-id="${esc(e.id)}" onclick="Hours.openEditEl(this)" onkeydown="Hours.keyEl(event,this)" aria-label="Apontamento de ${esc(e.person)}, ${fmtH(e.hours)} em ${fmtDate(e.date)}. Abrir para editar">
+        <div class="hr-h">${fmtH(e.hours)}</div>
+        <div style="min-width:0;flex:1"><div style="font-weight:600;overflow-wrap:anywhere">${esc(e.person)}${e.wbsRef ? ` <span class="chip">${esc(e.wbsRef)}</span>` : ''}</div>${e.note ? `<div style="font-size:12px;color:var(--t2);overflow-wrap:anywhere">${esc(e.note)}</div>` : ''}</div>
+      </div>`;
+    });
+    if(!showAll && sorted.length > SHOW) html += `<button class="btn btn-sm" onclick="Hours.more()">Mostrar mais (${sorted.length - SHOW})</button>`;
+    root.innerHTML = html;
+  }
+
+  function render() {
+    fillPersonFilter();
+    const list = filtered();
+    renderKpis(list); renderLoad(); renderList(list);
+  }
+  function setFilter(k, v) { filter[k] = v; showAll = false; render(); }
+  function more() { showAll = true; renderList(filtered()); }
+  function keyEl(e, el) { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEditEl(el); } }
+  function openEditEl(el) { openEdit(el.dataset.id); }
+
+  // ── modal ──
+  function fillModal(e) {
+    document.getElementById('hr-person-list').innerHTML = peopleList().map(n => `<option value="${esc(n)}">`).join('');
+    const labels = [];
+    (DB.get('wbs') || []).forEach(m => { labels.push(m.label); });
+    document.getElementById('hr-f-wbs').innerHTML = '<option value="">— sem entrega específica —</option>' + labels.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('');
+    document.getElementById('hr-f-person-m').value = e ? e.person : '';
+    document.getElementById('hr-f-date').value = e ? e.date : iso(today());
+    document.getElementById('hr-f-hours').value = e ? e.hours : '';
+    document.getElementById('hr-f-wbs').value = e ? (e.wbsRef || '') : '';
+    if(e && e.wbsRef && document.getElementById('hr-f-wbs').value !== e.wbsRef) { // entrega antiga que não existe mais na WBS: mantém o texto
+      document.getElementById('hr-f-wbs').insertAdjacentHTML('beforeend', `<option value="${esc(e.wbsRef)}">${esc(e.wbsRef)}</option>`);
+      document.getElementById('hr-f-wbs').value = e.wbsRef;
+    }
+    document.getElementById('hr-f-note').value = e ? (e.note || '') : '';
+  }
+  function openAdd() {
+    if(!Auth.guard('business')) return;
+    modalCtx = { mode:'add', id:null };
+    document.getElementById('hr-modal-title').textContent = 'Apontar horas';
+    document.getElementById('hr-f-delete-btn').style.display = 'none';
+    fillModal(null);
+    document.getElementById('modal-hours').classList.remove('hidden');
+    document.getElementById('hr-f-person-m').focus();
+  }
+  function openEdit(id) {
+    if(!Auth.guard('business')) return;
+    const e = ensureLoaded().find(x => x.id === id); if(!e) return;
+    modalCtx = { mode:'edit', id };
+    document.getElementById('hr-modal-title').textContent = 'Editar apontamento';
+    document.getElementById('hr-f-delete-btn').style.display = '';
+    fillModal(e);
+    document.getElementById('modal-hours').classList.remove('hidden');
+    document.getElementById('hr-f-hours').focus();
+  }
+  function closeModal() { document.getElementById('modal-hours').classList.add('hidden'); }
+
+  function saveFromModal() {
+    if(!Auth.guard('business')) return;
+    ensureLoaded();
+    const person = document.getElementById('hr-f-person-m').value.trim();
+    const date = document.getElementById('hr-f-date').value;
+    const hours = parseFloat(String(document.getElementById('hr-f-hours').value).replace(',', '.'));
+    if(person.length < 2) { T.show('⚠️ Informe a pessoa.'); document.getElementById('hr-f-person-m').focus(); return; }
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) { T.show('⚠️ Informe a data.'); return; }
+    if(!(hours > 0 && hours <= 24)) { T.show('⚠️ As horas devem ficar entre 0,25 e 24.'); document.getElementById('hr-f-hours').focus(); return; }
+    // Soma do dia da pessoa não pode passar de 24 h (apontamento duplicado é o erro mais comum)
+    const others = data.filter(x => x.id !== modalCtx.id && nameKey(x.person) === nameKey(person) && x.date === date).reduce((s, x) => s + x.hours, 0);
+    if(others + hours > 24) { T.show(`⚠️ ${esc(person)} já tem ${fmtH(others)} em ${fmtDate(date)} — o total do dia passaria de 24 h.`); return; }
+    const member = (DB.get('team') || []).find(m => nameKey(m.name) === nameKey(person));
+    const fields = { person, date, hours: Math.round(hours * 100) / 100, wbsRef: document.getElementById('hr-f-wbs').value, note: document.getElementById('hr-f-note').value.trim(), memberId: member ? member.id : '' };
+    let item;
+    if(modalCtx.mode === 'add') { item = { id: genId(), ...fields }; data.unshift(item); }
+    else { item = data.find(x => x.id === modalCtx.id); if(!item) return; Object.assign(item, fields); }
+    persist();
+    Cloud.pushRow('time_entries', item);
+    render();
+    closeModal();
+    T.show(`✅ ${fmtH(fields.hours)} apontadas para ${esc(person)}`);
+  }
+  function deleteFromModal() {
+    if(!Auth.guard('business')) return;
+    ensureLoaded();
+    const e = data.find(x => x.id === modalCtx.id); if(!e) return;
+    if(!confirm('Excluir este apontamento?')) return;
+    data = data.filter(x => x.id !== modalCtx.id);
+    persist();
+    Cloud.deleteRow('time_entries', e.id);
+    render();
+    closeModal();
+    T.show('🗑️ Apontamento excluído.');
+  }
+
+  function addMany(items) {
+    ensureLoaded();
+    const created = items.map(x => { const m = (DB.get('team') || []).find(t => nameKey(t.name) === nameKey(x.person)); const item = { ...x, id: genId(), memberId: m ? m.id : '' }; data.unshift(item); return item; });
+    persist();
+    Cloud.pushMany('time_entries', created);
+    render();
+    return created.length;
+  }
+  // Mesma chave que SheetImport.build usa para detectar duplicados
+  function keys() { return ensureLoaded().map(e => `${SheetParse.norm(e.person)}|${e.date}|${e.hours}|${SheetParse.norm(e.wbsRef)}`); }
+
+  // CSV com proteção contra injeção de fórmula (=, +, -, @ no início viram texto)
+  function exportCsv() {
+    const q = v => { let s = String(v == null ? '' : v); if(/^[=+\-@\t\r]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
+    const rows = [['Pessoa','Data','Horas','Entrega','Observação'], ...filtered().sort((a, b) => a.date.localeCompare(b.date)).map(e => [e.person, e.date, String(e.hours).replace('.', ','), e.wbsRef, e.note])];
+    const blob = new Blob(['﻿' + rows.map(r => r.map(q).join(';')).join('\r\n')], { type:'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'horas-' + iso(today()) + '.csv';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    T.show('📥 CSV de horas exportado.');
+  }
+
+  return { render, resetCache, openAdd, openEdit, openEditEl, keyEl, saveFromModal, deleteFromModal, closeModal, setFilter, more, addMany, keys, exportCsv };
+})();
+</script>
+
+<!-- ■ MODULE: ui/import-js -->
+<script data-module="ui/import-js">
+const ImportUi = (() => {
+  let ctx = { target:'risks', matrix:[], headerRow:0, map:{}, sheets:null, fileName:'', result:null };
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const el = id => document.getElementById(id);
+  const MAX_BYTES = 5 * 1024 * 1024, MAX_ROWS = 5000;
+  const STEPS = ['1. Arquivo', '2. Colunas e prévia', '3. Resultado'];
+  const ALLOWED_TARGETS = ['wbs', 'team', 'costs', 'risks', 'hours'];
+
+  function steps(n) { el('imp-steps').innerHTML = STEPS.map((s, i) => `<span class="imp-step${i + 1 === n ? ' on' : ''}"${i + 1 === n ? ' aria-current="step"' : ''}>${s}</span>`).join(''); }
+  function show(n) {
+    [1, 2, 3].forEach(i => { el('imp-step-' + i).style.display = i === n ? '' : 'none'; });
+    steps(n);
+    el('imp-back').style.display = n === 2 ? '' : 'none';
+    el('imp-go').style.display = n === 2 ? '' : 'none';
+    el('imp-cancel').textContent = n === 3 ? 'Fechar' : 'Cancelar';
+  }
+  function expectText(t) {
+    const T_ = SheetImport.TARGETS[t];
+    const names = T_.fields.map(f => f.label + (f.req ? ' *' : '')).join(' · ');
+    const extra = t === 'wbs' ? ' Para o MS Project: use Arquivo → Exportar → Excel/CSV, ou copie as colunas Nome da tarefa, Início, Término, % concluída, Nível e Predecessoras.' : '';
+    return `Colunas reconhecidas (* obrigatória): ${names}.${extra}`;
+  }
+  function open(target) {
+    if(!Auth.guard('business')) return;
+    ctx = { target: ALLOWED_TARGETS.includes(target) ? target : 'risks', matrix:[], headerRow:0, map:{}, sheets:null, fileName:'', result:null };
+    el('imp-target').innerHTML = ALLOWED_TARGETS.map(k => [k, SheetImport.TARGETS[k].label]).sort((a, b) => a[1].localeCompare(b[1], 'pt-BR')).map(([k, l]) => `<option value="${k}"${k === ctx.target ? ' selected' : ''}>${esc(l)}</option>`).join('');
+    el('imp-paste').value = '';
+    el('imp-expect').textContent = expectText(ctx.target);
+    el('imp-file-hint').textContent = 'Aceita .csv, .tsv, .xlsx e .xls (até 5 MB e 5.000 linhas).';
+    show(1);
+    el('modal-import').classList.remove('hidden');
+  }
+  function close() { el('modal-import').classList.add('hidden'); }
+  function changeTarget(t) { if(ALLOWED_TARGETS.includes(t)) { ctx.target = t; el('imp-expect').textContent = expectText(t); } }
+  function back() { show(1); }
+
+  async function handleFiles(files) {
+    const f = files && files[0]; if(!f) return;
+    if(f.size > MAX_BYTES) { T.show('⚠️ Arquivo maior que 5 MB. Divida a planilha em partes.'); return; }
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    ctx.fileName = f.name;
+    try {
+      if(ext === 'xlsx' || ext === 'xls') {
+        T.show('Lendo planilha…');
+        const XLSX = await loadXlsx();
+        const wb = XLSX.read(await f.arrayBuffer(), { type:'array', cellDates:true });
+        ctx.sheets = wb.SheetNames.map(n => ({ name:n, matrix: XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, raw:false, dateNF:'yyyy-mm-dd', defval:'' }) })).filter(s => s.matrix.length);
+        if(!ctx.sheets.length) { T.show('⚠️ A planilha está vazia.'); return; }
+        useMatrix(ctx.sheets[0].matrix);
+      } else if(['csv', 'tsv', 'txt'].includes(ext)) {
+        useMatrix(SheetParse.parseDelimited(await f.text()));
+      } else { T.show('⚠️ Formato não suportado. Use .csv, .xlsx ou .xls.'); }
+    } catch(e) { console.warn('Importação: falha ao ler arquivo', e); T.show('❌ Não consegui ler o arquivo. Salve como CSV (UTF-8) e tente de novo.'); }
+  }
+  function usePasted() {
+    const text = el('imp-paste').value;
+    if(!text.trim()) { T.show('⚠️ Cole as células copiadas do Excel.'); return; }
+    ctx.fileName = 'texto colado'; ctx.sheets = null;
+    useMatrix(SheetParse.parseDelimited(text));
+  }
+  function loadXlsx() {
+    if(window.XLSX) return Promise.resolve(window.XLSX);
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.onload = () => resolve(window.XLSX);
+      s.onerror = () => reject(new Error('Falha ao carregar o leitor de Excel'));
+      document.head.appendChild(s);
+    });
+  }
+
+  function useMatrix(matrix) {
+    matrix = matrix.filter(r => r.some(c => String(c == null ? '' : c).trim() !== ''));
+    if(matrix.length < 2) { T.show('⚠️ Encontrei menos de 2 linhas (cabeçalho + dados).'); return; }
+    if(matrix.length > MAX_ROWS + 15) { T.show(`⚠️ Planilha com mais de ${MAX_ROWS} linhas. Divida em partes.`); return; }
+    ctx.matrix = matrix;
+    ctx.headerRow = SheetImport.detectHeaderRow(matrix, ctx.target);
+    ctx.map = SheetImport.autoMap(matrix[ctx.headerRow].map(String), ctx.target);
+    renderStep2();
+    show(2);
+  }
+  function pickSheet(i) { ctx.sheets && useMatrix(ctx.sheets[+i].matrix); }
+
+  function renderStep2() {
+    const T_ = SheetImport.TARGETS[ctx.target];
+    const pick = el('imp-sheet-pick');
+    if(ctx.sheets && ctx.sheets.length > 1) {
+      pick.style.display = '';
+      pick.innerHTML = `<div class="field-label"><label for="imp-sheet">Aba da planilha</label></div><select class="input" id="imp-sheet" onchange="ImportUi.pickSheet(this.value)">${ctx.sheets.map((s, i) => `<option value="${i}"${s.matrix === ctx.matrix ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}</select>`;
+    } else pick.style.display = 'none';
+    const headers = ctx.matrix[ctx.headerRow].map(h => String(h == null ? '' : h).trim());
+    el('imp-map').innerHTML = T_.fields.map(f => {
+      const opts = '<option value="-1">— não importar —</option>' + headers.map((h, i) => `<option value="${i}"${ctx.map[f.key] === i ? ' selected' : ''}>${esc(h || '(coluna ' + (i + 1) + ')')}</option>`).join('');
+      return `<label for="imp-col-${f.key}" style="font-size:12px;color:var(--t1)">${esc(f.label)}${f.req ? ' <span class="c-wa" aria-label="obrigatório">*</span>' : ''}</label><select class="input" id="imp-col-${f.key}" onchange="ImportUi.setMap('${f.key}', this.value)">${opts}</select>`;
+    }).join('');
+    refreshPreview();
+  }
+  function setMap(key, v) { const i = +v; if(i < 0) delete ctx.map[key]; else ctx.map[key] = i; refreshPreview(); }
+
+  function buildCtx() {
+    const today = Clock.iso(Clock.today());
+    const norm = SheetParse.norm;
+    if(ctx.target === 'team') return { existingNames: (DB.get('team') || []).map(m => m.name) };
+    if(ctx.target === 'risks') return { existingTitles: Risks.titles() };
+    if(ctx.target === 'hours') return { existingKeys: Hours.keys() };
+    if(ctx.target === 'costs') return { today, existingKeys: (DB.get('costActuals') || []).map(a => norm(a.label) + '|' + a.amount + '|' + a.date) };
+    return { idSeed: Date.now().toString(36) };
+  }
+  function compute() {
+    const rows = ctx.matrix.slice(ctx.headerRow + 1);
+    let res = SheetImport.build(ctx.target, rows, ctx.map, buildCtx(), ctx.headerRow + 1);
+    // Cronograma: não duplica entregas que já existem (mesmo nome e mesmo início)
+    if(ctx.target === 'wbs') {
+      const have = new Set((DB.get('wbs') || []).map(m => SheetParse.norm(m.label) + '|' + (m.start || '')));
+      const warnings = res.warnings.slice();
+      res = { ...res, rows: res.rows.filter(m => { const dup = have.has(SheetParse.norm(m.label) + '|' + (m.start || '')); if(dup) warnings.push({ line: 0, msg: `"${m.label}" já existe no cronograma — não duplicada.` }); return !dup; }), warnings };
+    }
+    return res;
+  }
+  function previewCells(r) {
+    switch(ctx.target) {
+      case 'wbs': return [r.label, r.start, r.end, r.pct + '%', (r.children.length) + ' subtarefa(s)'];
+      case 'team': return [r.name, r.role, r.allocationPct + '%', r.workloadPct + '%'];
+      case 'costs': return [r.label, 'R$ ' + r.amount.toLocaleString('pt-BR'), r.date, r.kind];
+      case 'risks': return [r.title, 'P' + r.probability + ' × I' + r.impact + ' = ' + r.probability * r.impact, r.category, r.owner];
+      default: return [r.person, r.date, r.hours + ' h', r.wbsRef];
+    }
+  }
+  function refreshPreview() {
+    ctx.result = compute();
+    const r = ctx.result;
+    el('imp-preview').innerHTML = r.rows.length
+      ? `<table class="hr-tbl"><tbody>${r.rows.slice(0, 8).map(x => '<tr>' + previewCells(x).map(c => `<td>${esc(c)}</td>`).join('') + '</tr>').join('')}</tbody></table>`
+      : '<div class="rk-empty">Nenhuma linha válida com este mapeamento.</div>';
+    const list = (arr, cls, title) => arr.length ? `<div style="margin-bottom:8px"><span class="badge ${cls}">${title}: ${arr.length}</span><ul class="imp-list">${arr.slice(0, 30).map(i => `<li>${i.line ? 'Linha ' + i.line + ': ' : ''}${esc(i.msg)}</li>`).join('')}${arr.length > 30 ? `<li>… e mais ${arr.length - 30}</li>` : ''}</ul></div>` : '';
+    el('imp-issues').innerHTML = `<div style="font-size:12.5px;margin-bottom:6px"><strong>${r.rows.length}</strong> registro(s) serão importados.</div>` + list(r.errors, 'b-red', 'Linhas ignoradas') + list(r.warnings, 'b-amb', 'Avisos');
+    el('imp-go').disabled = !r.rows.length;
+    el('imp-go').style.opacity = r.rows.length ? '' : '.5';
+  }
+
+  function commit() {
+    if(!Auth.guard('business')) return;
+    const r = ctx.result || compute();
+    if(!r.rows.length) { T.show('⚠️ Nada para importar.'); return; }
+    let n = 0;
+    try {
+      if(ctx.target === 'risks') n = Risks.addMany(r.rows);
+      else if(ctx.target === 'hours') n = Hours.addMany(r.rows);
+      else if(ctx.target === 'team') {
+        const team = DB.get('team') || [];
+        const created = r.rows.map(x => ({ id: 'tm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), ...x }));
+        DB.set('team', team.concat(created));
+        created.forEach(m => Cloud.pushTeamMember(m));
+        if(typeof Burnout !== 'undefined') { Burnout.resetCache(); Burnout.render(); }
+        if(typeof Resources !== 'undefined') Resources.render();
+        n = created.length;
+      } else if(ctx.target === 'costs') {
+        const cur = DB.get('costActuals') || [];
+        const created = r.rows.map(x => ({ id: 'ca' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), ...x }));
+        DB.set('costActuals', cur.concat(created));
+        created.forEach(a => Cloud.pushCostActual(a));
+        if(typeof Budget !== 'undefined') { Budget.resetCache(); Budget.render(); }
+        n = created.length;
+      } else if(ctx.target === 'wbs') {
+        const cur = DB.get('wbs') || [];
+        DB.set('wbs', cur.concat(r.rows));
+        r.rows.forEach(m => { Cloud.pushWbsModule(m); m.children.forEach(t => Cloud.pushWbsTask(m.id, t)); });
+        if(typeof WBS !== 'undefined') { WBS.resetCache(); WBS.render(); }
+        n = r.rows.reduce((s, m) => s + 1 + m.children.length, 0);
+      }
+    } catch(e) { console.warn('Importação falhou', e); T.show('❌ A importação falhou. Nada foi duplicado; tente de novo.'); return; }
+    const label = SheetImport.TARGETS[ctx.target].label;
+    Cloud.pushAuditEvent('data_import', `Importação de planilha (${label}): ${n} registro(s) de "${ctx.fileName}"`, { target: ctx.target, count: n });
+    Trail.log(`Importação de planilha: ${n} registro(s) — ${label}`, Auth.getName(), 'Importado', 'b-acc');
+    if(typeof Dashboard !== 'undefined') Dashboard.render();
+    el('imp-done').innerHTML = `<div class="card card-success" style="margin-bottom:10px"><strong>${n} registro(s) importados</strong> em ${esc(label)}.</div>`
+      + (r.errors.length || r.warnings.length ? `<div style="font-size:12px;color:var(--t2)">${r.errors.length} linha(s) ignorada(s) e ${r.warnings.length} aviso(s) — veja a lista na etapa anterior.</div>` : '')
+      + '<div style="font-size:12px;color:var(--t2);margin-top:8px">Para desfazer, exclua os registros pela própria tela; o histórico da importação fica na Trilha e no log de auditoria.</div>';
+    show(3);
+  }
+
+  return { open, close, changeTarget, back, handleFiles, usePasted, pickSheet, setMap, commit };
 })();
 </script>
 
@@ -6815,11 +8218,10 @@ const Budget = (() => {
   function fmtMoneyK(n) { const v = Math.round(n||0); return Math.abs(v) >= 1000 ? 'R$' + Math.round(v/1000) + 'k' : fmtMoney(v); }
 
   // Mesma data-referência fixa do WBS — usada só pro IDP/SPI (% esperado hoje pela data planejada).
-  const TODAY = new Date(2026, 5, 20);
   function parseDate(s) { const [y,m,d] = (s||'2026-01-01').split('-').map(Number); return new Date(y,(m||1)-1,d||1); }
-  function expectedPctToday(start, end) {
+  function expectedPctToday(start, end, today) {
     if(!start || !end) return null;
-    const s = parseDate(start).getTime(), e = parseDate(end).getTime(), t = TODAY.getTime();
+    const s = parseDate(start).getTime(), e = parseDate(end).getTime(), t = today.getTime();
     if(e <= s) return null;
     if(t <= s) return 0;
     if(t >= e) return 100;
@@ -6862,11 +8264,12 @@ const Budget = (() => {
     // referência (artia.com/blog/indicadores-de-projetos) — calculado com peso financeiro real,
     // não um número solto. Módulo sem datas cai pro próprio % real (neutro: nem atrasa nem adianta).
     let PV = 0;
+    const refToday = Clock.today(pid);
     baseLines.forEach(l => {
       if(!l.wbsModuleId) return;
       const m = wbs.find(x => x.id === l.wbsModuleId);
       if(!m) return;
-      const expected = expectedPctToday(m.start, m.end);
+      const expected = expectedPctToday(m.start, m.end, refToday);
       PV += (l.plannedValue||0) * ((expected == null ? (m.pct||0) : expected) / 100);
     });
 
@@ -8388,6 +9791,7 @@ const Board = (() => {
       <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:var(--amb);display:inline-block"></span>Atenção</span>
       <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:var(--red);display:inline-block"></span>Crítico</span>
     </div>`;
+    if(typeof ColumnDrag !== 'undefined') ColumnDrag.enable(root.querySelector('table'), 'board-heatmap');
   }
 
   function renderComparisonChart(rows) {
@@ -8628,6 +10032,7 @@ const ExecView = (() => {
       <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--t3);margin-top:4px"><span>Gasto: ${BAC>0?Math.round(AC/BAC*100):0}% do orçado</span><span>Previsão final: ${BAC>0?Math.round(EAC/BAC*100):0}% do orçado</span></div>
     </div>
     ${tableHtml}`;
+    if(typeof ColumnDrag !== 'undefined') ColumnDrag.enable(root.querySelector('table'), 'exec-financeiro');
   }
 
   // ── Precisa da sua decisão agora ──────────────────────────────────────────────────────────
@@ -8958,7 +10363,7 @@ const WBS = (() => {
   let data = null;
   const expand = {};
   let modalCtx = { mode:null, moduleId:null, taskId:null };
-  const TODAY = new Date(2026, 5, 20); // 20/06/2026 — data da decisão crítica do ERP
+  const todayRef = () => Clock.today();
   const STATUS_COLOR = { grn:'var(--grn)', amb:'var(--amb)', red:'var(--red)', neu:'var(--s3)' };
   const MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   const BADGE = { grn:{cls:'b-grn',txt:'Entregue ✓'}, amb:{cls:'b-amb',txt:'Em andamento'}, red:{cls:'b-red',txt:'Bloqueado'}, neu:{cls:'b-neu',txt:'Não iniciado'} };
@@ -9214,6 +10619,7 @@ const WBS = (() => {
     rows += '</tbody>';
     root.innerHTML = rows;
     if(!data.length) root.innerHTML = `<tbody><tr><td colspan="9" style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12.5px">Nenhuma entrega cadastrada ainda.</td></tr></tbody>`;
+    else if(typeof ColumnDrag !== 'undefined') ColumnDrag.enable(root, 'wbs-tabela');
   }
 
   // Salva um campo só, direto da célula — sem passar pelo modal. Grava quem/quando no próprio
@@ -9258,7 +10664,7 @@ const WBS = (() => {
     const items = buildFlatItems();
     const hasDeps = items.some(it => (it.predecessors||[]).length > 0);
     if(!hasDeps) { T.show('⚠️ Cadastre pelo menos uma dependência (predecessora) entre entregas/subtarefas pra poder replanejar o cronograma.'); return; }
-    const { error, result } = CPM.replan(items, isoDate(TODAY));
+    const { error, result } = CPM.replan(items, isoDate(todayRef()));
     if(error) { T.show('⚠️ ' + error); return; }
     replanPreview = [];
     data.forEach(m => {
@@ -9286,7 +10692,7 @@ const WBS = (() => {
       applyBtn.style.display = 'none';
       return;
     }
-    sub.textContent = `${replanPreview.length} entrega(s)/subtarefa(s) com nova data calculada a partir de hoje (${fmtDate(TODAY)}) e da duração que falta de cada uma. Desmarque o que não quiser aplicar.`;
+    sub.textContent = `${replanPreview.length} entrega(s)/subtarefa(s) com nova data calculada a partir de hoje (${fmtDate(todayRef())}) e da duração que falta de cada uma. Desmarque o que não quiser aplicar.`;
     applyBtn.style.display = '';
     root.innerHTML = replanPreview.map((r,i) => `<label style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--b1)">
       <input type="checkbox" checked data-replan-idx="${i}" style="margin-top:3px">
@@ -9424,7 +10830,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     computeCpm();
     if(!data.length) { ruler.innerHTML=''; body.innerHTML = '<div style="padding:20px;color:var(--t3);font-size:12.5px">Nenhuma entrega cadastrada ainda.</div>'; return; }
 
-    let minD = TODAY, maxD = TODAY;
+    let minD = todayRef(), maxD = todayRef();
     data.forEach(g => {
       const s = parseDate(g.start), e = parseDate(g.end);
       if(s < minD) minD = s;
@@ -9439,7 +10845,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     let cursor = new Date(minD.getFullYear(), minD.getMonth(), 1);
     while(cursor <= maxD) {
       const left = pctPos(cursor);
-      if(left >= 0) rulerHtml += `<div class="gantt-ruler-m" style="left:calc(200px + (100% - 200px) * ${Math.max(left,0)/100})">${MES[cursor.getMonth()]}/${cursor.getFullYear()}</div>`;
+      if(left >= 0) rulerHtml += `<div class="gantt-ruler-m" style="left:calc(var(--gl) + (100% - var(--gl)) * ${Math.max(left,0)/100})">${MES[cursor.getMonth()]}/${cursor.getFullYear()}</div>`;
       cursor = new Date(cursor.getFullYear(), cursor.getMonth()+1, 1);
     }
     ruler.innerHTML = rulerHtml;
@@ -9472,8 +10878,8 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
       });
     });
 
-    const todayLeft = pctPos(TODAY);
-    rows += `<div class="gantt-today-line" style="left:calc(200px + (100% - 200px) * ${todayLeft/100})"><div class="gantt-today-tag">Hoje · ${fmtDate(TODAY)}</div></div>`;
+    const todayLeft = pctPos(todayRef());
+    rows += `<div class="gantt-today-line" style="left:calc(var(--gl) + (100% - var(--gl)) * ${todayLeft/100})"><div class="gantt-today-tag">Hoje · ${fmtDate(todayRef())}</div></div>`;
     body.innerHTML = rows;
   }
 
@@ -9539,7 +10945,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
   }
   function expectedPctToday(start, end) {
     if(!start || !end) return null;
-    const s = parseDate(start).getTime(), e = parseDate(end).getTime(), t = TODAY.getTime();
+    const s = parseDate(start).getTime(), e = parseDate(end).getTime(), t = todayRef().getTime();
     if(e <= s) return null;
     if(t <= s) return 0;
     if(t >= e) return 100;
@@ -10309,6 +11715,397 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
   </div>
 </div>
 
+<!-- ■ MODULE: ui/risk-modal -->
+<div class="modal-ov hidden" id="modal-risk" onclick="if(event.target===this)Risks.closeModal()">
+  <div class="modal-box" style="width:600px;max-height:92vh;overflow:auto" role="dialog" aria-modal="true" aria-labelledby="rk-modal-title">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" id="rk-modal-title">Registrar risco</div>
+      <button class="btn btn-sm" onclick="Risks.closeModal()" aria-label="Fechar"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-sub">Descreva o que pode dar errado, estime probabilidade e impacto e defina quem cuida disso</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><div class="field-label"><label for="rk-f-title">O que pode acontecer?</label></div><input class="input" id="rk-f-title" maxlength="200" placeholder="Ex: Fornecedor não entrega o módulo de integração no prazo"></div>
+      <div><div class="field-label"><label for="rk-f-desc">Detalhes (causa e consequência)</label></div><textarea class="input" id="rk-f-desc" rows="2" style="resize:vertical;font-family:inherit" placeholder="Por que pode acontecer e o que acontece com o projeto se acontecer"></textarea></div>
+      <div class="g3" style="gap:10px">
+        <div><div class="field-label"><label for="rk-f-prob">Probabilidade</label></div><select class="input" id="rk-f-prob" onchange="Risks.previewScore()"></select></div>
+        <div><div class="field-label"><label for="rk-f-impact">Impacto</label></div><select class="input" id="rk-f-impact" onchange="Risks.previewScore()"></select></div>
+        <div><div class="field-label"><label for="rk-f-cat">Categoria</label></div><select class="input" id="rk-f-cat"></select></div>
+      </div>
+      <div class="rk-prev" id="rk-f-preview" aria-live="polite">Escolha probabilidade e impacto para ver a nota.</div>
+      <div class="g3" style="gap:10px">
+        <div><div class="field-label"><label for="rk-f-resp">Resposta</label></div><select class="input" id="rk-f-resp"></select></div>
+        <div><div class="field-label"><label for="rk-f-status-m">Situação</label></div><select class="input" id="rk-f-status-m"></select></div>
+        <div><div class="field-label"><label for="rk-f-review">Próxima revisão</label></div><input class="input" type="date" id="rk-f-review"></div>
+      </div>
+      <div><div class="field-label"><label for="rk-f-owner">Responsável</label></div><input class="input" id="rk-f-owner" list="rk-owner-list" maxlength="120" placeholder="Quem acompanha este risco"><datalist id="rk-owner-list"></datalist></div>
+      <div><div class="field-label"><label for="rk-f-mit">Ação para reduzir (mitigação)</label></div><textarea class="input" id="rk-f-mit" rows="2" style="resize:vertical;font-family:inherit" placeholder="O que será feito agora para diminuir a chance ou o impacto"></textarea></div>
+      <div><div class="field-label"><label for="rk-f-cont">Plano B (se acontecer)</label></div><textarea class="input" id="rk-f-cont" rows="2" style="resize:vertical;font-family:inherit" placeholder="O que fazer se o risco se concretizar"></textarea></div>
+    </div>
+    <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
+      <button class="btn btn-sm btn-red" id="rk-f-delete-btn" style="display:none" onclick="Risks.deleteFromModal()"><i class="ti ti-trash"></i>Excluir</button>
+      <button class="btn btn-sm" onclick="Risks.closeModal()">Cancelar</button>
+      <button class="btn btn-sm btn-acc" onclick="Risks.saveFromModal()"><i class="ti ti-device-floppy"></i>Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ■ MODULE: ui/hours-modal -->
+<div class="modal-ov hidden" id="modal-hours" onclick="if(event.target===this)Hours.closeModal()">
+  <div class="modal-box" style="width:460px" role="dialog" aria-modal="true" aria-labelledby="hr-modal-title">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" id="hr-modal-title">Apontar horas</div>
+      <button class="btn btn-sm" onclick="Hours.closeModal()" aria-label="Fechar"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-sub">Quem trabalhou, quando e em quê</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><div class="field-label"><label for="hr-f-person-m">Pessoa</label></div><input class="input" id="hr-f-person-m" list="hr-person-list" maxlength="120" placeholder="Nome da pessoa"><datalist id="hr-person-list"></datalist></div>
+      <div class="g2" style="gap:10px">
+        <div><div class="field-label"><label for="hr-f-date">Data</label></div><input class="input" type="date" id="hr-f-date"></div>
+        <div><div class="field-label"><label for="hr-f-hours">Horas</label></div><input class="input" type="number" id="hr-f-hours" min="0.25" max="24" step="0.25" placeholder="Ex: 7,5"></div>
+      </div>
+      <div><div class="field-label"><label for="hr-f-wbs">Entrega (opcional)</label></div><select class="input" id="hr-f-wbs"></select></div>
+      <div><div class="field-label"><label for="hr-f-note">Observação (opcional)</label></div><input class="input" id="hr-f-note" maxlength="300" placeholder="O que foi feito"></div>
+    </div>
+    <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
+      <button class="btn btn-sm btn-red" id="hr-f-delete-btn" style="display:none" onclick="Hours.deleteFromModal()"><i class="ti ti-trash"></i>Excluir</button>
+      <button class="btn btn-sm" onclick="Hours.closeModal()">Cancelar</button>
+      <button class="btn btn-sm btn-acc" onclick="Hours.saveFromModal()"><i class="ti ti-device-floppy"></i>Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ■ MODULE: ui/import-modal -->
+<div class="modal-ov hidden" id="modal-import" onclick="if(event.target===this)ImportUi.close()">
+  <div class="modal-box" style="width:720px;max-height:92vh;overflow:auto" role="dialog" aria-modal="true" aria-labelledby="imp-title">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" id="imp-title">Importar planilha</div>
+      <button class="btn btn-sm" onclick="ImportUi.close()" aria-label="Fechar"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-sub">Traga dados de Excel, CSV ou exportação do MS Project. Nada é apagado: o que já existe fica como está.</div>
+    <div class="imp-steps" id="imp-steps"></div>
+
+    <div id="imp-step-1">
+      <div class="field-label"><label for="imp-target">O que você está importando?</label></div>
+      <select class="input" id="imp-target" onchange="ImportUi.changeTarget(this.value)" style="margin-bottom:10px"></select>
+      <div class="imp-drop" id="imp-drop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');ImportUi.handleFiles(event.dataTransfer.files)">
+        <i class="ti ti-file-spreadsheet" style="font-size:22px;display:block;margin-bottom:6px"></i>
+        Arraste o arquivo aqui ou
+        <label class="btn btn-sm btn-acc" for="imp-file" style="margin-left:4px;cursor:pointer">Escolher arquivo</label>
+        <input type="file" id="imp-file" accept=".csv,.tsv,.txt,.xlsx,.xls" style="display:none" onchange="ImportUi.handleFiles(this.files);this.value=''">
+        <div style="font-size:11px;color:var(--t3);margin-top:6px" id="imp-file-hint"></div>
+      </div>
+      <div style="margin-top:12px"><div class="field-label"><label for="imp-paste">…ou cole as células copiadas do Excel</label></div>
+        <textarea class="input" id="imp-paste" rows="4" style="font-family:var(--font-mono);font-size:11.5px;resize:vertical" placeholder="Copie as linhas (com o cabeçalho) no Excel e cole aqui"></textarea>
+        <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm btn-acc" onclick="ImportUi.usePasted()"><i class="ti ti-arrow-right"></i>Usar texto colado</button></div>
+      </div>
+      <div id="imp-expect" style="font-size:11.5px;color:var(--t3);margin-top:12px"></div>
+    </div>
+
+    <div id="imp-step-2" style="display:none">
+      <div id="imp-sheet-pick" style="display:none;margin-bottom:10px"></div>
+      <div class="field-label" style="margin-bottom:6px">Qual coluna da planilha corresponde a cada campo?</div>
+      <div class="imp-map" id="imp-map"></div>
+      <div class="field-label" style="margin:14px 0 6px">Prévia (primeiras linhas já interpretadas)</div>
+      <div class="imp-prev" id="imp-preview"></div>
+      <div id="imp-issues" style="margin-top:10px"></div>
+    </div>
+
+    <div id="imp-step-3" style="display:none"><div id="imp-done"></div></div>
+
+    <div class="btn-row" style="margin-top:18px;justify-content:flex-end" id="imp-actions">
+      <button class="btn btn-sm" id="imp-back" onclick="ImportUi.back()" style="display:none"><i class="ti ti-arrow-left"></i>Voltar</button>
+      <button class="btn btn-sm" onclick="ImportUi.close()" id="imp-cancel">Cancelar</button>
+      <button class="btn btn-sm btn-acc" id="imp-go" onclick="ImportUi.commit()" style="display:none"><i class="ti ti-check"></i>Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ■ MODULE: ui/recipient-modal -->
+<div class="modal-ov hidden" id="modal-recipient" onclick="if(event.target===this)Messaging.closeModal()">
+  <div class="modal-box" style="width:620px;max-height:92vh;overflow:auto" role="dialog" aria-modal="true" aria-labelledby="rc-modal-title">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" id="rc-modal-title">Novo destinatário</div>
+      <button class="btn btn-sm" onclick="Messaging.closeModal()" aria-label="Fechar"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-sub">Pessoa de fora do app (diretoria, patrocinador) que recebe avisos e pode perguntar sobre os projetos</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="g2" style="gap:10px">
+        <div><div class="field-label"><label for="rc-f-name">Nome</label></div><input class="input" id="rc-f-name" maxlength="120" placeholder="Nome completo"></div>
+        <div><div class="field-label"><label for="rc-f-role">Cargo ou papel (opcional)</label></div><input class="input" id="rc-f-role" maxlength="80" placeholder="Ex: Diretor financeiro"></div>
+      </div>
+      <div class="g2" style="gap:10px">
+        <div><div class="field-label"><label for="rc-f-wa">WhatsApp</label></div><input class="input" id="rc-f-wa" inputmode="tel" placeholder="(11) 99999-8888"><div style="font-size:11px;color:var(--t3);margin-top:4px">Com DDD. A pessoa precisa responder SIM para ativar.</div></div>
+        <div><div class="field-label"><label for="rc-f-email">E-mail</label></div><input class="input" id="rc-f-email" type="email" maxlength="200" placeholder="nome@empresa.com"></div>
+      </div>
+      <fieldset style="border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
+        <legend style="font-size:11.5px;color:var(--t2);padding:0 6px">Projetos que esta pessoa pode acompanhar</legend>
+        <div id="rc-projects" style="display:flex;flex-wrap:wrap;gap:6px 16px"></div>
+        <div style="font-size:11px;color:var(--t3);margin-top:6px">A IA só responde sobre os projetos marcados aqui — nunca sobre os outros.</div>
+      </fieldset>
+      <fieldset style="border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
+        <legend style="font-size:11.5px;color:var(--t2);padding:0 6px">Avisos que recebe</legend>
+        <div id="rc-events" style="display:flex;flex-wrap:wrap;gap:6px 16px"></div>
+      </fieldset>
+      <div style="border:1px solid var(--ambb);background:var(--amd);border-radius:var(--r8);padding:10px 12px">
+        <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--t1);cursor:pointer"><input type="checkbox" id="rc-f-fin" style="margin-top:3px"><span><strong>Pode ver valores financeiros (R$)</strong><br><span style="font-size:11.5px;color:var(--t2)">Desmarcado, nenhum valor em reais chega a esta pessoa — nem nos avisos, nem nas respostas da IA. Marque só para quem tem direito de conhecer custos.</span></span></label>
+      </div>
+      <div><div class="field-label"><label for="rc-f-consent">Base do consentimento (obrigatório)</label></div>
+        <input class="input" id="rc-f-consent" maxlength="300" placeholder="Ex: Autorizou por e-mail em 20/10/2026 (patrocinador do contrato)">
+        <div style="font-size:11px;color:var(--t3);margin-top:4px">Registra por que esta pessoa pode ser contatada (LGPD). Ela pode sair a qualquer momento respondendo PARAR.</div></div>
+    </div>
+    <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
+      <button class="btn btn-sm btn-red" id="rc-f-delete-btn" style="display:none" onclick="Messaging.deleteFromModal()"><i class="ti ti-trash"></i>Excluir</button>
+      <button class="btn btn-sm" onclick="Messaging.closeModal()">Cancelar</button>
+      <button class="btn btn-sm btn-acc" onclick="Messaging.saveRecipient()"><i class="ti ti-device-floppy"></i>Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ■ MODULE: ui/messaging-js ─ Configurações → WhatsApp & E-mail (somente administrador; a RLS do banco impõe) -->
+<script data-module="ui/messaging-js">
+const Messaging = (() => {
+  const EVENTS = [['decisao_critica','Decisão crítica pendente'],['farol_vermelho','Projeto entrou em risco'],['resumo_semanal','Resumo semanal'],['risco_alto','Risco crítico registrado']];
+  const WD = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  const WA_LABEL = { sem_whatsapp:['b-neu','sem WhatsApp'], aguardando_confirmacao:['b-amb','aguardando SIM'], ativo:['b-grn','WhatsApp ativo'], descadastrado:['b-red','pediu para sair'] };
+  const EM_LABEL = { sem_email:['b-neu','sem e-mail'], ativo:['b-grn','e-mail ativo'], descadastrado:['b-red','e-mail: saiu'] };
+  let st = { settings:null, recipients:[], links:{}, server:null, log:[], outbox:null, loaded:false, loading:false, editing:null, testResult:null };
+
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const el = id => document.getElementById(id);
+
+  // Telefone → E+número (padrão internacional). Sem "+", 10–11 dígitos = Brasil. Igual ao que o servidor valida.
+  function normalizePhone(input) {
+    const raw = String(input || '').trim();
+    let digits = raw.replace(/\D/g, '');
+    if(!digits) return null;
+    if(!raw.startsWith('+') && (digits.length === 10 || digits.length === 11)) digits = '55' + digits;
+    if(!/^[1-9]\d{9,14}$/.test(digits)) return null;
+    if(digits.startsWith('55') && digits.length !== 12 && digits.length !== 13) return null;
+    return '+' + digits;
+  }
+  const maskPhone = p => p ? '••••' + String(p).slice(-4) : '';
+  const validEmail = e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
+  const isAdmin = () => typeof Auth !== 'undefined' && Auth.getRole() === 'admin' && Cloud.isSignedIn();
+
+  async function loadAll() {
+    st.loading = true;
+    const t = n => Cloud.msgTable(n);
+    try {
+      const [s, r, l, lg, ob] = await Promise.all([
+        t('messaging_settings').select('*').eq('id', 1).maybeSingle(),
+        t('message_recipients').select('*').order('name'),
+        t('message_recipient_projects').select('*'),
+        t('message_log').select('id,created_at,direction,channel,kind,project_ids,ai_ms,error,recipient_id,message_recipients(name)').order('created_at', { ascending:false }).limit(30),
+        t('notification_outbox').select('status').in('status', ['pending','failed'])
+      ]);
+      const firstErr = [s, r, l, lg, ob].find(x => x.error);
+      if(firstErr) throw new Error(firstErr.error.message);
+      st.settings = s.data; st.recipients = r.data || [];
+      st.links = {}; (l.data || []).forEach(x => { (st.links[x.recipient_id] = st.links[x.recipient_id] || []).push(x.project_id); });
+      st.log = lg.data || [];
+      st.outbox = { pending:(ob.data || []).filter(x => x.status === 'pending').length, failed:(ob.data || []).filter(x => x.status === 'failed').length };
+      st.loaded = true;
+    } catch(e) { console.warn('Mensagens: falha ao carregar', e); st.loaded = false; st.error = e.message; }
+    const res = await Cloud.invokeFn('messaging-admin', { action:'status' });
+    st.server = res.error ? null : res.data;
+    st.loading = false;
+  }
+
+  async function render() {
+    const root = el('msg-root'); if(!root) return;
+    if(!Cloud.isSignedIn()) { root.innerHTML = notice('Entre com a sua conta de administrador (Supabase) para configurar WhatsApp e e-mail. Os destinatários ficam no servidor, nunca só neste navegador.'); return; }
+    if(Auth.getRole() !== 'admin') { root.innerHTML = notice('Somente o Administrador configura mensagens: elas envolvem dados pessoais de terceiros (telefone e e-mail).'); return; }
+    if(!st.loaded && !st.loading) { root.innerHTML = notice('Carregando…'); await loadAll(); }
+    if(!st.loaded) { root.innerHTML = notice('Não foi possível carregar as mensagens: ' + esc(st.error || 'erro desconhecido') + '. Confirme que as migrações do banco foram aplicadas (scripts/db-apply.mjs).') + `<button class="btn btn-sm" onclick="Messaging.reload()"><i class="ti ti-refresh"></i>Tentar de novo</button>`; return; }
+    root.innerHTML = cardStatus() + cardSettings() + cardRecipients() + cardTest() + cardLog();
+    ColumnDrag.enable(root.querySelector('table'), 'msg-log');
+  }
+  const notice = t => `<div class="card"><div style="font-size:12.5px;color:var(--t2);line-height:1.6"><i class="ti ti-info-circle"></i> ${t}</div></div>`;
+  async function reload() { st.loaded = false; await render(); }
+
+  function check(ok, label, hint) { return `<li style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px"><span class="badge ${ok ? 'b-grn' : 'b-amb'}" style="flex-shrink:0">${ok ? 'pronto' : 'pendente'}</span><span style="font-size:12.5px;color:var(--t1)">${label}${!ok && hint ? `<br><span style="font-size:11.5px;color:var(--t2)">${hint}</span>` : ''}</span></li>`; }
+  function cardStatus() {
+    const sv = st.server, s = st.settings || {};
+    const live = s.enabled && ((s.whatsapp_enabled && sv && sv.whatsapp) || (s.email_enabled && sv && sv.email));
+    return `<div class="card"><div class="lbl"><i class="ti ti-checklist"></i>Situação da integração</div>
+      <div style="margin-bottom:10px">${live ? '<span class="badge b-grn">Enviando mensagens</span>' : '<span class="badge b-amb">Ainda não está enviando</span>'}
+      ${st.outbox ? `<span class="chip" style="margin-left:6px">${st.outbox.pending} na fila · ${st.outbox.failed} com falha</span>` : ''}</div>
+      <ul style="list-style:none">
+        ${check(!!s.enabled, 'Mensagens ligadas (chave geral abaixo)')}
+        ${check(!!(sv && sv.whatsapp), 'WhatsApp Business conectado no servidor', 'Falta cadastrar WA_ACCESS_TOKEN e WA_PHONE_NUMBER_ID (veja docs/WHATSAPP_GO_LIVE.md).')}
+        ${check(!!(sv && sv.webhookSecret), 'Webhook do WhatsApp protegido (assinatura)', 'Falta WA_APP_SECRET e WA_VERIFY_TOKEN. URL do webhook: ' + esc(sv ? sv.webhookUrl : '—'))}
+        ${check(!!(sv && sv.email), 'E-mail conectado no servidor', 'Falta RESEND_API_KEY e EMAIL_FROM.')}
+        ${check(!!(sv && sv.cron), 'Envio automático agendado', 'Falta o segredo do agendador (CRON_SECRET) e rodar scripts/db-apply.mjs --setup-cron.')}
+        ${check(!!(sv && sv.ai), 'IA que responde as perguntas', 'Escolha o provedor abaixo e salve uma chave de IA em “Provedor de IA”.')}
+      </ul></div>`;
+  }
+
+  function cardSettings() {
+    const s = st.settings || {};
+    const num = (id, v, min, max, label) => `<div><div class="field-label"><label for="${id}">${label}</label></div><input class="input" type="number" id="${id}" min="${min}" max="${max}" value="${esc(v)}"></div>`;
+    const hours = (id, v, label) => `<div><div class="field-label"><label for="${id}">${label}</label></div><select class="input" id="${id}">${Array.from({ length:24 }, (_, h) => `<option value="${h}"${h === v ? ' selected' : ''}>${String(h).padStart(2, '0')}h</option>`).join('')}</select></div>`;
+    return `<div class="card"><div class="lbl"><i class="ti ti-settings"></i>Configuração</div>
+      <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px">
+        <label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input type="checkbox" id="ms-enabled"${s.enabled ? ' checked' : ''}> <strong>Ligar mensagens</strong></label>
+        <label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input type="checkbox" id="ms-wa"${s.whatsapp_enabled ? ' checked' : ''}> WhatsApp</label>
+        <label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input type="checkbox" id="ms-em"${s.email_enabled ? ' checked' : ''}> E-mail</label>
+      </div>
+      <div class="g3" style="gap:10px;margin-bottom:10px">
+        <div><div class="field-label"><label for="ms-ai">IA que responde as perguntas</label></div><select class="input" id="ms-ai"><option value="">— escolher —</option>${[['anthropic','Claude'],['google','Gemini'],['openai','ChatGPT']].map(([k, l]) => `<option value="${k}"${s.ai_provider === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+        ${num('ms-limit', s.daily_question_limit || 30, 1, 500, 'Perguntas por pessoa por dia')}
+        <div><div class="field-label"><label for="ms-wd">Resumo semanal</label></div><select class="input" id="ms-wd">${WD.map((d, i) => `<option value="${i}"${s.digest_weekday === i ? ' selected' : ''}>${d}</option>`).join('')}</select></div>
+      </div>
+      <div class="g3" style="gap:10px">
+        ${hours('ms-dh', s.digest_hour == null ? 8 : s.digest_hour, 'Hora do resumo')}
+        ${hours('ms-qs', s.quiet_start == null ? 21 : s.quiet_start, 'Silêncio a partir de')}
+        ${hours('ms-qe', s.quiet_end == null ? 7 : s.quiet_end, 'Silêncio até')}
+      </div>
+      <p style="font-size:11.5px;color:var(--t3);margin:10px 0">A IA usa a chave de IA da <strong>sua</strong> conta (Configurações → Provedor de IA) — o custo das respostas é seu. Horário de Brasília; avisos de WhatsApp não são enviados no horário de silêncio (ficam para depois).</p>
+      <button class="btn btn-sm btn-acc" onclick="Messaging.saveSettings()"><i class="ti ti-device-floppy"></i>Salvar configuração</button></div>`;
+  }
+
+  function cardRecipients() {
+    const names = Object.fromEntries(DB.listProjects().map(p => [p.id, p.name]));
+    const rows = st.recipients.map(r => {
+      const [wc, wl] = WA_LABEL[r.whatsapp_status] || WA_LABEL.sem_whatsapp, [ec, elb] = EM_LABEL[r.email_status] || EM_LABEL.sem_email;
+      const projs = (st.links[r.id] || []).map(id => esc(names[id] || id));
+      return `<div class="rk-item" style="cursor:default${r.active ? '' : ';opacity:.6'}">
+        <div class="rk-main">
+          <div class="rk-title">${esc(r.name)}${r.role_label ? ` <span style="font-weight:400;color:var(--t2)">· ${esc(r.role_label)}</span>` : ''}${r.active ? '' : ' <span class="badge b-neu">desativado</span>'}</div>
+          <div class="rk-meta">
+            ${r.whatsapp ? `<span class="chip"><i class="ti ti-brand-whatsapp"></i>${esc(maskPhone(r.whatsapp))}</span>` : ''}<span class="badge ${wc}">${wl}</span>
+            ${r.email ? `<span class="chip"><i class="ti ti-mail"></i>${esc(r.email)}</span>` : ''}<span class="badge ${ec}">${elb}</span>
+            ${r.can_see_financials ? '<span class="badge b-amb"><i class="ti ti-coin"></i>vê valores em R$</span>' : ''}
+          </div>
+          <div class="rk-note">Projetos: ${projs.length ? projs.join(', ') : '<span class="c-wa">nenhum — não receberá nada</span>'} · Avisos: ${(r.events || []).map(e => esc((EVENTS.find(x => x[0] === e) || [e, e])[1])).join(', ') || 'nenhum'}</div>
+          <div class="btn-row" style="margin-top:8px">
+            <button class="btn btn-sm" data-id="${esc(r.id)}" onclick="Messaging.editEl(this)"><i class="ti ti-edit"></i>Editar</button>
+            ${r.whatsapp && r.whatsapp_status === 'aguardando_confirmacao' ? `<button class="btn btn-sm btn-acc" data-id="${esc(r.id)}" onclick="Messaging.confirmEl(this)"><i class="ti ti-send"></i>Pedir confirmação por WhatsApp</button>` : ''}
+          </div>
+        </div></div>`;
+    }).join('');
+    return `<div class="card"><div class="lbl"><i class="ti ti-users"></i>Destinatários (${st.recipients.length})</div>
+      <p style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:10px">Quem recebe avisos e pode perguntar sobre os projetos. O WhatsApp só fica ativo depois que a <strong>própria pessoa</strong> responde SIM — nem o administrador consegue ativar por ela.</p>
+      ${rows || '<div class="rk-empty">Nenhum destinatário ainda.</div>'}
+      <button class="btn btn-sm btn-acc" style="margin-top:6px" onclick="Messaging.openAdd()"><i class="ti ti-plus"></i>Adicionar destinatário</button></div>`;
+  }
+
+  function cardTest() {
+    const opts = st.recipients.filter(r => r.active).map(r => `<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');
+    const tr = st.testResult;
+    return `<div class="card"><div class="lbl"><i class="ti ti-message-chatbot"></i>Testar o assistente (não envia nada)</div>
+      <p style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:10px">Simula uma pergunta como se fosse a pessoa escolhida — com o mesmo recorte de projetos e a mesma regra de valores em R$. Nada é enviado nem gravado.</p>
+      <div class="rk-toolbar"><select class="input" id="ms-t-who" aria-label="Simular como"><option value="">— escolher pessoa —</option>${opts}</select>
+        <input class="input rk-q" id="ms-t-q" maxlength="500" placeholder="Ex: como está o projeto Nexus? o que está atrasado?" aria-label="Pergunta" onkeydown="if(event.key==='Enter')Messaging.test()">
+        <button class="btn btn-sm btn-acc" id="ms-t-btn" onclick="Messaging.test()"><i class="ti ti-send"></i>Perguntar</button></div>
+      <div id="ms-t-out" aria-live="polite" style="white-space:pre-wrap;font-size:12.5px;color:var(--t1);background:var(--s2);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;min-height:44px;overflow-wrap:anywhere">${tr ? esc(tr) : '<span style="color:var(--t3)">A resposta aparece aqui.</span>'}</div></div>`;
+  }
+
+  function cardLog() {
+    const KIND = { pergunta:'pergunta', resposta:'resposta da IA', entrada:'mensagem recebida', confirmacao:'confirmação (SIM)', confirmacao_enviada:'pedido de confirmação', descadastro:'saiu (PARAR)', lembrete:'lembrete', limite:'limite atingido', erro_ia:'IA indisponível', comando:'comando', sem_projetos:'sem projetos', nao_texto:'mídia não suportada', decisao_critica:'aviso: decisão crítica', farol_vermelho:'aviso: projeto em risco', risco_alto:'aviso: risco crítico', resumo_semanal:'resumo semanal' };
+    const rows = st.log.map(x => `<tr><td>${esc(new Date(x.created_at).toLocaleString('pt-BR'))}</td><td>${esc((x.message_recipients && x.message_recipients.name) || '—')}</td><td>${x.channel === 'whatsapp' ? 'WhatsApp' : x.channel === 'email' ? 'E-mail' : esc(x.channel)} ${x.direction === 'in' ? '←' : '→'}</td><td>${esc(KIND[x.kind] || x.kind)}</td><td>${x.error ? `<span class="badge b-red" title="${esc(x.error)}">falha</span>` : '<span class="badge b-grn">ok</span>'}</td></tr>`).join('');
+    return `<div class="card"><div class="lbl"><i class="ti ti-history"></i>Últimas mensagens<span class="help-q" data-help="O texto fica guardado por 90 dias, já sem dados pessoais (CPF, telefone, e-mail). Depois disso é apagado automaticamente." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+      ${rows ? `<div style="overflow:auto"><table class="hr-tbl"><thead><tr><th scope="col">Quando</th><th scope="col">Pessoa</th><th scope="col">Canal</th><th scope="col">Tipo</th><th scope="col">Resultado</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="rk-empty">Nenhuma mensagem ainda.</div>'}
+      <button class="btn btn-sm" style="margin-top:8px" onclick="Messaging.reload()"><i class="ti ti-refresh"></i>Atualizar</button></div>`;
+  }
+
+  // ── ações ──
+  async function saveSettings() {
+    if(!isAdmin()) return;
+    const v = id => el(id).value;
+    const aiProvider = v('ms-ai') || null;
+    const row = { id:1, enabled: el('ms-enabled').checked, whatsapp_enabled: el('ms-wa').checked, email_enabled: el('ms-em').checked,
+      ai_provider: aiProvider, ai_owner_user_id: aiProvider ? Cloud.getUserId() : null,
+      daily_question_limit: Math.max(1, Math.min(500, parseInt(v('ms-limit'), 10) || 30)),
+      digest_weekday: +v('ms-wd'), digest_hour: +v('ms-dh'), quiet_start: +v('ms-qs'), quiet_end: +v('ms-qe'),
+      updated_at: new Date().toISOString(), updated_by: Cloud.getUserId() };
+    const { error } = await Cloud.msgTable('messaging_settings').upsert(row);
+    if(error) { T.show('❌ Não salvou: ' + esc(error.message)); return; }
+    Cloud.pushAuditEvent('messaging_settings', `Configuração de mensagens alterada (${row.enabled ? 'ligadas' : 'desligadas'}; WhatsApp ${row.whatsapp_enabled ? 'sim' : 'não'}; e-mail ${row.email_enabled ? 'sim' : 'não'})`, {});
+    T.show('✅ Configuração salva.');
+    await reload();
+  }
+
+  function fillChecks(rootId, items, selected, name) {
+    el(rootId).innerHTML = items.map(([k, l]) => `<label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" name="${name}" value="${esc(k)}"${selected.includes(k) ? ' checked' : ''}> ${esc(l)}</label>`).join('');
+  }
+  function openModal(r) {
+    st.editing = r || null;
+    el('rc-modal-title').textContent = r ? 'Editar destinatário' : 'Novo destinatário';
+    el('rc-f-delete-btn').style.display = r ? '' : 'none';
+    el('rc-f-name').value = r ? r.name : ''; el('rc-f-role').value = r ? (r.role_label || '') : '';
+    el('rc-f-wa').value = r ? (r.whatsapp || '') : ''; el('rc-f-email').value = r ? (r.email || '') : '';
+    el('rc-f-fin').checked = !!(r && r.can_see_financials);
+    el('rc-f-consent').value = r ? (r.consent_basis || '') : '';
+    const projects = DB.listProjects().map(p => [p.id, p.name]).sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'));
+    fillChecks('rc-projects', projects, r ? (st.links[r.id] || []) : [], 'rc-proj');
+    fillChecks('rc-events', EVENTS, r ? (r.events || []) : ['decisao_critica','farol_vermelho','resumo_semanal'], 'rc-ev');
+    el('modal-recipient').classList.remove('hidden');
+    el('rc-f-name').focus();
+  }
+  const openAdd = () => openModal(null);
+  const editEl = b => openModal(st.recipients.find(r => r.id === b.dataset.id));
+  const closeModal = () => el('modal-recipient').classList.add('hidden');
+  const checked = name => [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(i => i.value);
+
+  async function saveRecipient() {
+    if(!isAdmin()) return;
+    const name = el('rc-f-name').value.trim(), email = el('rc-f-email').value.trim().toLowerCase();
+    const waRaw = el('rc-f-wa').value.trim(), wa = waRaw ? normalizePhone(waRaw) : null;
+    const consent = el('rc-f-consent').value.trim();
+    if(name.length < 2) { T.show('⚠️ Informe o nome.'); el('rc-f-name').focus(); return; }
+    if(waRaw && !wa) { T.show('⚠️ WhatsApp inválido. Use DDD + número, ex: (11) 99999-8888.'); el('rc-f-wa').focus(); return; }
+    if(email && !validEmail(email)) { T.show('⚠️ E-mail inválido.'); el('rc-f-email').focus(); return; }
+    if(!wa && !email) { T.show('⚠️ Informe WhatsApp ou e-mail.'); return; }
+    if(consent.length < 5) { T.show('⚠️ Registre a base do consentimento (de onde veio a autorização).'); el('rc-f-consent').focus(); return; }
+    const projects = checked('rc-proj'), events = checked('rc-ev');
+    const prev = st.editing;
+    const row = { name, role_label: el('rc-f-role').value.trim() || null, whatsapp: wa, email: email || null, events,
+      can_see_financials: el('rc-f-fin').checked, consent_basis: consent,
+      email_status: email ? ((prev && prev.email_status === 'descadastrado' && prev.email === email) ? 'descadastrado' : 'ativo') : 'sem_email' };
+    if(!prev || prev.consent_basis !== consent) { row.consent_recorded_at = new Date().toISOString(); row.consent_recorded_by = Cloud.getUserId(); }
+    const tbl = Cloud.msgTable('message_recipients');
+    const res = prev ? await tbl.update(row).eq('id', prev.id).select().single() : await tbl.insert(row).select().single();
+    if(res.error) { T.show(res.error.code === '23505' ? '⚠️ Este WhatsApp ou e-mail já está cadastrado.' : '❌ Não salvou: ' + esc(res.error.message)); return; }
+    const id = res.data.id;
+    const lk = Cloud.msgTable('message_recipient_projects');
+    const del = await lk.delete().eq('recipient_id', id);
+    if(del.error) { T.show('❌ Não atualizou os projetos: ' + esc(del.error.message)); return; }
+    if(projects.length) { const ins = await lk.insert(projects.map(project_id => ({ recipient_id:id, project_id }))); if(ins.error) { T.show('❌ Não salvou os projetos: ' + esc(ins.error.message)); return; } }
+    closeModal();
+    T.show('✅ Destinatário salvo.' + (wa && (!prev || prev.whatsapp !== wa) ? ' Agora peça a confirmação por WhatsApp.' : ''));
+    await reload();
+  }
+
+  async function deleteFromModal() {
+    if(!isAdmin() || !st.editing) return;
+    if(!confirm('Excluir este destinatário? O histórico de mensagens dele deixa de ser associado a um nome. Para só parar os avisos, prefira desativar.')) return;
+    const { error } = await Cloud.msgTable('message_recipients').delete().eq('id', st.editing.id);
+    if(error) { T.show('❌ Não excluiu: ' + esc(error.message)); return; }
+    closeModal(); T.show('🗑️ Destinatário excluído.'); await reload();
+  }
+  async function confirmEl(btn) {
+    btn.disabled = true;
+    const res = await Cloud.invokeFn('messaging-admin', { action:'send_confirmation', recipient_id: btn.dataset.id });
+    btn.disabled = false;
+    T.show(res.error ? '❌ ' + esc(res.error) : '📨 Pedido de confirmação enviado. A pessoa deve responder SIM.');
+    if(!res.error) await reload();
+  }
+  async function test() {
+    const who = el('ms-t-who').value, q = el('ms-t-q').value.trim();
+    if(!who) { T.show('⚠️ Escolha a pessoa a simular.'); return; }
+    if(!q) { T.show('⚠️ Digite uma pergunta.'); return; }
+    const btn = el('ms-t-btn'); btn.disabled = true; el('ms-t-out').textContent = 'Consultando…';
+    const res = await Cloud.invokeFn('messaging-admin', { action:'test_question', recipient_id: who, text: q });
+    btn.disabled = false;
+    st.testResult = res.error ? 'Erro: ' + res.error : ((res.data.replies || []).join('\n\n') || '(sem resposta)') + `\n\n— tipo: ${res.data.kind}${res.data.aiMs != null ? ' · IA ' + res.data.aiMs + ' ms' : ''}${res.data.error ? ' · ' + res.data.error : ''}`;
+    el('ms-t-out').textContent = st.testResult;
+  }
+
+  return { render, reload, openAdd, editEl, closeModal, saveRecipient, deleteFromModal, saveSettings, confirmEl, test, normalizePhone };
+})();
+</script>
+
 <!-- ■ MODULE: ui/budget-line-modal -->
 <div class="modal-ov hidden" id="modal-budget-line" onclick="if(event.target===this)Budget.closeLineModal()">
   <div class="modal-box" style="width:460px">
@@ -10806,9 +12603,10 @@ const HealthScore = (() => {
     schedule: 0.25,
     budget: 0.20,
     team: 0.20,
-    quality: 0.15,
-    learning: 0.10,
-    scope: 0.10
+    quality: 0.12,
+    learning: 0.05,
+    scope: 0.08,
+    risks: 0.10
   };
 
   function calculate(metrics) {
@@ -10839,7 +12637,7 @@ const HealthScore = (() => {
   // Reúne as 6 dimensões a partir de dados reais do projeto ativo — cada uma tem uma fonte
   // concreta, nenhuma é decorativa. Onde não há dado suficiente para julgar, assume-se 100
   // (neutro/sem problema detectado) em vez de inventar um número.
-  const DIM_LABEL = { schedule:'Cronograma', budget:'Orçamento', team:'Equipe', quality:'Qualidade', learning:'Aprendizado', scope:'Scope creep' };
+  const DIM_LABEL = { schedule:'Cronograma', budget:'Orçamento', team:'Equipe', quality:'Qualidade', learning:'Aprendizado', scope:'Scope creep', risks:'Riscos' };
 
   // Sem projectId, calcula pro projeto ativo — com projectId, lê o outro projeto sem trocar o
   // ativo (DB.getForProject), do mesmo jeito que Budget.computeMetrics já fazia. É o que permite
@@ -10875,7 +12673,10 @@ const HealthScore = (() => {
     // Aprendizado: % de lições aprendidas já aplicadas neste projeto
     const learningScore = lessons.length ? Math.round(lessons.filter(l => l.applied).length / lessons.length * 100) : 100;
 
-    return { schedule, budget:budgetScore, team:teamScore, quality:qualityScore, learning:learningScore, scope:scopeScore };
+    // Riscos: cada risco em aberto tira pontos conforme a faixa (crítico 25 · alto 10 · médio 3) — sem riscos registrados, neutro
+    const risksScore = (typeof RiskMatrix !== 'undefined') ? RiskMatrix.healthScore(getTable('risks')) : 100;
+
+    return { schedule, budget:budgetScore, team:teamScore, quality:qualityScore, learning:learningScore, scope:scopeScore, risks:risksScore };
   }
 
   return { calculate, getStatus, updateRingDisplay, computeMetrics, WEIGHTS, DIM_LABEL };

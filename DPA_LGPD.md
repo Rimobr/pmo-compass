@@ -33,6 +33,9 @@ central — mas trata, sim, dados pessoais reais no curso normal de uso:
 | Conteúdo de documentos anexados | Repositório, Raio-X do Projeto | Variável — depende do que o cliente sobe; o sistema mascara automaticamente CPF/CNPJ/e-mail/telefone/CEP/RG antes de qualquer processamento por IA (ver `services/file-intake`, função `anonymize()`), mas **não há garantia de que 100% dos formatos possíveis de PII sejam capturados** — não trate essa máscara como uma DPO/DPIA completa |
 | Texto de decisões e riscos | Módulo Decisões | Pode conter nomes/contexto pessoal em texto livre, a critério de quem escreve |
 | Chave de API de provedor de IA | `user_ai_keys` (Supabase) | Credencial, não dado pessoal — mas sensível; nunca é lida de volta pelo navegador depois de salva |
+| Telefone (WhatsApp) e e-mail de destinatários de avisos | Configurações → WhatsApp & E-mail (`message_recipients`) | Dado pessoal comum **de terceiros que não são usuários do sistema** (diretoria, patrocinadores). Só o administrador lê e grava; consentimento e sua base ficam registrados; a pessoa pode sair a qualquer momento (PARAR no WhatsApp, link no e-mail) |
+| Mensagens trocadas com o assistente de WhatsApp | `message_log` | Texto das perguntas e respostas **com CPF/CNPJ/e-mail/telefone/CEP já mascarados**, guardado por 90 dias e apagado automaticamente |
+| Apontamento de horas | Tela Horas (`time_entries`) | Nome, data e horas trabalhadas — dado pessoal comum de trabalho |
 | Sessão de autenticação | `localStorage` do navegador (token JWT do Supabase) | Ver nota de segurança na Seção 6 |
 
 ## 3. Finalidade do tratamento
@@ -49,8 +52,13 @@ mesmos dados — nunca para finalidade distinta (ex.: marketing, scoring de cré
 | **Vercel** | Hospeda os arquivos estáticos do aplicativo (HTML/JS) | Nenhum dado de negócio — serve só o código; conexão ao Supabase acontece direto do navegador do usuário |
 | **Anthropic / OpenAI / Google** (conforme o provedor de IA escolhido por cada usuário em Configurações) | Processa o texto enviado ao Chat e à análise de documentos | Texto de prompts e documentos **já mascarado** (Seção 2) quando vem do Raio-X; o Chat livre não passa pela mesma máscara — o usuário pode digitar qualquer coisa nele |
 
-Nenhum subprocessador adicional (analytics, e-mail transacional, etc.) está integrado ao sistema
-nesta versão.
+| **Meta (WhatsApp Business Cloud API)** — *somente se o administrador ativar o WhatsApp* | Entrega de avisos e conversa com o assistente de status | Número de telefone do destinatário e o texto das mensagens (avisos e respostas). Respostas da IA nunca incluem valores em R$ para quem não tem essa permissão |
+| **Resend** — *somente se o administrador ativar o e-mail* | Envio de avisos por e-mail | E-mail do destinatário e o texto do aviso |
+
+O assistente de WhatsApp envia ao provedor de IA escolhido apenas **fatos calculados no servidor** sobre os projetos que
+aquela pessoa tem liberados (percentuais, índices, títulos de decisões e riscos já mascarados) — nunca a base inteira, nunca
+projetos não liberados, e sem valores em R$ quando a pessoa não tem permissão financeira. O custo da IA é de quem
+cadastrou a chave. Nenhum outro subprocessador (analytics, publicidade) está integrado ao sistema.
 
 ## 5. Base legal
 
@@ -95,8 +103,10 @@ portabilidade — LGPD Art. 18). O Operador se compromete a:
 
 ## 8. Retenção e eliminação
 
-Sem política de retenção automática nesta versão — os dados permanecem até serem apagados
-manualmente pelo Controlador ou até o encerramento do contrato. Ao final do contrato: **[definir
+Mensagens do assistente (`message_log`): apagadas automaticamente após **90 dias**; fila de envios já concluídos:
+**30 dias** (rotina diária no banco). Destinatário excluído por um administrador tem seus dados de contato removidos
+imediatamente (o histórico perde a associação ao nome). Demais dados: sem retenção automática — permanecem até serem
+apagados manualmente pelo Controlador ou até o encerramento do contrato. Ao final do contrato: **[definir
 prazo e procedimento — ex.: exportação final + eliminação em N dias]**.
 
 ## 9. Notificação de incidentes

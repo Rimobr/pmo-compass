@@ -124,6 +124,21 @@ A página **Ajuda** dentro do próprio app (`R.go('help')`) tem a lista completa
 - `CONTEXTO_PROJETO.md` — este arquivo
 - `.claude/launch.json` — configuração pra rodar um servidor local (`npx serve`) e testar no Browser pane
 
+## 12. Entrega de 23/10/2026 — riscos, horas, importação, mensagens (WhatsApp/e-mail)
+
+- **Banco versionado**: `supabase/migrations/` é a fonte da verdade; `schema.sql` é GERADO (`node scripts/build-schema.mjs`, conferido no CI).
+  Aplicar: `node scripts/db-apply.mjs --dry-run` e depois sem a flag. Funções de borda: `node scripts/deploy-functions.mjs`. Sintaxe SQL: `npm run check:sql`.
+- **"Hoje" do app** = `Clock.today(projectId)`: data de referência só dos projetos de DEMONSTRAÇÃO; projeto real usa o dia real. O servidor usa a mesma regra (`projectToday`).
+- **Telas novas**: Riscos (`pages/risks*`, matriz 5×5, entra no índice de saúde como 7ª dimensão), Horas (`pages/hours*`), Importar planilha (`ui/import-js`,
+  lógica pura em `services/sheet-import`), Configurações → WhatsApp & E-mail (`ui/messaging-js`), colunas arrastáveis (`ui/column-drag`).
+- **Assistente de WhatsApp** (`supabase/functions/`): `wa-webhook` (recebe), `notify-dispatch` (fila), `notify-digest` (resumo semanal),
+  `messaging-admin` (confirmação/teste), `notify-unsub`. Regras em `_shared/`: `facts.mjs` (números calculados no servidor — IA só reformula),
+  `assistant.mjs` (consentimento SIM/PARAR, limites, prompt blindado), `notify.mjs`, `providers.mjs`, `store.mjs`. Roteiro: `docs/WHATSAPP_GO_LIVE.md`.
+- **Regras que não podem quebrar**: valores em R$ só com `can_see_financials`; a IA só recebe projetos liberados ao destinatário; WhatsApp só fica ativo pela
+  resposta SIM da própria pessoa; toda tabela de dados do projeto entra em `Cloud.PROJECT_DATA_TABLES` (teste confere contra o schema);
+  `tests/unit/parity.test.mjs` garante que servidor e app calculam os mesmos números.
+- **Testes**: `npm run test:unit` (app + servidor + paridade), E2E em `tests/e2e/` (`messaging-rls.spec.js` exige as migrações aplicadas).
+
 ## 11. Como retomar numa conversa nova
 
 O projeto agora vive num repositório git com deploy automático — **não precisa mais colar os arquivos**, é só apontar para o repositório (https://github.com/Rimobr/pmo-compass) ou abrir a pasta local. Este arquivo mais o `git log` já dão contexto suficiente para continuar sem re-explorar o app do zero.

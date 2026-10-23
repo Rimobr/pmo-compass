@@ -10,6 +10,8 @@ const PAGES = [
   { hash: '#board', name: 'Painel da Diretoria (Farol do Portfólio)' },
   { hash: '#execview', name: 'Visão Executiva' },
   { hash: '#settings', name: 'Membros do Projeto' },
+  { hash: '#risks', name: 'Registro de Riscos' },
+  { hash: '#hours', name: 'Apontamento de Horas' },
 ];
 
 test.describe('Acessibilidade WCAG 2.1 AA', () => {
