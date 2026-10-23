@@ -3,7 +3,7 @@
 // com fallback para o cache quando estiver offline. Tudo que não é do app shell
 // (CDNs de ícones/fontes, chamadas às APIs de IA) passa direto, sem interferência.
 
-const CACHE_NAME = 'pmo-compass-v2.1.3';
+const CACHE_NAME = 'pmo-compass-v2.1.4';
 const APP_SHELL = [
   './PMO_Compass_v2.html',
   './manifest.json',
@@ -28,6 +28,8 @@ self.addEventListener('activate', (event) => {
     )
   );
   self.clients.claim();
+  // Avisa as páginas abertas: elas conferem a versão na hora e mostram a faixa "Atualizar agora" (sem esperar o ciclo de 5 min)
+  event.waitUntil(self.clients.matchAll({ type: 'window' }).then((cs) => cs.forEach((c) => c.postMessage({ type: 'SW_ACTIVATED' }))));
 });
 
 self.addEventListener('fetch', (event) => {
