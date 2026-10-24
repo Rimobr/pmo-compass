@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.6.1'
+  version: '2.6.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -818,17 +818,22 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: ui/sidebar -->
 <aside class="sidebar" data-module="ui/sidebar">
-  <div class="sb-sec">Indicadores Gerenciais</div>
+  <div class="sb-sec">Painéis</div>
   <button class="sb-xray-btn" data-p="xray" onclick="R.go('xray')"><i class="ti ti-report-medical"></i>Raio-X do Projeto</button>
   <button class="sb-board-btn" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button>
   <button class="sb-exec-btn" data-p="execview" onclick="R.go('execview')"><i class="ti ti-chart-infographic"></i>Visão Executiva</button>
   <button class="sb-pmo-btn" data-p="pmoview" onclick="R.go('pmoview')"><i class="ti ti-binoculars"></i>Visão do PMO</button>
 
-  <button class="si on" data-p="dashboard" onclick="R.go('dashboard')"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
-  <button class="si" data-p="pfkpi" onclick="R.go('pfkpi')"><i class="ti ti-chart-donut-3"></i>Indicadores do portfólio</button>
-  <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
-  <button class="si" data-p="prioritization" onclick="R.go('prioritization')"><i class="ti ti-sort-descending-2"></i>Priorização</button>
-  <button class="si" data-p="report" onclick="R.go('report')"><i class="ti ti-file-report"></i>Relatório</button>
+  <div class="sb-group" id="sbg-indicadores">
+    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-indicadores')"><i class="ti ti-chart-donut-3 sb-gico"></i>Indicadores<i class="ti ti-chevron-right sb-gchev"></i></button>
+    <div class="sb-group-body">
+      <button class="si on" data-p="dashboard" onclick="R.go('dashboard')"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
+      <button class="si" data-p="pfkpi" onclick="R.go('pfkpi')"><i class="ti ti-chart-donut-3"></i>Indicadores</button>
+      <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
+      <button class="si" data-p="prioritization" onclick="R.go('prioritization')"><i class="ti ti-sort-descending-2"></i>Priorização</button>
+      <button class="si" data-p="report" onclick="R.go('report')"><i class="ti ti-file-report"></i>Relatório</button>
+    </div>
+  </div>
 
   <div class="sb-div"></div>
   <div class="sb-sec">Ações do Gerente de Projeto</div>
@@ -887,10 +892,14 @@ body.icons-failed i[data-fb]::before{
   </div>
 
   <div class="sb-div"></div>
-  <div class="sb-sec">Sistema</div>
-  <button class="si" data-p="settings" onclick="R.go('settings')"><i class="ti ti-settings"></i>Configurações</button>
-  <button class="si" data-p="help" onclick="R.go('help')"><i class="ti ti-help-circle"></i>Ajuda</button>
-  <button class="si" onclick="Privacy.open()"><i class="ti ti-shield-lock"></i>Privacidade &amp; dados</button>
+  <div class="sb-group" id="sbg-sistema">
+    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-sistema')"><i class="ti ti-settings sb-gico"></i>Sistema<i class="ti ti-chevron-right sb-gchev"></i></button>
+    <div class="sb-group-body">
+      <button class="si" data-p="settings" onclick="R.go('settings')"><i class="ti ti-settings"></i>Configurações</button>
+      <button class="si" data-p="help" onclick="R.go('help')"><i class="ti ti-help-circle"></i>Ajuda</button>
+      <button class="si" onclick="Privacy.open()"><i class="ti ti-shield-lock"></i>Privacidade &amp; dados</button>
+    </div>
+  </div>
 </aside>
 
 <main class="content" id="content">
@@ -5163,6 +5172,7 @@ const R = (() => {
   function init() {
     const h = location.hash.replace('#','');
     if(h && pages.includes(h)) go(h);
+    else if(typeof Nav !== 'undefined') Nav.expandGroupFor('dashboard'); // página inicial: Dashboard abre o grupo Indicadores
     window.addEventListener('hashchange', () => { const h2 = location.hash.replace('#',''); if(pages.includes(h2)) go(h2); });
   }
   // Ativa por teclado (Enter/Espaço) um elemento clicável que não é <button>/<a> nativo —
@@ -5177,6 +5187,8 @@ const R = (() => {
 const Nav = (() => {
   // Mapa página → grupo, usado para abrir automaticamente o grupo certo ao navegar
   const GROUP_OF = {
+    dashboard:'sbg-indicadores', pfkpi:'sbg-indicadores', portfolio:'sbg-indicadores', prioritization:'sbg-indicadores', report:'sbg-indicadores',
+    settings:'sbg-sistema', help:'sbg-sistema',
     decisions:'sbg-decisao', loop:'sbg-decisao', trail:'sbg-decisao', statusmsg:'sbg-decisao',
     wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento', risks:'sbg-planejamento', baseline:'sbg-planejamento',
     burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe', hours:'sbg-equipe',
@@ -5206,6 +5218,9 @@ const Nav = (() => {
   // Todos os grupos começam fechados a cada novo login/sessão (sem lembrar estado anterior)
   function collapseAll() {
     document.querySelectorAll('.sb-group').forEach(g => g.classList.remove('open'));
+    // ...exceto o grupo da página que está aberta (um item selecionado mantém o seu grupo aberto)
+    const cur = document.querySelector('.page.on');
+    expandGroupFor(cur ? cur.id.replace(/^p-/, '') : (location.hash.replace('#', '') || 'dashboard'));
   }
 
   function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -5248,18 +5263,15 @@ const Nav = (() => {
   });
 
   const GROUP_LABEL = {
+    sbg_indicadores: 'Indicadores', sbg_sistema: 'Sistema',
     sbg_decisao: 'Decisão & Acompanhamento', sbg_planejamento: 'Planejamento',
     sbg_equipe: 'Equipe', sbg_conhecimento: 'Conhecimento', sbg_projetos: 'Projetos'
   };
-  // Seções do menu: páginas de análise e de sistema não pertencem a um grupo, mas ganham a trilha "Seção › Página"
-  const SECTION_OF = {
-    xray:'Indicadores Gerenciais', board:'Indicadores Gerenciais', execview:'Indicadores Gerenciais', pmoview:'Indicadores Gerenciais', dashboard:'Indicadores Gerenciais',
-    pfkpi:'Indicadores Gerenciais', portfolio:'Indicadores Gerenciais', prioritization:'Indicadores Gerenciais', report:'Indicadores Gerenciais',
-    settings:'Sistema', help:'Sistema'
-  };
+  // Os 4 painéis do topo não pertencem a um grupo, mas ganham a trilha "Painéis › Página"
+  const SECTION_OF = { xray:'Painéis', board:'Painéis', execview:'Painéis', pmoview:'Painéis' };
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
-    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores do Portfólio', pmoview:'Visão do PMO',
+    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores', pmoview:'Visão do PMO',
     burnout:'Burnout Radar', resources:'Colaboradores', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
     portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
@@ -5306,12 +5318,12 @@ const CmdK = (() => {
   let currentResults = [];
 
   const PAGES = [
-    { label:'Raio-X do Projeto', page:'xray', icon:'report-medical', group:'Indicadores Gerenciais' },
-    { label:'Dashboard', page:'dashboard', icon:'layout-dashboard', group:'Indicadores Gerenciais' },
+    { label:'Raio-X do Projeto', page:'xray', icon:'report-medical', group:'Painéis' },
+    { label:'Dashboard', page:'dashboard', icon:'layout-dashboard', group:'Indicadores' },
     { label:'Decisões IA', page:'decisions', icon:'brain', group:'Decisão & Acompanhamento' },
     { label:'Loop de Ação', page:'loop', icon:'refresh-alert', group:'Decisão & Acompanhamento' },
     { label:'Trilha', page:'trail', icon:'git-branch', group:'Decisão & Acompanhamento' },
-    { label:'Relatório', page:'report', icon:'file-report', group:'Indicadores Gerenciais' },
+    { label:'Relatório', page:'report', icon:'file-report', group:'Indicadores' },
     { label:'Mensagem de status', page:'statusmsg', icon:'brand-whatsapp', group:'Decisão & Acompanhamento' },
     { label:'WBS', page:'wbs', icon:'sitemap', group:'Planejamento' },
     { label:'Linha de base', page:'baseline', icon:'camera', group:'Planejamento' },
@@ -5327,12 +5339,12 @@ const CmdK = (() => {
     { label:'Atas e Ações', page:'meetings', icon:'notes', group:'Conhecimento' },
     { label:'Repositório', page:'repository', icon:'files', group:'Conhecimento' },
     { label:'Chat contextual', page:'chat', icon:'message-2', group:'Conhecimento' },
-    { label:'Portfólio', page:'portfolio', icon:'layout-grid', group:'Indicadores Gerenciais' },
-    { label:'Priorização', page:'prioritization', icon:'sort-descending-2', group:'Indicadores Gerenciais' },
-    { label:'Indicadores do Portfólio', page:'pfkpi', icon:'chart-donut-3', group:'Indicadores Gerenciais' },
-    { label:'Visão do PMO', page:'pmoview', icon:'binoculars', group:'Indicadores Gerenciais' },
-    { label:'Painel da Diretoria', page:'board', icon:'presentation-analytics', group:'Indicadores Gerenciais' },
-    { label:'Visão Executiva', page:'execview', icon:'chart-infographic', group:'Indicadores Gerenciais' },
+    { label:'Portfólio', page:'portfolio', icon:'layout-grid', group:'Indicadores' },
+    { label:'Priorização', page:'prioritization', icon:'sort-descending-2', group:'Indicadores' },
+    { label:'Indicadores do Portfólio', page:'pfkpi', icon:'chart-donut-3', group:'Indicadores' },
+    { label:'Visão do PMO', page:'pmoview', icon:'binoculars', group:'Painéis' },
+    { label:'Painel da Diretoria', page:'board', icon:'presentation-analytics', group:'Painéis' },
+    { label:'Visão Executiva', page:'execview', icon:'chart-infographic', group:'Painéis' },
     { label:'Configurações', page:'settings', icon:'settings', group:'Sistema' },
     { label:'Ajuda', page:'help', icon:'help-circle', group:'Sistema' }
   ];
@@ -13669,7 +13681,7 @@ const Messaging = (() => {
     <div class="modal-title" style="display:flex;align-items:center;gap:8px"><i class="ti ti-compass" style="color:var(--acc)"></i>Bem-vindo ao <span data-brand="name">PMO Compass</span></div>
     <div class="modal-sub">4 coisas rápidas antes de começar</div>
     <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
-      <div style="display:flex;gap:10px;align-items:flex-start"><i class="ti ti-layout-grid" style="color:var(--acc);font-size:17px;margin-top:1px;flex-shrink:0"></i><div><strong style="color:var(--t1);font-size:12.5px">O menu lateral tem três blocos</strong><div style="font-size:12px;color:var(--t2);margin-top:2px">Indicadores Gerenciais (para analisar), Ações do Gerente de Projeto (para fazer) e Sistema — nas ações, clique no grupo para abrir.</div></div></div>
+      <div style="display:flex;gap:10px;align-items:flex-start"><i class="ti ti-layout-grid" style="color:var(--acc);font-size:17px;margin-top:1px;flex-shrink:0"></i><div><strong style="color:var(--t1);font-size:12.5px">O menu lateral tem quatro partes</strong><div style="font-size:12px;color:var(--t2);margin-top:2px">Painéis (visões prontas), Indicadores (Dashboard, portfólio, relatório), Ações do Gerente de Projeto (para fazer) e Sistema — clique no grupo para abrir; o grupo da página em uso fica aberto sozinho.</div></div></div>
       <div style="display:flex;gap:10px;align-items:flex-start"><i class="ti ti-cpu" style="color:var(--acc);font-size:17px;margin-top:1px;flex-shrink:0"></i><div><strong style="color:var(--t1);font-size:12.5px">Configure um provedor de IA primeiro</strong><div style="font-size:12px;color:var(--t2);margin-top:2px">Em Configurações → Provedor de IA. Sem isso, os recursos de IA ficam desativados.</div></div></div>
       <div style="display:flex;gap:10px;align-items:flex-start"><i class="ti ti-search" style="color:var(--acc);font-size:17px;margin-top:1px;flex-shrink:0"></i><div><strong style="color:var(--t1);font-size:12.5px">Ctrl/Cmd+K pula para qualquer lugar</strong><div style="font-size:12px;color:var(--t2);margin-top:2px">Busca páginas e troca de projeto sem precisar navegar pelo menu.</div></div></div>
       <div style="display:flex;gap:10px;align-items:flex-start"><i class="ti ti-help-circle" style="color:var(--acc);font-size:17px;margin-top:1px;flex-shrink:0"></i><div><strong style="color:var(--t1);font-size:12.5px">A página Ajuda mostra o que já está pronto</strong><div style="font-size:12px;color:var(--t2);margin-top:2px">Um retrato honesto do que funciona de verdade e o que ainda está em desenvolvimento.</div></div></div>
