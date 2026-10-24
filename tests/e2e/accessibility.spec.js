@@ -14,6 +14,7 @@ const PAGES = [
   { hash: '#hours', name: 'Apontamento de Horas' },
   { hash: '#baseline', name: 'Linha de Base' },
   { hash: '#pfkpi', name: 'Indicadores do Portfólio' },
+  { hash: '#pmoview', name: 'Visão do PMO' },
   { hash: '#statusmsg', name: 'Mensagem de status' },
 ];
 

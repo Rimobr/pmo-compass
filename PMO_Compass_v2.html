@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.4.0'
+  version: '2.5.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -874,6 +874,7 @@ body.icons-failed i[data-fb]::before{
       <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
       <button class="si" data-p="prioritization" onclick="R.go('prioritization')"><i class="ti ti-sort-descending-2"></i>Priorização</button>
       <button class="si" data-p="pfkpi" onclick="R.go('pfkpi')"><i class="ti ti-chart-donut-3"></i>Indicadores</button>
+      <button class="si" data-p="pmoview" onclick="R.go('pmoview')"><i class="ti ti-binoculars"></i>Visão do PMO</button>
       <div id="sb-projects-root"></div>
       <button class="si" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
     </div>
@@ -2567,7 +2568,191 @@ const PfKpi = (() => {
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     T.show('📥 CSV dos indicadores exportado.');
   }
-  return { render, setArea, openEditEl, closeEdit, saveEdit, exportCsv, resetCache: () => {} };
+  return { render, setArea, openEditEl, closeEdit, saveEdit, exportCsv, daysSinceUpdate, resetCache: () => {} };
+})();
+</script>
+
+<!-- ■ MODULE: services/pmo-views ─ O que cada tipo de PMO acompanha (indicadores e lista de atenção). Lógica pura, sem DOM -->
+<script data-module="services/pmo-views">
+const PmoViews = (() => {
+  const ORDER = ['controle', 'departamental', 'diretivo', 'estrategico', 'agil', 'suporte'];
+  const INFO = {
+    controle:      { label: 'PMO de Controle',      foco: 'Conformidade com o plano e com o processo: desvios de prazo, custo e escopo, linha de base e status em dia.' },
+    departamental: { label: 'PMO Departamental',    foco: 'Os projetos de UMA área: como estão no prazo, no custo e nos riscos, para priorizar a operação da área.' },
+    diretivo:      { label: 'PMO Diretivo',         foco: 'Decisões e alocação: o que precisa ser decidido agora, quem está sobrealocado e quais projetos estão em risco.' },
+    estrategico:   { label: 'PMO Estratégico',      foco: 'Saúde do portfólio como um todo: projetos saudáveis, em risco e quanto o plano original foi respeitado.' },
+    agil:          { label: 'PMO Ágil',             foco: 'Fluxo de entrega e impedimentos: o que foi concluído por semana, o que está bloqueado e a carga do time.' },
+    suporte:       { label: 'PMO de Suporte',       foco: 'Onde apoiar as equipes: projetos sem atualização, sem linha de base, conhecimento aplicado e pendências de reunião.' }
+  };
+  const sum = (rows, f) => rows.reduce((s, r) => s + (Number(f(r)) || 0), 0);
+  const pctOf = (n, d) => d > 0 ? Math.round(n / d * 100) : null;
+  const k = (label, value, sub, tone, tip) => ({ label, value, sub: sub || '', tone: tone || 'neutro', tip: tip || '' });
+  const tone = (n, bad) => n > 0 ? (bad || 'alerta') : 'ok';
+  const rateK = (label, r, tip) => k(label, r.pct == null ? '—' : r.pct + '%', r.known ? `${r.ok} de ${r.known}${r.unknown ? ` · ${r.unknown} sem dados` : ''}` : 'sem dados', r.pct == null ? 'neutro' : r.pct >= 80 ? 'ok' : r.pct >= 50 ? 'alerta' : 'critico', tip);
+
+  // rows: um item por projeto, já com { id, name, area, ev (PortfolioKpi.evaluate), days, hasBaseline, finishVar, risksNoOwner, risksOverdue, lessons:{total,applied},
+  //   docs, pendingActions, blocked, doneLast28, highLoad, overallocated, decisionsOpen }.   ctx: { overallocatedPeople, area }
+  function attention(rows, why) {
+    return rows.map(r => ({ id: r.id, name: r.name, reasons: why(r).filter(Boolean) })).filter(x => x.reasons.length).sort((a, b) => b.reasons.length - a.reasons.length);
+  }
+
+  function build(type, rowsAll, ctx = {}) {
+    const rows = type === 'departamental' && ctx.area ? rowsAll.filter(r => ((r.area || '').trim() || 'Sem área') === ctx.area) : rowsAll;
+    const agg = PortfolioKpi.aggregate(rows), t = agg.total;
+    const stale = rows.filter(r => r.days != null && r.days > 14).length;
+    const noBase = rows.filter(r => !r.hasBaseline).length;
+    const finishVars = rows.map(r => r.finishVar).filter(v => v != null);
+    let kpis = [], list = [], listTitle = '', note = '';
+
+    if(type === 'controle') {
+      kpis = [rateK('No prazo', t.prazo, 'Projetos sem entrega atrasada e com ritmo de prazo ≥ 0,90, entre os que têm dados.'),
+        rateK('No custo', t.custo, 'Ritmo de custo ≥ 0,90 e previsão no término até 105% do orçado.'),
+        rateK('No escopo', t.escopo, 'Nenhuma mudança de escopo aguardando decisão.'),
+        k('Sem linha de base', noBase, 'projeto(s) sem plano congelado para comparar', tone(noBase), 'Sem linha de base não há como medir desvio contra o plano aprovado.'),
+        k('Status desatualizado', stale, 'projeto(s) sem edição há mais de 14 dias', tone(stale), 'Governança: o status do projeto precisa ser atualizado com frequência.'),
+        k('Revisões de risco vencidas', sum(rows, r => r.risksOverdue), 'riscos em aberto com revisão atrasada', tone(sum(rows, r => r.risksOverdue)))];
+      listTitle = 'Projetos fora do padrão';
+      list = attention(rows, r => [r.ev.prazo === false && 'prazo fora do plano', r.ev.custo === false && 'custo acima do previsto', r.ev.escopo === false && 'mudança de escopo sem decisão',
+        r.finishVar != null && r.finishVar > 0 && `término ${r.finishVar} dia(s) depois da linha de base`, !r.hasBaseline && 'sem linha de base', r.days != null && r.days > 14 && `sem atualização há ${r.days} dias`, r.risksOverdue > 0 && `${r.risksOverdue} revisão(ões) de risco vencida(s)`]);
+    } else if(type === 'departamental') {
+      kpis = [k('Projetos da área', rows.length, ctx.area ? `área: ${ctx.area}` : 'escolha a área acima', 'neutro'),
+        rateK('No prazo', t.prazo), rateK('No custo', t.custo),
+        k('Em risco', t.emRisco, 'projeto(s) com farol vermelho', tone(t.emRisco, 'critico')),
+        k('Riscos críticos', t.riscosCriticos, 'em aberto na área', tone(t.riscosCriticos, 'critico')),
+        k('Decisões críticas', t.decisoesCriticas, 'pendentes na área', tone(t.decisoesCriticas))];
+      listTitle = 'O que pede atenção na área';
+      list = attention(rows, r => [r.ev.farol === 'vermelho' && 'projeto em risco', r.ev.atrasadas > 0 && `${r.ev.atrasadas} entrega(s) atrasada(s)`, r.ev.riscosCriticos > 0 && `${r.ev.riscosCriticos} risco(s) crítico(s)`, r.ev.decisoesCriticas > 0 && `${r.ev.decisoesCriticas} decisão(ões) crítica(s)`, r.highLoad > 0 && `${r.highLoad} colaborador(es) com carga muito alta`]);
+      if(!ctx.area) note = 'Escolha a área para ver só os projetos dela. Defina a área de cada projeto em Indicadores → Editar.';
+    } else if(type === 'diretivo') {
+      kpis = [k('Decisões críticas pendentes', t.decisoesCriticas, 'aguardando a sua decisão', tone(t.decisoesCriticas, 'critico')),
+        k('Projetos em risco', t.emRisco, 'farol vermelho', tone(t.emRisco, 'critico')),
+        k('Colaboradores sobrealocados', ctx.overallocatedPeople || 0, 'alocação somada acima de 100% entre projetos', tone(ctx.overallocatedPeople || 0)),
+        k('Riscos críticos', t.riscosCriticos, 'nota 15 a 25, em aberto', tone(t.riscosCriticos, 'critico')),
+        k('Entregas atrasadas', t.atrasadas, 'em todo o portfólio', tone(t.atrasadas)),
+        k('Mudanças de escopo abertas', sum(rows, r => r.scopeOpen), 'aguardando aprovação', tone(sum(rows, r => r.scopeOpen)))];
+      listTitle = 'Decisões e ações para agora';
+      list = attention(rows, r => [r.ev.decisoesCriticas > 0 && `decidir ${r.ev.decisoesCriticas} item(ns) crítico(s)`, r.ev.farol === 'vermelho' && 'projeto em risco: avaliar continuar, pausar ou replanejar', r.overallocated > 0 && `redistribuir ${r.overallocated} colaborador(es) sobrealocado(s)`, r.scopeOpen > 0 && `aprovar ou recusar ${r.scopeOpen} mudança(s) de escopo`]);
+    } else if(type === 'estrategico') {
+      kpis = [rateK('Projetos saudáveis', t.saudavel, 'No prazo, no custo e no escopo ao mesmo tempo.'),
+        k('Em risco', t.emRisco, 'farol vermelho', tone(t.emRisco, 'critico')),
+        k('Desvio médio do término', finishVars.length ? (Math.round(finishVars.reduce((s, v) => s + v, 0) / finishVars.length) > 0 ? '+' : '') + Math.round(finishVars.reduce((s, v) => s + v, 0) / finishVars.length) + ' d' : '—', finishVars.length ? `contra a linha de base de ${finishVars.length} projeto(s)` : 'nenhum projeto com linha de base', finishVars.length && finishVars.reduce((s, v) => s + v, 0) > 0 ? 'alerta' : 'neutro', 'Média do atraso (positivo) ou adiantamento (negativo) do término em relação ao plano aprovado.'),
+        k('Sem linha de base', noBase, 'sem plano congelado para medir', tone(noBase)),
+        k('Riscos críticos', t.riscosCriticos, 'no portfólio', tone(t.riscosCriticos, 'critico')),
+        k('Projetos no portfólio', rows.length, 'considerados nesta visão', 'neutro')];
+      listTitle = 'Projetos que pedem a atenção da liderança';
+      list = attention(rows, r => [r.ev.farol === 'vermelho' && 'em risco', r.finishVar != null && r.finishVar > 14 && `término ${r.finishVar} dias depois do plano original`, r.ev.riscosCriticos > 0 && `${r.ev.riscosCriticos} risco(s) crítico(s)`, r.ev.custo === false && 'custo fora do previsto']);
+      note = 'Alinhamento dos projetos a objetivos estratégicos (metas/OKR) ainda não existe no produto; esta visão mostra a saúde e a aderência ao plano.';
+    } else if(type === 'agil') {
+      const done = sum(rows, r => r.doneLast28);
+      kpis = [k('Concluídas em 4 semanas', done, 'entregas e subtarefas com término real nas últimas 4 semanas', 'neutro', 'Conta itens do cronograma com data real de término nos últimos 28 dias. É um indicador de fluxo, não de sprint.'),
+        k('Média por semana', (Math.round(done / 4 * 10) / 10).toLocaleString('pt-BR'), 'entregas concluídas por semana', 'neutro'),
+        k('Impedimentos', sum(rows, r => r.blocked), 'itens marcados como bloqueados', tone(sum(rows, r => r.blocked), 'critico'), 'Itens do cronograma com situação "Bloqueado".'),
+        k('Carga muito alta', sum(rows, r => r.highLoad), 'colaborador(es) com carga de 85% ou mais', tone(sum(rows, r => r.highLoad))),
+        k('Decisões pendentes', sum(rows, r => r.decisionsOpen), 'aguardando resposta', tone(sum(rows, r => r.decisionsOpen))),
+        k('Entregas atrasadas', t.atrasadas, 'fora da data planejada', tone(t.atrasadas))];
+      listTitle = 'Impedimentos e riscos ao fluxo';
+      list = attention(rows, r => [r.blocked > 0 && `${r.blocked} item(ns) bloqueado(s)`, r.highLoad > 0 && `${r.highLoad} colaborador(es) sobrecarregado(s)`, r.decisionsOpen > 0 && `${r.decisionsOpen} decisão(ões) pendente(s)`, r.ev.atrasadas > 0 && `${r.ev.atrasadas} entrega(s) atrasada(s)`]);
+      note = 'Backlog, sprints, velocidade e burndown ainda não existem no produto. Esta visão usa o que já há: entregas concluídas por semana, bloqueios e carga do time.';
+    } else { // suporte
+      const lessons = sum(rows, r => r.lessons.total), applied = sum(rows, r => r.lessons.applied);
+      kpis = [k('Lições aplicadas', lessons ? pctOf(applied, lessons) + '%' : '—', lessons ? `${applied} de ${lessons} lições` : 'nenhuma lição registrada', lessons && applied / lessons < 0.5 ? 'alerta' : 'neutro', 'Conhecimento que virou prática nos projetos.'),
+        k('Documentos no repositório', sum(rows, r => r.docs), 'base de conhecimento', 'neutro'),
+        k('Ações de reunião pendentes', sum(rows, r => r.pendingActions), 'ainda sem conclusão', tone(sum(rows, r => r.pendingActions))),
+        k('Sem atualização recente', stale, 'projeto(s) parados há mais de 14 dias', tone(stale), 'Projetos que provavelmente precisam de apoio para manter o status em dia.'),
+        k('Sem linha de base', noBase, 'projeto(s) sem plano congelado', tone(noBase)),
+        k('Riscos sem responsável', sum(rows, r => r.risksNoOwner), 'riscos críticos sem dono', tone(sum(rows, r => r.risksNoOwner), 'critico'))];
+      listTitle = 'Onde apoiar as equipes';
+      list = attention(rows, r => [r.days != null && r.days > 14 && `sem atualização há ${r.days} dias`, !r.hasBaseline && 'ajudar a definir a linha de base', r.risksNoOwner > 0 && `${r.risksNoOwner} risco(s) crítico(s) sem responsável`, r.ev.prazo === null && 'sem entregas cadastradas: apoiar o planejamento', r.pendingActions > 0 && `${r.pendingActions} ação(ões) de reunião pendente(s)`]);
+      note = 'Biblioteca de modelos e templates ainda não existe no produto; hoje o apoio se apoia no repositório de documentos e nas lições aprendidas.';
+    }
+    return { type, label: INFO[type].label, foco: INFO[type].foco, kpis, listTitle, list, note, projects: rows.length };
+  }
+  return { ORDER, INFO, build };
+})();
+</script>
+
+<!-- ■ MODULE: pages/pmoview -->
+<section class="page" id="p-pmoview" data-module="pages/pmoview">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Visão do PMO<span class="help-q" data-help="Cada tipo de PMO acompanha coisas diferentes. Escolha o tipo e veja os indicadores que ele costuma cobrar, calculados dos seus projetos, mais a lista do que pede atenção. A escolha só muda o que você vê aqui; o perfil da IA continua sendo definido em Configurações → Perfil de PMO." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">O que o seu tipo de PMO acompanha, calculado dos dados reais dos projetos.</div></div>
+  </div>
+  <div class="rk-toolbar">
+    <label for="pv-type" style="font-size:12px;color:var(--t2)">Tipo de PMO</label>
+    <span class="help-q" data-help="Controle: desvios e conformidade. Departamental: uma área. Diretivo: decisões e alocação. Estratégico: saúde do portfólio. Ágil: fluxo e impedimentos. Suporte: onde apoiar. Começa pelo perfil definido no projeto ativo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>
+    <select class="input" id="pv-type" onchange="PmoView.setType(this.value)"></select>
+    <span id="pv-area-wrap" style="display:none;align-items:center;gap:6px"><label for="pv-area" style="font-size:12px;color:var(--t2)">Área</label><span class="help-q" data-help="Mostra só os projetos desta área. A área de cada projeto é definida em Indicadores → Editar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span><select class="input" id="pv-area" onchange="PmoView.setArea(this.value)"></select></span>
+  </div>
+  <div id="pv-foco" style="font-size:12.5px;color:var(--t2);margin:2px 0 12px"></div>
+  <div class="g3" id="pv-kpis"></div>
+  <div class="card" style="margin-top:12px">
+    <div class="lbl"><i class="ti ti-alert-circle"></i><span id="pv-list-title">Atenção</span><span class="help-q" data-help="Projetos que se enquadram em algum critério de atenção deste tipo de PMO, do que mais pesa para o que menos pesa. Clique em &quot;Abrir&quot; para ir ao projeto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div id="pv-list"></div>
+  </div>
+  <div id="pv-note" style="font-size:11.5px;color:var(--t3);margin-top:10px"></div>
+</section>
+
+<!-- ■ MODULE: pages/pmoview-js -->
+<script data-module="pages/pmoview-js">
+const PmoView = (() => {
+  const K = 'pmo_view_type_v1';
+  let type = null, area = '';
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const el = id => document.getElementById(id);
+  const TONE = { ok: 'var(--grn)', alerta: 'var(--amb)', critico: 'var(--red)', neutro: 'var(--t1)' };
+  const DOT = { ok: 'sdot-grn', alerta: 'sdot-amb', critico: 'sdot-red', neutro: 'sdot-acc' };
+
+  function defaultType() {
+    try { const v = localStorage.getItem(K); if(PmoViews.INFO[v]) return v; } catch(e) {}
+    const p = (typeof PmoProfiles !== 'undefined' && PmoProfiles.get()) || null;
+    return p && PmoViews.INFO[p.type] ? p.type : 'controle';
+  }
+
+  // Dados de cada projeto no formato que a lógica pura espera
+  function collect() {
+    const alloc = new Set(DB.computePortfolioAllocation().filter(p => p.overallocated).map(p => p.name.trim().toLowerCase()));
+    const rows = DB.listProjects().map(p => {
+      const g = t => DB.getForProject(p.id, t) || [];
+      const f = SharedFacts.computeFacts(StatusMsg.factsInput(p.id, alloc), new Date());
+      const today = Clock.today(p.id), todayIso = Clock.iso(today);
+      const risks = g('risks'), rs = RiskMatrix.summarize(risks, today);
+      const bls = g('baselines'), bl = bls[bls.length - 1];
+      const cmp = bl ? BaselineCalc.compare(bl.snapshot, g('wbs'), g('budgetLines')) : null;
+      const items = []; g('wbs').forEach(m => { items.push(m); (m.children || []).forEach(t => items.push(t)); });
+      const doneLast28 = items.filter(i => i.endActual && BaselineCalc.diff(i.endActual, todayIso) != null && BaselineCalc.diff(i.endActual, todayIso) >= 0 && BaselineCalc.diff(i.endActual, todayIso) <= 28).length;
+      const lessons = g('lessons');
+      return { id: p.id, name: p.name, area: p.area || '', ev: PortfolioKpi.evaluate(f), days: PfKpi.daysSinceUpdate(p.id), hasBaseline: !!bl, finishVar: cmp ? cmp.summary.finishVar : null,
+        risksNoOwner: risks.filter(r => RiskMatrix.isOpen(r) && RiskMatrix.scoreOf(r) >= 15 && !String(r.owner || '').trim()).length, risksOverdue: rs.overdueReviews,
+        lessons: { total: lessons.length, applied: lessons.filter(l => l.applied).length }, docs: g('repository').length,
+        pendingActions: g('meetings').reduce((n, m) => n + (m.actions || []).filter(a => !a.done).length, 0),
+        blocked: items.filter(i => i.status === 'red').length, doneLast28, highLoad: g('team').filter(m => (m.workloadPct || 0) >= 85).length,
+        overallocated: f.team.overallocated, decisionsOpen: g('decisions').filter(d => d.status === 'pending').length, scopeOpen: f.scope.openCount };
+    });
+    return { rows, overallocatedPeople: alloc.size };
+  }
+
+  function render() {
+    if(!el('pv-kpis')) return;
+    if(!type) type = defaultType();
+    el('pv-type').innerHTML = PmoViews.ORDER.map(k => `<option value="${k}"${k === type ? ' selected' : ''}>${esc(PmoViews.INFO[k].label)}</option>`).join('');
+    const { rows, overallocatedPeople } = collect();
+    const areas = [...new Set(rows.map(r => (r.area || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    if(rows.some(r => !(r.area || '').trim())) areas.push('Sem área');
+    if(type === 'departamental' && !area) { const act = DB.listProjects().find(p => p.id === DB.getActiveProjectId()); area = ((act && act.area) || '').trim() || areas[0] || ''; }
+    el('pv-area-wrap').style.display = type === 'departamental' ? 'inline-flex' : 'none';
+    el('pv-area').innerHTML = areas.map(a => `<option value="${esc(a)}"${a === area ? ' selected' : ''}>${esc(a)}</option>`).join('') || '<option value="">(nenhuma área definida)</option>';
+    const v = PmoViews.build(type, rows, { overallocatedPeople, area });
+    el('pv-foco').innerHTML = `<strong>${esc(v.label)}:</strong> ${esc(v.foco)}`;
+    el('pv-kpis').innerHTML = v.kpis.map(x => `<div class="kpi"><div class="kpi-lbl"><span class="sdot ${DOT[x.tone] || 'sdot-acc'}"></span>${esc(x.label)}${x.tip ? `<span class="help-q" data-help="${esc(x.tip)}" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>` : ''}</div><div class="kpi-val" style="color:${TONE[x.tone] || 'var(--t1)'}">${esc(x.value)}</div><div class="kpi-delta">${esc(x.sub)}</div></div>`).join('');
+    el('pv-list-title').textContent = v.listTitle;
+    el('pv-list').innerHTML = v.list.length
+      ? v.list.map(it => `<div class="rk-item" style="cursor:default"><div class="rk-main"><div class="rk-title">${esc(it.name)}</div><div class="rk-meta">${it.reasons.map(r => `<span class="chip">${esc(r)}</span>`).join('')}</div></div><button class="btn btn-sm" data-id="${esc(it.id)}" onclick="PmoView.openProject(this)"><i class="ti ti-arrow-right"></i>Abrir</button></div>`).join('')
+      : `<div class="rk-empty">${v.projects ? 'Nada pedindo atenção neste momento. 👍' : 'Nenhum projeto nesta visão.'}</div>`;
+    el('pv-note').textContent = v.note;
+  }
+  function setType(t) { type = t; area = ''; try { localStorage.setItem(K, t); } catch(e) {} render(); }
+  function setArea(a) { area = a; render(); }
+  function openProject(btn) { DB.switchProject(btn.dataset.id); R.go('dashboard'); }
+  return { render, setType, setArea, openProject, resetCache: () => {} };
 })();
 </script>
 
@@ -2814,6 +2999,7 @@ const PfKpi = (() => {
     <div class="lbl"><i class="ti ti-layout-grid"></i>Projetos</div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Múltiplos projetos com dados isolados</strong> — cada projeto (Portal Nexus, Valdori Dist., Grupo Beltrano ou qualquer um novo) tem sua própria WBS, decisões, repositório, equipe etc., guardados separadamente. Trocar de projeto troca o app inteiro na hora.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Indicadores do Portfólio</strong> — quantos projetos estão no prazo, no custo e no escopo (e nos três), distribuição do farol e quadro por área/departamento, com a situação de cada projeto, entregas atrasadas, decisões e riscos críticos e há quantos dias o projeto foi atualizado. Projetos sem dados ficam fora das taxas. Exporta em CSV. Defina a área do projeto em “Editar”.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Visão do PMO</strong> — escolha o tipo de PMO (Controle, Departamental, Diretivo, Estratégico, Ágil ou Suporte) e veja os indicadores que ele costuma cobrar, calculados dos seus projetos, mais a lista do que pede atenção. Onde o produto ainda não tem o dado (backlog e sprints no ágil, metas estratégicas, biblioteca de modelos) a própria tela avisa em vez de inventar número.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Portfólio</strong> — os cards de todos os projetos mostram números reais (prazo, escopo, documentos, decisões pendentes), calculados a partir dos dados de cada um.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Novo projeto</strong> — o assistente cria um projeto de verdade, com base de dados própria e vazia, e já deixa ele como o projeto ativo.</div></div>
   </div>
@@ -4903,7 +5089,7 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','help','xray'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','help','xray'];
   function go(id) {
     pages.forEach(p => {
       const el = document.getElementById('p-'+p);
@@ -4926,6 +5112,7 @@ const R = (() => {
     if(id === 'budget' && typeof Budget !== 'undefined') Budget.render();
     if(id === 'risks' && typeof Risks !== 'undefined') Risks.render();
     if(id === 'pfkpi' && typeof PfKpi !== 'undefined') PfKpi.render();
+    if(id === 'pmoview' && typeof PmoView !== 'undefined') PmoView.render();
     if(id === 'baseline' && typeof Baselines !== 'undefined') Baselines.render();
     if(id === 'statusmsg' && typeof StatusMsg !== 'undefined') StatusMsg.render();
     if(id === 'hours' && typeof Hours !== 'undefined') Hours.render();
@@ -4955,7 +5142,7 @@ const Nav = (() => {
     wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento', risks:'sbg-planejamento', baseline:'sbg-planejamento',
     burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe', hours:'sbg-equipe',
     lessons:'sbg-conhecimento', meetings:'sbg-conhecimento', repository:'sbg-conhecimento', chat:'sbg-conhecimento',
-    portfolio:'sbg-projetos', prioritization:'sbg-projetos', pfkpi:'sbg-projetos'
+    portfolio:'sbg-projetos', prioritization:'sbg-projetos', pfkpi:'sbg-projetos', pmoview:'sbg-projetos'
   };
 
   // Comportamento sanfona: só um menu fica aberto por vez — todo menu sem
@@ -5027,7 +5214,7 @@ const Nav = (() => {
   };
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
-    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores do Portfólio',
+    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores do Portfólio', pmoview:'Visão do PMO',
     burnout:'Burnout Radar', resources:'Colaboradores', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
     portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
@@ -5097,6 +5284,7 @@ const CmdK = (() => {
     { label:'Portfólio', page:'portfolio', icon:'layout-grid', group:'Projetos' },
     { label:'Priorização', page:'prioritization', icon:'sort-descending-2', group:'Projetos' },
     { label:'Indicadores do Portfólio', page:'pfkpi', icon:'chart-donut-3', group:'Projetos' },
+    { label:'Visão do PMO', page:'pmoview', icon:'binoculars', group:'Projetos' },
     { label:'Painel da Diretoria', page:'board', icon:'presentation-analytics', group:'Projetos' },
     { label:'Visão Executiva', page:'execview', icon:'chart-infographic', group:'Projetos' },
     { label:'Configurações', page:'settings', icon:'settings', group:'' },
