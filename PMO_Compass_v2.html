@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.5.1'
+  version: '2.5.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -277,6 +277,10 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .sb-exec-btn i{font-size:15px;flex-shrink:0;color:var(--grn)}
 .sb-exec-btn:hover{background:rgba(63,185,80,.18)}
 .sb-exec-btn.on{background:var(--gd);color:var(--t1);border-color:var(--grn);box-shadow:inset 3px 0 0 var(--grn)}
+.sb-pmo-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;margin-bottom:4px;border-radius:var(--r8);border:1px solid var(--ambb);background:var(--amd);color:var(--t1);font-size:12.5px;font-weight:600;cursor:pointer;text-align:left}
+.sb-pmo-btn i{font-size:15px;flex-shrink:0;color:var(--amb)}
+.sb-pmo-btn:hover{background:var(--s2)}
+.sb-pmo-btn.on{border-color:var(--amb);box-shadow:inset 3px 0 0 var(--amb)}
 </style>
 <style>.page{padding:20px;display:none;flex-direction:column;gap:14px;animation:pgIn .15s ease}
 .page.on{display:flex}
@@ -286,8 +290,8 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .pg-sub{font-size:12px;color:var(--t3);line-height:1.5}
 @media(max-width:900px){.sidebar,.sb-rzw{display:none}.tb-nav{display:flex;justify-content:flex-start}}
 .sidebar.collapsed{width:56px;padding:12px 4px;align-items:stretch}
-.sidebar.collapsed .si,.sidebar.collapsed .sb-xray-btn,.sidebar.collapsed .sb-board-btn,.sidebar.collapsed .sb-exec-btn,.sidebar.collapsed .sb-group-hdr{font-size:0;justify-content:center;padding-left:0;padding-right:0;gap:0}
-.sidebar.collapsed .si i,.sidebar.collapsed .sb-xray-btn i,.sidebar.collapsed .sb-board-btn i,.sidebar.collapsed .sb-exec-btn i{font-size:17px}
+.sidebar.collapsed .si,.sidebar.collapsed .sb-xray-btn,.sidebar.collapsed .sb-board-btn,.sidebar.collapsed .sb-exec-btn,.sidebar.collapsed .sb-pmo-btn,.sidebar.collapsed .sb-group-hdr{font-size:0;justify-content:center;padding-left:0;padding-right:0;gap:0}
+.sidebar.collapsed .si i,.sidebar.collapsed .sb-xray-btn i,.sidebar.collapsed .sb-board-btn i,.sidebar.collapsed .sb-exec-btn i,.sidebar.collapsed .sb-pmo-btn i{font-size:17px}
 .sidebar.collapsed .sb-group-hdr i.sb-gico{font-size:17px}
 .sidebar.collapsed .sb-gchev,.sidebar.collapsed .sb-sec{display:none}
 .sidebar.collapsed .sb-group-body .si{padding-left:0}
@@ -817,6 +821,7 @@ body.icons-failed i[data-fb]::before{
   <button class="sb-xray-btn" data-p="xray" onclick="R.go('xray')"><i class="ti ti-report-medical"></i>Raio-X do Projeto</button>
   <button class="sb-board-btn" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button>
   <button class="sb-exec-btn" data-p="execview" onclick="R.go('execview')"><i class="ti ti-chart-infographic"></i>Visão Executiva</button>
+  <button class="sb-pmo-btn" data-p="pmoview" onclick="R.go('pmoview')"><i class="ti ti-binoculars"></i>Visão do PMO</button>
 
   <div class="sb-div"></div>
   <div class="sb-sec">Gestão de Projeto</div>
@@ -874,7 +879,6 @@ body.icons-failed i[data-fb]::before{
       <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
       <button class="si" data-p="prioritization" onclick="R.go('prioritization')"><i class="ti ti-sort-descending-2"></i>Priorização</button>
       <button class="si" data-p="pfkpi" onclick="R.go('pfkpi')"><i class="ti ti-chart-donut-3"></i>Indicadores</button>
-      <button class="si" data-p="pmoview" onclick="R.go('pmoview')"><i class="ti ti-binoculars"></i>Visão do PMO</button>
       <div id="sb-projects-root"></div>
       <button class="si" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
     </div>
@@ -2691,8 +2695,9 @@ const PmoViews = (() => {
   </div>
   <div class="rk-toolbar">
     <label for="pv-type" style="font-size:12px;color:var(--t2)">Tipo de PMO</label>
-    <span class="help-q" data-help="Controle: desvios e conformidade. Departamental: uma área. Diretivo: decisões e alocação. Estratégico: saúde do portfólio. Ágil: fluxo e impedimentos. Suporte: onde apoiar. Começa pelo perfil definido no projeto ativo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>
+    <span class="help-q" data-help="Controle: desvios e conformidade. Departamental: uma área. Diretivo: decisões e alocação. Estratégico: saúde do portfólio. Ágil: fluxo e impedimentos. Suporte: onde apoiar. Começa pelo perfil definido no projeto ativo. Em dúvida sobre qual escolher, clique em &quot;Guia dos tipos de PMO&quot;." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>
     <select class="input" id="pv-type" onchange="PmoView.setType(this.value)"></select>
+    <button class="btn btn-sm" onclick="PmoView.openGuide()"><i class="ti ti-info-circle"></i>Guia dos tipos de PMO</button>
     <span id="pv-area-wrap" style="display:none;align-items:center;gap:6px"><label for="pv-area" style="font-size:12px;color:var(--t2)">Área</label><span class="help-q" data-help="Mostra só os projetos desta área. A área de cada projeto é definida em Indicadores → Editar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span><select class="input" id="pv-area" onchange="PmoView.setArea(this.value)"></select></span>
   </div>
   <div id="pv-foco" style="font-size:12.5px;color:var(--t2);margin:2px 0 12px"></div>
@@ -2702,11 +2707,19 @@ const PmoViews = (() => {
     <div id="pv-list"></div>
   </div>
   <div id="pv-note" style="font-size:11.5px;color:var(--t3);margin-top:10px"></div>
-  <details class="card" style="margin-top:14px" id="pv-guide">
-    <summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--t1)"><i class="ti ti-help-circle"></i> Guia: o que cada visão oferece<span class="help-q" style="margin-left:6px" data-help="Se você não sabe qual tipo de PMO escolher, leia a coluna &quot;Escolha se...&quot;: ela diz para quem cada visão serve. Clique numa linha para abrir aquela visão." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></summary>
-    <div style="overflow-x:auto;margin-top:10px" id="pv-guide-root"></div>
-  </details>
 </section>
+
+<!-- ■ MODULE: ui/pmo-guide-modal -->
+<div class="modal-ov hidden" id="modal-pmoguide" onclick="if(event.target===this)PmoView.closeGuide()">
+  <div class="modal-box" style="width:860px;max-height:92vh;overflow:auto" role="dialog" aria-modal="true" aria-labelledby="pg-title">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" id="pg-title">Guia dos tipos de PMO</div>
+      <button class="btn btn-sm" onclick="PmoView.closeGuide()" aria-label="Fechar"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-sub">O que cada visão oferece e para quem serve. Clique numa linha para abrir aquela visão.</div>
+    <div style="overflow-x:auto" id="pv-guide-root"></div>
+  </div>
+</div>
 
 <!-- ■ MODULE: pages/pmoview-js -->
 <script data-module="pages/pmoview-js">
@@ -2765,12 +2778,17 @@ const PmoView = (() => {
       ? v.list.map(it => `<div class="rk-item" style="cursor:default"><div class="rk-main"><div class="rk-title">${esc(it.name)}</div><div class="rk-meta">${it.reasons.map(r => `<span class="chip">${esc(r)}</span>`).join('')}</div></div><button class="btn btn-sm" data-id="${esc(it.id)}" onclick="PmoView.openProject(this)"><i class="ti ti-arrow-right"></i>Abrir</button></div>`).join('')
       : `<div class="rk-empty">${v.projects ? 'Nada pedindo atenção neste momento. 👍' : 'Nenhum projeto nesta visão.'}</div>`;
     el('pv-note').textContent = v.note;
-    el('pv-guide-root').innerHTML = `<table class="hr-tbl"><thead><tr><th scope="col">Tipo</th><th scope="col">O que acompanha</th><th scope="col">Escolha se…</th></tr></thead><tbody>${PmoViews.ORDER.map(k => `<tr style="cursor:pointer${k === type ? ';background:var(--ad)' : ''}" tabindex="0" data-type="${k}" onclick="PmoView.setType(this.dataset.type);window.scrollTo(0,0)" onkeydown="if(event.key==='Enter')PmoView.setType(this.dataset.type)"><td style="font-weight:600;white-space:nowrap">${esc(PmoViews.INFO[k].label)}${k === type ? ' <span class="badge b-acc">em uso</span>' : ''}</td><td>${esc(PmoViews.INFO[k].acompanha)}</td><td>${esc(PmoViews.INFO[k].quando)}</td></tr>`).join('')}</tbody></table>`;
+    renderGuide();
   }
+  function renderGuide() {
+    el('pv-guide-root').innerHTML = `<table class="hr-tbl"><thead><tr><th scope="col">Tipo</th><th scope="col">O que acompanha</th><th scope="col">Escolha se…</th></tr></thead><tbody>${PmoViews.ORDER.map(k => `<tr style="cursor:pointer${k === type ? ';background:var(--ad)' : ''}" tabindex="0" data-type="${k}" onclick="PmoView.setType(this.dataset.type);PmoView.closeGuide()" onkeydown="if(event.key==='Enter'){PmoView.setType(this.dataset.type);PmoView.closeGuide()}"><td style="font-weight:600;white-space:nowrap">${esc(PmoViews.INFO[k].label)}${k === type ? ' <span class="badge b-acc">em uso</span>' : ''}</td><td>${esc(PmoViews.INFO[k].acompanha)}</td><td>${esc(PmoViews.INFO[k].quando)}</td></tr>`).join('')}</tbody></table>`;
+  }
+  function openGuide() { renderGuide(); el('modal-pmoguide').classList.remove('hidden'); }
+  function closeGuide() { el('modal-pmoguide').classList.add('hidden'); }
   function setType(t) { type = t; area = ''; try { localStorage.setItem(K, t); } catch(e) {} render(); }
   function setArea(a) { area = a; render(); }
   function openProject(btn) { DB.switchProject(btn.dataset.id); R.go('dashboard'); }
-  return { render, setType, setArea, openProject, resetCache: () => {} };
+  return { render, setType, setArea, openProject, openGuide, closeGuide, resetCache: () => {} };
 })();
 </script>
 
@@ -5114,7 +5132,7 @@ const R = (() => {
       if(el) el.classList.toggle('on', p===id);
     });
     document.querySelectorAll('.ntab[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===id));
-    document.querySelectorAll('.si[data-p], .sb-xray-btn[data-p], .sb-board-btn[data-p], .sb-exec-btn[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===id));
+    document.querySelectorAll('.si[data-p], .sb-xray-btn[data-p], .sb-board-btn[data-p], .sb-exec-btn[data-p], .sb-pmo-btn[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===id));
     const c = document.getElementById('content');
     if(c) c.scrollTop = 0;
     history.replaceState(null,'','#'+id);
@@ -5160,7 +5178,7 @@ const Nav = (() => {
     wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento', risks:'sbg-planejamento', baseline:'sbg-planejamento',
     burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe', hours:'sbg-equipe',
     lessons:'sbg-conhecimento', meetings:'sbg-conhecimento', repository:'sbg-conhecimento', chat:'sbg-conhecimento',
-    portfolio:'sbg-projetos', prioritization:'sbg-projetos', pfkpi:'sbg-projetos', pmoview:'sbg-projetos'
+    portfolio:'sbg-projetos', prioritization:'sbg-projetos', pfkpi:'sbg-projetos'
   };
 
   // Comportamento sanfona: só um menu fica aberto por vez — todo menu sem
@@ -5302,7 +5320,7 @@ const CmdK = (() => {
     { label:'Portfólio', page:'portfolio', icon:'layout-grid', group:'Projetos' },
     { label:'Priorização', page:'prioritization', icon:'sort-descending-2', group:'Projetos' },
     { label:'Indicadores do Portfólio', page:'pfkpi', icon:'chart-donut-3', group:'Projetos' },
-    { label:'Visão do PMO', page:'pmoview', icon:'binoculars', group:'Projetos' },
+    { label:'Visão do PMO', page:'pmoview', icon:'binoculars', group:'' },
     { label:'Painel da Diretoria', page:'board', icon:'presentation-analytics', group:'Projetos' },
     { label:'Visão Executiva', page:'execview', icon:'chart-infographic', group:'Projetos' },
     { label:'Configurações', page:'settings', icon:'settings', group:'' },
@@ -8934,7 +8952,7 @@ const ColumnDrag = (() => {
       tg.innerHTML = '<i class="ti ti-chevron-' + (on ? 'right' : 'left') + '"></i>';
       tg.title = on ? 'Expandir o menu' : 'Recolher o menu em ícones';
       tg.setAttribute('aria-label', tg.title); tg.setAttribute('aria-expanded', on ? 'false' : 'true');
-      sb.querySelectorAll('.si,.sb-xray-btn,.sb-board-btn,.sb-exec-btn,.sb-group-hdr').forEach(b => {
+      sb.querySelectorAll('.si,.sb-xray-btn,.sb-board-btn,.sb-exec-btn,.sb-pmo-btn,.sb-group-hdr').forEach(b => {
         if(on) { if(!b.dataset.t0) b.dataset.t0 = b.getAttribute('title') || ''; b.title = b.textContent.trim(); }
         else if(b.dataset.t0 != null) { if(b.dataset.t0) b.title = b.dataset.t0; else b.removeAttribute('title'); delete b.dataset.t0; }
       });
