@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.6.2'
+  version: '2.7.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -243,6 +243,12 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .si:hover:not(.on){background:var(--s2);color:var(--t1)}
 .si .sb-b{margin-left:auto;font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px;background:var(--rd);color:var(--red);border:1px solid var(--rb)}
 .sb-div{height:1px;background:var(--b1);margin:6px 4px}
+.sb-hdr-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-hdr-txt b{font-weight:700;color:var(--t1)}
+.sb-ctx{display:flex;align-items:center;gap:6px;margin:0 6px 4px;padding:5px 8px;border-radius:var(--r6);background:var(--ad);border:1px solid var(--ab);font-size:12px;font-weight:600;color:var(--t1)}
+.sb-ctx i{color:var(--acc);font-size:14px;flex-shrink:0}
+.sb-ctx span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.sb-bottom{margin-top:auto;padding-top:8px;border-top:2px solid var(--b2)}
 .content{flex:1;overflow-y:auto}
 </style>
 
@@ -293,7 +299,7 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .sidebar.collapsed .si,.sidebar.collapsed .sb-xray-btn,.sidebar.collapsed .sb-board-btn,.sidebar.collapsed .sb-exec-btn,.sidebar.collapsed .sb-pmo-btn,.sidebar.collapsed .sb-group-hdr{font-size:0;justify-content:center;padding-left:0;padding-right:0;gap:0}
 .sidebar.collapsed .si i,.sidebar.collapsed .sb-xray-btn i,.sidebar.collapsed .sb-board-btn i,.sidebar.collapsed .sb-exec-btn i,.sidebar.collapsed .sb-pmo-btn i{font-size:17px}
 .sidebar.collapsed .sb-group-hdr i.sb-gico{font-size:17px}
-.sidebar.collapsed .sb-gchev,.sidebar.collapsed .sb-sec{display:none}
+.sidebar.collapsed .sb-gchev,.sidebar.collapsed .sb-sec,.sidebar.collapsed .sb-ctx{display:none}
 .sidebar.collapsed .sb-group-body .si{padding-left:0}
 .sb-tg{position:absolute;top:10px;left:-8px;width:22px;height:22px;border-radius:50%;border:1px solid var(--b2);background:var(--s1);color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;z-index:31}
 .sb-tg:hover{background:var(--s3);color:var(--t1)}
@@ -836,7 +842,16 @@ body.icons-failed i[data-fb]::before{
   </div>
 
   <div class="sb-div"></div>
-  <div class="sb-sec">Ações do Gerente de Projeto</div>
+  <div class="sb-group" id="sbg-projetos">
+    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-projetos')"><i class="ti ti-layout-grid sb-gico"></i><span class="sb-hdr-txt">Projeto: <b id="sb-proj-name">—</b></span><i class="ti ti-chevron-right sb-gchev"></i></button>
+    <div class="sb-group-body" id="sbg-projetos-list">
+      <div id="sb-projects-root"></div>
+      <button class="si" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
+    </div>
+  </div>
+
+  <div class="sb-sec">Ações do projeto</div>
+  <div class="sb-ctx" id="sb-ctx-project" title="As ações abaixo valem para o projeto escolhido"><i class="ti ti-folder"></i><span id="sb-ctx-name">—</span></div>
 
   <div class="sb-group" id="sbg-planejamento">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-planejamento')"><i class="ti ti-sitemap sb-gico"></i>Planejamento<i class="ti ti-chevron-right sb-gchev"></i></button>
@@ -881,17 +896,7 @@ body.icons-failed i[data-fb]::before{
     </div>
   </div>
 
-  <div class="sb-div"></div>
-
-  <div class="sb-group" id="sbg-projetos">
-    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-projetos')"><i class="ti ti-layout-grid sb-gico"></i>Projetos<i class="ti ti-chevron-right sb-gchev"></i></button>
-    <div class="sb-group-body" id="sbg-projetos-list">
-      <div id="sb-projects-root"></div>
-      <button class="si" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
-    </div>
-  </div>
-
-  <div class="sb-div"></div>
+  <div class="sb-bottom">
   <div class="sb-group" id="sbg-sistema">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-sistema')"><i class="ti ti-settings sb-gico"></i>Sistema<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
@@ -899,6 +904,7 @@ body.icons-failed i[data-fb]::before{
       <button class="si" data-p="help" onclick="R.go('help')"><i class="ti ti-help-circle"></i>Ajuda</button>
       <button class="si" onclick="Privacy.open()"><i class="ti ti-shield-lock"></i>Privacidade &amp; dados</button>
     </div>
+  </div>
   </div>
 </aside>
 
@@ -1109,14 +1115,90 @@ body.icons-failed i[data-fb]::before{
   </div>
 </section>
 
+<!-- ■ MODULE: pages/report-css ─ Relatório executivo: documento "papel" claro (também no tema escuro) e pronto para imprimir -->
+<style data-module="pages/report-css">
+.rp-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:4px 0 12px}
+.rp-controls .input{width:auto;min-width:230px;max-width:100%}
+.rp-controls label.rp-chk{display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--t1);cursor:pointer}
+.rp-doc{--rp-bg:#ffffff;--rp-ink:#101828;--rp-mut:#475467;--rp-line:#e4e7ec;--rp-soft:#f9fafb;--rp-brand:#0f4c81;
+  --rp-red:#b42318;--rp-redbg:#fef3f2;--rp-amb:#b54708;--rp-ambbg:#fffaeb;--rp-grn:#067647;--rp-grnbg:#ecfdf3;--rp-blu:#175cd3;--rp-blubg:#eff8ff;
+  background:var(--rp-bg);color:var(--rp-ink);border-radius:var(--r12);border:1px solid var(--b2);padding:26px 30px;max-width:1180px;box-shadow:var(--shadow-md);font-size:13px;line-height:1.5}
+.rp-doc *{color:inherit}
+.rp-head{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;border-bottom:3px solid var(--rp-brand);padding-bottom:14px;margin-bottom:16px}
+.rp-title{font-size:22px;font-weight:800;letter-spacing:-.01em;color:var(--rp-brand)}
+.rp-scope{font-size:15px;font-weight:600;margin-top:2px}
+.rp-meta{font-size:11.5px;color:var(--rp-mut);margin-top:2px}
+.rp-chips{display:flex;gap:6px;flex-wrap:wrap}
+.rp-chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid var(--rp-line);background:var(--rp-soft)}
+.rp-chip i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.rp-lead{background:var(--rp-blubg);border-left:4px solid var(--rp-blu);border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:13.5px}
+.rp-h2{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--rp-mut);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.rp-h2 .rp-count{font-weight:600;text-transform:none;letter-spacing:0;color:var(--rp-mut)}
+.rp-sec{margin-bottom:20px}
+.rp-dec{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:10px}
+.rp-card{border:1px solid var(--rp-line);border-left:5px solid var(--rp-blu);border-radius:10px;padding:11px 13px;background:var(--rp-bg);break-inside:avoid;page-break-inside:avoid}
+.rp-card.u-urgente{border-left-color:var(--rp-red);background:var(--rp-redbg)}
+.rp-card.u-semana{border-left-color:var(--rp-amb);background:var(--rp-ambbg)}
+.rp-card.u-ciclo{border-left-color:var(--rp-blu);background:var(--rp-blubg)}
+.rp-pill{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:20px;color:#fff!important}
+.u-urgente .rp-pill{background:var(--rp-red)} .u-semana .rp-pill{background:var(--rp-amb)} .u-ciclo .rp-pill{background:var(--rp-blu)}
+.rp-proj{font-size:11px;font-weight:700;color:var(--rp-mut);margin-left:6px}
+.rp-card h3{font-size:13.5px;font-weight:700;margin:6px 0 4px;overflow-wrap:anywhere}
+.rp-card p{font-size:12px;margin:2px 0;overflow-wrap:anywhere}
+.rp-card p b{font-weight:700}
+.rp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:20px}
+.rp-kpi{border:1px solid var(--rp-line);border-radius:10px;padding:10px 12px;background:var(--rp-soft);display:flex;gap:10px;align-items:center;break-inside:avoid;page-break-inside:avoid}
+.rp-kpi .rp-kl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--rp-mut)}
+.rp-kpi .rp-kv{font-size:24px;font-weight:800;line-height:1.1}
+.rp-kpi .rp-kv small{font-size:12px;font-weight:600;color:var(--rp-mut)}
+.rp-kpi .rp-ks{font-size:11px;color:var(--rp-mut)}
+.rp-kpi.t-ok .rp-kv{color:var(--rp-grn)} .rp-kpi.t-alerta .rp-kv{color:var(--rp-amb)} .rp-kpi.t-critico .rp-kv{color:var(--rp-red)} .rp-kpi.t-neutro .rp-kv{color:var(--rp-ink)}
+.rp-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;margin-bottom:20px}
+.rp-cc{border:1px solid var(--rp-line);border-radius:10px;padding:12px 14px;background:var(--rp-bg);break-inside:avoid;page-break-inside:avoid}
+.rp-bar{display:grid;grid-template-columns:minmax(80px,38%) 1fr auto;gap:8px;align-items:center;margin:6px 0;font-size:11.5px}
+.rp-bar-l{overflow-wrap:anywhere}
+.rp-bar-t{position:relative;height:12px;border-radius:6px;background:var(--rp-line)}
+.rp-bar-f{height:100%;border-radius:6px}
+.rp-bar-x{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--rp-ink)}
+.rp-bar-v{font-weight:700;white-space:nowrap} .rp-bar-v small{font-weight:500;color:var(--rp-mut)}
+.rp-cols{display:flex;gap:14px;align-items:flex-end;height:120px;padding-top:6px}
+.rp-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%;font-size:11px;font-weight:700}
+.rp-col div{width:100%;border-radius:6px 6px 0 0;min-height:3px}
+.rp-col span{font-weight:600;color:var(--rp-mut)}
+.rp-legend{font-size:10.5px;color:var(--rp-mut);margin-top:6px}
+.rp-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.rp-tbl th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--rp-mut);text-align:left;padding:4px 6px;border-bottom:1px solid var(--rp-line)}
+.rp-tbl td{padding:6px;border-bottom:1px solid var(--rp-line);overflow-wrap:anywhere}
+.rp-tbl .n{text-align:right;white-space:nowrap}
+.rp-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.rp-two{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:12px}
+@media (max-width:900px){.rp-two{grid-template-columns:minmax(0,1fr)}.rp-doc{padding:16px}}
+.rp-act{display:flex;gap:10px;margin:7px 0;font-size:12.5px;break-inside:avoid}
+.rp-act b.n{flex:0 0 22px;height:22px;border-radius:50%;background:var(--rp-brand);color:#fff!important;display:flex;align-items:center;justify-content:center;font-size:11px}
+.rp-act .w{display:block;font-size:11px;color:var(--rp-mut)}
+.rp-ul{margin:0;padding-left:18px;font-size:12.5px} .rp-ul li{margin:4px 0}
+.rp-foot{margin-top:16px;padding-top:8px;border-top:1px solid var(--rp-line);font-size:10.5px;color:var(--rp-mut);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.rp-empty{font-size:12.5px;color:var(--rp-mut);padding:6px 0}
+@media print{
+  .no-print{display:none!important}
+  #p-report .pg-hdr{display:none!important}
+  .rp-doc{box-shadow:none;border:none;border-radius:0;padding:0;max-width:none}
+  body,html{background:#fff!important}
+}
+</style>
+
 <!-- ■ MODULE: pages/report -->
 <section class="page" id="p-report" data-module="pages/report">
-  <div class="pg-hdr"><div><div class="pg-title">Status Report — Gerado a partir dos dados reais<span class="help-q" data-help="Um relatório de status pronto, montado a partir do que já está cadastrado no sistema — não é preciso escrever do zero toda semana." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub" id="report-sub">Baseado nos documentos indexados · Linguagem adaptada por público-alvo</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" onclick="Report.regenerate()"><i class="ti ti-sparkles"></i>Regenerar</button><button class="btn btn-sm" onclick="T.show('🔒 Versão futura — envio por e-mail exige um provedor pago configurado no servidor (roadmap P7). Por enquanto, use PDF e envie por fora.')"><i class="ti ti-send"></i>Enviar</button><button class="btn btn-sm" onclick="window.print()"><i class="ti ti-download"></i>PDF</button></div></div>
-  <!-- Só aparece no PDF/impressão — a tela some com topbar/sidebar (onde ficam nome do projeto e
-       data), então sem isso o relatório impresso saía sem dizer de qual projeto ou de quando é. -->
-  <div class="print-only" id="report-print-header" style="margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #000">
-    <div style="font-size:18px;font-weight:700" id="report-print-project"></div>
-    <div style="font-size:12px;color:#444;margin-top:2px" id="report-print-meta"></div>
+  <div class="pg-hdr">
+    <div><div class="pg-title">Relatório Executivo<span class="help-q" data-help="Documento de uma página para reunião de diretoria: as decisões que precisam sair desta reunião (em destaque), os indicadores em gráficos e as ações sugeridas, tudo calculado dos dados reais dos projetos. Escolha um projeto ou todos, ajuste o que mostrar e use &quot;Imprimir / salvar PDF&quot; para levar à reunião." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">O que decidir agora, como estão os projetos e o que fazer — numa leitura rápida.</div></div>
+  </div>
+  <div class="rp-controls no-print">
+    <label for="rp-scope" style="font-size:12px;color:var(--t2)">Projeto</label>
+    <span class="help-q" data-help="Escolha &quot;Todos os projetos&quot; para o relatório de portfólio (uma visão da diretoria sobre o conjunto) ou um projeto para o relatório detalhado dele. A escolha fica salva neste navegador." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>
+    <select class="input" id="rp-scope" onchange="Report.setScope(this.value)"></select>
+    <label class="rp-chk"><input type="checkbox" id="rp-money" checked onchange="Report.render()"> Incluir valores em R$<span class="help-q" data-help="Desmarque se o documento vai para alguém que não pode ver custos: valores em reais somem de todo o relatório, inclusive dos gráficos e das decisões." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></label>
+    <button class="btn btn-sm btn-acc" onclick="Report.print()"><i class="ti ti-printer"></i>Imprimir / salvar PDF</button>
+    <button class="btn btn-sm" onclick="Report.regenerate()"><i class="ti ti-sparkles"></i>Refinar a leitura com IA<span class="help-q" data-help="Reescreve só o parágrafo de abertura (&quot;leitura do momento&quot;) em tom mais fluido, usando a sua chave de IA. Os números e as decisões continuam calculados dos dados e não são alterados." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
   </div>
   <div id="report-root"></div>
 </section>
@@ -5232,7 +5314,11 @@ const Nav = (() => {
     const activeId = DB.getActiveProjectId();
     root.innerHTML = projects.map(p => `<button class="si${p.id===activeId?' proj-active':''}" style="padding-left:22px" onclick="DB.switchProject('${p.id}')"><i class="ti ti-${escapeHtml(p.icon||'compass')}"></i>${escapeHtml(p.name)}</button>`).join('');
     const tag = document.getElementById('proj-name');
-    if(tag) { const active = projects.find(x=>x.id===activeId); if(active) tag.textContent = active.name; }
+    const active = projects.find(x=>x.id===activeId);
+    if(tag && active) tag.textContent = active.name;
+    // O menu mostra QUAL projeto está escolhido: as "Ações do projeto" valem para ele
+    const nm = document.getElementById('sb-proj-name'), cx = document.getElementById('sb-ctx-name');
+    if(active) { if(nm) nm.textContent = active.name; if(cx) cx.textContent = active.name; }
     renderProjDropdown();
   }
 
@@ -9152,6 +9238,115 @@ const BaselineCalc = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: services/exec-report ─ Relatório executivo: o que decidir, o que fazer e os números dos gráficos. Lógica pura, sem DOM -->
+<script data-module="services/exec-report">
+const ExecReport = (() => {
+  const URG = { urgente: 3, semana: 2, ciclo: 1 };
+  const URG_LABEL = { urgente: 'Urgente', semana: 'Esta semana', ciclo: 'Próximo ciclo' };
+  const money = v => 'R$ ' + Math.round(v || 0).toLocaleString('pt-BR');
+  const ratio = v => v == null ? '—' : v.toFixed(2).replace('.', ',');
+  const clip = (t, n = 90) => { const x = String(t || '').replace(/\s+/g, ' ').trim(); return x.length > n ? x.slice(0, n - 1).trimEnd() + '…' : x; };
+  const sum = (arr, f) => arr.reduce((s, x) => s + (Number(f(x)) || 0), 0);
+  const avg = arr => arr.length ? Math.round(arr.reduce((s, x) => s + x, 0) / arr.length) : null;
+
+  // % que a entrega deveria ter hoje pelas datas planejadas (mesma regra do servidor e do orçamento)
+  function expectedPct(start, end, todayIso) {
+    const d = s => { const [y, m, dd] = String(s).split('-').map(Number); return Date.UTC(y, m - 1, dd); };
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(start || '') || !/^\d{4}-\d{2}-\d{2}$/.test(end || '')) return null;
+    const s = d(start), e = d(end), t = d(todayIso);
+    if(e <= s) return null;
+    if(t <= s) return 0;
+    if(t >= e) return 100;
+    return Math.round((t - s) / (e - s) * 100);
+  }
+
+  // rows: um por projeto (ver contrato em PmoReportData no app). opts: { money:boolean, maxDecisions:number }
+  function build(rows, opts = {}) {
+    const o = Object.assign({ money: true, maxDecisions: 6, maxActions: 6 }, opts);
+    const single = rows.length === 1;
+    const decisions = [], actions = [];
+    const add = (urg, project, title, impact, action, kind, weight) =>
+      decisions.push({ urgency: urg, urgencyLabel: URG_LABEL[urg], project, title: clip(title, 110), impact, action, kind, score: URG[urg] * 1000 + Math.min(999, Math.round(weight || 0)) });
+
+    rows.forEach(r => {
+      const f = r.f, b = f.budget, name = r.name;
+      f.decisions.pendingCritical.slice(0, 3).forEach(t => add('urgente', name, 'Decidir: ' + t, 'Decisão crítica parada: o plano segue travado até a resposta.', 'Reunir os responsáveis e registrar a decisão (aceitar, adiar ou recusar).', 'decisao', 100));
+      if(f.farol.color === 'vermelho') add('urgente', name, `${name} está em risco`, `Ritmo de prazo ${ratio(b.spi)} e de custo ${ratio(b.cpi)}; ${f.schedule.delayedCount} entrega(s) atrasada(s).`, 'Decidir entre continuar, pausar ou replanejar o projeto.', 'farol', 90);
+      (r.risksTop || []).filter(x => x.score >= 15).slice(0, 2).forEach(x =>
+        add((!x.owner || x.reviewOverdue) ? 'urgente' : 'semana', name, 'Risco crítico: ' + x.title, `Nota ${x.score} de 25 (probabilidade × impacto)${x.owner ? '' : ' e sem responsável definido'}${x.reviewOverdue ? ' e com revisão vencida' : ''}.`, x.mitigation ? 'Executar a mitigação: ' + clip(x.mitigation, 90) : 'Definir responsável e plano de resposta.', 'risco', x.score * 3));
+      (r.scopeOpen || []).slice().sort((a, b2) => (b2.days || 0) - (a.days || 0)).slice(0, 3).forEach(s =>
+        add('semana', name, `Mudança de escopo ${s.id}: ${s.title}`, `Se aprovada: +${s.days || 0} dia(s)${o.money && s.cost ? ' e +' + money(s.cost) : ''} no projeto.`, 'Aprovar, recusar ou mover para a Fase 2.', 'escopo', (s.days || 0) * 5));
+      (r.delayedCrit || []).slice(0, 2).forEach(d =>
+        add(d.daysLate > 14 ? 'urgente' : 'semana', name, 'Entrega atrasada no caminho crítico: ' + d.label, `${d.daysLate} dia(s) de atraso empurram o término do projeto.`, 'Replanejar o cronograma ou reforçar a equipe.', 'prazo', d.daysLate));
+      if(b.hasBudget && b.eacPctOfBac > 105) add(b.eacPctOfBac > 115 ? 'urgente' : 'semana', name, `Orçamento: previsão de ${b.eacPctOfBac}% do orçado`,
+        o.money && b.amounts ? `Previsão de ${money(b.amounts.eac)} contra ${money(b.amounts.bac)} orçados (+${money(b.amounts.eac - b.amounts.bac)}).` : `Previsão ${b.eacPctOfBac - 100}% acima do orçado.`, 'Revisar o escopo ou aprovar reforço de orçamento.', 'custo', b.eacPctOfBac - 100);
+      (r.loaded || []).filter(m => m.load >= 85).slice(0, 2).forEach(m =>
+        add('semana', name, `Carga alta: ${m.name} (${m.load}%)`, 'Risco de esgotamento e de atraso nas entregas dele(a).', 'Redistribuir tarefas ou ajustar prazos.', 'equipe', m.load / 10));
+      if(r.stakeholderCrit) add('ciclo', name, `Reengajar ${r.stakeholderCrit.name}`, `Stakeholder em engajamento crítico${r.stakeholderCrit.days != null ? ` (sem contato há ${r.stakeholderCrit.days} dias)` : ''}.`, 'Agendar conversa de alinhamento nos próximos 7 dias.', 'stakeholder', 10);
+
+      // Ações do time de gestão (o que fazer, com a justificativa nos dados)
+      if(r.daysSinceUpdate != null && r.daysSinceUpdate > 14) actions.push({ project: name, text: `Atualizar o status de ${name}`, why: `sem edição há ${r.daysSinceUpdate} dias`, w: r.daysSinceUpdate });
+      if(!r.hasBaseline && f.schedule.moduleCount) actions.push({ project: name, text: `Salvar a linha de base de ${name}`, why: 'sem plano congelado não dá para medir desvio de prazo e custo', w: 12 });
+      if(r.pendingActions > 0) actions.push({ project: name, text: `Cobrar ${r.pendingActions} ação(ões) de reunião pendente(s)`, why: 'ações combinadas sem conclusão', w: 8 + r.pendingActions });
+      (r.risksTop || []).filter(x => x.score >= 15 && !x.owner).slice(0, 1).forEach(x => actions.push({ project: name, text: `Definir responsável pelo risco "${clip(x.title, 60)}"`, why: `nota ${x.score} e ninguém acompanhando`, w: 30 }));
+      const lateOther = f.schedule.delayedCount - (r.delayedCrit || []).length;
+      if(lateOther > 0) actions.push({ project: name, text: `Revisar o prazo de ${lateOther} entrega(s) atrasada(s)`, why: 'fora da data planejada, sem estar no caminho crítico', w: 15 });
+      if(f.team.overallocated > 0) actions.push({ project: name, text: `Resolver a sobrealocação de ${f.team.overallocated} colaborador(es)`, why: 'alocação somada acima de 100% entre projetos', w: 20 });
+    });
+
+    decisions.sort((a, b) => b.score - a.score);
+    actions.sort((a, b) => b.w - a.w);
+
+    // Farol e KPIs
+    const evs = rows.map(r => ({ id: r.id, name: r.name, area: r.area || '', ev: PortfolioKpi.evaluate(r.f) }));
+    const agg = PortfolioKpi.aggregate(evs);
+    const healthAvg = avg(rows.filter(r => r.health.score != null).map(r => r.health.score));
+    const tone = (v, ok, warn) => v >= ok ? 'ok' : v >= warn ? 'alerta' : 'critico';
+    const r0 = rows[0];
+    const rate = x => x.pct == null ? { value: '—', sub: 'sem dados', tone: 'neutro' } : { value: x.pct + '%', sub: `${x.ok} de ${x.known} projeto(s)`, tone: tone(x.pct, 80, 50) };
+    const crit = sum(rows, r => r.f.risks.byLevel['crítico']), decCrit = sum(rows, r => r.f.decisions.pendingCriticalCount);
+    const kpis = single ? [
+      { key: 'saude', label: 'Saúde geral', value: r0.health.score == null ? '—' : String(r0.health.score), unit: '/100', sub: r0.health.status, tone: r0.health.score == null ? 'neutro' : tone(r0.health.score, 80, 60), gauge: r0.health.score },
+      { key: 'avanco', label: 'Concluído', value: (r0.f.schedule.avgPct == null ? '—' : r0.f.schedule.avgPct + '%'), sub: `${r0.f.schedule.doneCount} de ${r0.f.schedule.moduleCount} entregas`, tone: 'neutro', gauge: r0.f.schedule.avgPct },
+      { key: 'prazo', label: 'Ritmo do prazo', value: ratio(r0.f.budget.spi), sub: '1,00 = no combinado', tone: r0.f.budget.spi == null ? 'neutro' : r0.f.budget.spi >= 1 ? 'ok' : r0.f.budget.spi >= 0.9 ? 'alerta' : 'critico' },
+      { key: 'custo', label: 'Ritmo do custo', value: ratio(r0.f.budget.cpi), sub: '1,00 = no combinado', tone: r0.f.budget.cpi == null ? 'neutro' : r0.f.budget.cpi >= 1 ? 'ok' : r0.f.budget.cpi >= 0.9 ? 'alerta' : 'critico' },
+      { key: 'riscos', label: 'Riscos críticos', value: String(crit), sub: `${r0.f.risks.openCount} em aberto`, tone: crit ? 'critico' : 'ok' },
+      { key: 'decisoes', label: 'Decisões críticas', value: String(decCrit), sub: 'aguardando resposta', tone: decCrit ? 'critico' : 'ok' }
+    ] : [
+      { key: 'saude', label: 'Saúde média', value: healthAvg == null ? '—' : String(healthAvg), unit: '/100', sub: `${rows.length} projetos`, tone: healthAvg == null ? 'neutro' : tone(healthAvg, 80, 60), gauge: healthAvg },
+      Object.assign({ key: 'prazo', label: 'No prazo' }, rate(agg.total.prazo)),
+      Object.assign({ key: 'custo', label: 'No custo' }, rate(agg.total.custo)),
+      Object.assign({ key: 'escopo', label: 'No escopo' }, rate(agg.total.escopo)),
+      { key: 'riscos', label: 'Riscos críticos', value: String(crit), sub: 'em todo o portfólio', tone: crit ? 'critico' : 'ok' },
+      { key: 'decisoes', label: 'Decisões críticas', value: String(decCrit), sub: 'aguardando resposta', tone: decCrit ? 'critico' : 'ok' }
+    ];
+
+    // Dados dos gráficos
+    const charts = {
+      progress: single
+        ? (r0.items || []).slice(0, 8).map(i => ({ label: clip(i.label, 34), real: i.pct, expected: i.expected }))
+        : rows.map(r => ({ label: clip(r.name, 34), real: r.f.schedule.avgPct == null ? 0 : r.f.schedule.avgPct, expected: avg((r.items || []).map(i => i.expected).filter(v => v != null)) })),
+      budget: (() => { const bs = rows.filter(r => r.f.budget.hasBudget && r.f.budget.amounts); if(!bs.length || !o.money) return null; return { bac: sum(bs, r => r.f.budget.amounts.bac), ac: sum(bs, r => r.f.budget.amounts.ac), eac: sum(bs, r => r.f.budget.amounts.eac) }; })(),
+      budgetPct: (() => { const bs = rows.filter(r => r.f.budget.hasBudget); return bs.length ? { consumo: avg(bs.map(r => r.f.budget.consumoPct)), previsao: avg(bs.map(r => r.f.budget.eacPctOfBac)) } : null; })(),
+      risks: { critico: sum(rows, r => r.f.risks.byLevel['crítico']), alto: sum(rows, r => r.f.risks.byLevel.alto), medio: sum(rows, r => r.f.risks.byLevel['médio']), baixo: sum(rows, r => r.f.risks.byLevel.baixo) },
+      health: single ? (Array.isArray(r0.health.dims) ? r0.health.dims : Object.entries(r0.health.dims || {}).map(([label, value]) => ({ label, value }))) : null,
+      projects: rows.map(r => ({ name: r.name, farol: r.f.farol.color, health: r.health.score, status: r.health.status, spi: r.f.budget.spi, cpi: r.f.budget.cpi, pct: r.f.schedule.avgPct, delayed: r.f.schedule.delayedCount }))
+    };
+
+    const conquests = [];
+    rows.forEach(r => { (r.done || []).slice(0, single ? 5 : 2).forEach(d => conquests.push(single ? d : `${r.name}: ${d}`)); });
+
+    const headline = single
+      ? `${r0.name}: ${r0.health.score == null ? 'sem dados para avaliar a saúde' : 'saúde ' + r0.health.score + '/100 (' + r0.health.status.toLowerCase() + ')'}, ${r0.f.schedule.avgPct == null ? 'sem entregas cadastradas' : r0.f.schedule.avgPct + '% concluído'}. ${decCrit ? decCrit + ' decisão(ões) crítica(s) aguardando resposta. ' : 'Nenhuma decisão crítica pendente. '}${crit ? crit + ' risco(s) crítico(s). ' : ''}${r0.f.schedule.delayedCount ? r0.f.schedule.delayedCount + ' entrega(s) atrasada(s).' : 'Sem entregas atrasadas.'}`
+      : `${rows.length} projetos: ${agg.farol.verde} saudável(is), ${agg.farol.amarelo} em atenção, ${agg.farol.vermelho} em risco${agg.farol.semDados ? ', ' + agg.farol.semDados + ' sem dados' : ''}. ${decCrit} decisão(ões) crítica(s) e ${crit} risco(s) crítico(s) em aberto.`;
+
+    return { mode: single ? 'projeto' : 'portfolio', count: rows.length, farol: agg.farol, kpis, decisions: decisions.slice(0, o.maxDecisions), decisionsTotal: decisions.length,
+      actions: actions.slice(0, o.maxActions), charts, conquests: conquests.slice(0, 6), headline, agg: agg.total };
+  }
+  return { build, expectedPct, URG_LABEL };
+})();
+</script>
+
 <!-- ■ MODULE: pages/hours-js -->
 <script data-module="pages/hours-js">
 const Hours = (() => {
@@ -10223,124 +10418,131 @@ const Meetings = (() => {
 <!-- ■ MODULE: pages/report-js -->
 <script data-module="pages/report-js">
 const Report = (() => {
-  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-  function fmtMoney(n) { return 'R$' + Number(n||0).toLocaleString('pt-BR'); }
+  const K = 'pmo_report_scope_v1';
+  let scope = null;
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const el = id => document.getElementById(id);
+  const TONE = { ok: 'var(--rp-grn)', alerta: 'var(--rp-amb)', critico: 'var(--rp-red)', neutro: 'var(--rp-blu)' };
+  const FAROL = { verde: ['var(--rp-grn)', 'Saudável'], amarelo: ['var(--rp-amb)', 'Atenção'], vermelho: ['var(--rp-red)', 'Em risco'] };
+  const fmtMoney = v => 'R$ ' + Math.round(v || 0).toLocaleString('pt-BR');
+  const ratio = v => v == null ? '—' : v.toFixed(2).replace('.', ',');
 
-  function computeData() {
-    const wbs = DB.get('wbs') || [];
-    const decisions = DB.get('decisions') || [];
-    const repository = DB.get('repository') || [];
-    const stakeholders = DB.get('stakeholders') || [];
-    const lessons = DB.get('lessons') || [];
-    const scope = DB.get('scopeChanges') || [];
-    const team = DB.get('team') || [];
-    const meetings = DB.get('meetings') || [];
-
-    const aderencia = wbs.length ? Math.round(wbs.reduce((s,m)=>s+(m.pct||0),0) / wbs.length) : 0;
-    const pendentes = decisions.filter(d => d.status === 'pending');
-    const criticasPendentes = pendentes.filter(d => d.severity === 'crit');
-    const modulosCriticos = wbs.filter(m => m.status === 'red');
-    const modulosConcluidos = wbs.filter(m => m.status === 'grn');
-    const membrosCriticos = team.filter(m => m.workloadPct >= 85);
-    const scopeAbertos = scope.filter(s => s.status === 'pending' || s.status === 'analysis');
-    const scopeImpactoDias = scopeAbertos.reduce((s,x)=>s+(x.impactDays||0),0);
-    const scopeImpactoCusto = scopeAbertos.reduce((s,x)=>s+(x.impactCost||0),0);
-    const acoesPendentes = meetings.reduce((s,mt)=>s+(mt.actions||[]).filter(a=>!a.done).length, 0);
-    const licoesAplicadas = lessons.filter(l => l.applied).length;
-    const stakeholderCritico = stakeholders.filter(s => s.engagement === 'critico')
-      .sort((a,b) => new Date(a.lastContact) - new Date(b.lastContact))[0];
-
-    // Mesma fórmula unificada usada no Dashboard (services/health-score) — antes havia um cálculo
-    // duplicado e mais simples aqui, considerando só 3 das 6 dimensões.
-    const saude = (typeof HealthScore !== 'undefined') ? HealthScore.calculate(HealthScore.computeMetrics()) : aderencia;
-
-    return { wbs, decisions, repository, stakeholders, lessons, scope, team, meetings,
-      aderencia, pendentes, criticasPendentes, modulosCriticos, modulosConcluidos, membrosCriticos,
-      scopeAbertos, scopeImpactoDias, scopeImpactoCusto, acoesPendentes, licoesAplicadas, stakeholderCritico, saude };
+  // Dados de cada projeto no formato que a lógica pura (ExecReport.build) espera
+  function collect(pid, alloc, money) {
+    const g = t => DB.getForProject(pid, t) || [];
+    const proj = DB.listProjects().find(p => p.id === pid) || { id: pid, name: pid };
+    const today = Clock.today(pid), todayIso = Clock.iso(today);
+    const wbs = g('wbs');
+    const f = SharedFacts.restrictFacts(SharedFacts.computeFacts(StatusMsg.factsInput(pid, alloc), new Date()), money);
+    const hasData = wbs.length || g('budgetLines').length;
+    const dims = (typeof HealthScore !== 'undefined' && hasData) ? HealthScore.computeMetrics(pid) : null;
+    const score = dims ? HealthScore.calculate(dims) : null;
+    const health = { score, status: score == null ? 'Sem dados' : HealthScore.getStatus(score).label, dims: dims ? Object.fromEntries(Object.entries(dims).map(([k, v]) => [HealthScore.DIM_LABEL[k] || k, v])) : null };
+    if(health.dims) health.dims = Object.entries(health.dims).map(([label, value]) => ({ label, value }));
+    // caminho crítico: só entregas atrasadas que NÃO têm folga (CPM real)
+    let delayedCrit = [];
+    if(typeof CPM !== 'undefined') {
+      const items = []; wbs.forEach(m => { items.push({ id: m.id, label: m.label, start: m.start, end: m.end, predecessors: m.predecessors || [], status: m.status }); (m.children || []).forEach(t => items.push({ id: t.id, label: t.label, start: t.start, end: t.end, predecessors: t.predecessors || [], status: t.status })); });
+      const { error, result } = CPM.compute(items);
+      if(!error) delayedCrit = items.filter(i => i.status !== 'grn' && i.end && result.get(i.id) && result.get(i.id).critical && BaselineCalc.diff(i.end, todayIso) > 0)
+        .map(i => ({ label: i.label, daysLate: BaselineCalc.diff(i.end, todayIso) })).sort((a, b) => b.daysLate - a.daysLate);
+    }
+    const risks = g('risks').filter(RiskMatrix.isOpen).sort((a, b) => RiskMatrix.scoreOf(b) - RiskMatrix.scoreOf(a));
+    const stk = g('stakeholders').filter(s => s.engagement === 'critico').sort((a, b) => new Date(a.lastContact || 0) - new Date(b.lastContact || 0))[0];
+    return { id: pid, name: proj.name, client: proj.client || '', area: proj.area || '', f, health,
+      items: wbs.slice(0, 12).map(m => ({ label: m.label, pct: m.pct || 0, expected: ExecReport.expectedPct(m.start, m.end, todayIso) })),
+      delayedCrit,
+      scopeOpen: g('scopeChanges').filter(s => s.status === 'pending' || s.status === 'analysis').map(s => ({ id: s.id, title: s.title, days: s.impactDays || 0, cost: s.impactCost || 0 })),
+      loaded: g('team').filter(m => (m.workloadPct || 0) >= 85).map(m => ({ name: m.name, load: m.workloadPct })),
+      risksTop: risks.slice(0, 5).map(r => ({ title: r.title, score: RiskMatrix.scoreOf(r), owner: String(r.owner || '').trim(), mitigation: r.mitigation || '', reviewOverdue: !!(r.reviewOn && r.reviewOn < todayIso) })),
+      stakeholderCrit: stk ? { name: stk.name, days: stk.lastContact ? BaselineCalc.diff(String(stk.lastContact).slice(0, 10), todayIso) : null } : null,
+      pendingActions: g('meetings').reduce((n, m) => n + (m.actions || []).filter(a => !a.done).length, 0),
+      done: wbs.filter(m => m.status === 'grn').map(m => m.label),
+      daysSinceUpdate: PfKpi.daysSinceUpdate(pid), hasBaseline: g('baselines').length > 0 };
   }
 
-  function blk(icon, title, bodyHtml) {
-    return `<div class="report-blk"><div class="report-sec"><i class="ti ${icon}"></i>${title}</div><p class="report-body">${bodyHtml}</p></div>`;
+  // ── gráficos (HTML/SVG simples, nada externo) ──
+  const donut = (v, color) => `<svg viewBox="0 0 80 80" width="72" height="72" role="img" aria-label="${v} de 100"><circle cx="40" cy="40" r="30" fill="none" stroke="var(--rp-line)" stroke-width="9"/><circle cx="40" cy="40" r="30" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round" stroke-dasharray="188.5" stroke-dashoffset="${(188.5 * (1 - Math.max(0, Math.min(100, v)) / 100)).toFixed(1)}" transform="rotate(-90 40 40)"/><text x="40" y="45" text-anchor="middle" font-size="17" font-weight="700" fill="var(--rp-ink)">${v}</text></svg>`;
+  const barColor = (real, exp) => exp == null ? 'var(--rp-blu)' : real >= exp - 5 ? 'var(--rp-grn)' : real >= exp - 20 ? 'var(--rp-amb)' : 'var(--rp-red)';
+  const hbar = (label, value, max, color, text) => `<div class="rp-bar"><div class="rp-bar-l">${esc(label)}</div><div class="rp-bar-t"><div class="rp-bar-f" style="width:${Math.max(2, Math.min(100, value / (max || 1) * 100))}%;background:${color}"></div></div><div class="rp-bar-v">${text}</div></div>`;
+
+  function cardProgress(c, single) {
+    const body = c.progress.length ? c.progress.map(p => `<div class="rp-bar"><div class="rp-bar-l">${esc(p.label)}</div><div class="rp-bar-t"><div class="rp-bar-f" style="width:${Math.max(2, p.real)}%;background:${barColor(p.real, p.expected)}"></div>${p.expected != null ? `<div class="rp-bar-x" style="left:${p.expected}%" title="Esperado hoje: ${p.expected}%"></div>` : ''}</div><div class="rp-bar-v">${p.real}%${p.expected != null ? ` <small>/ ${p.expected}%</small>` : ''}</div></div>`).join('') : '<div class="rp-empty">Nenhuma entrega cadastrada.</div>';
+    return `<div class="rp-cc"><div class="rp-h2">${single ? 'Avanço por entrega' : 'Avanço por projeto'}</div>${body}<div class="rp-legend">Barra = realizado · traço preto = esperado hoje pelo cronograma · verde no ritmo, âmbar atenção, vermelho atrasado</div></div>`;
+  }
+  function cardBudget(c) {
+    let body;
+    if(c.budget) { const m = Math.max(c.budget.bac, c.budget.ac, c.budget.eac, 1); body = hbar('Orçado', c.budget.bac, m, 'var(--rp-blu)', fmtMoney(c.budget.bac)) + hbar('Gasto até agora', c.budget.ac, m, 'var(--rp-amb)', fmtMoney(c.budget.ac)) + hbar('Previsão no término', c.budget.eac, m, c.budget.eac > c.budget.bac * 1.05 ? 'var(--rp-red)' : 'var(--rp-grn)', fmtMoney(c.budget.eac)); }
+    else if(c.budgetPct) body = hbar('Consumo do orçado', c.budgetPct.consumo, 150, 'var(--rp-amb)', c.budgetPct.consumo + '%') + hbar('Previsão no término', c.budgetPct.previsao, 150, c.budgetPct.previsao > 105 ? 'var(--rp-red)' : 'var(--rp-grn)', c.budgetPct.previsao + '% do orçado');
+    else body = '<div class="rp-empty">Nenhuma linha de orçamento cadastrada.</div>';
+    return `<div class="rp-cc"><div class="rp-h2">Orçamento</div>${body}</div>`;
+  }
+  function cardRisks(c) {
+    const r = c.risks, max = Math.max(1, r.critico, r.alto, r.medio, r.baixo), col = (n, label, color) => `<div class="rp-col"><span>${n}</span><div style="height:${Math.max(3, n / max * 100)}%;background:${color}"></div>${label}</div>`;
+    return `<div class="rp-cc"><div class="rp-h2">Riscos em aberto por faixa</div><div class="rp-cols">${col(r.critico, 'Crítico', 'var(--rp-red)')}${col(r.alto, 'Alto', 'var(--rp-amb)')}${col(r.medio, 'Médio', 'var(--rp-blu)')}${col(r.baixo, 'Baixo', 'var(--rp-grn)')}</div><div class="rp-legend">Nota = probabilidade × impacto (crítico 15–25 · alto 10–14 · médio 5–9 · baixo 1–4)</div></div>`;
+  }
+  function cardHealthOrProjects(c, single, rows) {
+    if(single) {
+      const d = rows[0].health.dims;
+      return `<div class="rp-cc"><div class="rp-h2">Saúde por dimensão</div>${d ? d.map(x => hbar(x.label, x.value, 100, x.value >= 70 ? 'var(--rp-grn)' : x.value >= 50 ? 'var(--rp-amb)' : 'var(--rp-red)', x.value)).join('') : '<div class="rp-empty">Sem dados para avaliar.</div>'}</div>`;
+    }
+    return `<div class="rp-cc"><div class="rp-h2">Farol por projeto</div><table class="rp-tbl"><thead><tr><th>Projeto</th><th class="n">Saúde</th><th class="n">Prazo</th><th class="n">Custo</th><th class="n">Atrasadas</th></tr></thead><tbody>${c.projects.map(p => { const f = FAROL[p.farol]; return `<tr><td><span class="rp-dot" style="background:${f ? f[0] : 'var(--rp-mut)'}"></span>${esc(p.name)}</td><td class="n">${p.health == null ? '—' : p.health}</td><td class="n">${ratio(p.spi)}</td><td class="n">${ratio(p.cpi)}</td><td class="n">${p.delayed}</td></tr>`; }).join('')}</tbody></table><div class="rp-legend">Ritmo: 1,00 = no combinado · abaixo de 0,90 = fora do plano</div></div>`;
   }
 
-  function renderTemplate() {
-    const d = computeData();
-    const root = document.getElementById('report-root');
-    if(!root) return;
+  function render() {
+    if(!el('report-root')) return;
+    const projects = DB.listProjects();
+    if(!scope) { try { scope = localStorage.getItem(K); } catch(e) {} }
+    if(scope !== 'all' && !projects.some(p => p.id === scope)) scope = DB.getActiveProjectId();
+    el('rp-scope').innerHTML = (projects.length > 1 ? `<option value="all"${scope === 'all' ? ' selected' : ''}>Todos os projetos (${projects.length})</option>` : '') + projects.map(p => `<option value="${esc(p.id)}"${p.id === scope ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
+    if(projects.length < 2 && scope === 'all') scope = projects[0].id;
+    const money = el('rp-money').checked;
+    const alloc = new Set(DB.computePortfolioAllocation().filter(p => p.overallocated).map(p => p.name.trim().toLowerCase()));
+    const ids = scope === 'all' ? projects.map(p => p.id) : [scope];
+    const rows = ids.map(id => collect(id, alloc, money));
+    const out = ExecReport.build(rows, { money });
+    const single = out.mode === 'projeto';
+    const now = new Date();
+    const posicao = SharedFacts.fmtDateBr(SharedFacts.isoDate(SharedFacts.projectToday(null, now)));
+    const refs = rows.filter(r => r.f.usesReferenceDate).length;
+    const chips = ['verde', 'amarelo', 'vermelho'].map(k => `<span class="rp-chip"><i style="background:${FAROL[k][0]}"></i>${out.farol[k]} ${FAROL[k][1].toLowerCase()}</span>`).join('') + (out.farol.semDados ? `<span class="rp-chip"><i style="background:var(--rp-mut)"></i>${out.farol.semDados} sem dados</span>` : '');
+    const decCards = out.decisions.length ? out.decisions.map(d => `<div class="rp-card u-${d.urgency}"><span class="rp-pill">${esc(d.urgencyLabel)}</span>${single ? '' : `<span class="rp-proj">${esc(d.project)}</span>`}<h3>${esc(d.title)}</h3><p><b>Impacto:</b> ${esc(d.impact)}</p><p><b>Sugestão:</b> ${esc(d.action)}</p></div>`).join('')
+      : '<div class="rp-empty">✅ Nada crítico aguardando decisão neste momento.</div>';
+    const kpis = out.kpis.map(k => `<div class="rp-kpi t-${k.tone}">${k.gauge != null ? donut(k.gauge, TONE[k.tone]) : ''}<div><div class="rp-kl">${esc(k.label)}</div>${k.gauge != null ? '' : `<div class="rp-kv">${esc(k.value)}${k.unit ? `<small>${esc(k.unit)}</small>` : ''}</div>`}<div class="rp-ks">${esc(k.sub)}</div></div></div>`).join('');
+    const acts = out.actions.length ? out.actions.map((a, i) => `<div class="rp-act"><b class="n">${i + 1}</b><div>${esc(a.text)}${single ? '' : ` <span class="rp-proj">${esc(a.project)}</span>`}<span class="w">Porque: ${esc(a.why)}</span></div></div>`).join('') : '<div class="rp-empty">Nenhuma ação pendente para o time de gestão.</div>';
+    const wins = out.conquests.length ? `<ul class="rp-ul">${out.conquests.map(w => `<li>${esc(w)} — concluído</li>`).join('')}</ul>` : '<div class="rp-empty">Nenhum marco concluído registrado ainda.</div>';
+    el('report-root').innerHTML = `<article class="rp-doc" id="rp-doc">
+      <header class="rp-head"><div><div class="rp-title">${esc(BRAND.name)} · Relatório Executivo</div><div class="rp-scope">${single ? esc(rows[0].name) + (rows[0].client ? ' · ' + esc(rows[0].client) : '') : 'Portfólio · ' + rows.length + ' projetos'}</div><div class="rp-meta">Posição de ${posicao}${refs ? ` (projetos de demonstração usam a data de referência deles)` : ''} · gerado em ${esc(now.toLocaleString('pt-BR'))}</div></div><div class="rp-chips">${chips}</div></header>
+      <div class="rp-lead" id="rp-lead"><strong>Leitura do momento:</strong> <span id="rp-lead-text">${esc(out.headline)}</span></div>
+      <section class="rp-sec"><div class="rp-h2">⚠ Decisões para o próximo período <span class="rp-count">${out.decisionsTotal > out.decisions.length ? `(as ${out.decisions.length} que mais pesam, de ${out.decisionsTotal})` : out.decisions.length ? `(${out.decisions.length})` : ''}</span></div><div class="rp-dec">${decCards}</div></section>
+      <section class="rp-kpis">${kpis}</section>
+      <section class="rp-charts">${cardProgress(out.charts, single)}${cardBudget(out.charts)}${cardRisks(out.charts)}${cardHealthOrProjects(out.charts, single, rows)}</section>
+      <section class="rp-two"><div class="rp-cc"><div class="rp-h2">Ações sugeridas para o time de gestão <span class="rp-count">(baseadas nos dados)</span></div>${acts}</div><div class="rp-cc"><div class="rp-h2">Conquistas</div>${wins}</div></section>
+      <footer class="rp-foot"><span>Fonte: dados cadastrados no ${esc(BRAND.name)}. Números calculados pelo mesmo motor do assistente de mensagens.</span><span>${money ? 'Inclui valores em reais' : 'Sem valores monetários'}</span></footer>
+    </article>`;
+  }
+  function setScope(v) { scope = v; try { localStorage.setItem(K, v); } catch(e) {} render(); }
 
-    const sub = document.getElementById('report-sub');
-    if(sub) sub.textContent = `Baseado em ${d.repository.length} documentos indexados · Gerado agora`;
-
-    const activeProj = (typeof DB !== 'undefined') ? (DB.listProjects().find(p => p.id === DB.getActiveProjectId()) || {}) : {};
-    const projEl = document.getElementById('report-print-project');
-    const metaEl = document.getElementById('report-print-meta');
-    if(projEl) projEl.textContent = `${BRAND.name} — ${activeProj.name || 'Projeto'}`;
-    if(metaEl) metaEl.textContent = `${activeProj.client ? activeProj.client + ' · ' : ''}Status Report gerado em ${new Date().toLocaleString('pt-BR')}`;
-
-    // Resumo executivo
-    let resumo = `O projeto está com saúde geral estimada de <strong>${d.saude}/100</strong>, aderência de cronograma (WBS) de <strong>${d.aderencia}%</strong>. `;
-    if(d.criticasPendentes.length) resumo += `<strong>Risco crítico:</strong> ${d.criticasPendentes.length} decisão(ões) crítica(s) pendente(s) — ${escapeHtml(d.criticasPendentes[0].title)}. `;
-    if(d.membrosCriticos.length) resumo += `Burnout detectado em ${d.membrosCriticos.length} colaborador(es) exige atenção imediata. `;
-    if(!d.criticasPendentes.length && !d.membrosCriticos.length) resumo += `Sem riscos críticos abertos no momento.`;
-
-    // Pontos de atenção
-    let atencaoItems = [];
-    d.modulosCriticos.forEach(m => atencaoItems.push(`<strong>${escapeHtml(m.label)}:</strong> em status crítico/bloqueado.`));
-    d.membrosCriticos.forEach(m => atencaoItems.push(`<strong>Burnout:</strong> ${escapeHtml(m.name)} em ${m.workloadPct}% de carga.`));
-    if(d.scopeAbertos.length) atencaoItems.push(`<strong>Scope creep:</strong> ${d.scopeAbertos.length} mudança(s) aberta(s) (+${d.scopeImpactoDias}d, +${fmtMoney(d.scopeImpactoCusto)}) sem aprovação formal.`);
-    if(d.acoesPendentes) atencaoItems.push(`<strong>Atas:</strong> ${d.acoesPendentes} ação(ões) aguardando confirmação dos responsáveis.`);
-    if(d.stakeholderCritico) atencaoItems.push(`<strong>Stakeholder:</strong> ${escapeHtml(d.stakeholderCritico.name)} em engajamento crítico.`);
-    const atencao = atencaoItems.length ? '• ' + atencaoItems.join('<br>• ') : 'Nenhum ponto crítico de atenção no momento.';
-
-    // Conquistas
-    let conquistas = [];
-    d.modulosConcluidos.forEach(m => conquistas.push(`${escapeHtml(m.label)} — concluído.`));
-    if(d.licoesAplicadas) conquistas.push(`${d.licoesAplicadas} lição(ões) aprendida(s) aplicada(s) neste projeto.`);
-    const scopeAprovados = d.scope.filter(s => s.status === 'approved').length;
-    if(scopeAprovados) conquistas.push(`${scopeAprovados} mudança(s) de escopo aprovada(s) e incorporada(s).`);
-    const conquistasHtml = conquistas.length ? '• ' + conquistas.join('<br>• ') : 'Sem marcos concluídos registrados ainda.';
-
-    // Top ações
-    let acoes = [];
-    d.criticasPendentes.slice(0,2).forEach(dc => acoes.push(`<strong>[Urgente]</strong> ${escapeHtml(dc.title)}`));
-    d.membrosCriticos.slice(0,1).forEach(m => acoes.push(`<strong>[Imediato]</strong> Redistribuir carga de ${escapeHtml(m.name)}`));
-    if(d.scopeAbertos.length) acoes.push(`<strong>[Esta semana]</strong> Revisar as ${d.scopeAbertos.length} mudança(s) de escopo aberta(s)`);
-    if(d.acoesPendentes) acoes.push(`<strong>[GP]</strong> Confirmar ${d.acoesPendentes} ação(ões) de ata pendente(s)`);
-    if(d.stakeholderCritico) acoes.push(`<strong>[7 dias]</strong> Reengajar ${escapeHtml(d.stakeholderCritico.name)}`);
-    const acoesHtml = acoes.length ? acoes.slice(0,5).map((a,i)=>`${i+1}. ${a}`).join('<br>') : 'Nenhuma ação crítica pendente.';
-
-    // Fontes
-    const fontes = d.repository.map(r => escapeHtml(r.name)).join(' · ') || 'Nenhum documento indexado ainda.';
-
-    root.innerHTML =
-      blk('ti-flag', 'Resumo executivo', resumo) +
-      blk('ti-alert-triangle', 'Pontos de atenção', atencao) +
-      blk('ti-trophy', 'Conquistas', conquistasHtml) +
-      blk('ti-list-check', 'Top ações para a próxima semana', acoesHtml) +
-      blk('ti-database', 'Fontes utilizadas', `<span style="color:var(--t3)">${fontes}</span>`);
+  // Impressão em A4 paisagem (a regra de página só vale enquanto imprime este relatório)
+  function print() {
+    const st = document.createElement('style'); st.id = 'rp-page-style'; st.textContent = '@page{size:A4 landscape;margin:10mm}';
+    document.head.appendChild(st);
+    const done = () => { st.remove(); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
   }
 
   async function regenerate() {
-    renderTemplate(); // sempre recalcula do zero com os dados mais recentes primeiro
+    render();
     if(!Store.hasKeyOrCloud()) { T.show('✅ Relatório recalculado a partir dos dados atuais.'); return; }
-
-    const root = document.getElementById('report-root');
-    T.show('✨ Refinando redação com IA…');
-    const d = computeData();
-    const prompt = `Reescreva o resumo executivo de um status report de projeto em tom profissional, 3-4 frases, com base nestes dados reais:
-- Saúde geral: ${d.saude}/100, aderência de cronograma: ${d.aderencia}%
-- Decisões críticas pendentes: ${d.criticasPendentes.length}
-- Colaboradores em burnout: ${d.membrosCriticos.length}
-- Mudanças de escopo abertas: ${d.scopeAbertos.length} (impacto +${d.scopeImpactoDias} dias, +${fmtMoney(d.scopeImpactoCusto)})
-Responda só com o parágrafo, sem título.`;
-    const r = await AI.send([{ role:'user', content:prompt }]);
-    if(r.error) { T.show('⚠️ Não consegui refinar com IA agora — mantendo versão calculada.'); return; }
-    const firstBlk = root.querySelector('.report-blk .report-body');
-    if(firstBlk && r.text) firstBlk.innerHTML = r.text.trim();
-    T.show('✅ Resumo executivo refinado pela IA!');
+    const lead = el('rp-lead-text'); if(!lead) return;
+    T.show('✨ Refinando a leitura com IA…');
+    const r = await AI.send([{ role: 'user', content: `Reescreva em tom executivo, 2 a 3 frases, sem inventar nenhum número além destes: "${lead.textContent}". Responda só com o parágrafo.` }]);
+    if(r.error || !r.text) { T.show('⚠️ Não consegui refinar com IA agora — mantendo a versão calculada.'); return; }
+    lead.textContent = r.text.trim();
+    T.show('✅ Leitura refinada pela IA.');
   }
-
-  return { render: renderTemplate, regenerate };
+  return { render, setScope, print, regenerate, resetCache: () => {} };
 })();
 </script>
 
