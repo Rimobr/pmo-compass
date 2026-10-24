@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.5.2'
+  version: '2.6.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -818,25 +818,20 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: ui/sidebar -->
 <aside class="sidebar" data-module="ui/sidebar">
+  <div class="sb-sec">Indicadores Gerenciais</div>
   <button class="sb-xray-btn" data-p="xray" onclick="R.go('xray')"><i class="ti ti-report-medical"></i>Raio-X do Projeto</button>
   <button class="sb-board-btn" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button>
   <button class="sb-exec-btn" data-p="execview" onclick="R.go('execview')"><i class="ti ti-chart-infographic"></i>Visão Executiva</button>
   <button class="sb-pmo-btn" data-p="pmoview" onclick="R.go('pmoview')"><i class="ti ti-binoculars"></i>Visão do PMO</button>
 
-  <div class="sb-div"></div>
-  <div class="sb-sec">Gestão de Projeto</div>
   <button class="si on" data-p="dashboard" onclick="R.go('dashboard')"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
+  <button class="si" data-p="pfkpi" onclick="R.go('pfkpi')"><i class="ti ti-chart-donut-3"></i>Indicadores do portfólio</button>
+  <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
+  <button class="si" data-p="prioritization" onclick="R.go('prioritization')"><i class="ti ti-sort-descending-2"></i>Priorização</button>
+  <button class="si" data-p="report" onclick="R.go('report')"><i class="ti ti-file-report"></i>Relatório</button>
 
-  <div class="sb-group" id="sbg-decisao">
-    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-decisao')"><i class="ti ti-brain sb-gico"></i>Decisão &amp; Acompanhamento<i class="ti ti-chevron-right sb-gchev"></i></button>
-    <div class="sb-group-body">
-      <button class="si" data-p="decisions" onclick="R.go('decisions')"><i class="ti ti-brain"></i>Decisões IA<span class="sb-b" id="sb-decisions-count">4</span></button>
-      <button class="si" data-p="loop" onclick="R.go('loop')"><i class="ti ti-refresh-alert"></i>Loop de Ação</button>
-      <button class="si" data-p="trail" onclick="R.go('trail')"><i class="ti ti-git-branch"></i>Trilha</button>
-      <button class="si" data-p="report" onclick="R.go('report')"><i class="ti ti-file-report"></i>Relatório</button>
-      <button class="si" data-p="statusmsg" onclick="R.go('statusmsg')"><i class="ti ti-brand-whatsapp"></i>Mensagem de status</button>
-    </div>
-  </div>
+  <div class="sb-div"></div>
+  <div class="sb-sec">Ações do Gerente de Projeto</div>
 
   <div class="sb-group" id="sbg-planejamento">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-planejamento')"><i class="ti ti-sitemap sb-gico"></i>Planejamento<i class="ti ti-chevron-right sb-gchev"></i></button>
@@ -848,6 +843,16 @@ body.icons-failed i[data-fb]::before{
       <button class="si" data-p="scope" onclick="R.go('scope')"><i class="ti ti-git-diff"></i>Scope Changes</button>
       <button class="si" data-p="estimates" onclick="R.go('estimates')"><i class="ti ti-ruler"></i>Estimativas IA</button>
       <button class="si" data-p="whatif" onclick="R.go('whatif')"><i class="ti ti-arrows-split"></i>What-If</button>
+    </div>
+  </div>
+
+  <div class="sb-group" id="sbg-decisao">
+    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-decisao')"><i class="ti ti-brain sb-gico"></i>Decisão &amp; Acompanhamento<i class="ti ti-chevron-right sb-gchev"></i></button>
+    <div class="sb-group-body">
+      <button class="si" data-p="decisions" onclick="R.go('decisions')"><i class="ti ti-brain"></i>Decisões IA<span class="sb-b" id="sb-decisions-count">4</span></button>
+      <button class="si" data-p="loop" onclick="R.go('loop')"><i class="ti ti-refresh-alert"></i>Loop de Ação</button>
+      <button class="si" data-p="trail" onclick="R.go('trail')"><i class="ti ti-git-branch"></i>Trilha</button>
+      <button class="si" data-p="statusmsg" onclick="R.go('statusmsg')"><i class="ti ti-brand-whatsapp"></i>Mensagem de status</button>
     </div>
   </div>
 
@@ -876,15 +881,13 @@ body.icons-failed i[data-fb]::before{
   <div class="sb-group" id="sbg-projetos">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-projetos')"><i class="ti ti-layout-grid sb-gico"></i>Projetos<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body" id="sbg-projetos-list">
-      <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
-      <button class="si" data-p="prioritization" onclick="R.go('prioritization')"><i class="ti ti-sort-descending-2"></i>Priorização</button>
-      <button class="si" data-p="pfkpi" onclick="R.go('pfkpi')"><i class="ti ti-chart-donut-3"></i>Indicadores</button>
       <div id="sb-projects-root"></div>
       <button class="si" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
     </div>
   </div>
 
   <div class="sb-div"></div>
+  <div class="sb-sec">Sistema</div>
   <button class="si" data-p="settings" onclick="R.go('settings')"><i class="ti ti-settings"></i>Configurações</button>
   <button class="si" data-p="help" onclick="R.go('help')"><i class="ti ti-help-circle"></i>Ajuda</button>
   <button class="si" onclick="Privacy.open()"><i class="ti ti-shield-lock"></i>Privacidade &amp; dados</button>
@@ -5174,11 +5177,11 @@ const R = (() => {
 const Nav = (() => {
   // Mapa página → grupo, usado para abrir automaticamente o grupo certo ao navegar
   const GROUP_OF = {
-    decisions:'sbg-decisao', loop:'sbg-decisao', trail:'sbg-decisao', report:'sbg-decisao', statusmsg:'sbg-decisao',
+    decisions:'sbg-decisao', loop:'sbg-decisao', trail:'sbg-decisao', statusmsg:'sbg-decisao',
     wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento', risks:'sbg-planejamento', baseline:'sbg-planejamento',
     burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe', hours:'sbg-equipe',
     lessons:'sbg-conhecimento', meetings:'sbg-conhecimento', repository:'sbg-conhecimento', chat:'sbg-conhecimento',
-    portfolio:'sbg-projetos', prioritization:'sbg-projetos', pfkpi:'sbg-projetos'
+    // projetos: a lista de projetos do menu (sem página própria)
   };
 
   // Comportamento sanfona: só um menu fica aberto por vez — todo menu sem
@@ -5248,6 +5251,12 @@ const Nav = (() => {
     sbg_decisao: 'Decisão & Acompanhamento', sbg_planejamento: 'Planejamento',
     sbg_equipe: 'Equipe', sbg_conhecimento: 'Conhecimento', sbg_projetos: 'Projetos'
   };
+  // Seções do menu: páginas de análise e de sistema não pertencem a um grupo, mas ganham a trilha "Seção › Página"
+  const SECTION_OF = {
+    xray:'Indicadores Gerenciais', board:'Indicadores Gerenciais', execview:'Indicadores Gerenciais', pmoview:'Indicadores Gerenciais', dashboard:'Indicadores Gerenciais',
+    pfkpi:'Indicadores Gerenciais', portfolio:'Indicadores Gerenciais', prioritization:'Indicadores Gerenciais', report:'Indicadores Gerenciais',
+    settings:'Sistema', help:'Sistema'
+  };
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
     wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores do Portfólio', pmoview:'Visão do PMO',
@@ -5265,13 +5274,14 @@ const Nav = (() => {
     const groupId = GROUP_OF[pageId];
     const groupLabel = groupId ? GROUP_LABEL[groupId.replace(/-/g,'_')] : null;
     const pageLabel = PAGE_LABEL[pageId] || '';
-    if(!groupLabel) { if(bc) bc.remove(); return; } // Dashboard/Configurações/Ajuda não pertencem a grupo — sem breadcrumb
+    const sectionLabel = SECTION_OF[pageId];
+    if(!groupLabel && !sectionLabel) { if(bc) bc.remove(); return; }
     if(!bc) {
       bc = document.createElement('div');
       bc.className = 'pg-breadcrumb';
       hdr.insertBefore(bc, hdr.firstChild);
     }
-    bc.innerHTML = `<i class="ti ti-home" style="font-size:11px"></i>${groupLabel}<i class="ti ti-chevron-right"></i><span class="pg-bc-cur">${pageLabel}</span>`;
+    bc.innerHTML = `<i class="ti ti-home" style="font-size:11px"></i>${groupLabel || sectionLabel}<i class="ti ti-chevron-right"></i><span class="pg-bc-cur">${pageLabel}</span>`;
   }
 
   return { toggleGroup, expandGroupFor, collapseAll, renderProjects, toggleProjDropdown, closeProjDropdown, renderBreadcrumb };
@@ -5296,12 +5306,12 @@ const CmdK = (() => {
   let currentResults = [];
 
   const PAGES = [
-    { label:'Raio-X do Projeto', page:'xray', icon:'report-medical', group:'' },
-    { label:'Dashboard', page:'dashboard', icon:'layout-dashboard', group:'' },
+    { label:'Raio-X do Projeto', page:'xray', icon:'report-medical', group:'Indicadores Gerenciais' },
+    { label:'Dashboard', page:'dashboard', icon:'layout-dashboard', group:'Indicadores Gerenciais' },
     { label:'Decisões IA', page:'decisions', icon:'brain', group:'Decisão & Acompanhamento' },
     { label:'Loop de Ação', page:'loop', icon:'refresh-alert', group:'Decisão & Acompanhamento' },
     { label:'Trilha', page:'trail', icon:'git-branch', group:'Decisão & Acompanhamento' },
-    { label:'Relatório', page:'report', icon:'file-report', group:'Decisão & Acompanhamento' },
+    { label:'Relatório', page:'report', icon:'file-report', group:'Indicadores Gerenciais' },
     { label:'Mensagem de status', page:'statusmsg', icon:'brand-whatsapp', group:'Decisão & Acompanhamento' },
     { label:'WBS', page:'wbs', icon:'sitemap', group:'Planejamento' },
     { label:'Linha de base', page:'baseline', icon:'camera', group:'Planejamento' },
@@ -5317,14 +5327,14 @@ const CmdK = (() => {
     { label:'Atas e Ações', page:'meetings', icon:'notes', group:'Conhecimento' },
     { label:'Repositório', page:'repository', icon:'files', group:'Conhecimento' },
     { label:'Chat contextual', page:'chat', icon:'message-2', group:'Conhecimento' },
-    { label:'Portfólio', page:'portfolio', icon:'layout-grid', group:'Projetos' },
-    { label:'Priorização', page:'prioritization', icon:'sort-descending-2', group:'Projetos' },
-    { label:'Indicadores do Portfólio', page:'pfkpi', icon:'chart-donut-3', group:'Projetos' },
-    { label:'Visão do PMO', page:'pmoview', icon:'binoculars', group:'' },
-    { label:'Painel da Diretoria', page:'board', icon:'presentation-analytics', group:'Projetos' },
-    { label:'Visão Executiva', page:'execview', icon:'chart-infographic', group:'Projetos' },
-    { label:'Configurações', page:'settings', icon:'settings', group:'' },
-    { label:'Ajuda', page:'help', icon:'help-circle', group:'' }
+    { label:'Portfólio', page:'portfolio', icon:'layout-grid', group:'Indicadores Gerenciais' },
+    { label:'Priorização', page:'prioritization', icon:'sort-descending-2', group:'Indicadores Gerenciais' },
+    { label:'Indicadores do Portfólio', page:'pfkpi', icon:'chart-donut-3', group:'Indicadores Gerenciais' },
+    { label:'Visão do PMO', page:'pmoview', icon:'binoculars', group:'Indicadores Gerenciais' },
+    { label:'Painel da Diretoria', page:'board', icon:'presentation-analytics', group:'Indicadores Gerenciais' },
+    { label:'Visão Executiva', page:'execview', icon:'chart-infographic', group:'Indicadores Gerenciais' },
+    { label:'Configurações', page:'settings', icon:'settings', group:'Sistema' },
+    { label:'Ajuda', page:'help', icon:'help-circle', group:'Sistema' }
   ];
 
   function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -13353,11 +13363,17 @@ const Messaging = (() => {
   }
 
   function cardTest() {
-    const opts = st.recipients.filter(r => r.active).map(r => `<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');
+    const active = st.recipients.filter(r => r.active);
+    const opts = active.map(r => `<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');
     const tr = st.testResult;
-    return `<div class="card"><div class="lbl"><i class="ti ti-message-chatbot"></i>Testar o assistente (não envia nada)${hq(HELP.test)}</div>
-      <p style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:10px">Simula uma pergunta como se fosse a pessoa escolhida — com o mesmo recorte de projetos e a mesma regra de valores em R$. Nada é enviado nem gravado.</p>
+    const head = `<div class="card"><div class="lbl"><i class="ti ti-message-chatbot"></i>Testar o assistente (não envia nada)${hq(HELP.test)}</div>
+      <p style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:10px">Simula uma pergunta como se fosse a pessoa escolhida — com o mesmo recorte de projetos e a mesma regra de valores em R$. Nada é enviado nem gravado.</p>`;
+    // As pessoas da lista vêm do cadastro de destinatários (cartão acima): sem ninguém cadastrado não há quem simular
+    if(!active.length) return head + `<div style="border:1px dashed var(--b3);border-radius:var(--r8);padding:14px 16px;font-size:12.5px;color:var(--t1);line-height:1.6"><i class="ti ti-info-circle" style="color:var(--acc)"></i> <strong>Ainda não há ninguém para simular.</strong> A lista de pessoas vem do cadastro de <strong>Destinatários</strong> (cartão acima). Cadastre pelo menos uma pessoa, marcando os projetos que ela pode ver, e volte aqui para testar o que ela receberia.<div style="margin-top:10px"><button class="btn btn-sm btn-acc" onclick="Messaging.openAdd()"><i class="ti ti-plus"></i>Adicionar destinatário</button></div></div></div>`;
+    const noProjects = active.filter(r => !(st.links[r.id] || []).length).length;
+    return head + `${noProjects ? `<div style="font-size:11.5px;color:var(--amb);margin-bottom:8px"><i class="ti ti-alert-triangle"></i> ${noProjects} destinatário(s) estão sem projetos marcados e responderão que não têm projetos liberados. Marque os projetos em Editar.</div>` : ''}
       <div class="rk-toolbar"><select class="input" id="ms-t-who" aria-label="Simular como"><option value="">— escolher pessoa —</option>${opts}</select>
+        <button class="btn btn-sm" onclick="Messaging.openAdd()" title="Cadastrar outra pessoa para simular"><i class="ti ti-plus"></i>Novo destinatário</button>
         <input class="input rk-q" id="ms-t-q" maxlength="500" placeholder="Ex: como está o projeto Nexus? o que está atrasado?" aria-label="Pergunta" onkeydown="if(event.key==='Enter')Messaging.test()">
         <button class="btn btn-sm btn-acc" id="ms-t-btn" onclick="Messaging.test()"><i class="ti ti-send"></i>Perguntar</button></div>
       <div id="ms-t-out" aria-live="polite" style="white-space:pre-wrap;font-size:12.5px;color:var(--t1);background:var(--s2);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;min-height:44px;overflow-wrap:anywhere">${tr ? esc(tr) : '<span style="color:var(--t3)">A resposta aparece aqui.</span>'}</div></div>`;
@@ -13401,6 +13417,7 @@ const Messaging = (() => {
     el('rc-f-consent').value = r ? (r.consent_basis || '') : '';
     const projects = DB.listProjects().map(p => [p.id, p.name]).sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'));
     fillChecks('rc-projects', projects, r ? (st.links[r.id] || []) : [], 'rc-proj');
+    if(!projects.length) el('rc-projects').innerHTML = '<span style="font-size:12px;color:var(--amb)">Nenhum projeto cadastrado ainda. Crie um em Projetos → Novo projeto para poder liberá-lo.</span>';
     fillChecks('rc-events', EVENTS, r ? (r.events || []) : ['decisao_critica','farol_vermelho','resumo_semanal'], 'rc-ev');
     el('modal-recipient').classList.remove('hidden');
     el('rc-f-name').focus();
@@ -13652,7 +13669,7 @@ const Messaging = (() => {
     <div class="modal-title" style="display:flex;align-items:center;gap:8px"><i class="ti ti-compass" style="color:var(--acc)"></i>Bem-vindo ao <span data-brand="name">PMO Compass</span></div>
     <div class="modal-sub">4 coisas rápidas antes de começar</div>
     <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
-      <div style="display:flex;gap:10px;align-items:flex-start"><i class="ti ti-layout-grid" style="color:var(--acc);font-size:17px;margin-top:1px;flex-shrink:0"></i><div><strong style="color:var(--t1);font-size:12.5px">O menu lateral é agrupado por área</strong><div style="font-size:12px;color:var(--t2);margin-top:2px">Decisão, Planejamento, Equipe, Conhecimento e Projetos — clique no grupo para abrir.</div></div></div>
+      <div style="display:flex;gap:10px;align-items:flex-start"><i class="ti ti-layout-grid" style="color:var(--acc);font-size:17px;margin-top:1px;flex-shrink:0"></i><div><strong style="color:var(--t1);font-size:12.5px">O menu lateral tem três blocos</strong><div style="font-size:12px;color:var(--t2);margin-top:2px">Indicadores Gerenciais (para analisar), Ações do Gerente de Projeto (para fazer) e Sistema — nas ações, clique no grupo para abrir.</div></div></div>
       <div style="display:flex;gap:10px;align-items:flex-start"><i class="ti ti-cpu" style="color:var(--acc);font-size:17px;margin-top:1px;flex-shrink:0"></i><div><strong style="color:var(--t1);font-size:12.5px">Configure um provedor de IA primeiro</strong><div style="font-size:12px;color:var(--t2);margin-top:2px">Em Configurações → Provedor de IA. Sem isso, os recursos de IA ficam desativados.</div></div></div>
       <div style="display:flex;gap:10px;align-items:flex-start"><i class="ti ti-search" style="color:var(--acc);font-size:17px;margin-top:1px;flex-shrink:0"></i><div><strong style="color:var(--t1);font-size:12.5px">Ctrl/Cmd+K pula para qualquer lugar</strong><div style="font-size:12px;color:var(--t2);margin-top:2px">Busca páginas e troca de projeto sem precisar navegar pelo menu.</div></div></div>
       <div style="display:flex;gap:10px;align-items:flex-start"><i class="ti ti-help-circle" style="color:var(--acc);font-size:17px;margin-top:1px;flex-shrink:0"></i><div><strong style="color:var(--t1);font-size:12.5px">A página Ajuda mostra o que já está pronto</strong><div style="font-size:12px;color:var(--t2);margin-top:2px">Um retrato honesto do que funciona de verdade e o que ainda está em desenvolvimento.</div></div></div>
