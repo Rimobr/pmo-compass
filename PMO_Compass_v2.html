@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.5.0'
+  version: '2.5.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2576,13 +2576,26 @@ const PfKpi = (() => {
 <script data-module="services/pmo-views">
 const PmoViews = (() => {
   const ORDER = ['controle', 'departamental', 'diretivo', 'estrategico', 'agil', 'suporte'];
+  // foco = frase curta da tela; acompanha = o que a visão mostra; quando = para quem serve (linguagem simples, para quem não conhece os tipos de PMO)
   const INFO = {
-    controle:      { label: 'PMO de Controle',      foco: 'Conformidade com o plano e com o processo: desvios de prazo, custo e escopo, linha de base e status em dia.' },
-    departamental: { label: 'PMO Departamental',    foco: 'Os projetos de UMA área: como estão no prazo, no custo e nos riscos, para priorizar a operação da área.' },
-    diretivo:      { label: 'PMO Diretivo',         foco: 'Decisões e alocação: o que precisa ser decidido agora, quem está sobrealocado e quais projetos estão em risco.' },
-    estrategico:   { label: 'PMO Estratégico',      foco: 'Saúde do portfólio como um todo: projetos saudáveis, em risco e quanto o plano original foi respeitado.' },
-    agil:          { label: 'PMO Ágil',             foco: 'Fluxo de entrega e impedimentos: o que foi concluído por semana, o que está bloqueado e a carga do time.' },
-    suporte:       { label: 'PMO de Suporte',       foco: 'Onde apoiar as equipes: projetos sem atualização, sem linha de base, conhecimento aplicado e pendências de reunião.' }
+    controle:      { label: 'PMO de Controle',      foco: 'Conformidade com o plano e com o processo: desvios de prazo, custo e escopo, linha de base e status em dia.',
+                     acompanha: 'Taxas no prazo, no custo e no escopo; projetos sem linha de base; status desatualizado; revisões de risco vencidas. A lista traz os projetos fora do padrão (ex.: "término 12 dias depois da linha de base").',
+                     quando: 'Escolha se o seu papel é garantir que os projetos sigam o plano e o processo combinados.' },
+    departamental: { label: 'PMO Departamental',    foco: 'Os projetos de UMA área: como estão no prazo, no custo e nos riscos, para priorizar a operação da área.',
+                     acompanha: 'Só os projetos da área escolhida: prazo, custo, projetos em risco, riscos e decisões críticas.',
+                     quando: 'Escolha se você cuida dos projetos de um departamento (TI, Engenharia, Marketing...) e não da empresa toda.' },
+    diretivo:      { label: 'PMO Diretivo',         foco: 'Decisões e alocação: o que precisa ser decidido agora, quem está sobrealocado e quais projetos estão em risco.',
+                     acompanha: 'Decisões críticas pendentes, projetos em risco, colaboradores sobrealocados, mudanças de escopo abertas. A lista diz o que decidir agora.',
+                     quando: 'Escolha se você decide pelo portfólio: prioridades, alocação de pessoas e quais projetos continuar, pausar ou replanejar.' },
+    estrategico:   { label: 'PMO Estratégico',      foco: 'Saúde do portfólio como um todo: projetos saudáveis, em risco e quanto o plano original foi respeitado.',
+                     acompanha: 'Projetos saudáveis, desvio médio do término contra a linha de base, riscos críticos.',
+                     quando: 'Escolha se você presta contas à diretoria e precisa mostrar se o conjunto de projetos está entregando o prometido.' },
+    agil:          { label: 'PMO Ágil',             foco: 'Fluxo de entrega e impedimentos: o que foi concluído por semana, o que está bloqueado e a carga do time.',
+                     acompanha: 'Entregas concluídas nas últimas 4 semanas, média por semana, impedimentos (itens bloqueados), carga muito alta do time.',
+                     quando: 'Escolha se as equipes trabalham por entregas curtas e você ajuda a remover bloqueios. Backlog e sprints ainda não existem no produto.' },
+    suporte:       { label: 'PMO de Suporte',       foco: 'Onde apoiar as equipes: projetos sem atualização, sem linha de base, conhecimento aplicado e pendências de reunião.',
+                     acompanha: 'Lições aplicadas, documentos, ações de reunião pendentes, projetos parados, riscos críticos sem responsável.',
+                     quando: 'Escolha se o seu papel é orientar e dar modelos e boas práticas às equipes, sem cobrar conformidade.' }
   };
   const sum = (rows, f) => rows.reduce((s, r) => s + (Number(f(r)) || 0), 0);
   const pctOf = (n, d) => d > 0 ? Math.round(n / d * 100) : null;
@@ -2689,6 +2702,10 @@ const PmoViews = (() => {
     <div id="pv-list"></div>
   </div>
   <div id="pv-note" style="font-size:11.5px;color:var(--t3);margin-top:10px"></div>
+  <details class="card" style="margin-top:14px" id="pv-guide">
+    <summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--t1)"><i class="ti ti-help-circle"></i> Guia: o que cada visão oferece<span class="help-q" style="margin-left:6px" data-help="Se você não sabe qual tipo de PMO escolher, leia a coluna &quot;Escolha se...&quot;: ela diz para quem cada visão serve. Clique numa linha para abrir aquela visão." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></summary>
+    <div style="overflow-x:auto;margin-top:10px" id="pv-guide-root"></div>
+  </details>
 </section>
 
 <!-- ■ MODULE: pages/pmoview-js -->
@@ -2748,6 +2765,7 @@ const PmoView = (() => {
       ? v.list.map(it => `<div class="rk-item" style="cursor:default"><div class="rk-main"><div class="rk-title">${esc(it.name)}</div><div class="rk-meta">${it.reasons.map(r => `<span class="chip">${esc(r)}</span>`).join('')}</div></div><button class="btn btn-sm" data-id="${esc(it.id)}" onclick="PmoView.openProject(this)"><i class="ti ti-arrow-right"></i>Abrir</button></div>`).join('')
       : `<div class="rk-empty">${v.projects ? 'Nada pedindo atenção neste momento. 👍' : 'Nenhum projeto nesta visão.'}</div>`;
     el('pv-note').textContent = v.note;
+    el('pv-guide-root').innerHTML = `<table class="hr-tbl"><thead><tr><th scope="col">Tipo</th><th scope="col">O que acompanha</th><th scope="col">Escolha se…</th></tr></thead><tbody>${PmoViews.ORDER.map(k => `<tr style="cursor:pointer${k === type ? ';background:var(--ad)' : ''}" tabindex="0" data-type="${k}" onclick="PmoView.setType(this.dataset.type);window.scrollTo(0,0)" onkeydown="if(event.key==='Enter')PmoView.setType(this.dataset.type)"><td style="font-weight:600;white-space:nowrap">${esc(PmoViews.INFO[k].label)}${k === type ? ' <span class="badge b-acc">em uso</span>' : ''}</td><td>${esc(PmoViews.INFO[k].acompanha)}</td><td>${esc(PmoViews.INFO[k].quando)}</td></tr>`).join('')}</tbody></table>`;
   }
   function setType(t) { type = t; area = ''; try { localStorage.setItem(K, t); } catch(e) {} render(); }
   function setArea(a) { area = a; render(); }
