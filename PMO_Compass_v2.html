@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.7.1'
+  version: '2.8.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -883,6 +883,7 @@ body.icons-failed i[data-fb]::before{
       <button class="si" data-p="hours" onclick="R.go('hours')"><i class="ti ti-clock-hour-4"></i>Horas</button>
       <button class="si" data-p="resources" onclick="R.go('resources')"><i class="ti ti-users-group"></i>Colaboradores</button>
       <button class="si" data-p="stakeholders" onclick="R.go('stakeholders')"><i class="ti ti-users"></i>Stakeholders</button>
+      <button class="si" data-p="raci" onclick="R.go('raci')"><i class="ti ti-table-options"></i>Matriz RACI</button>
     </div>
   </div>
 
@@ -1774,6 +1775,7 @@ body.icons-failed i[data-fb]::before{
     <div class="btn-row">
       <button class="btn btn-sm btn-acc" data-perm="business" onclick="Risks.openAdd()"><i class="ti ti-plus"></i>Registrar risco</button>
       <button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('risks')"><i class="ti ti-table-import"></i>Importar planilha</button>
+      <button class="btn btn-sm" onclick="XlsxExport.risks()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button>
     </div>
   </div>
   <div class="g4" id="rk-kpis"></div>
@@ -1800,6 +1802,53 @@ body.icons-failed i[data-fb]::before{
   </div>
 </section>
 
+<!-- ■ MODULE: pages/raci-css -->
+<style data-module="pages/raci-css">
+.rc-legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:12px}
+.rc-leg{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--t2)}
+.rc-leg b{color:var(--t1)}
+.rc-scroll{overflow-x:auto;border:1px solid var(--b1);border-radius:var(--r8)}
+.rc-tbl{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}
+.rc-tbl th{font-size:11px;font-weight:600;color:var(--t2);padding:8px;border-bottom:1px solid var(--b2);background:var(--s2);text-align:center;white-space:nowrap}
+.rc-tbl th.rc-first,.rc-tbl td.rc-first{text-align:left;position:sticky;left:0;z-index:1;background:var(--s1);min-width:200px;max-width:320px;white-space:normal;overflow-wrap:anywhere}
+.rc-tbl th.rc-first{background:var(--s2)}
+.rc-tbl td{padding:4px;border-bottom:1px solid var(--b1);text-align:center;color:var(--t1)}
+.rc-tbl td.rc-first{padding:8px;font-weight:500}
+.rc-tbl tr.rc-sub td.rc-first{padding-left:24px;font-weight:400}
+.rc-tbl td.rc-chk{min-width:130px;text-align:left;padding:6px 8px}
+.rc-cell{width:38px;height:34px;border-radius:var(--r6);border:1px dashed var(--b2);background:transparent;color:var(--t3);font-weight:700;font-size:13px;cursor:pointer}
+.rc-cell:hover{border-color:var(--b3)}
+.rc-cell:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.rc-cell.rc-R{background:var(--ad);border:1px solid var(--ab);color:var(--t1)}
+.rc-cell.rc-A{background:var(--rd);border:1px solid var(--rb);color:var(--t1)}
+.rc-cell.rc-C{background:var(--amd);border:1px solid var(--ambb);color:var(--t1)}
+.rc-cell.rc-I{background:var(--gd);border:1px solid var(--gb);color:var(--t1)}
+.rc-add{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.rc-add .input{flex:1 1 220px;min-width:160px}
+.rc-foot td{font-size:11px;color:var(--t2);background:var(--s2)}
+</style>
+
+<!-- ■ MODULE: pages/raci -->
+<section class="page" id="p-raci" data-module="pages/raci">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Matriz RACI<span class="help-q" data-help="Define, para cada entrega, quem faz (R, Responsável), quem aprova (A, Aprovador), quem dá opinião antes (C, Consultado) e quem só precisa saber (I, Informado). Clique numa célula para trocar a letra: vazio → R → A → C → I → vazio. Regra de ouro: cada entrega tem pelo menos um R e um único A. Os colaboradores vêm de Equipe → Colaboradores; as entregas vêm da WBS." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Quem faz, quem aprova, quem opina e quem é avisado em cada entrega. Evita o “achei que era com você”.</div></div>
+    <div class="btn-row">
+      <button class="btn btn-sm" onclick="Raci.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button>
+      <button class="btn btn-sm" onclick="Raci.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button>
+    </div>
+  </div>
+  <div class="g4" id="rc-kpis"></div>
+  <div class="card" style="margin-top:12px">
+    <div class="lbl"><i class="ti ti-table-options"></i>Entregas × colaboradores<span class="help-q" data-help="Cada linha é uma entrega da WBS (ou uma entrega avulsa que você adicionar aqui). A última coluna avisa quando falta responsável (R) ou aprovador (A), ou quando há mais de um aprovador. A última linha mostra quantas entregas cada colaborador carrega como R." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div class="rc-legend" id="rc-legend"></div>
+    <div class="rc-add" data-perm="business">
+      <input class="input" id="rc-new" type="text" maxlength="120" placeholder="Entrega avulsa (que não está na WBS)" aria-label="Nome da nova entrega avulsa" onkeydown="if(event.key==='Enter'){event.preventDefault();Raci.addCustom()}">
+      <button class="btn btn-sm" onclick="Raci.addCustom()"><i class="ti ti-plus"></i>Adicionar entrega</button>
+    </div>
+    <div id="rc-root"></div>
+  </div>
+</section>
+
 <!-- ■ MODULE: pages/hours -->
 <section class="page" id="p-hours" data-module="pages/hours">
   <div class="pg-hdr">
@@ -1807,6 +1856,7 @@ body.icons-failed i[data-fb]::before{
     <div class="btn-row">
       <button class="btn btn-sm btn-acc" data-perm="business" onclick="Hours.openAdd()"><i class="ti ti-plus"></i>Apontar horas</button>
       <button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('hours')"><i class="ti ti-table-import"></i>Importar planilha</button>
+      <button class="btn btn-sm" onclick="Hours.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button>
       <button class="btn btn-sm" onclick="Hours.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button>
     </div>
   </div>
@@ -2536,7 +2586,7 @@ const PortfolioKpi = (() => {
 <section class="page" id="p-pfkpi" data-module="pages/pfkpi">
   <div class="pg-hdr">
     <div><div class="pg-title">Indicadores do Portfólio<span class="help-q" data-help="Quantos projetos estão no prazo, no custo e no escopo, e como isso se divide por área. É a visão do PMO sobre o conjunto, calculada dos dados de cada projeto com as mesmas regras do assistente de WhatsApp. Projetos sem dados suficientes ficam fora das taxas e aparecem contados à parte." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Taxa de projetos no prazo, no custo e no escopo, por área, com a situação de cada projeto.</div></div>
-    <div class="btn-row"><button class="btn btn-sm" onclick="PfKpi.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button></div>
+    <div class="btn-row"><button class="btn btn-sm" onclick="PfKpi.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button><button class="btn btn-sm" onclick="PfKpi.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button></div>
   </div>
   <div class="rk-toolbar">
     <label for="pk-area" style="font-size:12px;color:var(--t2)">Área</label>
@@ -2655,10 +2705,16 @@ const PfKpi = (() => {
     T.show('✅ Projeto atualizado.');
   }
 
+  const ynTxt = v => v === null ? 'sem dados' : v ? 'sim' : 'não';
+  function exportXlsx() {
+    XlsxExport.download('indicadores-portfolio-' + XlsxExport.stamp() + '.xlsx', [{ name: 'Indicadores', rows: [
+      ['Projeto', 'Área', 'Farol', 'No prazo', 'No custo', 'No escopo', 'Entregas atrasadas', 'Decisões críticas', 'Riscos críticos', 'Atualizado há (dias)'],
+      ...lastRows.map(r => [r.name, r.area, r.ev.farol || 'sem dados', ynTxt(r.ev.prazo), ynTxt(r.ev.custo), ynTxt(r.ev.escopo), r.ev.atrasadas, r.ev.decisoesCriticas, r.ev.riscosCriticos, r.days == null ? '' : r.days])] }]);
+  }
   // CSV com proteção contra injeção de fórmula
   function exportCsv() {
     const q = v => { let s = String(v == null ? '' : v); if(/^[=+\-@\t\r]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
-    const yn = v => v === null ? 'sem dados' : v ? 'sim' : 'não';
+    const yn = ynTxt;
     const lines = [['Projeto', 'Área', 'Farol', 'No prazo', 'No custo', 'No escopo', 'Entregas atrasadas', 'Decisões críticas', 'Riscos críticos', 'Atualizado há (dias)'],
       ...lastRows.map(r => [r.name, r.area, r.ev.farol || 'sem dados', yn(r.ev.prazo), yn(r.ev.custo), yn(r.ev.escopo), r.ev.atrasadas, r.ev.decisoesCriticas, r.ev.riscosCriticos, r.days == null ? '' : r.days])];
     const blob = new Blob(['﻿' + lines.map(l => l.map(q).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
@@ -2666,7 +2722,7 @@ const PfKpi = (() => {
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     T.show('📥 CSV dos indicadores exportado.');
   }
-  return { render, setArea, openEditEl, closeEdit, saveEdit, exportCsv, daysSinceUpdate, resetCache: () => {} };
+  return { render, setArea, openEditEl, closeEdit, saveEdit, exportCsv, exportXlsx, daysSinceUpdate, resetCache: () => {} };
 })();
 </script>
 
@@ -2999,7 +3055,7 @@ const PmoView = (() => {
       <button class="btn btn-sm btn-acc" data-perm="business" onclick="WBS.openAddModule()"><i class="ti ti-plus"></i>Nova entrega</button>
       <button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('wbs')"><i class="ti ti-table-import"></i>Importar planilha</button>
       <button class="btn btn-sm" data-perm="business" onclick="WBS.openReplan()"><i class="ti ti-calendar-time"></i>Replanejar cronograma<span class="help-q" data-help="Recalcula as datas de tudo que ainda não terminou, começando a contar a partir de hoje — o que já foi entregue não muda. Você revisa e escolhe o que aplicar antes de qualquer data mudar de verdade." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
-      <button class="btn btn-sm" onclick="T.show('Exportando WBS…')"><i class="ti ti-download"></i>Exportar</button>
+      <button class="btn btn-sm" onclick="XlsxExport.wbs()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button>
       <button class="btn btn-sm" data-perm="business" onclick="WBS.openAiSuggest()"><i class="ti ti-brain"></i>IA: sugerir<span class="help-q" data-help="A IA sugere de 3 a 6 subtarefas pra decompor uma entrega, só com base no nome dela — sem inventar data, responsável ou %. Você escolhe quais aceitar antes de qualquer uma virar tarefa real." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
     </div>
   </div>
@@ -3398,7 +3454,7 @@ const Cloud = (() => {
   // Tabelas de dados do PROJETO (têm project_id e são apagadas por "Zerar base"/"Limpar projeto"). Fonte única:
   // clearProjectData e resetForNewUsers percorrem esta lista — tabela nova entra aqui, nunca em lista escrita à mão.
   // A ordem respeita chaves estrangeiras (filhas antes das mães). tests/run.js confere esta lista contra o schema.sql.
-  const PROJECT_DATA_TABLES = ['wbs_tasks','cost_actuals','budget_lines','wbs_modules','decisions','documents','scope_changes','risks','time_entries','baselines'];
+  const PROJECT_DATA_TABLES = ['wbs_tasks','cost_actuals','budget_lines','wbs_modules','decisions','documents','scope_changes','risks','time_entries','baselines','raci_entries'];
   // Mapeadores local ⇄ nuvem das tabelas novas (um só lugar para push, pull e importação em lote)
   const ROW = {
     scope_changes: {
@@ -3415,6 +3471,11 @@ const Cloud = (() => {
       toDb: (x, pid) => ({ project_id:pid, id:x.id, name:x.name, note:x.note||null, created_on:x.createdOn, snapshot:x.snapshot }),
       fromDb: r => ({ id:r.id, name:r.name, note:r.note||'', createdOn:r.created_on, snapshot:r.snapshot }),
       local: 'baselines'
+    },
+    raci_entries: {
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, label:x.label, assignments:x.assignments||{}, updated_at:new Date().toISOString() }),
+      fromDb: r => ({ id:r.id, label:r.label, assignments:r.assignments||{} }),
+      local: 'raci'
     },
     time_entries: {
       toDb: (x, pid) => ({ project_id:pid, id:x.id, person_name:x.person, member_id:x.memberId||null, work_date:x.date, hours:x.hours, wbs_ref:x.wbsRef||null, note:x.note||null, updated_at:new Date().toISOString() }),
@@ -3759,7 +3820,7 @@ const Cloud = (() => {
     // de um projeto na tela de outro. Antes disso não existia esse filtro: era um pool só.
     const pid = DB.getActiveProjectId();
     try {
-      const [mods, tasks, decs, docs, budLines, costActs, settings, team, scopeRows, riskRows, timeRows, baseRows] = await Promise.all([
+      const [mods, tasks, decs, docs, budLines, costActs, settings, team, scopeRows, riskRows, timeRows, baseRows, raciRows] = await Promise.all([
         client.from('wbs_modules').select('*').eq('project_id', pid),
         client.from('wbs_tasks').select('*').eq('project_id', pid),
         client.from('decisions').select('*').eq('project_id', pid),
@@ -3771,14 +3832,16 @@ const Cloud = (() => {
         client.from('scope_changes').select('*').eq('project_id', pid),
         client.from('risks').select('*').eq('project_id', pid),
         client.from('time_entries').select('*').eq('project_id', pid).order('work_date', { ascending:false }).limit(5000),
-        client.from('baselines').select('*').eq('project_id', pid).order('created_on', { ascending:true }).order('id', { ascending:true })
+        client.from('baselines').select('*').eq('project_id', pid).order('created_on', { ascending:true }).order('id', { ascending:true }),
+        client.from('raci_entries').select('*').eq('project_id', pid)
       ]);
       // Tabelas que antes só existiam neste navegador: se a nuvem ainda está vazia e há dado local, SOBE o local
       // (migração única, sem perder nada); se a nuvem já tem dado, ela manda.
       [['scope_changes', scopeRows, () => typeof Scope !== 'undefined' && Scope.resetCache(), () => typeof Scope !== 'undefined' && Scope.render()],
        ['risks', riskRows, () => typeof Risks !== 'undefined' && Risks.resetCache(), () => typeof Risks !== 'undefined' && Risks.render()],
        ['time_entries', timeRows, () => typeof Hours !== 'undefined' && Hours.resetCache(), () => typeof Hours !== 'undefined' && Hours.render()],
-       ['baselines', baseRows, () => typeof Baselines !== 'undefined' && Baselines.resetCache(), () => typeof Baselines !== 'undefined' && Baselines.render()]
+       ['baselines', baseRows, () => typeof Baselines !== 'undefined' && Baselines.resetCache(), () => typeof Baselines !== 'undefined' && Baselines.render()],
+       ['raci_entries', raciRows, () => typeof Raci !== 'undefined' && Raci.resetCache(), () => typeof Raci !== 'undefined' && Raci.render()]
       ].forEach(([table, res, reset, draw]) => {
         if(!res || res.error || !res.data) return;
         const m = ROW[table];
@@ -4563,7 +4626,7 @@ const DB = (() => {
   function storageKeyFor(projectId) { return projectId === 'nexus' ? 'pmo_db_v1' : ('pmo_db_v1__' + projectId); }
 
   function seedEmpty() {
-    return { version:1, wbs:[], decisions:[], repository:[], stakeholders:[], trail:[], lessons:[], scopeChanges:[], team:[], meetings:[], estimateHistory:[], scenarios:[], budgetLines:[], costActuals:[], risks:[], timeEntries:[], baselines:[], pmoProfile:null };
+    return { version:1, wbs:[], decisions:[], repository:[], stakeholders:[], trail:[], lessons:[], scopeChanges:[], team:[], meetings:[], estimateHistory:[], scenarios:[], budgetLines:[], costActuals:[], risks:[], timeEntries:[], baselines:[], raci:[], pmoProfile:null };
   }
 
   function seed() {
@@ -4744,6 +4807,7 @@ const DB = (() => {
     if(!Array.isArray(c.risks)) c.risks = defaults.risks;
     if(!Array.isArray(c.timeEntries)) c.timeEntries = defaults.timeEntries;
     if(!Array.isArray(c.baselines)) c.baselines = defaults.baselines || [];
+    if(!Array.isArray(c.raci)) c.raci = [];
     if(c.pmoProfile === undefined) c.pmoProfile = defaults.pmoProfile;
     return c;
   }
@@ -5219,7 +5283,7 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','help','xray'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','raci','help','xray'];
   function go(id) {
     pages.forEach(p => {
       const el = document.getElementById('p-'+p);
@@ -5246,6 +5310,7 @@ const R = (() => {
     if(id === 'baseline' && typeof Baselines !== 'undefined') Baselines.render();
     if(id === 'statusmsg' && typeof StatusMsg !== 'undefined') StatusMsg.render();
     if(id === 'hours' && typeof Hours !== 'undefined') Hours.render();
+    if(id === 'raci' && typeof Raci !== 'undefined') Raci.render();
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
     if(id === 'settings' && typeof PmoProfiles !== 'undefined') PmoProfiles.render();
     if(id === 'settings' && typeof ProjectMembers !== 'undefined') ProjectMembers.render();
@@ -5273,7 +5338,7 @@ const Nav = (() => {
     settings:'sbg-sistema', help:'sbg-sistema',
     decisions:'sbg-decisao', loop:'sbg-decisao', trail:'sbg-decisao', statusmsg:'sbg-decisao',
     wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento', risks:'sbg-planejamento', baseline:'sbg-planejamento',
-    burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe', hours:'sbg-equipe',
+    burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe', hours:'sbg-equipe', raci:'sbg-equipe',
     lessons:'sbg-conhecimento', meetings:'sbg-conhecimento', repository:'sbg-conhecimento', chat:'sbg-conhecimento',
     // projetos: a lista de projetos do menu (sem página própria)
   };
@@ -5357,7 +5422,7 @@ const Nav = (() => {
   const SECTION_OF = { xray:'Painéis', board:'Painéis', execview:'Painéis', pmoview:'Painéis' };
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
-    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores', pmoview:'Visão do PMO',
+    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores', pmoview:'Visão do PMO', raci:'Matriz RACI',
     burnout:'Burnout Radar', resources:'Colaboradores', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
     portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
@@ -5420,6 +5485,7 @@ const CmdK = (() => {
     { label:'Burnout Radar', page:'burnout', icon:'heartbeat', group:'Equipe' },
     { label:'Colaboradores', page:'resources', icon:'users-group', group:'Equipe' },
     { label:'Horas', page:'hours', icon:'clock-hour-4', group:'Equipe' },
+    { label:'Matriz RACI', page:'raci', icon:'table-options', group:'Equipe' },
     { label:'Stakeholders', page:'stakeholders', icon:'users', group:'Equipe' },
     { label:'Lições Aprendidas', page:'lessons', icon:'books', group:'Conhecimento' },
     { label:'Atas e Ações', page:'meetings', icon:'notes', group:'Conhecimento' },
@@ -8846,6 +8912,264 @@ const Risks = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: ui/xlsx-export ─ Exportação em Excel (.xlsx) com a biblioteca carregada só quando o usuário pede -->
+<script data-module="ui/xlsx-export">
+const XlsxExport = (() => {
+  // Célula segura: texto que começa com = + - @ vira texto literal (sem injeção de fórmula); número continua número
+  const safeCell = v => {
+    if(v == null) return '';
+    if(typeof v === 'number') return isFinite(v) ? v : '';
+    const s = String(v);
+    return /^[=+\-@\t\r]/.test(s) ? "'" + s : s;
+  };
+  // Nome de aba do Excel: até 31 caracteres e sem  [ ] : * ? / \
+  const sheetName = (n, i) => (String(n || 'Planilha ' + (i + 1)).replace(/[\[\]:*?\/\\]/g, ' ').trim() || 'Planilha ' + (i + 1)).slice(0, 31);
+  function load() {
+    if(window.XLSX) return Promise.resolve(window.XLSX);
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.onload = () => window.XLSX ? resolve(window.XLSX) : reject(new Error('biblioteca de Excel indisponível'));
+      s.onerror = () => reject(new Error('sem acesso à biblioteca de Excel'));
+      document.head.appendChild(s);
+    });
+  }
+  // sheets: [{ name, rows: [[cabeçalho...], [linha...]], widths?: [n...] }]
+  async function download(fileName, sheets) {
+    T.show('⏳ Gerando a planilha Excel…');
+    try {
+      const X = await load();
+      const wb = X.utils.book_new();
+      sheets.forEach((sh, i) => {
+        const ws = X.utils.aoa_to_sheet(sh.rows.map(r => r.map(safeCell)));
+        const cols = sh.rows[0] ? sh.rows[0].length : 0;
+        ws['!cols'] = Array.from({ length: cols }, (_, c) => ({ wch: (sh.widths && sh.widths[c]) || Math.min(60, Math.max(10, ...sh.rows.slice(0, 200).map(r => String(r[c] == null ? '' : r[c]).length + 2))) }));
+        X.utils.book_append_sheet(wb, ws, sheetName(sh.name, i));
+      });
+      X.writeFile(wb, fileName);
+      T.show('📥 Excel exportado: ' + fileName);
+    } catch(e) {
+      T.show('⚠️ Não foi possível gerar o Excel (' + e.message + '). Use o CSV, que abre no Excel do mesmo jeito.');
+    }
+  }
+  const stamp = () => Clock.iso(Clock.today());
+  const fmt = iso => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
+
+  function wbs() {
+    const rows = [['Código', 'Nível', 'Entrega', 'Situação', '% concluído', 'Início', 'Fim', 'Responsável']];
+    (DB.get('wbs') || []).forEach(m => {
+      rows.push([m.id, 'Módulo', m.label, m.status, Number(m.pct) || 0, fmt(m.start), fmt(m.end), m.responsavel || '']);
+      (m.children || []).forEach(t => rows.push([t.id, 'Tarefa', t.label, t.status, '', fmt(t.start), fmt(t.end), t.responsavel || '']));
+    });
+    return download('wbs-' + stamp() + '.xlsx', [{ name: 'WBS', rows }]);
+  }
+  function risks() {
+    const rows = [['Código', 'Risco', 'Probabilidade', 'Impacto', 'Nota', 'Faixa', 'Situação', 'Categoria', 'Resposta', 'Responsável', 'Revisão', 'Ação de mitigação']];
+    (DB.get('risks') || []).slice().sort((a, b) => RiskMatrix.scoreOf(b) - RiskMatrix.scoreOf(a)).forEach(r => {
+      const sc = RiskMatrix.scoreOf(r);
+      rows.push([r.id, r.title, Number(r.probability), Number(r.impact), sc, RiskMatrix.level(sc).label, RiskMatrix.label(RiskMatrix.STATUSES, r.status), RiskMatrix.label(RiskMatrix.CATEGORIES, r.category), RiskMatrix.label(RiskMatrix.RESPONSES, r.response), r.owner || '', fmt(r.reviewOn), r.mitigation || '']);
+    });
+    return download('riscos-' + stamp() + '.xlsx', [{ name: 'Riscos', rows }]);
+  }
+  return { safeCell, sheetName, download, wbs, risks, stamp, fmt };
+})();
+</script>
+
+<!-- ■ MODULE: services/raci-calc ─ Regras puras da matriz RACI (sem tela) -->
+<script data-module="services/raci-calc">
+const RaciCalc = (() => {
+  const ROLES = { R:'Responsável', A:'Aprovador', C:'Consultado', I:'Informado' };
+  const ORDER = ['', 'R', 'A', 'C', 'I'];
+  const next = cur => ORDER[(ORDER.indexOf(cur || '') + 1) % ORDER.length];
+  const count = (assignments, role) => Object.values(assignments || {}).filter(v => v === role).length;
+  // Problemas de uma entrega: sem R, sem A ou mais de um A
+  function problems(assignments) {
+    const out = [];
+    if(!count(assignments, 'R')) out.push('sem responsável (R)');
+    const a = count(assignments, 'A');
+    if(!a) out.push('sem aprovador (A)');
+    if(a > 1) out.push('mais de um aprovador (A)');
+    return out;
+  }
+  // rows: [{ id, label, assignments }]
+  function summarize(rows) {
+    const s = { total: rows.length, noR: 0, noA: 0, multiA: 0, ok: 0 };
+    rows.forEach(r => {
+      const p = problems(r.assignments);
+      if(p.includes('sem responsável (R)')) s.noR++;
+      if(p.includes('sem aprovador (A)')) s.noA++;
+      if(p.includes('mais de um aprovador (A)')) s.multiA++;
+      if(!p.length) s.ok++;
+    });
+    return s;
+  }
+  // Quantas entregas cada pessoa carrega por letra
+  function loadByPerson(rows, people) {
+    const out = {};
+    people.forEach(n => { out[n] = { R:0, A:0, C:0, I:0 }; });
+    rows.forEach(r => Object.entries(r.assignments || {}).forEach(([n, v]) => { if(out[n] && out[n][v] != null) out[n][v]++; }));
+    return out;
+  }
+  // Letra só entra se for R/A/C/I; nome vazio ou chave perigosa é descartado
+  function sanitize(assignments) {
+    const out = {};
+    Object.entries(assignments || {}).forEach(([n, v]) => {
+      const name = String(n).trim().slice(0, 80);
+      if(name && name !== '__proto__' && ROLES[v]) out[name] = v;
+    });
+    return out;
+  }
+  return { ROLES, next, count, problems, summarize, loadByPerson, sanitize };
+})();
+</script>
+
+<!-- ■ MODULE: pages/raci-js -->
+<script data-module="pages/raci-js">
+const Raci = (() => {
+  let data = null;
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const ensureLoaded = () => { if(!data) data = DB.get('raci') || []; return data; };
+  const resetCache = () => { data = null; };
+  const persist = () => DB.set('raci', data);
+  const byName = (a, b) => String(a).localeCompare(String(b), 'pt-BR');
+
+  function people() {
+    const team = [...new Set((DB.get('team') || []).map(m => m.name).filter(Boolean))];
+    const extra = [...new Set(ensureLoaded().flatMap(e => Object.keys(e.assignments || {})))].filter(n => !team.includes(n));
+    return { team: team.sort(byName), extra: extra.sort(byName) };
+  }
+  // Linhas = entregas da WBS (módulos e tarefas) + entregas avulsas/antigas guardadas aqui
+  function rows() {
+    const saved = ensureLoaded(), seen = new Set(), out = [];
+    const push = (id, label, sub) => {
+      seen.add(id);
+      const e = saved.find(x => x.id === id);
+      out.push({ id, label, sub, wbs: !String(id).startsWith('RC-'), assignments: e ? e.assignments : {} });
+    };
+    (DB.get('wbs') || []).forEach(m => {
+      push(m.id, m.label, false);
+      (m.children || []).forEach(t => push(t.id, t.label, true));
+    });
+    saved.filter(e => !seen.has(e.id)).forEach(e => out.push({ id: e.id, label: e.label, sub: false, wbs: false, assignments: e.assignments }));
+    return out;
+  }
+  function nextId() {
+    const nums = ensureLoaded().map(e => parseInt(String(e.id).replace(/\D/g, ''), 10)).filter(n => !isNaN(n) && String(n) !== '');
+    return 'RC-' + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, '0');
+  }
+
+  function renderKpis(list) {
+    const root = document.getElementById('rc-kpis'); if(!root) return;
+    const s = RaciCalc.summarize(list);
+    const k = (lbl, val, sub, dot) => `<div class="kpi"><div class="kpi-lbl"><span class="sdot ${dot}"></span>${lbl}</div><div class="kpi-val">${val}</div><div class="kpi-delta">${sub}</div></div>`;
+    root.innerHTML =
+      k('Entregas na matriz', s.total, `${s.ok} completas (com R e um A)`, 'sdot-acc') +
+      k('Sem responsável (R)', s.noR, s.noR ? 'ninguém foi escolhido para fazer' : 'todas têm quem faça', s.noR ? 'sdot-amb' : 'sdot-grn') +
+      k('Sem aprovador (A)', s.noA, s.noA ? 'ninguém decide se está pronto' : 'todas têm aprovador', s.noA ? 'sdot-amb' : 'sdot-grn') +
+      k('Mais de um aprovador', s.multiA, s.multiA ? 'só um A por entrega' : 'nenhum conflito', s.multiA ? 'sdot-red' : 'sdot-grn');
+  }
+
+  function renderLegend() {
+    const lg = document.getElementById('rc-legend'); if(!lg) return;
+    lg.innerHTML = Object.entries(RaciCalc.ROLES).map(([k, v]) => `<div class="rc-leg"><span class="rc-cell rc-${k}" style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:26px;cursor:default;flex:0 0 auto">${k}</span><span><b>${v}</b> — ${{R:'faz o trabalho', A:'decide e responde pelo resultado (um só)', C:'opina antes de decidir', I:'é avisado depois'}[k]}</span></div>`).join('');
+  }
+
+  function render() {
+    const root = document.getElementById('rc-root'); if(!root) return;
+    renderLegend();
+    const list = rows(), { team, extra } = people(), cols = [...team, ...extra];
+    renderKpis(list);
+    if(!cols.length) {
+      root.innerHTML = '<div class="rk-empty">Nenhum colaborador cadastrado. A matriz usa as pessoas de <button class="link-a" onclick="R.go(\'resources\')">Equipe → Colaboradores</button>; cadastre-os e volte aqui.</div>';
+      return;
+    }
+    if(!list.length) {
+      root.innerHTML = '<div class="rk-empty">Nenhuma entrega ainda. Crie as entregas na <button class="link-a" onclick="R.go(\'wbs\')">WBS</button> ou adicione uma entrega avulsa acima.</div>';
+      return;
+    }
+    const load = RaciCalc.loadByPerson(list, cols);
+    let h = '<div class="rc-scroll"><table class="rc-tbl"><caption style="position:absolute;left:-9999px">Matriz RACI: entregas nas linhas, colaboradores nas colunas</caption><thead><tr><th class="rc-first" scope="col">Entrega</th>';
+    cols.forEach(n => { h += `<th scope="col" title="${esc(n)}">${esc(n)}${extra.includes(n) ? '<br><small>fora da equipe</small>' : ''}</th>`; });
+    h += '<th scope="col">Situação</th><th scope="col"><span style="position:absolute;left:-9999px">Ações</span></th></tr></thead><tbody>';
+    list.forEach(r => {
+      const pr = RaciCalc.problems(r.assignments);
+      h += `<tr class="${r.sub ? 'rc-sub' : ''}"><td class="rc-first">${esc(r.label)}${r.wbs ? '' : ' <span class="chip">avulsa</span>'}</td>`;
+      cols.forEach(n => {
+        const v = r.assignments[n] || '';
+        const desc = v ? RaciCalc.ROLES[v] : 'sem papel';
+        h += `<td><button type="button" class="rc-cell${v ? ' rc-' + v : ''}" data-id="${esc(r.id)}" data-n="${esc(n)}" aria-label="${esc(r.label)}, ${esc(n)}: ${desc}. Clique para trocar" onclick="Raci.cycle(this)">${v || '·'}</button></td>`;
+      });
+      h += `<td class="rc-chk">${pr.length ? `<span class="badge b-amb">${esc(pr.join('; '))}</span>` : '<span class="badge b-grn">completa</span>'}</td>`;
+      h += `<td>${r.wbs ? '' : `<button type="button" class="btn btn-sm" data-id="${esc(r.id)}" aria-label="Remover entrega avulsa ${esc(r.label)}" onclick="Raci.removeCustom(this.dataset.id)"><i class="ti ti-trash"></i></button>`}</td></tr>`;
+    });
+    h += '<tr class="rc-foot"><td class="rc-first">Entregas como R (responsável)</td>';
+    cols.forEach(n => { h += `<td>${load[n].R}</td>`; });
+    h += '<td></td><td></td></tr></tbody></table></div>';
+    root.innerHTML = h;
+  }
+
+  function entryFor(id) {
+    ensureLoaded();
+    let e = data.find(x => x.id === id);
+    if(!e) {
+      const row = rows().find(x => x.id === id); if(!row) return null;
+      e = { id, label: row.label, assignments: {} }; data.push(e);
+    }
+    return e;
+  }
+  function cycle(btn) {
+    if(!Auth.guard('business')) return;
+    const e = entryFor(btn.dataset.id); if(!e) return;
+    const name = btn.dataset.n;
+    const nx = RaciCalc.next(e.assignments[name]);
+    if(nx) e.assignments[name] = nx; else delete e.assignments[name];
+    e.assignments = RaciCalc.sanitize(e.assignments);
+    // entrega da WBS sem ninguém marcado não precisa ficar guardada
+    if(!Object.keys(e.assignments).length && !String(e.id).startsWith('RC-')) {
+      data = data.filter(x => x.id !== e.id); persist(); Cloud.deleteRow('raci_entries', e.id);
+    } else { persist(); Cloud.pushRow('raci_entries', e); }
+    render();
+    const again = document.querySelector(`.rc-cell[data-id="${CSS.escape(btn.dataset.id)}"][data-n="${CSS.escape(name)}"]`);
+    if(again) again.focus();
+  }
+  function addCustom() {
+    if(!Auth.guard('business')) return;
+    const inp = document.getElementById('rc-new'); const label = inp.value.trim();
+    if(label.length < 2) { T.show('⚠️ Escreva o nome da entrega (mínimo 2 letras).'); inp.focus(); return; }
+    ensureLoaded();
+    const e = { id: nextId(), label: label.slice(0, 120), assignments: {} };
+    data.push(e); persist(); Cloud.pushRow('raci_entries', e);
+    Trail.log(`Entrega avulsa na matriz RACI: ${e.label}`, Auth.getName(), 'RACI', 'b-neu');
+    inp.value = ''; render(); T.show('✅ Entrega adicionada à matriz.');
+  }
+  function removeCustom(id) {
+    if(!Auth.guard('business')) return;
+    ensureLoaded();
+    const e = data.find(x => x.id === id); if(!e) return;
+    if(!confirm('Remover esta entrega avulsa da matriz? Os papéis marcados nela serão perdidos.')) return;
+    data = data.filter(x => x.id !== id); persist(); Cloud.deleteRow('raci_entries', id);
+    render(); T.show('🗑️ Entrega removida da matriz.');
+  }
+  // CSV com proteção contra injeção de fórmula
+  function exportCsv() {
+    const list = rows(), { team, extra } = people(), cols = [...team, ...extra];
+    const q = v => { let s = String(v == null ? '' : v); if(/^[=+\-@\t\r]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
+    const lines = [['Entrega', ...cols, 'Situação'], ...list.map(r => [r.label, ...cols.map(n => r.assignments[n] || ''), RaciCalc.problems(r.assignments).join('; ') || 'completa'])];
+    const blob = new Blob(['﻿' + lines.map(l => l.map(q).join(';')).join('\r\n')], { type:'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'matriz-raci-' + Clock.iso(Clock.today()) + '.csv';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    T.show('📥 CSV da matriz RACI exportado.');
+  }
+  function exportXlsx() {
+    const list = rows(), { team, extra } = people(), cols = [...team, ...extra];
+    XlsxExport.download('matriz-raci-' + XlsxExport.stamp() + '.xlsx', [
+      { name: 'Matriz RACI', rows: [['Entrega', ...cols, 'Situação'], ...list.map(r => [r.label, ...cols.map(n => r.assignments[n] || ''), RaciCalc.problems(r.assignments).join('; ') || 'completa'])] },
+      { name: 'Legenda', rows: [['Letra', 'Papel'], ...Object.entries(RaciCalc.ROLES)] }]);
+  }
+  return { render, resetCache, cycle, addCustom, removeCustom, exportCsv, exportXlsx, rows };
+})();
+</script>
+
 <!-- ■ MODULE: ui/column-drag-css ─ Colunas de tabela que o usuário reorganiza e redimensiona com o mouse -->
 <style data-module="ui/column-drag-css">
 table[data-col-key] th{position:relative;cursor:grab;user-select:none}
@@ -9560,8 +9884,12 @@ const Hours = (() => {
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     T.show('📥 CSV de horas exportado.');
   }
+  function exportXlsx() {
+    XlsxExport.download('horas-' + iso(today()) + '.xlsx', [{ name: 'Horas', rows: [['Pessoa','Data','Horas','Entrega','Observação'],
+      ...filtered().sort((a, b) => a.date.localeCompare(b.date)).map(e => [e.person, e.date, Number(e.hours), e.wbsRef, e.note])] }]);
+  }
 
-  return { render, resetCache, openAdd, openEdit, openEditEl, keyEl, saveFromModal, deleteFromModal, closeModal, setFilter, more, addMany, keys, exportCsv };
+  return { render, resetCache, openAdd, openEdit, openEditEl, keyEl, saveFromModal, deleteFromModal, closeModal, setFilter, more, addMany, keys, exportCsv, exportXlsx };
 })();
 </script>
 
