@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.9.0'
+  version: '2.9.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -12900,7 +12900,10 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     persist();
     Trail.log(`${idxs.length} subtarefa(s) sugerida(s) pela IA adicionada(s) em "${m.label}"`, Auth.getName(), '', 'b-acc');
     closeAiSuggestModal();
+    expand[m.id] = true; // abre a entrega que acabou de ganhar subtarefas — recolhida, o usuário não veria nada mudar
     render();
+    // render() só refaz árvore e tabela; se o Gantt é a visão aberta, ele também precisa ser refeito
+    if(document.getElementById('wbs-gantt-view').style.display !== 'none') renderGantt();
     T.show(`✅ ${idxs.length} subtarefa(s) adicionada(s) a "${m.label}" — edite pra preencher data e responsável.`);
   }
 
@@ -13162,7 +13165,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
       Trail.log(`Entrega atualizada: ${label} (${pct}%)`, Auth.getName(), status==='red'?'Risco crítico':(status==='grn'?'Concluída':'Em andamento'), status==='red'?'b-red':(status==='grn'?'b-grn':'b-amb'));
     } else if(modalCtx.mode === 'add-task') {
       const m = data.find(x => x.id === modalCtx.moduleId);
-      if(m) { m.children = m.children || []; m.children.push({ id:genId('wt'), label, status, start, end, startActual, endActual, responsavel, predecessors }); }
+      if(m) { m.children = m.children || []; m.children.push({ id:genId('wt'), label, status, start, end, startActual, endActual, responsavel, predecessors }); expand[m.id] = true; }
       T.show('✅ Subtarefa adicionada!');
       Trail.log(`Nova subtarefa: ${label}`, Auth.getName(), '', 'b-acc');
     } else if(modalCtx.mode === 'edit-task') {
