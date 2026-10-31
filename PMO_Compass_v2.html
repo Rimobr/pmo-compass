@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.15.0'
+  version: '2.15.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -243,6 +243,11 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .si:hover:not(.on){background:var(--s2);color:var(--t1)}
 .si .sb-b{margin-left:auto;font-size:11px;font-weight:600;padding:1px 6px;border-radius:20px;background:var(--rd);color:var(--red);border:1px solid var(--rb)}
 .sb-div{height:1px;background:var(--b1);margin:6px 4px}
+/* Divisor com título: acima, painéis e indicadores (diretoria/PMO); abaixo, a área de quem conduz o projeto */
+.sb-divl{display:flex;align-items:center;gap:8px;margin:12px 4px 6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);white-space:nowrap}
+.sb-divl::before,.sb-divl::after{content:'';flex:1;height:1px;background:var(--b2)}
+.sidebar.collapsed .sb-divl span{display:none}
+.sidebar.collapsed .sb-divl::after{display:none}
 .sb-hdr-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;text-transform:none;letter-spacing:0;text-align:left}
 .sb-hdr-kicker{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--t3)}
 .sb-hdr-txt b{font-weight:700;font-size:12.5px;color:var(--t1);overflow-wrap:anywhere;line-height:1.3}
@@ -872,7 +877,7 @@ body.icons-failed i[data-fb]::before{
     </div>
   </div>
 
-  <div class="sb-div"></div>
+  <div class="sb-divl" role="separator" aria-label="Gestão do projeto — área do gerente de projeto e da equipe"><span>Gestão do projeto</span></div>
   <div class="sb-group" id="sbg-projetos">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-projetos')"><i class="ti ti-layout-grid sb-gico"></i><span class="sb-hdr-txt"><small class="sb-hdr-kicker">Projeto · <span id="sb-method-tag">Híbrido</span></small><b id="sb-proj-name">—</b></span><i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body" id="sbg-projetos-list">
