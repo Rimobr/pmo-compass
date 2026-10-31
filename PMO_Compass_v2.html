@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.18.0'
+  version: '2.18.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -15005,15 +15005,21 @@ const WBS = (() => {
 
   function fmtDateTimeShort(iso) { if(!iso) return ''; try { const d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); } catch(e) { return ''; } }
 
+  // Quem só atualiza o próprio trabalho muda status e datas reais das tarefas em que é o responsável
+  function canEditOwn(scope, item, field) {
+    return scope === 'task' && !!item && ['status','startActual','endActual'].includes(field) && Auth.can('update_own') && typeof MyWork !== 'undefined' && MyWork.isMine(item.responsavel);
+  }
   function renderTable() {
     ensureLoaded();
     const root = document.getElementById('wbs-table-root');
     if(!root) return;
     const canEdit = Auth.can('business');
     const cell = (scope, moduleId, taskId, field, value, type) => {
-      if(!canEdit) {
+      const mod = data.find(x => x.id === moduleId);
+      const it = scope === 'task' && mod ? (mod.children||[]).find(x => x.id === taskId) : mod;
+      if(!(canEdit || canEditOwn(scope, it, field))) {
         if(field === 'status') return escapeHtml((BADGE[value]||BADGE.neu).txt);
-        return escapeHtml(value || '—');
+        return escapeHtml(String(value == null || value === '' ? '—' : value));
       }
       const attrs = `onchange="WBS.updateField('${scope}','${moduleId}',${taskId?`'${taskId}'`:'null'},'${field}',this.value)"`;
       if(field === 'status') return `<select class="wbs-table-inp" ${attrs}>${STATUS_OPTIONS.map(([v,l])=>`<option value="${v}"${v===value?' selected':''}>${l}</option>`).join('')}</select>`;
@@ -15067,12 +15073,12 @@ const WBS = (() => {
   // item (mostrado na coluna "Últ. ajuste") E registra o valor antigo → novo na Trilha, pra
   // quem quiser o histórico completo de uma entrega, não só o último ajuste.
   function updateField(scope, moduleId, taskId, field, rawValue) {
-    if(!Auth.guard('business')) { renderTable(); return; }
     ensureLoaded();
     const m = data.find(x => x.id === moduleId);
     if(!m) return;
     const item = scope === 'module' ? m : (m.children||[]).find(x => x.id === taskId);
     if(!item) return;
+    if(!canEditOwn(scope, item, field) && !Auth.guard('business')) { renderTable(); return; }
     const old = item[field];
     let value = rawValue;
     if(field === 'pct') value = Math.max(0, Math.min(100, parseInt(rawValue,10) || 0));
