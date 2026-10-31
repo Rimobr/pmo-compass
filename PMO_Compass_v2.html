@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.8.1'
+  version: '2.9.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -42,7 +42,7 @@ document.querySelector('meta[name="description"]').setAttribute('content', BRAND
 :root {
   --bg:#0d1117; --s1:#161b22; --s2:#1c2230; --s3:#21293f;
   --b1:rgba(255,255,255,0.06); --b2:rgba(255,255,255,0.11); --b3:rgba(255,255,255,0.20);
-  --t1:#e6edf3; --t2:#8b949e; --t3:#848d97;
+  --t1:#e6edf3; --t2:#9aa4b0; --t3:#8e98a3;
   --acc:#5995f1; --ad:rgba(77,142,240,0.10); --ab:rgba(77,142,240,0.28);
   --grn:#3fb950; --gd:rgba(63,185,80,0.09); --gb:rgba(63,185,80,0.28);
   --amb:#d29922; --amd:rgba(210,153,34,0.09); --ambb:rgba(210,153,34,0.28);
@@ -101,7 +101,7 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 .card-accent{border-color:var(--ab);background:var(--ad)}
 .card-danger{border-color:var(--rb);background:var(--rd)}
 .card-success{border-color:var(--gb);background:var(--gd)}
-.badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap}
 .b-grn{background:var(--gd);color:var(--grn);border:1px solid var(--gb)}
 .b-amb{background:var(--amd);color:var(--amb);border:1px solid var(--ambb)}
 .b-red{background:var(--rd);color:var(--red);border:1px solid var(--rb)}
@@ -109,7 +109,7 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 .b-pur{background:var(--pd);color:var(--pur);border:1px solid var(--pb)}
 .b-neu{background:var(--s3);color:var(--t2);border:1px solid var(--b2)}
 html[data-theme="gray"] .b-neu{color:var(--t1)}
-.help-q{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--s3);color:var(--t3);font-size:10px;font-weight:700;line-height:1;cursor:pointer;flex-shrink:0;user-select:none;vertical-align:1px}
+.help-q{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--s3);color:var(--t3);font-size:11px;font-weight:700;line-height:1;cursor:pointer;flex-shrink:0;user-select:none;vertical-align:1px}
 .help-q:hover{background:var(--ab);color:var(--acc)}
 .help-tip-pop{position:fixed;z-index:1200;max-width:260px;background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);box-shadow:0 4px 16px rgba(0,0,0,.18);padding:10px 12px;font-size:12px;color:var(--t2);line-height:1.55}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--r6);border:1px solid var(--b2);background:transparent;color:var(--t2);cursor:pointer;font-size:12px;font-weight:500;transition:all .14s;white-space:nowrap}
@@ -125,9 +125,9 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .btn-sm{padding:4px 10px;font-size:11px}
 .btn-sm i{font-size:12px}
 .btn-row{display:flex;gap:8px;flex-wrap:wrap}
-.chip{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;background:var(--s2);border:1px solid var(--b1);border-radius:4px;padding:2px 7px;color:var(--t2)}
+.chip{display:inline-flex;align-items:center;gap:3px;font-size:11px;background:var(--s2);border:1px solid var(--b1);border-radius:4px;padding:2px 7px;color:var(--t2)}
 .chip i{font-size:11px}
-.lbl{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .help-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--b1);font-size:12.5px;color:var(--t2);line-height:1.6}
 .help-item:last-child{border-bottom:none;padding-bottom:0}
 .help-item .badge{flex-shrink:0;margin-top:1px}
@@ -153,11 +153,11 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .kpi-val{font-size:22px;font-weight:600;color:var(--t1);line-height:1}
 .kpi-unit{font-size:13px;font-weight:400;color:var(--t2)}
 .kpi-delta{font-size:11px;margin-top:4px;display:flex;align-items:center;gap:3px}
-.kpi-delta i{font-size:10px}
+.kpi-delta i{font-size:11px}
 .ring-wrap{position:relative;width:64px;height:64px;flex-shrink:0}
 .ring-wrap svg{transform:rotate(-90deg)}
 .ring-lbl{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--t1);line-height:1}
-.ring-lbl small{font-size:9px;color:var(--t3);font-weight:400}
+.ring-lbl small{font-size:11px;color:var(--t3);font-weight:400}
 .link-a{font-size:11px;color:var(--acc);cursor:pointer;display:inline-flex;align-items:center;gap:3px;margin-top:4px;background:none;border:none;padding:0}
 .link-a:hover{text-decoration:underline}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -214,7 +214,7 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .cmdk-item:hover,.cmdk-item.sel{background:var(--s2);color:var(--t1)}
 .cmdk-item i{font-size:15px;color:var(--t3);flex-shrink:0;width:18px;text-align:center}
 .cmdk-item.sel i{color:var(--acc)}
-.cmdk-item .cmdk-grp{margin-left:auto;font-size:10.5px;color:var(--t3)}
+.cmdk-item .cmdk-grp{margin-left:auto;font-size:11px;color:var(--t3)}
 .cmdk-empty{padding:20px;text-align:center;color:var(--t3);font-size:12px}
 .tb-proj:hover{border-color:var(--b2);color:var(--t1)}
 .proj-dot{width:6px;height:6px;border-radius:50%;background:var(--grn)}
@@ -225,7 +225,7 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .ntab i{font-size:13px}
 .ntab.on{background:var(--s3);color:var(--t1);font-weight:500;border:1px solid var(--b2)}
 .ntab:hover:not(.on){color:var(--t1)}
-.ntab .tb-cnt{font-size:9.5px;font-weight:700;background:var(--rd);color:var(--red);border:1px solid var(--rb);border-radius:20px;padding:1px 5px}
+.ntab .tb-cnt{font-size:11px;font-weight:700;background:var(--rd);color:var(--red);border:1px solid var(--rb);border-radius:20px;padding:1px 5px}
 .tb-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;padding-left:10px;border-left:1px solid var(--b1)}
 .ico-btn{width:30px;height:30px;border-radius:var(--r6);background:transparent;border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
 .ico-btn i{font-size:15px;color:var(--t2)}
@@ -234,17 +234,19 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .ava{width:30px;height:30px;border-radius:50%;background:var(--pd);border:1px solid var(--pb);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--t1);cursor:pointer;flex-shrink:0}
 .app-body{flex:1;display:flex;overflow:hidden}
 .sidebar{width:var(--sbw,192px);flex-shrink:0;background:var(--s1);border-right:1px solid var(--b1);padding:12px 8px;display:flex;flex-direction:column;gap:1px;overflow-y:auto}
-.sb-sec{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);padding:8px 10px 4px;margin-top:6px}
+.sb-sec{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);padding:8px 10px 4px;margin-top:6px}
 .sb-sec:first-child{margin-top:0}
 .si{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:var(--r6);font-size:12.5px;color:var(--t2);cursor:pointer;border:none;background:transparent;width:100%;text-align:left}
 .si i{font-size:14px;flex-shrink:0}
 .si.on{background:var(--s3);color:var(--t1);font-weight:600;box-shadow:inset 2px 0 0 var(--acc)}
 .si.on i{color:var(--acc)}
 .si:hover:not(.on){background:var(--s2);color:var(--t1)}
-.si .sb-b{margin-left:auto;font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px;background:var(--rd);color:var(--red);border:1px solid var(--rb)}
+.si .sb-b{margin-left:auto;font-size:11px;font-weight:600;padding:1px 6px;border-radius:20px;background:var(--rd);color:var(--red);border:1px solid var(--rb)}
 .sb-div{height:1px;background:var(--b1);margin:6px 4px}
-.sb-hdr-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sb-hdr-txt b{font-weight:700;color:var(--t1)}
+.sb-hdr-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;text-transform:none;letter-spacing:0;text-align:left}
+.sb-hdr-kicker{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--t3)}
+.sb-hdr-txt b{font-weight:700;font-size:12.5px;color:var(--t1);overflow-wrap:anywhere;line-height:1.3}
+.sidebar.collapsed .sb-hdr-txt{display:none}
 .sb-ctx{display:flex;align-items:center;gap:6px;margin:0 6px 4px;padding:5px 8px;border-radius:var(--r6);background:var(--ad);border:1px solid var(--ab);font-size:12px;font-weight:600;color:var(--t1)}
 .sb-ctx i{color:var(--acc);font-size:14px;flex-shrink:0}
 .sb-ctx span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -287,6 +289,13 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .sb-pmo-btn i{font-size:15px;flex-shrink:0;color:var(--amb)}
 .sb-pmo-btn:hover{background:var(--s2)}
 .sb-pmo-btn.on{border-color:var(--amb);box-shadow:inset 3px 0 0 var(--amb)}
+/* Os 4 painéis usam UM só visual: a cor fica reservada para significar estado, não para decorar o menu */
+.sb-xray-btn,.sb-board-btn,.sb-exec-btn,.sb-pmo-btn{background:var(--s2);border:1px solid var(--b1);color:var(--t1);padding:7px 10px;margin-bottom:3px}
+.sb-xray-btn i,.sb-board-btn i,.sb-exec-btn i,.sb-pmo-btn i{color:var(--acc)}
+.sb-xray-btn:hover,.sb-board-btn:hover,.sb-exec-btn:hover,.sb-pmo-btn:hover{background:var(--s3)}
+.sb-xray-btn.on,.sb-board-btn.on,.sb-exec-btn.on,.sb-pmo-btn.on{background:var(--s3);color:var(--t1);border-color:var(--acc);box-shadow:inset 3px 0 0 var(--acc)}
+.sb-xray-btn.on i,.sb-board-btn.on i,.sb-exec-btn.on i,.sb-pmo-btn.on i{color:var(--acc)}
+.sb-xray-btn:focus-visible,.sb-board-btn:focus-visible,.sb-exec-btn:focus-visible,.sb-pmo-btn:focus-visible,.si:focus-visible,.sb-group-hdr:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 </style>
 <style>.page{padding:20px;display:none;flex-direction:column;gap:14px;animation:pgIn .15s ease}
 .page.on{display:flex}
@@ -294,7 +303,26 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .pg-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .pg-title{font-size:17px;font-weight:600;color:var(--t1);margin-bottom:2px}
 .pg-sub{font-size:12px;color:var(--t3);line-height:1.5}
-@media(max-width:900px){.sidebar,.sb-rzw{display:none}.tb-nav{display:flex;justify-content:flex-start}}
+.tb-burger,.sb-backdrop{display:none}
+/* Celular/tablet estreito: o menu vira gaveta (abre pelo botão ☰), com todas as telas — as abas antigas do topo saem */
+@media(max-width:900px){
+  .tb-burger{display:flex;flex-shrink:0}
+  .tb-nav{display:none!important}
+  .sb-rzw,.sp-rz{display:none}
+  .topbar{gap:8px;padding:0 10px}
+  .tb-logo{padding-right:8px}
+  .tb-actions{padding-left:6px;gap:6px}
+  .sidebar{position:fixed;top:48px;bottom:0;left:0;width:min(300px,86vw)!important;z-index:80;transform:translateX(-104%);transition:transform .2s ease;box-shadow:var(--shadow-md);visibility:hidden}
+  body.sb-open .sidebar{transform:none;visibility:visible}
+  body.sb-open .sb-backdrop{display:block;position:fixed;top:48px;right:0;bottom:0;left:0;background:rgba(0,0,0,.5);z-index:70}
+  .tb-proj #proj-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:34vw}
+}
+@media(max-width:600px){
+  .tb-logo [data-brand="name"]{display:none}
+  .tb-logo{border-right:0}
+  #tb-cloud-badge,#tb-role-tag,.tb-actions .ico-btn[title="Configurações"],.tb-actions .ico-btn[title="Novo projeto"],.tb-actions .ico-btn[title^="Trocar tema"]{display:none!important}
+}
+@media(prefers-reduced-motion:reduce){.sidebar{transition:none}}
 .sidebar.collapsed{width:56px;padding:12px 4px;align-items:stretch}
 .sidebar.collapsed .si,.sidebar.collapsed .sb-xray-btn,.sidebar.collapsed .sb-board-btn,.sidebar.collapsed .sb-exec-btn,.sidebar.collapsed .sb-pmo-btn,.sidebar.collapsed .sb-group-hdr{font-size:0;justify-content:center;padding-left:0;padding-right:0;gap:0}
 .sidebar.collapsed .si i,.sidebar.collapsed .sb-xray-btn i,.sidebar.collapsed .sb-board-btn i,.sidebar.collapsed .sb-exec-btn i,.sidebar.collapsed .sb-pmo-btn i{font-size:17px}
@@ -326,7 +354,7 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .kg-l{display:flex;align-items:center;gap:10px}
 .kg-ico{width:28px;height:28px;border-radius:var(--r6);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
 .kg-title{font-size:13.5px;font-weight:500;color:var(--t1)}
-.kg-n{font-size:10px;background:var(--s2);border:1px solid var(--b1);border-radius:20px;padding:1px 8px;color:var(--t2)}
+.kg-n{font-size:11px;background:var(--s2);border:1px solid var(--b1);border-radius:20px;padding:1px 8px;color:var(--t2)}
 .kg-r{display:flex;align-items:center;gap:10px}
 .kg-st{font-size:11.5px;display:flex;align-items:center;gap:5px}
 .kg-chev{font-size:14px;color:var(--t3);transition:transform .18s}
@@ -353,7 +381,7 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .burn-role{font-size:11px;color:var(--t3);margin-bottom:8px}
 .burn-track{width:100%;height:8px;background:var(--s3);border-radius:4px;overflow:hidden;margin-bottom:3px}
 .burn-fill{height:100%;border-radius:4px}
-.burn-leg{display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-bottom:8px}
+.burn-leg{display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-bottom:8px}
 .burn-sigs{display:flex;gap:5px;flex-wrap:wrap}
 .res-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--b1)}
 .res-row:last-child{border-bottom:none}
@@ -401,7 +429,7 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .tl-out{font-size:11px;display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;margin-top:5px}
 .report-blk{background:var(--s2);border-radius:var(--r8);padding:13px 15px;margin-bottom:8px}
 .report-blk:last-child{margin-bottom:0}
-.report-sec{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.report-sec{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);margin-bottom:6px;display:flex;align-items:center;gap:5px}
 .report-body{font-size:12.5px;color:var(--t2);line-height:1.7}
 .report-body strong{color:var(--t1)}
 .pc-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r10);padding:16px;cursor:pointer;transition:all .14s}
@@ -410,10 +438,10 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .pc-name{font-size:14px;font-weight:600;color:var(--t1);margin-bottom:2px}
 .pc-client{font-size:11px;color:var(--t3);margin-bottom:10px}
 .pb-row{display:flex;align-items:center;gap:7px;margin-bottom:5px}
-.pb-lbl{font-size:10.5px;color:var(--t3);width:60px;flex-shrink:0}
+.pb-lbl{font-size:11px;color:var(--t3);width:60px;flex-shrink:0}
 .pb-track{flex:1;height:3px;background:var(--s3);border-radius:2px;overflow:hidden}
 .pb-fill{height:100%;border-radius:2px}
-.pb-pct{font-size:10.5px;color:var(--t3);width:26px;text-align:right}
+.pb-pct{font-size:11px;color:var(--t3);width:26px;text-align:right}
 .set-row{display:flex;align-items:flex-start;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--b1);gap:20px}
 .set-row:last-child{border-bottom:none}
 .set-lbl{font-size:13px;font-weight:500;color:var(--t1);margin-bottom:3px}
@@ -503,7 +531,7 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .ls{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;position:relative}
 .ls:not(:last-child)::after{content:'→';position:absolute;right:-10px;top:12px;font-size:16px;color:var(--t3)}
 .ls-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;flex-shrink:0;margin-bottom:6px}
-.ls-lbl{font-size:10.5px;color:var(--t2);text-align:center;line-height:1.4;padding:0 4px}
+.ls-lbl{font-size:11px;color:var(--t2);text-align:center;line-height:1.4;padding:0 4px}
 .ls.done .ls-num{background:var(--gd);color:var(--grn);border:1px solid var(--gb)}
 .ls.active .ls-num{background:var(--ad);color:var(--acc);border:1px solid var(--ab)}
 .ls.pend .ls-num{background:var(--s3);color:var(--t3);border:1px solid var(--b2)}
@@ -540,7 +568,7 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .wbs-ic-btn:hover{background:var(--s3);color:var(--t1);border-color:var(--b2)}
 .wbs-ic-btn i{font-size:12px}
 .wbs-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:820px}
-.wbs-table th{text-align:left;font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t3);padding:6px 8px;border-bottom:1px solid var(--b2);white-space:nowrap}
+.wbs-table th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t3);padding:6px 8px;border-bottom:1px solid var(--b2);white-space:nowrap}
 .wbs-table td{padding:5px 8px;border-bottom:1px solid var(--b1);vertical-align:middle}
 .wbs-table-l1 td{background:var(--s2)}
 .wbs-table-inp{width:100%;min-width:84px;background:var(--s1);border:1px solid var(--b1);border-radius:5px;padding:3px 6px;font-size:12px;color:var(--t1);font-family:inherit}
@@ -558,7 +586,7 @@ body[data-role="consulta"] [data-perm]{display:none !important;}
 body[data-role="manutencao"] [data-perm="business"]{display:none !important;}
 body[data-role="gerente"] [data-perm="settings"]{display:none !important;}
 
-.role-badge{font-size:9.5px;font-weight:700;letter-spacing:.03em;padding:3px 9px;border-radius:20px;background:var(--s3);color:var(--t2);white-space:nowrap}
+.role-badge{font-size:11px;font-weight:700;letter-spacing:.03em;padding:3px 9px;border-radius:20px;background:var(--s3);color:var(--t2);white-space:nowrap}
 body[data-role="admin"] .role-badge{background:var(--ad);color:var(--acc)}
 body[data-role="gerente"] .role-badge{background:var(--gd);color:var(--grn)}
 body[data-role="consulta"] .role-badge{background:var(--s3);color:var(--t3)}
@@ -588,7 +616,7 @@ body[data-role="manutencao"] .role-badge{background:var(--amd);color:var(--amb)}
 .gantt-rz:hover::after,.gantt-rz.on::after,.gantt-rz:focus-visible::after{background:var(--acc)}
 .gantt-rz:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
 .gantt-ruler{display:flex;position:relative;height:24px;margin-left:var(--gl);border-bottom:1px solid var(--b1);margin-bottom:6px}
-.gantt-ruler-m{position:absolute;top:0;height:100%;font-size:10.5px;color:var(--t3);border-left:1px solid var(--b1);padding-left:5px;display:flex;align-items:center;white-space:nowrap}
+.gantt-ruler-m{position:absolute;top:0;height:100%;font-size:11px;color:var(--t3);border-left:1px solid var(--b1);padding-left:5px;display:flex;align-items:center;white-space:nowrap}
 .gantt-row{display:flex;align-items:center;min-height:28px}
 .gantt-row-l1{margin-top:8px}
 .gantt-lbl{width:var(--gl);flex-shrink:0;font-size:12px;color:var(--t1);padding-right:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -601,7 +629,7 @@ body[data-role="manutencao"] .role-badge{background:var(--amd);color:var(--amb)}
 .gantt-bar-stripe{background-image:repeating-linear-gradient(45deg, rgba(0,0,0,.16) 0 6px, transparent 6px 12px)}
 .gantt-body{position:relative}
 .gantt-today-line{position:absolute;top:0;bottom:0;width:2px;background:var(--acc);z-index:5;pointer-events:none}
-.gantt-today-tag{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:9.5px;color:var(--acc);font-weight:700;background:var(--ad);padding:1px 5px;border-radius:3px;white-space:nowrap}
+.gantt-today-tag{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--acc);font-weight:700;background:var(--ad);padding:1px 5px;border-radius:3px;white-space:nowrap}
 .gantt-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;font-size:11px;color:var(--t2)}
 .gantt-leg-sw{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
 @media(max-width:900px){.gantt-inner{--gl:120px}.gantt-lbl{font-size:11px}}
@@ -640,13 +668,13 @@ body[data-role="manutencao"] .role-badge{background:var(--amd);color:var(--amb)}
 .wz-step:not(:last-child)::after{content:'→';position:absolute;right:0;color:var(--t3);font-size:12px}
 .wz-step.active{color:var(--acc);font-weight:500}
 .wz-step.done{color:var(--grn)}
-.wz-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.wz-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
 .wz-step.active .wz-num{background:var(--ad);border:1px solid var(--ab);color:var(--acc)}
 .wz-step.done .wz-num{background:var(--gd);border:1px solid var(--gb);color:var(--grn)}
 .wz-step:not(.active):not(.done) .wz-num{background:var(--s3);border:1px solid var(--b2);color:var(--t3)}
 .field-group{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
 .field-label{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;color:var(--t2)}
-.field-hint{font-size:10.5px;color:var(--t3)}
+.field-hint{font-size:11px;color:var(--t3)}
 </style>
 
 <!-- ■ MODULE: ui/icon-fallback ─ Garante ícones distinguíveis mesmo se a fonte de ícones não carregar -->
@@ -746,6 +774,7 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: ui/topbar -->
 <header class="topbar" data-module="ui/topbar">
+  <button class="ico-btn tb-burger" id="tb-burger" type="button" aria-label="Abrir o menu" aria-expanded="false" aria-controls="sidebar" onclick="Nav.toggleDrawer()"><i class="ti ti-menu-2"></i></button>
   <div class="tb-logo">
     <div class="tb-logo-ico" style="background:#0f2038;border-color:#e0b854">
       <svg viewBox="0 0 200 200" width="18" height="18">
@@ -822,8 +851,9 @@ body.icons-failed i[data-fb]::before{
 
 <div class="app-body">
 
+<div class="sb-backdrop" onclick="Nav.closeDrawer()"></div>
 <!-- ■ MODULE: ui/sidebar -->
-<aside class="sidebar" data-module="ui/sidebar">
+<aside class="sidebar" id="sidebar" data-module="ui/sidebar">
   <div class="sb-sec">Painéis</div>
   <button class="sb-xray-btn" data-p="xray" onclick="R.go('xray')"><i class="ti ti-report-medical"></i>Raio-X do Projeto</button>
   <button class="sb-board-btn" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button>
@@ -843,15 +873,14 @@ body.icons-failed i[data-fb]::before{
 
   <div class="sb-div"></div>
   <div class="sb-group" id="sbg-projetos">
-    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-projetos')"><i class="ti ti-layout-grid sb-gico"></i><span class="sb-hdr-txt">Projeto: <b id="sb-proj-name">—</b></span><i class="ti ti-chevron-right sb-gchev"></i></button>
+    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-projetos')"><i class="ti ti-layout-grid sb-gico"></i><span class="sb-hdr-txt"><small class="sb-hdr-kicker">Projeto</small><b id="sb-proj-name">—</b></span><i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body" id="sbg-projetos-list">
       <div id="sb-projects-root"></div>
       <button class="si" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
     </div>
   </div>
 
-  <div class="sb-sec">Ações do projeto</div>
-  <div class="sb-ctx" id="sb-ctx-project" title="As ações abaixo valem para o projeto escolhido"><i class="ti ti-folder"></i><span id="sb-ctx-name">—</span></div>
+  <div class="sb-sec" title="As ações abaixo valem para o projeto escolhido acima">Ações do projeto escolhido</div>
 
   <div class="sb-group" id="sbg-planejamento">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-planejamento')"><i class="ti ti-sitemap sb-gico"></i>Planejamento<i class="ti ti-chevron-right sb-gchev"></i></button>
@@ -867,7 +896,7 @@ body.icons-failed i[data-fb]::before{
   </div>
 
   <div class="sb-group" id="sbg-decisao">
-    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-decisao')"><i class="ti ti-brain sb-gico"></i>Decisão &amp; Acompanhamento<i class="ti ti-chevron-right sb-gchev"></i></button>
+    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-decisao')"><i class="ti ti-brain sb-gico"></i>Decisões<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
       <button class="si" data-p="decisions" onclick="R.go('decisions')"><i class="ti ti-brain"></i>Decisões IA<span class="sb-b" id="sb-decisions-count">4</span></button>
       <button class="si" data-p="loop" onclick="R.go('loop')"><i class="ti ti-refresh-alert"></i>Loop de Ação</button>
@@ -1006,7 +1035,7 @@ body.icons-failed i[data-fb]::before{
   <div class="pg-hdr"><div><div class="pg-title">Decisões recomendadas pela IA<span class="help-q" data-help="Decisões que a IA sugere a partir dos documentos e do andamento do projeto. Ela nunca decide sozinha — você aceita, adia ou recusa cada uma." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub"><span id="dec-pending-count">4</span> pendentes · Documentos + lições aprendidas + padrões históricos</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Decisions.openManual()"><i class="ti ti-plus"></i>Nova decisão</button><button class="btn btn-sm" onclick="DB.exportBackup()"><i class="ti ti-download"></i>Exportar</button></div></div>
   <div id="dec-list-root"></div>
   <div id="dec-resolved-wrap" style="display:none">
-    <div style="font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin:18px 0 10px;display:flex;align-items:center;gap:7px;cursor:pointer" onclick="Decisions.toggleResolved()"><span style="flex:1;height:1px;background:var(--b1)"></span>Resolvidas <span id="dec-resolved-count">0</span> · clique para ver<span style="flex:1;height:1px;background:var(--b1)"></span></div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin:18px 0 10px;display:flex;align-items:center;gap:7px;cursor:pointer" onclick="Decisions.toggleResolved()"><span style="flex:1;height:1px;background:var(--b1)"></span>Resolvidas <span id="dec-resolved-count">0</span> · clique para ver<span style="flex:1;height:1px;background:var(--b1)"></span></div>
     <div id="dec-resolved-root" style="display:none"></div>
   </div>
 </section>
@@ -1141,7 +1170,7 @@ body.icons-failed i[data-fb]::before{
 .rp-card.u-urgente{border-left-color:var(--rp-red);background:var(--rp-redbg)}
 .rp-card.u-semana{border-left-color:var(--rp-amb);background:var(--rp-ambbg)}
 .rp-card.u-ciclo{border-left-color:var(--rp-blu);background:var(--rp-blubg)}
-.rp-pill{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:20px;color:#fff!important}
+.rp-pill{display:inline-block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:20px;color:#fff!important}
 .u-urgente .rp-pill{background:var(--rp-red)} .u-semana .rp-pill{background:var(--rp-amb)} .u-ciclo .rp-pill{background:var(--rp-blu)}
 .rp-proj{font-size:11px;font-weight:700;color:var(--rp-mut);margin-left:6px}
 .rp-card h3{font-size:13.5px;font-weight:700;margin:6px 0 4px;overflow-wrap:anywhere}
@@ -1149,7 +1178,7 @@ body.icons-failed i[data-fb]::before{
 .rp-card p b{font-weight:700}
 .rp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:20px}
 .rp-kpi{border:1px solid var(--rp-line);border-radius:10px;padding:10px 12px;background:var(--rp-soft);display:flex;gap:10px;align-items:center;break-inside:avoid;page-break-inside:avoid}
-.rp-kpi .rp-kl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--rp-mut)}
+.rp-kpi .rp-kl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--rp-mut)}
 .rp-kpi .rp-kv{font-size:24px;font-weight:800;line-height:1.1}
 .rp-kpi .rp-kv small{font-size:12px;font-weight:600;color:var(--rp-mut)}
 .rp-kpi .rp-ks{font-size:11px;color:var(--rp-mut)}
@@ -1166,9 +1195,9 @@ body.icons-failed i[data-fb]::before{
 .rp-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%;font-size:11px;font-weight:700}
 .rp-col div{width:100%;border-radius:6px 6px 0 0;min-height:3px}
 .rp-col span{font-weight:600;color:var(--rp-mut)}
-.rp-legend{font-size:10.5px;color:var(--rp-mut);margin-top:6px}
+.rp-legend{font-size:11px;color:var(--rp-mut);margin-top:6px}
 .rp-tbl{width:100%;border-collapse:collapse;font-size:12px}
-.rp-tbl th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--rp-mut);text-align:left;padding:4px 6px;border-bottom:1px solid var(--rp-line)}
+.rp-tbl th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--rp-mut);text-align:left;padding:4px 6px;border-bottom:1px solid var(--rp-line)}
 .rp-tbl td{padding:6px;border-bottom:1px solid var(--rp-line);overflow-wrap:anywhere}
 .rp-tbl .n{text-align:right;white-space:nowrap}
 .rp-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
@@ -1178,7 +1207,7 @@ body.icons-failed i[data-fb]::before{
 .rp-act b.n{flex:0 0 22px;height:22px;border-radius:50%;background:var(--rp-brand);color:#fff!important;display:flex;align-items:center;justify-content:center;font-size:11px}
 .rp-act .w{display:block;font-size:11px;color:var(--rp-mut)}
 .rp-ul{margin:0;padding-left:18px;font-size:12.5px} .rp-ul li{margin:4px 0}
-.rp-foot{margin-top:16px;padding-top:8px;border-top:1px solid var(--rp-line);font-size:10.5px;color:var(--rp-mut);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.rp-foot{margin-top:16px;padding-top:8px;border-top:1px solid var(--rp-line);font-size:11px;color:var(--rp-mut);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .rp-empty{font-size:12.5px;color:var(--rp-mut);padding:6px 0}
 @media print{
   .no-print{display:none!important}
@@ -1383,7 +1412,7 @@ body.icons-failed i[data-fb]::before{
       <div class="prov-body">
         <div class="prov-name"><i class="ti ti-brain" style="color:var(--acc)"></i>Claude (Anthropic)<span class="badge b-acc" id="prov-badge-anthropic" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-anthropic" style="display:none">Configurada</span></div>
         <div class="prov-desc">Padrão do <span data-brand="name">PMO Compass</span> — forte em analisar documentos longos e avaliar risco de projetos.</div>
-        <div class="prov-inp-row"><input class="input" id="api-inp-anthropic" type="password" placeholder="sk-ant-api03-..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('anthropic')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-anthropic" style="display:none" onclick="Store.removeKey('anthropic')"><i class="ti ti-trash"></i></button></div>
+        <div class="prov-inp-row"><input class="input" id="api-inp-anthropic" type="password" aria-label="Chave de API de Claude (Anthropic)" autocomplete="off" placeholder="sk-ant-api03-..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('anthropic')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-anthropic" aria-label="Remover a chave de Claude (Anthropic)" title="Remover a chave" style="display:none" onclick="Store.removeKey('anthropic')"><i class="ti ti-trash"></i></button></div>
         <div style="font-size:11px;color:var(--t3);margin-top:5px">Obtenha em <a href="https://console.anthropic.com" target="_blank" rel="noopener" style="color:var(--acc)">console.anthropic.com</a> · claude-sonnet-4-6</div>
       </div>
     </div>
@@ -1393,7 +1422,7 @@ body.icons-failed i[data-fb]::before{
       <div class="prov-body">
         <div class="prov-name"><i class="ti ti-sparkles" style="color:var(--grn)"></i>ChatGPT (OpenAI)<span class="badge b-acc" id="prov-badge-openai" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-openai" style="display:none">Configurada</span></div>
         <div class="prov-desc">Alternativa da OpenAI — bom custo-benefício para chat e resumos rápidos.</div>
-        <div class="prov-inp-row"><input class="input" id="api-inp-openai" type="password" placeholder="sk-proj-..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('openai')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-openai" style="display:none" onclick="Store.removeKey('openai')"><i class="ti ti-trash"></i></button></div>
+        <div class="prov-inp-row"><input class="input" id="api-inp-openai" type="password" aria-label="Chave de API de ChatGPT (OpenAI)" autocomplete="off" placeholder="sk-proj-..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('openai')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-openai" aria-label="Remover a chave de ChatGPT (OpenAI)" title="Remover a chave" style="display:none" onclick="Store.removeKey('openai')"><i class="ti ti-trash"></i></button></div>
         <div style="font-size:11px;color:var(--t3);margin-top:5px">Obtenha em <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" style="color:var(--acc)">platform.openai.com</a> · gpt-4o</div>
       </div>
     </div>
@@ -1403,7 +1432,7 @@ body.icons-failed i[data-fb]::before{
       <div class="prov-body">
         <div class="prov-name"><i class="ti ti-brand-google" style="color:var(--pur)"></i>Gemini (Google)<span class="badge b-acc" id="prov-badge-google" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-google" style="display:none">Configurada</span></div>
         <div class="prov-desc">Alternativa do Google — boa opção se você já usa o ecossistema Google Workspace.</div>
-        <div class="prov-inp-row"><input class="input" id="api-inp-google" type="password" placeholder="AIza..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('google')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-google" style="display:none" onclick="Store.removeKey('google')"><i class="ti ti-trash"></i></button></div>
+        <div class="prov-inp-row"><input class="input" id="api-inp-google" type="password" aria-label="Chave de API de Gemini (Google)" autocomplete="off" placeholder="AIza..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('google')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-google" aria-label="Remover a chave de Gemini (Google)" title="Remover a chave" style="display:none" onclick="Store.removeKey('google')"><i class="ti ti-trash"></i></button></div>
         <div style="font-size:11px;color:var(--t3);margin-top:5px">Obtenha em <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--acc)">aistudio.google.com</a> · gemini-3.6-flash</div>
       </div>
     </div>
@@ -1439,8 +1468,8 @@ body.icons-failed i[data-fb]::before{
     <div style="font-size:11.5px;color:var(--t3);margin-bottom:10px" id="cloud-status">⚪ Não configurado (modo local)</div>
 
     <div id="cloud-config-box" style="display:flex;flex-direction:column;gap:8px">
-      <input class="input" id="cloud-f-url" placeholder="URL do projeto — https://xxxxx.supabase.co" style="font-family:var(--font-mono);font-size:12px">
-      <input class="input" id="cloud-f-key" placeholder="anon public key" style="font-family:var(--font-mono);font-size:12px">
+      <input class="input" id="cloud-f-url" aria-label="Endereço (URL) do projeto Supabase" placeholder="URL do projeto — https://xxxxx.supabase.co" style="font-family:var(--font-mono);font-size:12px">
+      <input class="input" id="cloud-f-key" aria-label="Chave pública (anon) do Supabase" placeholder="anon public key" style="font-family:var(--font-mono);font-size:12px">
       <button class="btn btn-sm btn-acc" onclick="Cloud.configure()" style="align-self:flex-start"><i class="ti ti-plug"></i>Conectar</button>
     </div>
 
@@ -1526,7 +1555,7 @@ body.icons-failed i[data-fb]::before{
       <button class="btn btn-sm btn-acc" onclick="window.print()"><i class="ti ti-file-type-pdf"></i>Exportar PDF</button>
       <button class="btn btn-sm btn-acc" data-perm="settings" onclick="DB.exportBackup()"><i class="ti ti-download"></i>Baixar backup (JSON)</button>
       <button class="btn btn-sm" data-perm="settings" onclick="document.getElementById('db-import-inp').click()"><i class="ti ti-upload"></i>Restaurar backup</button>
-      <input type="file" id="db-import-inp" accept="application/json,.json" style="display:none" onchange="DB.importBackup(this.files[0])">
+      <input type="file" id="db-import-inp" aria-label="Arquivo de backup para restaurar" accept="application/json,.json" style="display:none" onchange="DB.importBackup(this.files[0])">
       <button class="btn btn-sm" onclick="ExportSvc.copyLink()"><i class="ti ti-share"></i>Copiar link</button>
       <button class="btn btn-sm" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
       <button class="btn btn-sm btn-red" data-perm="settings" onclick="DB.clearAll()"><i class="ti ti-trash"></i>Limpar dados</button>
@@ -1712,7 +1741,7 @@ body.icons-failed i[data-fb]::before{
 .rk-grid{display:grid;grid-template-columns:var(--c1,minmax(300px,380px)) minmax(0,1fr);gap:12px;margin-top:12px;align-items:start;position:relative}
 @media (max-width:900px){.rk-grid{grid-template-columns:minmax(0,1fr)!important}}
 .rk-mx{border-collapse:separate;border-spacing:3px;width:100%;table-layout:fixed}
-.rk-mx th{font-size:10px;font-weight:600;color:var(--t3);text-align:center;padding:2px;line-height:1.2}
+.rk-mx th{font-size:11px;font-weight:600;color:var(--t3);text-align:center;padding:2px;line-height:1.2}
 .rk-mx th.rk-rowh{text-align:right;padding-right:6px;width:58px}
 .rk-mx td{padding:0}
 .rk-cell{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;border-radius:var(--r6);border:1px solid var(--b1);font-size:14px;font-weight:700;color:var(--t1);cursor:pointer;background:var(--s2)}
@@ -1723,7 +1752,7 @@ body.icons-failed i[data-fb]::before{
 .rk-cell .rk-zero{font-weight:400;color:var(--t3);font-size:11px}
 .rk-cell.sel{outline:2px solid var(--acc);outline-offset:1px}
 .rk-cell:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
-.rk-axis{font-size:10.5px;color:var(--t3);text-align:center;margin-top:6px}
+.rk-axis{font-size:11px;color:var(--t3);text-align:center;margin-top:6px}
 .rk-legend{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .rk-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
 .rk-toolbar .input{width:auto;min-width:130px}
@@ -1734,7 +1763,7 @@ body.icons-failed i[data-fb]::before{
 .rk-item.rk-dim{opacity:1;background:transparent}
 .rk-score{flex:0 0 54px;text-align:center;border-radius:var(--r6);padding:6px 4px;border:1px solid var(--b1)}
 .rk-score b{display:block;font-size:18px;line-height:1.1;color:var(--t1)}
-.rk-score span{display:block;font-size:10px;color:var(--t1);margin-top:2px}
+.rk-score span{display:block;font-size:11px;color:var(--t1);margin-top:2px}
 .rk-score.rk-L-critico{background:var(--rd);border-color:var(--rb)}
 .rk-score.rk-L-alto{background:var(--amd);border-color:var(--ambb)}
 .rk-score.rk-L-medio{background:var(--ad);border-color:var(--ab)}
@@ -1747,7 +1776,7 @@ body.icons-failed i[data-fb]::before{
 .rk-prev{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r8);border:1px solid var(--b1);background:var(--s2);font-size:12px;color:var(--t2)}
 .rk-prev b{font-size:20px;color:var(--t1)}
 .hr-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
-.hr-tbl th{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--b2)}
+.hr-tbl th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--b2)}
 .hr-tbl td{padding:8px;border-bottom:1px solid var(--b1);color:var(--t1);vertical-align:top;overflow-wrap:anywhere}
 .hr-tbl .num{text-align:right;white-space:nowrap}
 .hr-tbl td:first-child{min-width:104px}
@@ -1826,6 +1855,10 @@ body.icons-failed i[data-fb]::before{
 .rc-add{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
 .rc-add .input{flex:1 1 220px;min-width:160px}
 .rc-foot td{font-size:11px;color:var(--t2);background:var(--s2)}
+.rc-tbl small{font-size:11px}
+.rc-hint{grid-column:1/-1;padding:12px 14px;border:1px dashed var(--b3);border-radius:var(--r8);color:var(--t2);font-size:12.5px}
+@media(max-width:900px){.rc-k{grid-template-columns:repeat(2,minmax(0,1fr))}.rc-k .kpi{padding:10px}.rc-k .kpi-val{font-size:20px}}
+@media(max-width:600px){.rc-legend{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.rc-d{display:none}}
 </style>
 
 <!-- ■ MODULE: pages/raci -->
@@ -1837,7 +1870,7 @@ body.icons-failed i[data-fb]::before{
       <button class="btn btn-sm" onclick="Raci.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button>
     </div>
   </div>
-  <div class="g4" id="rc-kpis"></div>
+  <div class="g4 rc-k" id="rc-kpis"></div>
   <div class="card" style="margin-top:12px">
     <div class="lbl"><i class="ti ti-table-options"></i>Entregas × colaboradores<span class="help-q" data-help="Cada linha é uma entrega da WBS (ou uma entrega avulsa que você adicionar aqui). A última coluna avisa quando falta responsável (R) ou aprovador (A), ou quando há mais de um aprovador. A última linha mostra quantas entregas cada colaborador carrega como R." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div class="rc-legend" id="rc-legend"></div>
@@ -4404,7 +4437,7 @@ const Users = (() => {
       return `<div class="set-row">
         <div>
           <div class="set-lbl">${escapeHtml(p.name || '(sem nome)')}${isMe ? ' <span class="badge b-acc">você</span>' : ''}</div>
-          <div class="set-sub" style="font-family:var(--font-mono);font-size:10.5px">${escapeHtml(p.id)}</div>
+          <div class="set-sub" style="font-family:var(--font-mono);font-size:11px">${escapeHtml(p.id)}</div>
         </div>
         <select class="input" style="width:auto" aria-label="Perfil de acesso de ${escapeHtml(p.name || '(sem nome)')}" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>
       </div>`;
@@ -5320,7 +5353,7 @@ const R = (() => {
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
     if(id === 'settings' && typeof PmoProfiles !== 'undefined') PmoProfiles.render();
     if(id === 'settings' && typeof ProjectMembers !== 'undefined') ProjectMembers.render();
-    if(typeof Nav !== 'undefined') { Nav.expandGroupFor(id); Nav.renderBreadcrumb(id); }
+    if(typeof Nav !== 'undefined') { Nav.expandGroupFor(id); Nav.renderBreadcrumb(id); Nav.closeDrawer(); }
   }
   function init() {
     const h = location.hash.replace('#','');
@@ -5421,7 +5454,7 @@ const Nav = (() => {
 
   const GROUP_LABEL = {
     sbg_indicadores: 'Indicadores', sbg_sistema: 'Sistema',
-    sbg_decisao: 'Decisão & Acompanhamento', sbg_planejamento: 'Planejamento',
+    sbg_decisao: 'Decisões', sbg_planejamento: 'Planejamento',
     sbg_equipe: 'Equipe', sbg_conhecimento: 'Conhecimento', sbg_projetos: 'Projetos'
   };
   // Os 4 painéis do topo não pertencem a um grupo, mas ganham a trilha "Painéis › Página"
@@ -5453,7 +5486,17 @@ const Nav = (() => {
     bc.innerHTML = `<i class="ti ti-home" style="font-size:11px"></i>${groupLabel || sectionLabel}<i class="ti ti-chevron-right"></i><span class="pg-bc-cur">${pageLabel}</span>`;
   }
 
-  return { toggleGroup, expandGroupFor, collapseAll, renderProjects, toggleProjDropdown, closeProjDropdown, renderBreadcrumb };
+  // Gaveta do menu no celular: abre pelo botão ☰, fecha ao escolher uma tela, tocar fora ou apertar Esc
+  function setDrawer(open) {
+    document.body.classList.toggle('sb-open', open);
+    const b = document.getElementById('tb-burger');
+    if(b) { b.setAttribute('aria-expanded', open ? 'true' : 'false'); b.setAttribute('aria-label', open ? 'Fechar o menu' : 'Abrir o menu'); }
+  }
+  const toggleDrawer = () => setDrawer(!document.body.classList.contains('sb-open'));
+  const closeDrawer = () => setDrawer(false);
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && document.body.classList.contains('sb-open')) { closeDrawer(); const b = document.getElementById('tb-burger'); if(b) b.focus(); } });
+
+  return { toggleGroup, expandGroupFor, collapseAll, renderProjects, toggleProjDropdown, closeProjDropdown, renderBreadcrumb, toggleDrawer, closeDrawer };
 })();
 
 const SettingsTabs = (() => {
@@ -5477,11 +5520,11 @@ const CmdK = (() => {
   const PAGES = [
     { label:'Raio-X do Projeto', page:'xray', icon:'report-medical', group:'Painéis' },
     { label:'Dashboard', page:'dashboard', icon:'layout-dashboard', group:'Indicadores' },
-    { label:'Decisões IA', page:'decisions', icon:'brain', group:'Decisão & Acompanhamento' },
-    { label:'Loop de Ação', page:'loop', icon:'refresh-alert', group:'Decisão & Acompanhamento' },
-    { label:'Trilha', page:'trail', icon:'git-branch', group:'Decisão & Acompanhamento' },
+    { label:'Decisões IA', page:'decisions', icon:'brain', group:'Decisões' },
+    { label:'Loop de Ação', page:'loop', icon:'refresh-alert', group:'Decisões' },
+    { label:'Trilha', page:'trail', icon:'git-branch', group:'Decisões' },
     { label:'Relatório', page:'report', icon:'file-report', group:'Indicadores' },
-    { label:'Mensagem de status', page:'statusmsg', icon:'brand-whatsapp', group:'Decisão & Acompanhamento' },
+    { label:'Mensagem de status', page:'statusmsg', icon:'brand-whatsapp', group:'Decisões' },
     { label:'WBS', page:'wbs', icon:'sitemap', group:'Planejamento' },
     { label:'Linha de base', page:'baseline', icon:'camera', group:'Planejamento' },
     { label:'Scope Changes', page:'scope', icon:'git-diff', group:'Planejamento' },
@@ -5578,13 +5621,32 @@ const CmdK = (() => {
 const Onboarding = (() => {
   const KEY = 'pmo_onboarded_v1';
   function shouldShow() { try { return !localStorage.getItem(KEY); } catch(e) { return false; } }
-  function show() { const m = document.getElementById('modal-onboarding'); if(m) m.classList.remove('hidden'); }
+  // Passos de começo: cada um é marcado como feito pelos dados reais (nada de caixa para o usuário marcar)
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function steps() {
+    const has = (k) => { try { return (DB.get(k) || []).length > 0; } catch(e) { return false; } };
+    let ai = false; try { ai = Store.hasKeyOrCloud(); } catch(e) {}
+    return [
+      { done: ai, title: 'Conecte um provedor de IA', why: 'Sem isso, os recursos de IA ficam desligados.', go: 'settings', label: 'Configurar' },
+      { done: has('wbs'), title: 'Monte as entregas (WBS) do projeto', why: 'Tudo — prazo, custo, riscos e relatórios — parte das entregas.', go: 'wbs', label: 'Abrir a WBS' },
+      { done: has('team'), title: 'Cadastre os colaboradores', why: 'Eles aparecem como responsáveis, na matriz RACI e nas horas.', go: 'resources', label: 'Cadastrar' }
+    ];
+  }
+  function render() {
+    const root = document.getElementById('onb-steps'); if(!root) return;
+    root.innerHTML = steps().map((s, i) => `<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border:1px solid var(--b1);border-radius:var(--r8);background:var(--s2)">
+      <span aria-hidden="true" style="flex:0 0 22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;${s.done ? 'background:var(--gd);color:var(--grn);border:1px solid var(--gb)' : 'background:var(--s3);color:var(--t2);border:1px solid var(--b2)'}">${s.done ? '✓' : i + 1}</span>
+      <div style="flex:1;min-width:0"><strong style="color:var(--t1);font-size:12.5px">${esc(s.title)}</strong><span style="position:absolute;left:-9999px"> — ${s.done ? 'feito' : 'pendente'}</span><div style="font-size:12px;color:var(--t2);margin-top:2px">${esc(s.why)}</div></div>
+      ${s.done ? '<span class="badge b-grn">feito</span>' : `<button class="btn btn-sm" onclick="Onboarding.dismiss();R.go('${s.go}')">${esc(s.label)}</button>`}
+    </div>`).join('');
+  }
+  function show() { render(); const m = document.getElementById('modal-onboarding'); if(m) m.classList.remove('hidden'); }
   function dismiss() {
     const m = document.getElementById('modal-onboarding'); if(m) m.classList.add('hidden');
     try { localStorage.setItem(KEY, '1'); } catch(e){}
   }
   function maybeShow() { if(shouldShow()) setTimeout(show, 600); }
-  return { maybeShow, show, dismiss };
+  return { maybeShow, show, dismiss, willShow: shouldShow };
 })();
 </script>
 
@@ -6423,7 +6485,7 @@ const Repo = (() => {
           const tagsHtml = (it.tags||[]).map(t => `<span class="badge b-neu">${escapeHtml(t)}</span>`).join('');
           const indexing = it.indexPct < 100;
           const statusHtml = indexing
-            ? `<div class="idx-bar"><div class="idx-fill" style="width:${it.indexPct}%"></div></div><div style="font-size:10.5px;color:var(--amb);margin-top:2px">Indexando — ${it.indexPct}% concluído</div>`
+            ? `<div class="idx-bar"><div class="idx-fill" style="width:${it.indexPct}%"></div></div><div style="font-size:11px;color:var(--amb);margin-top:2px">Indexando — ${it.indexPct}% concluído</div>`
             : '';
           const statusCol = indexing
             ? ''
@@ -6925,7 +6987,7 @@ Gere de 2 a 3 cenários, cada um de um "tipo" diferente (nunca repita tipo) — 
 
   function renderRecoveryPlanHtml(root, cenarios) {
     root.innerHTML = cenarios.map(c => `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;margin-top:8px">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><i class="ti ti-${TIPO_ICON[c.tipo]}" style="color:var(--acc)"></i><strong style="font-size:12.5px;color:var(--t1)">${escapeHtml(c.nome)}</strong><span class="badge b-acc" style="font-size:10px">${TIPO_LABEL[c.tipo]}</span></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><i class="ti ti-${TIPO_ICON[c.tipo]}" style="color:var(--acc)"></i><strong style="font-size:12.5px;color:var(--t1)">${escapeHtml(c.nome)}</strong><span class="badge b-acc" style="font-size:11px">${TIPO_LABEL[c.tipo]}</span></div>
       <p style="font-size:12px;color:var(--t2);line-height:1.55;margin-bottom:6px">${escapeHtml(c.resumo)}</p>
       ${c.acaoImediata ? `<div style="font-size:11.5px;color:var(--t1)"><i class="ti ti-arrow-right" style="color:var(--grn)"></i> <strong>Ação imediata:</strong> ${escapeHtml(c.acaoImediata)}</div>` : ''}
       ${c.risco ? `<div style="font-size:11.5px;color:var(--t3);margin-top:2px"><i class="ti ti-alert-triangle"></i> Risco: ${escapeHtml(c.risco)}</div>` : ''}
@@ -6964,7 +7026,7 @@ Gere de 2 a 3 cenários, cada um de um "tipo" diferente (nunca repita tipo) — 
     // WBS — é extração direta do texto (igual riscos/problemas), só que isolada num terceiro
     // bloco pra completar a linha de raciocínio prazo → custo → qualidade num único lugar.
     const qualityHtml = p.qualitySignals.length
-      ? `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><i class="ti ti-shield-check" style="color:var(--acc);font-size:15px"></i><strong style="font-size:11.5px;color:var(--t1)">Qualidade — sinais encontrados no documento</strong></div><ul style="margin:0;padding:0 0 0 18px;font-size:12.5px;color:var(--t2);line-height:1.7">${p.qualitySignals.map(q => `<li><span class="badge ${q.severidade==='alta'?'b-red':q.severidade==='media'?'b-amb':'b-neu'}" style="font-size:10px;margin-right:4px;vertical-align:1px">${q.severidade}</span>${escapeHtml(q.descricao)}</li>`).join('')}</ul></div>`
+      ? `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><i class="ti ti-shield-check" style="color:var(--acc);font-size:15px"></i><strong style="font-size:11.5px;color:var(--t1)">Qualidade — sinais encontrados no documento</strong></div><ul style="margin:0;padding:0 0 0 18px;font-size:12.5px;color:var(--t2);line-height:1.7">${p.qualitySignals.map(q => `<li><span class="badge ${q.severidade==='alta'?'b-red':q.severidade==='media'?'b-amb':'b-neu'}" style="font-size:11px;margin-right:4px;vertical-align:1px">${q.severidade}</span>${escapeHtml(q.descricao)}</li>`).join('')}</ul></div>`
       : '';
 
     box.innerHTML = `<div class="card-accent" style="border-radius:var(--r8);padding:14px;margin-top:12px">
@@ -7372,7 +7434,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   // Welcome toast
   setTimeout(() => {
-    if(!Store.hasKeyOrCloud()) T.show('💡 Configure sua API Key em Configurações para habilitar a IA', 5000);
+    // Na primeira visita o passo "conecte a IA" já está na janela de boas-vindas: não repete o aviso por cima do conteúdo
+    if(!Store.hasKeyOrCloud()) { if(!Onboarding.willShow()) T.show('💡 Configure sua API Key em Configurações para habilitar a IA', 5000); }
     else T.show(`✅ ${BRAND.name} — pressione ? para ver atalhos de teclado`, 4000);
   }, 800);
   console.log(`%c${BRAND.name} v${BRAND.version}\n%c18 módulos carregados\nArquitetura: cada <style/script data-module="..."> é um módulo independente`,'color:#4d8ef0;font-size:14px;font-weight:700','color:#8b949e;font-size:12px'); console.log('%c  41 módulos CSS/JS · 18 páginas · WBS + Loop + Stakeholders + Scope + Estimates + Repository\n  Atalhos de teclado: pressione ? para ver todos','color:#3fb950;font-size:11px');
@@ -7402,7 +7465,7 @@ const Decisions = (() => {
   function sourcesHtml(sources) {
     return (sources||[]).map(s => {
       const icon = s.ico || s.icon || 'file-text';
-      if(s.repoId) return `<span class="chip" style="cursor:pointer" title="Abrir documento no Repositório" onclick="Repo.focusItem('${escapeHtml(s.repoId)}')"><i class="ti ti-${icon}"></i>${escapeHtml(s.label)}<i class="ti ti-external-link" style="font-size:10px;margin-left:2px"></i></span>`;
+      if(s.repoId) return `<span class="chip" style="cursor:pointer" title="Abrir documento no Repositório" onclick="Repo.focusItem('${escapeHtml(s.repoId)}')"><i class="ti ti-${icon}"></i>${escapeHtml(s.label)}<i class="ti ti-external-link" style="font-size:11px;margin-left:2px"></i></span>`;
       return `<span class="chip"><i class="ti ti-${icon}"></i>${escapeHtml(s.label)}</span>`;
     }).join('');
   }
@@ -8945,6 +9008,7 @@ const Risks = (() => {
 .job.fail{border-color:var(--rb)}
 .job.fail .job-fill{background:var(--red,#c0392b)}
 .job .btn{padding:2px 8px;font-size:11.5px}
+@media(max-width:600px){.job-wrap{left:12px;right:12px;top:56px;bottom:auto;max-width:none}}
 </style>
 
 <!-- ■ MODULE: ui/progress ─ Indicador único para processos longos: barra por etapas REAIS (ou só tempo, sem porcentagem inventada), tempo decorrido, cancelar e erro claro -->
@@ -9182,6 +9246,12 @@ const Raci = (() => {
     const root = document.getElementById('rc-kpis'); if(!root) return;
     const s = RaciCalc.summarize(list);
     const k = (lbl, val, sub, dot) => `<div class="kpi"><div class="kpi-lbl"><span class="sdot ${dot}"></span>${lbl}</div><div class="kpi-val">${val}</div><div class="kpi-delta">${sub}</div></div>`;
+    // Matriz ainda vazia: um só convite em vez de três contadores iguais ("21 sem responsável", "21 sem aprovador")
+    if(s.total && list.every(r => !Object.keys(r.assignments || {}).length)) {
+      root.innerHTML = k('Entregas na matriz', s.total, 'nenhuma com papéis ainda', 'sdot-acc') +
+        '<div class="rc-hint">Comece pelas entregas mais importantes: clique numa célula para marcar quem <b>faz</b> (R) e quem <b>aprova</b> (A). Os avisos de pendência aparecem assim que houver a primeira marcação.</div>';
+      return;
+    }
     root.innerHTML =
       k('Entregas na matriz', s.total, `${s.ok} completas (com R e um A)`, 'sdot-acc') +
       k('Sem responsável (R)', s.noR, s.noR ? 'ninguém foi escolhido para fazer' : 'todas têm quem faça', s.noR ? 'sdot-amb' : 'sdot-grn') +
@@ -9191,7 +9261,7 @@ const Raci = (() => {
 
   function renderLegend() {
     const lg = document.getElementById('rc-legend'); if(!lg) return;
-    lg.innerHTML = Object.entries(RaciCalc.ROLES).map(([k, v]) => `<div class="rc-leg"><span class="rc-cell rc-${k}" style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:26px;cursor:default;flex:0 0 auto">${k}</span><span><b>${v}</b> — ${{R:'faz o trabalho', A:'decide e responde pelo resultado (um só)', C:'opina antes de decidir', I:'é avisado depois'}[k]}</span></div>`).join('');
+    lg.innerHTML = Object.entries(RaciCalc.ROLES).map(([k, v]) => `<div class="rc-leg"><span class="rc-cell rc-${k}" style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:26px;cursor:default;flex:0 0 auto">${k}</span><span><b>${v}</b><span class="rc-d"> — ${{R:'faz o trabalho', A:'decide e responde pelo resultado (um só)', C:'opina antes de decidir', I:'é avisado depois'}[k]}</span></span></div>`).join('');
   }
 
   function render() {
@@ -10721,7 +10791,7 @@ const Meetings = (() => {
           <span class="act-who">${escapeHtml(a.who)}</span>
           <div style="flex:1">
             <div>${escapeHtml(a.text)}</div>
-            <div style="font-size:10.5px;color:${a.done?'var(--grn)':'var(--t3)'};margin-top:1px">${a.done ? 'Concluído ✓' : 'Até: ' + fmtDateBR(a.due)}</div>
+            <div style="font-size:11px;color:${a.done?'var(--grn)':'var(--t3)'};margin-top:1px">${a.done ? 'Concluído ✓' : 'Até: ' + fmtDateBR(a.due)}</div>
           </div>
           <button class="wbs-ic-btn" data-perm="business" title="${a.done?'Reabrir':'Concluir'}" onclick="Meetings.toggleAction('${mt.id}','${a.id}')"><i class="ti ${a.done?'ti-refresh-alert':'ti-check'}"></i></button>
         </div>`).join('');
@@ -10732,7 +10802,7 @@ const Meetings = (() => {
         <div class="meet-meta">${fmtDateBR(mt.date)} · ${escapeHtml(mt.time||'')} · ${escapeHtml(mt.attendees||'')}</div>
         ${mt.summary ? `<p class="meet-body"><strong style="color:var(--t1)">Resumo:</strong> ${escapeHtml(mt.summary)}</p>` : ''}
         <div class="act-box">
-          <div style="font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);margin-bottom:8px">Ações</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);margin-bottom:8px">Ações</div>
           ${actionRows || '<div style="font-size:11.5px;color:var(--t3)">Nenhuma ação registrada.</div>'}
         </div>
         <div class="btn-row" style="margin-top:12px" data-perm="business">
@@ -11114,12 +11184,12 @@ const Portfolio = (() => {
         !hasBudget ? '<span class="badge b-neu">Orçamento: sem dados</span>' : (s.budget.consumoPct > 100 ? '<span class="badge b-red">Orçamento estourado</span>' : (s.budget.consumoPct > 85 ? '<span class="badge b-amb">Orçamento: atenção</span>' : '<span class="badge b-grn">Orçamento ok</span>')),
         s.aderencia >= 70 ? '<span class="badge b-grn">Prazo ok</span>' : '<span class="badge b-amb">Prazo: atenção</span>'
       ].join('');
-      const emptyNote = !s.hasData ? `<div style="font-size:10px;color:var(--t3);margin-top:6px">Projeto ainda sem dados — troque para ele e comece a preencher a WBS.</div>` : (!hasBudget ? `<div style="font-size:10px;color:var(--t3);margin-top:6px">Sem linhas de orçamento cadastradas — cadastre em Orçamento e Custos.</div>` : '');
+      const emptyNote = !s.hasData ? `<div style="font-size:11px;color:var(--t3);margin-top:6px">Projeto ainda sem dados — troque para ele e comece a preencher a WBS.</div>` : (!hasBudget ? `<div style="font-size:11px;color:var(--t3);margin-top:6px">Sem linhas de orçamento cadastradas — cadastre em Orçamento e Custos.</div>` : '');
       const budgetPct = hasBudget ? s.budget.consumoPct : 0;
       const budgetColor = hasBudget ? barColor(100 - Math.min(budgetPct, 100)) : 'var(--s3)';
       return `<div class="pc-card${isActive?' sel':''}" onclick="DB.switchProject('${p.id}');R.go('dashboard')">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-          <div><div class="pc-name">${escapeHtml(p.name)}${isActive?' <span style=\"font-size:10px;color:var(--acc);font-weight:400\">· ativo</span>':''}</div><div class="pc-client">${escapeHtml(p.client||'')}</div></div>
+          <div><div class="pc-name">${escapeHtml(p.name)}${isActive?' <span style=\"font-size:11px;color:var(--acc);font-weight:400\">· ativo</span>':''}</div><div class="pc-client">${escapeHtml(p.client||'')}</div></div>
           <span class="badge ${s.status}" title="Índice de saúde multidimensional — mesmo cálculo do Dashboard">${s.statusLabel}${s.healthScoreValue!=null?' · '+s.healthScoreValue:''}</span>
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">${badges}</div>
@@ -11768,7 +11838,7 @@ const Board = (() => {
     if(!root) return;
     if(!rows.length) { root.innerHTML = `<div style="text-align:center;padding:16px 10px;color:var(--t3);font-size:12.5px">Nenhum projeto pra mostrar com esse filtro.</div>`; return; }
     const sorted = [...rows].sort((a,b) => (a.health==null?-1:a.health) - (b.health==null?-1:b.health));
-    const headHtml = `<tr><th style="text-align:left;padding:6px 10px;font-size:10.5px;color:var(--t3);font-weight:600">Projeto</th>${HEAT_COLS.map(c => `<th style="padding:6px 6px;font-size:10.5px;color:var(--t3);font-weight:600;text-align:center;white-space:nowrap">${HEAT_COL_LABEL[c]}<span class="help-q" data-help="${escapeHtml(HEAT_COL_HELP[c])}" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></th>`).join('')}</tr>`;
+    const headHtml = `<tr><th style="text-align:left;padding:6px 10px;font-size:11px;color:var(--t3);font-weight:600">Projeto</th>${HEAT_COLS.map(c => `<th style="padding:6px 6px;font-size:11px;color:var(--t3);font-weight:600;text-align:center;white-space:nowrap">${HEAT_COL_LABEL[c]}<span class="help-q" data-help="${escapeHtml(HEAT_COL_HELP[c])}" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></th>`).join('')}</tr>`;
     const bodyHtml = sorted.map(r => {
       const cells = HEAT_COLS.map(c => {
         let val, code, display;
@@ -11777,7 +11847,10 @@ const Board = (() => {
         else if(RATIO_COLS.includes(c)) { val = r.bm ? r.bm[c === 'schedule' ? 'SPI' : 'CPI'] : null; code = ratioCode(val); display = val == null ? '—' : val.toFixed(2); }
         else { val = r.dims[c]; code = heatDimCode(val); display = val == null ? '—' : val; }
         const st = heatCellStyle(code);
-        return `<td style="padding:3px 4px;text-align:center"><div style="background:${st.bg};color:${st.fg};border:1px solid ${st.bd};border-radius:var(--r6);padding:6px 4px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums">${display}</div></td>`;
+        // A situação vem em PALAVRA (a diretoria lê "Crítico", não precisa saber qual escala o número usa); o número fica como detalhe
+        const word = code === 'grn' ? 'Saudável' : code === 'amb' ? 'Atenção' : code === 'red' ? 'Crítico' : 'Sem dados';
+        const detail = code ? (c === RISK_COL ? (val === 1 ? '1 decisão crítica' : val + ' decisões críticas') : display) : '';
+        return `<td style="padding:3px 4px;text-align:center"><div title="${word}${detail ? ' · ' + escapeHtml(String(detail)) : ''}" style="background:${st.bg};color:${st.fg};border:1px solid ${st.bd};border-radius:var(--r6);padding:5px 4px;font-size:12px;font-weight:700;line-height:1.25"><span>${word}</span>${detail ? `<span style="display:block;font-size:11px;font-weight:500;color:var(--t2);font-variant-numeric:tabular-nums">${escapeHtml(String(detail))}</span>` : ''}</div></td>`;
       }).join('');
       return `<tr class="kpi-link" role="button" tabindex="0" aria-label="Abrir ${escapeHtml(r.project.name)}" onclick="DB.switchProject('${r.project.id}');R.go('dashboard')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();DB.switchProject('${r.project.id}');R.go('dashboard')}">
         <td style="padding:6px 10px;font-size:12.5px;color:var(--t1);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(r.project.name)}">${escapeHtml(r.project.name)}</td>
@@ -11788,7 +11861,7 @@ const Board = (() => {
       <thead>${headHtml}</thead>
       <tbody>${bodyHtml}</tbody>
     </table>
-    <div style="font-size:10.5px;color:var(--t3);margin-top:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    <div style="font-size:11px;color:var(--t3);margin-top:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
       <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:var(--grn);display:inline-block"></span>Saudável</span>
       <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:var(--amb);display:inline-block"></span>Atenção</span>
       <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:var(--red);display:inline-block"></span>Crítico</span>
@@ -11806,7 +11879,7 @@ const Board = (() => {
       <div style="width:150px;flex-shrink:0;font-size:12px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(r.project.name)}">${escapeHtml(r.project.name)}</div>
       <div style="flex:1;height:10px;background:var(--s3);border-radius:5px;overflow:hidden"><div style="width:${r.health||0}%;height:100%;background:${color(r)}"></div></div>
       <div style="width:30px;text-align:right;font-size:11.5px;color:var(--t2);font-variant-numeric:tabular-nums">${r.health==null?'—':r.health}</div>
-    </div>`).join('') + `<div style="font-size:10.5px;color:var(--t3);margin-top:6px">Nota de situação geral (0-100) — combina prazo, orçamento, equipe e qualidade. Quem está pior aparece primeiro. Clique num projeto pra abrir o Dashboard dele.</div>`;
+    </div>`).join('') + `<div style="font-size:11px;color:var(--t3);margin-top:6px">Nota de situação geral (0-100) — combina prazo, orçamento, equipe e qualidade. Quem está pior aparece primeiro. Clique num projeto pra abrir o Dashboard dele.</div>`;
   }
 
   function renderKpis(rows) {
@@ -11833,24 +11906,24 @@ const Board = (() => {
       const dimColor = (v) => v >= 80 ? 'var(--grn)' : v >= 60 ? 'var(--amb)' : 'var(--red)';
       const dimsHtml = DIM_KEYS.map(k => {
         const v = Math.max(0, Math.min(100, r.dims[k] ?? 100));
-        return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="width:52px;flex-shrink:0;font-size:10.5px;color:var(--t3)">${DIM_LABEL_SHORT[k]}</span><div style="flex:1;height:6px;background:var(--s3);border-radius:3px;overflow:hidden"><div style="width:${v}%;height:100%;background:${dimColor(v)}"></div></div><span style="width:24px;text-align:right;font-size:10px;color:var(--t3);font-variant-numeric:tabular-nums">${v}</span></div>`;
+        return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="width:52px;flex-shrink:0;font-size:11px;color:var(--t3)">${DIM_LABEL_SHORT[k]}</span><div style="flex:1;height:6px;background:var(--s3);border-radius:3px;overflow:hidden"><div style="width:${v}%;height:100%;background:${dimColor(v)}"></div></div><span style="width:24px;text-align:right;font-size:11px;color:var(--t3);font-variant-numeric:tabular-nums">${v}</span></div>`;
       }).join('');
-      const costSub = (r.bm && r.bm.BAC > 0) ? `<div style="font-size:10.5px;color:var(--t3);margin-top:2px">Gasto: ${fmtMoney(r.bm.AC)} de ${fmtMoney(r.bm.BAC)}</div>` : `<div style="font-size:10.5px;color:var(--t3);margin-top:2px">Sem orçamento lançado ainda</div>`;
+      const costSub = (r.bm && r.bm.BAC > 0) ? `<div style="font-size:11px;color:var(--t3);margin-top:2px">Gasto: ${fmtMoney(r.bm.AC)} de ${fmtMoney(r.bm.BAC)}</div>` : `<div style="font-size:11px;color:var(--t3);margin-top:2px">Sem orçamento lançado ainda</div>`;
       const vrLabel = r.vr.status === 'total' ? 'Valor: totalmente entregue' : r.vr.status === 'parcial' ? 'Valor: parcialmente entregue' : r.vr.status === 'nao_iniciado' ? 'Valor: ainda não entregue' : 'Valor: não validado ainda';
       const vrClass = r.vr.status === 'total' ? 'b-grn' : r.vr.status === 'parcial' ? 'b-amb' : 'b-neu';
       const riskHtml = r.criticas.length ? `<div style="font-size:11.5px;color:var(--red);display:flex;align-items:center;gap:5px;margin-top:8px"><i class="ti ti-alert-triangle"></i>${escapeHtml(r.criticas[0].title)}${r.criticas.length>1?` (+${r.criticas.length-1})`:''}</div>` : `<div style="font-size:11.5px;color:var(--t3);display:flex;align-items:center;gap:5px;margin-top:8px"><i class="ti ti-shield-check" style="color:var(--grn)"></i>Sem risco crítico aberto</div>`;
       const sug = r.lastSuggestion;
       const sugHtml = sug
-        ? `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:8px 10px;margin-top:10px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><i class="ti ti-${SUG_ICON[sug.aiSuggestion]}"></i><span class="badge ${SUG_CLASS[sug.aiSuggestion]}" style="font-size:10.5px">Sugestão da IA: ${SUG_LABEL[sug.aiSuggestion]}</span></div><div style="font-size:11.5px;color:var(--t2);line-height:1.5">${escapeHtml(sug.aiReasoning)}</div></div>`
+        ? `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:8px 10px;margin-top:10px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><i class="ti ti-${SUG_ICON[sug.aiSuggestion]}"></i><span class="badge ${SUG_CLASS[sug.aiSuggestion]}" style="font-size:11px">Sugestão da IA: ${SUG_LABEL[sug.aiSuggestion]}</span></div><div style="font-size:11.5px;color:var(--t2);line-height:1.5">${escapeHtml(sug.aiReasoning)}</div></div>`
         : '';
       return `<div class="card" style="display:flex;flex-direction:column">
         <div class="kpi-link" role="button" tabindex="0" aria-label="Abrir ${escapeHtml(p.name)}" style="display:flex;align-items:center;justify-content:space-between;margin:-6px -6px 4px;padding:6px;border-radius:var(--r6)" onclick="DB.switchProject('${p.id}');R.go('dashboard')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();DB.switchProject('${p.id}');R.go('dashboard')}">
           <div style="font-size:14px;font-weight:600;color:var(--t1)">${escapeHtml(p.name)}</div>
-          <span class="badge ${r.status.badge}" style="font-size:10.5px">${escapeHtml(r.status.label)}</span>
+          <span class="badge ${r.status.badge}" style="font-size:11px">${escapeHtml(r.status.label)}</span>
         </div>
         ${dimsHtml}
         ${costSub}
-        <div style="margin-top:10px"><span class="badge ${vrClass}" style="font-size:10.5px">${vrLabel}</span></div>
+        <div style="margin-top:10px"><span class="badge ${vrClass}" style="font-size:11px">${vrLabel}</span></div>
         ${riskHtml}
         ${sugHtml}
         <div style="margin-top:auto;padding-top:10px">
@@ -11869,14 +11942,14 @@ const Board = (() => {
     root.innerHTML = rows.map(r => {
       const proj = projects.find(p => p.id === r.projectId);
       const outcomeHtml = r.outcomeRating
-        ? `<span class="badge ${OUTCOME_CLASS[r.outcomeRating]}" style="font-size:10.5px">${OUTCOME_LABEL[r.outcomeRating]}</span>`
+        ? `<span class="badge ${OUTCOME_CLASS[r.outcomeRating]}" style="font-size:11px">${OUTCOME_LABEL[r.outcomeRating]}</span>`
         : `<button class="btn btn-sm" onclick="Board.openOutcomeModal('${r.id}')"><i class="ti ti-star"></i>Avaliar esta decisão</button>`;
       return `<div class="set-row" style="align-items:flex-start">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <div class="set-lbl">${escapeHtml(proj ? proj.name : r.projectId)}</div>
-            <span class="badge b-acc" style="font-size:10.5px">${DECISION_LABEL[r.boardDecision]||r.boardDecision}</span>
-            ${r.aiSuggestion ? `<span class="badge b-neu" style="font-size:10px">sugestão da IA foi: ${SUG_LABEL[r.aiSuggestion]}</span>` : ''}
+            <span class="badge b-acc" style="font-size:11px">${DECISION_LABEL[r.boardDecision]||r.boardDecision}</span>
+            ${r.aiSuggestion ? `<span class="badge b-neu" style="font-size:11px">sugestão da IA foi: ${SUG_LABEL[r.aiSuggestion]}</span>` : ''}
           </div>
           <div class="set-sub">${r.boardComment ? escapeHtml(r.boardComment)+' · ' : ''}${escapeHtml(r.decidedBy||'')} em ${fmtDate(r.decidedAt)}</div>
         </div>
@@ -12016,12 +12089,12 @@ const ExecView = (() => {
     const tableHtml = rows.length ? `<div style="overflow-x:auto;margin-top:14px">
       <table style="width:100%;border-collapse:collapse;min-width:520px">
         <thead><tr>
-          <th style="text-align:left;padding:6px 10px;font-size:10.5px;color:var(--t3);font-weight:600">Projeto</th>
-          <th style="padding:6px 8px;font-size:10.5px;color:var(--t3);font-weight:600;text-align:right">Orçado</th>
-          <th style="padding:6px 8px;font-size:10.5px;color:var(--t3);font-weight:600;text-align:right">Gasto</th>
-          <th style="padding:6px 8px;font-size:10.5px;color:var(--t3);font-weight:600;text-align:right">Previsão</th>
-          <th style="padding:6px 8px;font-size:10.5px;color:var(--t3);font-weight:600;text-align:right">Valor entregue</th>
-          <th style="padding:6px 8px;font-size:10.5px;color:var(--t3);font-weight:600;text-align:right">ROI</th>
+          <th style="text-align:left;padding:6px 10px;font-size:11px;color:var(--t3);font-weight:600">Projeto</th>
+          <th style="padding:6px 8px;font-size:11px;color:var(--t3);font-weight:600;text-align:right">Orçado</th>
+          <th style="padding:6px 8px;font-size:11px;color:var(--t3);font-weight:600;text-align:right">Gasto</th>
+          <th style="padding:6px 8px;font-size:11px;color:var(--t3);font-weight:600;text-align:right">Previsão</th>
+          <th style="padding:6px 8px;font-size:11px;color:var(--t3);font-weight:600;text-align:right">Valor entregue</th>
+          <th style="padding:6px 8px;font-size:11px;color:var(--t3);font-weight:600;text-align:right">ROI</th>
         </tr></thead>
         <tbody>${rows.map(r => `<tr class="kpi-link" role="button" tabindex="0" aria-label="Abrir orçamento de ${escapeHtml(r.project.name)}" onclick="ExecView.open('${r.project.id}','budget')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ExecView.open('${r.project.id}','budget')}">
           <td style="padding:7px 10px;font-size:12.5px;color:var(--t1);white-space:nowrap">${escapeHtml(r.project.name)}</td>
@@ -12038,7 +12111,7 @@ const ExecView = (() => {
       <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--s3)">
         <div style="width:${BAC>0?Math.min(100,Math.round(AC/BAC*100)):0}%;background:var(--acc)" title="Gasto real"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--t3);margin-top:4px"><span>Gasto: ${BAC>0?Math.round(AC/BAC*100):0}% do orçado</span><span>Previsão final: ${BAC>0?Math.round(EAC/BAC*100):0}% do orçado</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:4px"><span>Gasto: ${BAC>0?Math.round(AC/BAC*100):0}% do orçado</span><span>Previsão final: ${BAC>0?Math.round(EAC/BAC*100):0}% do orçado</span></div>
     </div>
     ${tableHtml}`;
     if(typeof ColumnDrag !== 'undefined') ColumnDrag.enable(root.querySelector('table'), 'exec-financeiro');
@@ -12105,7 +12178,7 @@ const ExecView = (() => {
         <span style="margin-left:8px;font-size:12.5px;font-weight:600;color:${delta>=0?'var(--grn)':'var(--red)'}"><i class="ti ti-${delta>=0?'trending-up':'trending-down'}"></i> ${delta>=0?'+':''}${delta} pontos desde ${points[0].date.split('-').reverse().join('/')}</span>
       </div>
       <div style="display:flex;gap:4px;align-items:flex-end">${bars}</div>
-      <div style="font-size:10.5px;color:var(--t3);margin-top:6px">Média da nota de saúde (0-100) de todos os projetos, dia a dia — últimos ${points.length} dias com dado.</div>`;
+      <div style="font-size:11px;color:var(--t3);margin-top:6px">Média da nota de saúde (0-100) de todos os projetos, dia a dia — últimos ${points.length} dias com dado.</div>`;
   }
 
   return { render, open };
@@ -12156,7 +12229,7 @@ const Estimates = (() => {
           const note = s.diffPct > 40 ? ` — padrão de subestimação` : '';
           return `<div class="est-row">
             <span class="est-who">${escapeHtml(s.member)}</span>
-            <div class="est-bar"><div class="est-track" style="height:6px"><div class="est-planned" style="width:${plannedWidth}%;background:${color}"></div><div class="est-actual" style="width:${actualWidth}%;background:${color}"></div></div><div style="font-size:10.5px;color:${s.diffPct>40?'var(--red)':'var(--t3)'};margin-top:2px">${s.actual}d real vs ${s.planned}d planejado${note}</div></div>
+            <div class="est-bar"><div class="est-track" style="height:6px"><div class="est-planned" style="width:${plannedWidth}%;background:${color}"></div><div class="est-actual" style="width:${actualWidth}%;background:${color}"></div></div><div style="font-size:11px;color:${s.diffPct>40?'var(--red)':'var(--t3)'};margin-top:2px">${s.actual}d real vs ${s.planned}d planejado${note}</div></div>
             <span class="est-val">${s.actual}/${s.planned}d</span><span class="est-diff ${diffClass(s.diffPct)}">${s.diffPct>=0?'+':''}${s.diffPct}%</span>
           </div>`;
         }).join('');
@@ -12549,7 +12622,7 @@ const WBS = (() => {
         const tRange = fmtRange(t.start, t.end, t.startActual, t.endActual);
         const tSubParts = [tRange, t.responsavel ? escapeHtml(t.responsavel) : ''].filter(Boolean);
         html += `<div class="wbs-row wbs-l2">
-          <i class="ti ti-point" style="font-size:10px"></i>
+          <i class="ti ti-point" style="font-size:11px"></i>
           <div style="flex:1;min-width:0">
             <span>${escapeHtml(t.label)}</span>
             ${tSubParts.length ? `<div style="font-size:11px;color:var(--t3);margin-top:1px">${tSubParts.join(' · ')}</div>` : ''}
@@ -13464,7 +13537,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
 
       <!-- SSO/SAML — requer plano Supabase pago + IdP corporativo configurado (ver SETUP.md);
            sem isso, o botão simplesmente mostra o erro do Supabase, sem quebrar nada. -->
-      <div style="display:flex;align-items:center;gap:8px;margin:12px 0"><div style="flex:1;height:1px;background:var(--b1)"></div><span style="font-size:10.5px;color:var(--t3)">OU</span><div style="flex:1;height:1px;background:var(--b1)"></div></div>
+      <div style="display:flex;align-items:center;gap:8px;margin:12px 0"><div style="flex:1;height:1px;background:var(--b1)"></div><span style="font-size:11px;color:var(--t3)">OU</span><div style="flex:1;height:1px;background:var(--b1)"></div></div>
       <div class="field-label" style="margin-bottom:6px"><i class="ti ti-building"></i> Login corporativo (SSO/SAML)</div>
       <div class="prov-inp-row"><input class="input" id="auth-f-sso-domain" placeholder="dominio-da-sua-empresa.com.br"><button class="btn btn-sm" onclick="Auth.doSignInSSO()"><i class="ti ti-arrow-right"></i>Entrar com SSO</button></div>
       <div style="font-size:11px;color:var(--t3);margin-top:6px">Só funciona se o administrador desta instância já configurou SSO no Supabase para o seu domínio corporativo.</div>
@@ -14326,7 +14399,7 @@ const Messaging = (() => {
     <div style="padding:12px 14px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:8px">
       <i class="ti ti-search" style="color:var(--t3);font-size:15px"></i>
       <input id="cmdk-input" placeholder="Buscar página ou projeto…" style="flex:1;background:transparent;border:none;outline:none;color:var(--t1);font-size:13.5px" oninput="CmdK.filter(this.value)">
-      <span style="font-size:10px;color:var(--t3);border:1px solid var(--b2);border-radius:4px;padding:1px 5px">ESC</span>
+      <span style="font-size:11px;color:var(--t3);border:1px solid var(--b2);border-radius:4px;padding:1px 5px">ESC</span>
     </div>
     <div id="cmdk-results" style="max-height:360px;overflow-y:auto;padding:6px"></div>
   </div>
@@ -14336,16 +14409,12 @@ const Messaging = (() => {
 <div class="modal-ov hidden" id="modal-onboarding" onclick="if(event.target===this)Onboarding.dismiss()">
   <div class="modal-box" style="width:460px">
     <div class="modal-title" style="display:flex;align-items:center;gap:8px"><i class="ti ti-compass" style="color:var(--acc)"></i>Bem-vindo ao <span data-brand="name">PMO Compass</span></div>
-    <div class="modal-sub">4 coisas rápidas antes de começar</div>
-    <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
-      <div style="display:flex;gap:10px;align-items:flex-start"><i class="ti ti-layout-grid" style="color:var(--acc);font-size:17px;margin-top:1px;flex-shrink:0"></i><div><strong style="color:var(--t1);font-size:12.5px">O menu lateral tem quatro partes</strong><div style="font-size:12px;color:var(--t2);margin-top:2px">Painéis (visões prontas), Indicadores (Dashboard, portfólio, relatório), Ações do Gerente de Projeto (para fazer) e Sistema — clique no grupo para abrir; o grupo da página em uso fica aberto sozinho.</div></div></div>
-      <div style="display:flex;gap:10px;align-items:flex-start"><i class="ti ti-cpu" style="color:var(--acc);font-size:17px;margin-top:1px;flex-shrink:0"></i><div><strong style="color:var(--t1);font-size:12.5px">Configure um provedor de IA primeiro</strong><div style="font-size:12px;color:var(--t2);margin-top:2px">Em Configurações → Provedor de IA. Sem isso, os recursos de IA ficam desativados.</div></div></div>
-      <div style="display:flex;gap:10px;align-items:flex-start"><i class="ti ti-search" style="color:var(--acc);font-size:17px;margin-top:1px;flex-shrink:0"></i><div><strong style="color:var(--t1);font-size:12.5px">Ctrl/Cmd+K pula para qualquer lugar</strong><div style="font-size:12px;color:var(--t2);margin-top:2px">Busca páginas e troca de projeto sem precisar navegar pelo menu.</div></div></div>
-      <div style="display:flex;gap:10px;align-items:flex-start"><i class="ti ti-help-circle" style="color:var(--acc);font-size:17px;margin-top:1px;flex-shrink:0"></i><div><strong style="color:var(--t1);font-size:12.5px">A página Ajuda mostra o que já está pronto</strong><div style="font-size:12px;color:var(--t2);margin-top:2px">Um retrato honesto do que funciona de verdade e o que ainda está em desenvolvimento.</div></div></div>
-    </div>
+    <div class="modal-sub">3 passos para começar. Cada um se marca sozinho quando você conclui.</div>
+    <div id="onb-steps" style="display:flex;flex-direction:column;gap:8px;margin-top:6px"></div>
+    <div style="font-size:12px;color:var(--t2);margin-top:12px;line-height:1.5"><i class="ti ti-bulb" style="color:var(--acc)"></i> <b>Dicas:</b> <kbd>Ctrl</kbd>+<kbd>K</kbd> abre qualquer tela pela busca; no celular, o botão ☰ abre o menu; o ícone <b>?</b> ao lado de um título explica a tela.</div>
     <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
-      <button class="btn btn-sm" onclick="Onboarding.dismiss();R.go('help')">Ver Ajuda agora</button>
-      <button class="btn btn-sm btn-acc" onclick="Onboarding.dismiss()"><i class="ti ti-check"></i>Começar</button>
+      <button class="btn btn-sm" onclick="Onboarding.dismiss();R.go('help')">Ver Ajuda</button>
+      <button class="btn btn-sm btn-acc" onclick="Onboarding.dismiss()"><i class="ti ti-check"></i>Fechar</button>
     </div>
   </div>
 </div>
@@ -14599,7 +14668,7 @@ const Notif = (() => {
     const body = queue.length
       ? queue.map(n => `<div onclick="Notif.goTo('${n.page}')" style="padding:11px 14px;border-bottom:1px solid var(--b1);cursor:pointer;transition:background .12s" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">
         <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
-          <span class="badge ${escapeHtml(n.cls)}" style="font-size:9.5px">${escapeHtml(n.sev)}</span>
+          <span class="badge ${escapeHtml(n.cls)}" style="font-size:11px">${escapeHtml(n.sev)}</span>
           <span style="font-size:12.5px;font-weight:500;color:var(--t1)">${escapeHtml(n.title)}</span>
         </div>
         <div style="font-size:11.5px;color:var(--t2)">${escapeHtml(n.sub)}</div>
