@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.17.0'
+  version: '2.18.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -594,6 +594,21 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 body[data-role="consulta"] [data-perm]{display:none !important;}
 body[data-role="manutencao"] [data-perm="business"]{display:none !important;}
 body[data-role="gerente"] [data-perm="settings"]{display:none !important;}
+body:not([data-role="admin"]) [data-perm="admin"]{display:none !important;}
+/* Perfis por permissão: o <body> lista em data-can os escopos que o perfil tem; o que não está na lista some.
+   Vale para qualquer perfil (prontos ou criados pelo administrador). A regra de verdade está no banco; isto é só a interface acompanhar. */
+body:not([data-can~="business"]) [data-perm="business"],
+body:not([data-can~="settings"]) [data-perm="settings"],
+body:not([data-can~="view_costs"]) [data-perm="view_costs"],
+body:not([data-can~="edit_costs"]) [data-perm="edit_costs"],
+body:not([data-can~="edit_plan"]) [data-perm="edit_plan"],
+body:not([data-can~="approve_decisions"]) [data-perm="approve_decisions"],
+body:not([data-can~="manage_backlog"]) [data-perm="manage_backlog"],
+body:not([data-can~="run_rites"]) [data-perm="run_rites"],
+body:not([data-can~="update_own"]) [data-perm="update_own"],
+body:not([data-can~="log_hours"]) [data-perm="log_hours"],
+body:not([data-can~="view_all_hours"]) [data-perm="view_all_hours"],
+body:not([data-can~="create_projects"]) [data-perm="create_projects"]{display:none !important;}
 
 .role-badge{font-size:11px;font-weight:700;letter-spacing:.03em;padding:3px 9px;border-radius:20px;background:var(--s3);color:var(--t2);white-space:nowrap}
 body[data-role="admin"] .role-badge{background:var(--ad);color:var(--acc)}
@@ -893,6 +908,7 @@ body.icons-failed i[data-fb]::before{
   </div>
 
   <button class="si on" data-p="dashboard" onclick="R.go('dashboard')" title="Visão geral do projeto escolhido: prazo ou ritmo, custo, equipe, riscos e alertas"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
+  <button class="si" data-p="mywork" onclick="R.go('mywork')" title="O que está com você neste projeto: itens, tarefas e horas"><i class="ti ti-user-check"></i>Meu trabalho</button>
   <div class="sb-sec" title="As ações abaixo valem para o projeto escolhido acima">Ações do projeto</div>
 
   <div class="sb-group" id="sbg-agil">
@@ -910,7 +926,7 @@ body.icons-failed i[data-fb]::before{
     <div class="sb-group-body">
       <button class="si" data-p="wbs" onclick="R.go('wbs')"><i class="ti ti-sitemap"></i>WBS</button>
       <button class="si" data-p="baseline" onclick="R.go('baseline')"><i class="ti ti-camera"></i>Linha de base</button>
-      <button class="si" data-p="budget" onclick="R.go('budget')"><i class="ti ti-wallet"></i>Orçamento e Custos</button>
+      <button class="si" data-perm="view_costs" data-p="budget" onclick="R.go('budget')"><i class="ti ti-wallet"></i>Orçamento e Custos</button>
       <button class="si" data-p="risks" onclick="R.go('risks')"><i class="ti ti-shield-exclamation"></i>Riscos</button>
       <button class="si" data-p="scope" onclick="R.go('scope')"><i class="ti ti-git-diff"></i>Scope Changes</button>
       <button class="si" data-p="estimates" onclick="R.go('estimates')"><i class="ti ti-ruler"></i>Estimativas IA</button>
@@ -1000,10 +1016,10 @@ body.icons-failed i[data-fb]::before{
       <div class="kg-r"><span class="kg-st c-wa" id="dash-bud-status"><span class="sdot sdot-amb"></span>Atenção</span><i class="ti ti-chevron-down kg-chev op"></i></div>
     </div>
     <div class="kg-body">
-      <div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver orçamento e custos" onclick="R.go('budget')" onkeydown="R.goKey(event,'budget')"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-consumo-dot"></span>Consumo</div><div class="kpi-val" id="dash-kpi-consumo">—<span class="kpi-unit">%</span></div><div class="kpi-delta" id="dash-kpi-consumo-sub"></div></div>
-      <div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver orçamento e custos" onclick="R.go('budget')" onkeydown="R.goKey(event,'budget')"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-cpi-dot"></span>CPI<span class="help-q" data-help="Índice de Desempenho de Custo. Compara o valor do trabalho já entregue com o quanto foi gasto pra entregar. Acima de 1,0 = gastando menos do que o planejado; abaixo de 1,0 = gastando mais." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="kpi-val" id="dash-kpi-cpi">—</div><div class="kpi-delta" id="dash-kpi-cpi-sub"></div></div>
-      <div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver orçamento e custos" onclick="R.go('budget')" onkeydown="R.goKey(event,'budget')"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-reserva-dot"></span>Reserva<span class="help-q" data-help="Valor separado pra cobrir riscos já conhecidos do projeto, fora do orçamento normal — um 'colchão' pra imprevistos que já foram identificados." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="kpi-val" style="font-size:17px" id="dash-kpi-reserva">—</div><div class="kpi-delta" id="dash-kpi-reserva-sub"></div></div>
-      <div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver orçamento e custos" onclick="R.go('budget')" onkeydown="R.goKey(event,'budget')"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-eac-dot"></span>EAC<span class="help-q" data-help="Estimativa no Término — previsão de quanto o projeto vai custar no final, se o ritmo de gasto de agora continuar do jeito que está." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="kpi-val" style="font-size:17px" id="dash-kpi-eac">—</div><div class="kpi-delta" id="dash-kpi-eac-sub"></div></div>
+      <div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver orçamento e custos" data-perm="view_costs" onclick="R.go('budget')" onkeydown="R.goKey(event,'budget')"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-consumo-dot"></span>Consumo</div><div class="kpi-val" id="dash-kpi-consumo">—<span class="kpi-unit">%</span></div><div class="kpi-delta" id="dash-kpi-consumo-sub"></div></div>
+      <div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver orçamento e custos" data-perm="view_costs" onclick="R.go('budget')" onkeydown="R.goKey(event,'budget')"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-cpi-dot"></span>CPI<span class="help-q" data-help="Índice de Desempenho de Custo. Compara o valor do trabalho já entregue com o quanto foi gasto pra entregar. Acima de 1,0 = gastando menos do que o planejado; abaixo de 1,0 = gastando mais." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="kpi-val" id="dash-kpi-cpi">—</div><div class="kpi-delta" id="dash-kpi-cpi-sub"></div></div>
+      <div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver orçamento e custos" data-perm="view_costs" onclick="R.go('budget')" onkeydown="R.goKey(event,'budget')"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-reserva-dot"></span>Reserva<span class="help-q" data-help="Valor separado pra cobrir riscos já conhecidos do projeto, fora do orçamento normal — um 'colchão' pra imprevistos que já foram identificados." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="kpi-val" style="font-size:17px" id="dash-kpi-reserva">—</div><div class="kpi-delta" id="dash-kpi-reserva-sub"></div></div>
+      <div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver orçamento e custos" data-perm="view_costs" onclick="R.go('budget')" onkeydown="R.goKey(event,'budget')"><div class="kpi-lbl"><span class="sdot" id="dash-kpi-eac-dot"></span>EAC<span class="help-q" data-help="Estimativa no Término — previsão de quanto o projeto vai custar no final, se o ritmo de gasto de agora continuar do jeito que está." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="kpi-val" style="font-size:17px" id="dash-kpi-eac">—</div><div class="kpi-delta" id="dash-kpi-eac-sub"></div></div>
     </div>
   </div>
 
@@ -1539,6 +1555,13 @@ body.icons-failed i[data-fb]::before{
     <button class="btn btn-sm" style="margin-top:8px" onclick="Users.refresh()"><i class="ti ti-refresh"></i>Atualizar lista</button>
   </div>
 
+  <div class="card" id="access-profiles-card" style="display:none">
+    <div class="lbl"><i class="ti ti-id-badge-2"></i>Perfis de acesso</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Cada perfil é um conjunto de permissões. Os perfis prontos cobrem o PMI (gerente, patrocinador), o ágil (dono do produto, Scrum Master, time) e o básico (consulta, suporte); crie outros combinando as permissões. O banco aplica as regras — esconder o botão na tela não é a única barreira.</p>
+    <div id="access-profiles-root"></div>
+    <button class="btn btn-sm" style="margin-top:8px" onclick="Users.newProfile()"><i class="ti ti-plus"></i>Novo perfil</button>
+  </div>
+
   <!-- Só aparece para Administrador logado — registro append-only de eventos sensíveis (login,
        promoção de perfil, backup, reset de dados, tentativa bloqueada por permissão). Ver
        schema.sql seção 9: nem um Administrador consegue editar/apagar uma linha via API. -->
@@ -1602,7 +1625,8 @@ body.icons-failed i[data-fb]::before{
       <button class="btn btn-sm" onclick="ExportSvc.copyLink()"><i class="ti ti-share"></i>Copiar link</button>
       <button class="btn btn-sm" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
       <button class="btn btn-sm" data-perm="settings" title="Volta os 3 projetos de exemplo (Cascata, Ágil e Híbrido) neste navegador; não mexe na nuvem" onclick="DB.reloadDemo()"><i class="ti ti-database-import"></i>Recarregar dados de demonstração</button>
-      <button class="btn btn-sm btn-red" data-perm="settings" onclick="DB.clearAll()"><i class="ti ti-trash"></i>Limpar dados</button>
+      <button class="btn btn-sm btn-red" data-perm="settings" onclick="DB.clearAll()" title="Apaga os dados do projeto ativo, mas mantém o projeto"><i class="ti ti-eraser"></i>Limpar dados</button>
+      <button class="btn btn-sm btn-red" id="delete-project-btn" data-perm="admin" onclick="DB.deleteProject()" title="Exclui o projeto ativo e tudo o que há nele (só Administrador)"><i class="ti ti-trash"></i>Excluir projeto</button>
     </div>
     <div style="margin-top:10px;padding:10px 12px;background:var(--s2);border-radius:var(--r8);font-size:11.5px;color:var(--t3)">
       <i class="ti ti-info-circle" style="font-size:13px"></i> <strong style="color:var(--t2)">Backup:</strong> o arquivo baixado contém WBS, decisões, repositório, equipe e stakeholders — inclusive nomes e indicadores de burnout. Recomendamos proteger com senha ao exportar. Por segurança, chaves de IA não são incluídas — configure-as de novo após restaurar em outro navegador.
@@ -1739,9 +1763,9 @@ body.icons-failed i[data-fb]::before{
   <div class="pg-hdr">
     <div><div class="pg-title">Orçamento e Custos<span class="help-q" data-help="Quanto foi planejado, quanto já foi gasto de verdade, e se o ritmo de gasto está dentro do esperado — calculado a partir dos lançamentos reais, não é um número fixo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Consumo, CPI, EAC e reserva calculados a partir de linhas de orçamento e lançamentos de custo reais — não são mais números ilustrativos.</div></div>
     <div class="btn-row">
-      <button class="btn btn-sm btn-acc" data-perm="business" onclick="Budget.openAddLine()"><i class="ti ti-plus"></i>Linha de orçamento</button>
-      <button class="btn btn-sm btn-acc" data-perm="business" onclick="Budget.openAddActual()"><i class="ti ti-receipt"></i>Lançar custo</button>
-      <button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('costs')"><i class="ti ti-table-import"></i>Importar planilha</button>
+      <button class="btn btn-sm btn-acc" data-perm="edit_costs" onclick="Budget.openAddLine()"><i class="ti ti-plus"></i>Linha de orçamento</button>
+      <button class="btn btn-sm btn-acc" data-perm="edit_costs" onclick="Budget.openAddActual()"><i class="ti ti-receipt"></i>Lançar custo</button>
+      <button class="btn btn-sm" data-perm="edit_costs" onclick="ImportUi.open('costs')"><i class="ti ti-table-import"></i>Importar planilha</button>
     </div>
   </div>
 
@@ -1929,11 +1953,11 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
 <section class="page" id="p-kanban" data-module="pages/kanban">
   <div class="pg-hdr">
     <div><div class="pg-title">Quadro Kanban<span class="help-q" data-help="O trabalho em colunas: A fazer, Em andamento, Em revisão e Concluído. Arraste o cartão ou use as setas ◀ ▶. Cada coluna de trabalho tem um limite (WIP): passar dele avisa que a equipe começou coisa demais antes de terminar o que já está aberto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Veja o que está em andamento, o que trava e o que já foi entregue.</div></div>
-    <div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Agile.openItem()"><i class="ti ti-plus"></i>Novo item</button></div>
+    <div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="manage_backlog" onclick="Agile.openItem()"><i class="ti ti-plus"></i>Novo item</button></div>
   </div>
   <div class="kb-bar">
     <select class="input" id="kb-sprint" aria-label="Sprint exibida no quadro" onchange="Agile.setBoardSprint(this.value)"></select>
-    <button class="btn btn-sm" data-perm="business" onclick="Agile.openBoardCfg()"><i class="ti ti-adjustments"></i>Personalizar quadro<span class="help-q" data-help="Renomeie as colunas, acrescente colunas do seu fluxo (por exemplo Em teste ou Aguardando cliente), defina o limite de itens em andamento de cada uma (WIP) e escolha quais informações aparecem em cada cartão. As colunas A fazer e Concluído são fixas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
+    <button class="btn btn-sm" data-perm="manage_backlog" onclick="Agile.openBoardCfg()"><i class="ti ti-adjustments"></i>Personalizar quadro<span class="help-q" data-help="Renomeie as colunas, acrescente colunas do seu fluxo (por exemplo Em teste ou Aguardando cliente), defina o limite de itens em andamento de cada uma (WIP) e escolha quais informações aparecem em cada cartão. As colunas A fazer e Concluído são fixas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
     <span id="kb-imp"></span>
   </div>
   <div id="kb-root"></div>
@@ -1943,10 +1967,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
   <div class="pg-hdr">
     <div><div class="pg-title">Backlog<span class="help-q" data-help="A lista de tudo que o produto ainda precisa receber, em ordem de prioridade (o de cima é o mais importante). Use ▲ ▼ para priorizar e o campo Sprint para colocar o item no próximo ciclo. Pontos são uma estimativa de esforço relativo, não horas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Itens em ordem de prioridade. Coloque os mais importantes na próxima sprint.</div></div>
     <div class="btn-row">
-      <button class="btn btn-sm btn-acc" data-perm="business" onclick="Agile.openItem()"><i class="ti ti-plus"></i>Novo item</button>
-      <button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('backlog')"><i class="ti ti-table-import"></i>Importar planilha<span class="help-q" data-help="Traz vários itens de uma vez de uma planilha Excel ou CSV (inclusive exportada do Jira ou Trello). Colunas reconhecidas: título, tipo, pontos, responsável, situação, sprint, prioridade e descrição. Você vê uma prévia e confere antes de importar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
-      <button class="btn btn-sm" data-perm="business" onclick="Agile.aiEstimate()"><i class="ti ti-sparkles"></i>Estimar com IA<span class="help-q" data-help="A IA estima os pontos dos itens sem estimativa e sugere dividir os itens grandes (acima de 8 pontos), comparando com o que o seu próprio time já entregou. Cada sugestão cita o item parecido usado como referência. Você revisa e escolhe o que aplicar; nada muda sozinho." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
-      <button class="btn btn-sm" data-perm="business" onclick="Agile.openPlanNext()"><i class="ti ti-wand"></i>Planejar sprint<span class="help-q" data-help="O sistema monta a próxima sprint para você: pega os itens estimados do topo do backlog, na ordem de prioridade, até encher a capacidade (pontos), deixando uma reserva para imprevistos. Ele compara com o ritmo real do time e avisa o que não coube e por quê. Você revisa antes de aplicar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
+      <button class="btn btn-sm btn-acc" data-perm="manage_backlog" onclick="Agile.openItem()"><i class="ti ti-plus"></i>Novo item</button>
+      <button class="btn btn-sm" data-perm="manage_backlog" onclick="ImportUi.open('backlog')"><i class="ti ti-table-import"></i>Importar planilha<span class="help-q" data-help="Traz vários itens de uma vez de uma planilha Excel ou CSV (inclusive exportada do Jira ou Trello). Colunas reconhecidas: título, tipo, pontos, responsável, situação, sprint, prioridade e descrição. Você vê uma prévia e confere antes de importar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
+      <button class="btn btn-sm" data-perm="manage_backlog" onclick="Agile.aiEstimate()"><i class="ti ti-sparkles"></i>Estimar com IA<span class="help-q" data-help="A IA estima os pontos dos itens sem estimativa e sugere dividir os itens grandes (acima de 8 pontos), comparando com o que o seu próprio time já entregou. Cada sugestão cita o item parecido usado como referência. Você revisa e escolhe o que aplicar; nada muda sozinho." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
+      <button class="btn btn-sm" data-perm="manage_backlog" onclick="Agile.openPlanNext()"><i class="ti ti-wand"></i>Planejar sprint<span class="help-q" data-help="O sistema monta a próxima sprint para você: pega os itens estimados do topo do backlog, na ordem de prioridade, até encher a capacidade (pontos), deixando uma reserva para imprevistos. Ele compara com o ritmo real do time e avisa o que não coube e por quê. Você revisa antes de aplicar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
       <button class="btn btn-sm" onclick="Agile.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button>
     </div>
   </div>
@@ -1963,7 +1987,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
 <section class="page" id="p-sprints" data-module="pages/sprints">
   <div class="pg-hdr">
     <div><div class="pg-title">Sprints<span class="help-q" data-help="Sprint é um ciclo curto de trabalho (em geral 1 a 4 semanas) com uma meta. O burndown mostra os pontos que faltam entregar dia a dia contra a linha ideal; a velocidade é quantos pontos o time entrega por sprint e serve para prever quanto falta do backlog." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Ciclos de entrega, ritmo do time (velocidade) e burndown da sprint ativa.</div></div>
-    <div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Agile.openSprint()"><i class="ti ti-plus"></i>Nova sprint</button></div>
+    <div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="manage_backlog" onclick="Agile.openSprint()"><i class="ti ti-plus"></i>Nova sprint</button></div>
   </div>
   <div class="g4 rc-k" id="sp-kpis"></div>
   <div class="ag-grid">
@@ -1971,6 +1995,14 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div class="card"><div class="lbl"><i class="ti ti-chart-bar"></i>Velocidade por sprint<span class="help-q" data-help="Pontos concluídos em cada sprint encerrada. A média das últimas 3 sprints é usada para prever em quantas sprints o backlog termina." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div id="sp-vel"></div></div>
   </div>
   <div class="card"><div class="lbl"><i class="ti ti-list-details"></i>Todas as sprints</div><div id="sp-list"></div></div>
+</section>
+
+<section class="page" id="p-mywork" data-module="pages/mywork">
+  <div class="pg-hdr">
+    <div><h1 class="pg-title">Meu trabalho<span class="help-q" data-help="Reúne, num só lugar, o que está com você neste projeto: itens do backlog, tarefas do cronograma e as horas lançadas esta semana. O administrador liga a sua conta ao seu nome na equipe (Colaboradores → Editar → Conta vinculada)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></h1><div class="pg-sub">O que está com você neste projeto, sem precisar procurar.</div></div>
+    <div class="btn-row"><button class="btn btn-sm" onclick="R.go('hours')"><i class="ti ti-clock-plus"></i>Apontar horas</button></div>
+  </div>
+  <div id="mw-root"></div>
 </section>
 
 <section class="page" id="p-ritos" data-module="pages/ritos">
@@ -1985,7 +2017,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
 <section class="page" id="p-modelos" data-module="pages/modelos">
   <div class="pg-hdr">
     <div><div class="pg-title">Modelos de documentos<span class="help-q" data-help="Documentos prontos para preencher, guardados no projeto: plano de ação 5W2H, análise SWOT, plano de comunicação, plano de cutover (virada para produção) e termo de handover (entrega). Cada um já vem com sugestões; ajuste, marque o que foi feito e exporte para Excel." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Comece de um modelo pronto em vez da página em branco.</div></div>
-    <div class="btn-row" data-perm="business"><select class="input" id="md-kind" aria-label="Tipo de modelo"></select><button class="btn btn-sm btn-acc" onclick="Models.create()"><i class="ti ti-plus"></i>Criar a partir do modelo</button></div>
+    <div class="btn-row" data-perm="run_rites"><select class="input" id="md-kind" aria-label="Tipo de modelo"></select><button class="btn btn-sm btn-acc" onclick="Models.create()"><i class="ti ti-plus"></i>Criar a partir do modelo</button></div>
   </div>
   <div id="md-list"></div>
   <div id="md-editor"></div>
@@ -2130,8 +2162,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
   <div class="pg-hdr">
     <div><div class="pg-title">Apontamento de Horas<span class="help-q" data-help="Registro leve de quem trabalhou quantas horas e em quê. Serve para comparar a carga medida com a carga declarada no Burnout Radar e para enxergar para onde o esforço está indo. Não é folha de ponto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Horas por pessoa, dia e entrega. Compara a carga medida na última semana com a carga declarada na equipe.</div></div>
     <div class="btn-row">
-      <button class="btn btn-sm btn-acc" data-perm="business" onclick="Hours.openAdd()"><i class="ti ti-plus"></i>Apontar horas</button>
-      <button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('hours')"><i class="ti ti-table-import"></i>Importar planilha</button>
+      <button class="btn btn-sm btn-acc" data-perm="log_hours" onclick="Hours.openAdd()"><i class="ti ti-plus"></i>Apontar horas</button>
+      <button class="btn btn-sm" data-perm="log_hours" onclick="ImportUi.open('hours')"><i class="ti ti-table-import"></i>Importar planilha</button>
       <button class="btn btn-sm" onclick="Hours.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button>
       <button class="btn btn-sm" onclick="Hours.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button>
     </div>
@@ -3512,13 +3544,12 @@ const Auth = (() => {
   const ROLES = ['admin','gerente','consulta','manutencao'];
   const LABEL = { admin:'Administrador', gerente:'Gerente', consulta:'Consulta (somente leitura)', manutencao:'TI / Suporte' };
   const FALLBACK_INITIALS = { admin:'AD', gerente:'GE', consulta:'CO', manutencao:'TI' };
-  // Modelo de permissão: 'business' = CRUD de WBS/Decisões/Repositório · 'settings' = chaves de IA, integrações, backup/limpeza
-  const PERMS = {
-    admin:      { business:true,  settings:true  },
-    gerente:    { business:true,  settings:false },
-    consulta:   { business:false, settings:false },
-    manutencao: { business:false, settings:true  }
-  };
+  // Modelo de permissão: o perfil (role) é o ID de um perfil de acesso, que liga/desliga permissões (view_costs, edit_plan, manage_backlog…).
+  // Escopos antigos continuam valendo: 'business' = editar o plano (WBS, decisões, repositório…) · 'settings' = configurações do sistema.
+  // A nuvem entrega as definições dos perfis (inclusive os personalizados); sem nuvem valem os perfis prontos (AccessProfiles.LOCAL).
+  let profileDefs = null; // { id: { name, perms } } vindo do banco
+  const defsOf = () => profileDefs || AccessProfiles.LOCAL;
+  const permsOf = role => (defsOf()[role] && defsOf()[role].perms) || {};
   let state = { name:'Marcos R.', role:'admin' };
   let pendingRole = null;
   let cloudManaged = false;
@@ -3539,15 +3570,33 @@ const Auth = (() => {
 
   function load() {
     try { const raw = localStorage.getItem(KEY); if(raw) state = { ...state, ...JSON.parse(raw) }; } catch(e){}
-    if(!ROLES.includes(state.role)) state.role = 'admin';
+    if(!state.role || typeof state.role !== 'string') state.role = 'admin';
     apply();
   }
   function persist() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
 
   function getRole() { return state.role; }
   function getName() { return state.name; }
-  function label(role) { return pendingCloudConfirm ? 'Confirmando perfil…' : (LABEL[role || state.role] || role); }
-  function can(scope) { if(pendingCloudConfirm) return false; const p = PERMS[state.role]; return !!(p && p[scope]); }
+  function label(role) { const r = role || state.role; return pendingCloudConfirm ? 'Confirmando perfil…' : ((defsOf()[r] && defsOf()[r].name) || LABEL[r] || r); }
+  // Escopos: 'business' = editar o plano · 'settings' = configurações do sistema · qualquer permissão pelo nome (ex.: 'manage_backlog')
+  function can(scope) {
+    if(pendingCloudConfirm) return false;
+    if(state.role === 'admin') return true;
+    const p = permsOf(state.role);
+    if(scope === 'business') return !!p.edit_plan;
+    if(scope === 'settings') return !!p.manage_settings;
+    return !!p[scope];
+  }
+  // Quais escopos o perfil atual tem: vai para o <body> e o CSS esconde os botões [data-perm] que não valem
+  const SCOPES = ['business', 'settings', 'view_costs', 'edit_costs', 'edit_plan', 'approve_decisions', 'manage_backlog', 'run_rites', 'update_own', 'log_hours', 'view_all_hours', 'create_projects'];
+  function grantedScopes() { return SCOPES.filter(s => can(s)); }
+  // A nuvem entrega as definições dos perfis (id, nome, permissões); quem não está na lista cai em "sem permissões"
+  function setProfileDefs(list) {
+    if(!Array.isArray(list) || !list.length) return;
+    profileDefs = Object.fromEntries(list.map(p => [p.id, { name: p.name, perms: AccessProfiles.sanitize(p.perms), family: p.family, is_system: p.is_system, description: p.description }]));
+    apply();
+  }
+  const getProfileDefs = () => defsOf();
   // Chamado pelo Cloud quando initClient() resolve e NÃO há sessão ativa (usuário nunca
   // logou, ou sessão expirou) — libera o papel local, já que não existe confirmação de
   // servidor pra esperar nesse caso.
@@ -3564,6 +3613,7 @@ const Auth = (() => {
 
   function apply() {
     document.body.setAttribute('data-role', state.role);
+    document.body.setAttribute('data-can', grantedScopes().join(' '));
     const ava = document.getElementById('tb-avatar');
     if(ava) { ava.textContent = initialsFor(state.name, state.role); ava.title = `${state.name} — ${label()} · clique para ver sua conta`; }
     const tag = document.getElementById('tb-role-tag');
@@ -3598,7 +3648,7 @@ const Auth = (() => {
   function setFromCloud(name, role) {
     cloudManaged = true;
     pendingCloudConfirm = false;
-    state = { name: name || state.name, role: ROLES.includes(role) ? role : 'consulta' };
+    state = { name: name || state.name, role: (typeof role === 'string' && role) ? role : 'consulta' };
     persist();
     apply();
   }
@@ -3719,7 +3769,7 @@ const Auth = (() => {
     return false;
   }
 
-  return { load, getRole, getName, label, can, guard, openModal, closeModal, toggleLocalBox, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, confirmNoCloudSession, doSignIn, doSignInSSO, doSignUp, doSignOut, saveCloudName, updateCloudBadge };
+  return { setProfileDefs, getProfileDefs, grantedScopes, load, getRole, getName, label, can, guard, openModal, closeModal, toggleLocalBox, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, confirmNoCloudSession, doSignIn, doSignInSSO, doSignUp, doSignOut, saveCloudName, updateCloudBadge };
 })();
 </script>
 
@@ -4002,6 +4052,51 @@ const Cloud = (() => {
     return true;
   }
 
+  // ── Perfis de acesso (o administrador cria e ajusta; os 8 prontos não podem ser apagados) ──
+  async function listAccessProfiles() {
+    if(!client || !session) return [];
+    const { data, error } = await client.from('access_profiles').select('*').order('created_at', { ascending:true });
+    if(error) { console.warn('Perfis de acesso: falha ao buscar', error); return []; }
+    return data || [];
+  }
+  async function saveAccessProfile(p) {
+    if(!client || !session) return false;
+    const row = { id:p.id, name:p.name, description:p.description||null, family:p.family||'personalizado', perms:AccessProfiles.sanitize(p.perms) };
+    const { error } = p.isNew
+      ? await client.from('access_profiles').insert({ ...row, is_system:false })
+      : await client.from('access_profiles').update({ name:row.name, description:row.description, perms:row.perms }).eq('id', p.id);
+    if(error) { T.show('❌ ' + error.message); return false; }
+    pushAuditEvent('role_change', `Perfil de acesso "${p.name}" ${p.isNew ? 'criado' : 'alterado'}`, { profileId:p.id, perms:row.perms });
+    return true;
+  }
+  async function deleteAccessProfile(id) {
+    if(!client || !session) return false;
+    const { error } = await client.from('access_profiles').delete().eq('id', id);
+    if(error) { T.show('❌ ' + (/foreign key|violates/i.test(error.message) ? 'Há pessoas com este perfil. Mude o perfil delas antes de apagar.' : error.message)); return false; }
+    pushAuditEvent('role_change', `Perfil de acesso "${id}" apagado`, { profileId:id });
+    return true;
+  }
+  // Vincula uma conta de login ao colaborador do projeto (o banco só deixa o administrador fazer isso)
+  async function setMemberUser(memberId, userId) {
+    if(!client || !session) return false;
+    const { error } = await client.from('team_members').update({ user_id: userId || null }).eq('id', memberId);
+    if(error) { T.show('❌ ' + error.message); return false; }
+    pushAuditEvent('role_change', `Conta ${userId || '(nenhuma)'} vinculada ao colaborador ${memberId}`, { memberId, userId });
+    return true;
+  }
+
+  // Exclui um projeto inteiro da nuvem (administrador): primeiro os dados, depois o cadastro do projeto
+  async function deleteProject(projectId) {
+    if(!client || !session || !projectId) return { ok:false, error:'sem login na nuvem' };
+    try {
+      await clearProjectData(projectId, true);
+      pushAuditEvent('project_deleted', `Projeto "${projectId}" excluído`, { projectId });
+      const { error } = await client.from('projects').delete().eq('id', projectId);
+      if(error) throw new Error(error.message);
+      return { ok:true };
+    } catch(e) { return { ok:false, error:e.message || String(e) }; }
+  }
+
   // doSignIn/doSignUp fazem o trabalho de verdade e retornam sucesso/falha — usados tanto
   // pelo formulário técnico em Configurações quanto pelo modal de perfil (ponto único de login).
   async function doSignIn(email, password) {
@@ -4072,6 +4167,9 @@ const Cloud = (() => {
   async function afterSignIn() {
     if(!client || !session) return;
     try {
+      // As definições dos perfis (o que cada um pode) vêm do banco; sem elas valem os perfis prontos
+      const { data: aps } = await client.from('access_profiles').select('*').order('created_at', { ascending:true });
+      if(aps && aps.length) Auth.setProfileDefs(aps);
       const { data: profile, error } = await client.from('profiles').select('name,role').eq('id', session.user.id).single();
       if(error) throw error;
       Auth.setFromCloud((profile && profile.name) || session.user.email, (profile && profile.role) || 'consulta');
@@ -4198,7 +4296,7 @@ const Cloud = (() => {
         if(typeof Methodology !== 'undefined') { Methodology.apply(); Methodology.render(); }
       }
       if(team.data) {
-        DB.set('team', team.data.map(x => ({ id:x.id, name:x.name, role:x.role||'', allocationPct:x.allocation_pct, workloadPct:x.workload_pct, signals:x.signals||[], recommendation:x.recommendation||'', actionPage:x.action_page||'' })));
+        DB.set('team', team.data.map(x => ({ id:x.id, name:x.name, role:x.role||'', allocationPct:x.allocation_pct, workloadPct:x.workload_pct, signals:x.signals||[], recommendation:x.recommendation||'', actionPage:x.action_page||'', userId:x.user_id||'' })));
         if(typeof Burnout !== 'undefined') { Burnout.resetCache(); Burnout.render(); }
         if(typeof Resources !== 'undefined') Resources.render();
       }
@@ -4230,7 +4328,7 @@ const Cloud = (() => {
 
   function pushTeamMember(m) {
     if(!client || !session) return;
-    track(client.from('team_members').upsert({ id:m.id, name:m.name, role:m.role||null, allocation_pct:m.allocationPct, workload_pct:m.workloadPct, signals:m.signals||[], recommendation:m.recommendation||null, action_page:m.actionPage||null, project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed));
+    track(client.from('team_members').upsert({ id:m.id, name:m.name, role:m.role||null, allocation_pct:m.allocationPct, workload_pct:m.workloadPct, signals:m.signals||[], recommendation:m.recommendation||null, action_page:m.actionPage||null, ...(m.userId !== undefined && Auth.getRole() === 'admin' ? { user_id:m.userId||null } : {}), project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed));
   }
   function deleteTeamMember(id) { if(client && session) track(client.from('team_members').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
   // Uma linha só, pra detectar edição concorrente antes de sobrescrever (ver Burnout.saveFromModal)
@@ -4254,7 +4352,7 @@ const Cloud = (() => {
       if(error || !data) return;
       const byProject = new Map();
       data.forEach(x => {
-        const row = { id:x.id, name:x.name, role:x.role||'', allocationPct:x.allocation_pct, workloadPct:x.workload_pct, signals:x.signals||[], recommendation:x.recommendation||'', actionPage:x.action_page||'' };
+        const row = { id:x.id, name:x.name, role:x.role||'', allocationPct:x.allocation_pct, workloadPct:x.workload_pct, signals:x.signals||[], recommendation:x.recommendation||'', actionPage:x.action_page||'', userId:x.user_id||'' };
         if(!byProject.has(x.project_id)) byProject.set(x.project_id, []);
         byProject.get(x.project_id).push(row);
       });
@@ -4422,15 +4520,18 @@ const Cloud = (() => {
   // que antes só limpava o localStorage e deixava a cópia na nuvem intacta (o próximo login
   // trazia tudo de volta). Diferente de resetForNewUsers(): não exige admin nem apaga outros
   // projetos, porque agora cada linha sabe a qual projeto pertence.
-  async function clearProjectData(projectId) {
+  // Além das tabelas de dados, leva junto a equipe, as configurações (metodologia, quadro…), as decisões da diretoria e o histórico de saúde.
+  // O histórico só o administrador consegue apagar: para os outros perfis esse passo é ignorado, sem derrubar o resto.
+  const PROJECT_EXTRA_TABLES = ['team_members', 'board_decisions', 'project_settings', 'project_snapshots'];
+  async function clearProjectData(projectId, strict) {
     if(!client || !session || !projectId) return;
     try {
-      for(const t of PROJECT_DATA_TABLES) {
+      for(const t of PROJECT_DATA_TABLES.concat(PROJECT_EXTRA_TABLES)) {
         const { error } = await client.from(t).delete().eq('project_id', projectId);
-        if(error) throw new Error(t + ': ' + error.message);
+        if(error && !(t === 'project_snapshots')) throw new Error(t + ': ' + error.message);
       }
       pushAuditEvent('project_data_cleared', `Dados do projeto "${projectId}" apagados da nuvem`, { projectId });
-    } catch(e) { console.warn('Falha ao limpar dados do projeto na nuvem', e); }
+    } catch(e) { console.warn('Falha ao limpar dados do projeto na nuvem', e); if(strict) throw e; }
   }
 
   // Apaga TODOS os dados compartilhados na nuvem (visíveis pra qualquer pessoa que fizer login,
@@ -4469,7 +4570,7 @@ const Cloud = (() => {
     setTimeout(() => location.reload(), 900);
   }
 
-  return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole,
+  return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
     saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, doSignUp, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
@@ -4704,16 +4805,78 @@ const Forecast = (() => {
 <!-- ■ MODULE: ui/users ─ Promover/rebaixar perfis do Supabase pela interface, sem SQL manual -->
 <script data-module="ui/users">
 const Users = (() => {
-  const ROLE_LABEL = { admin:'Administrador', gerente:'Gerente', consulta:'Consulta', manutencao:'TI / Suporte' };
   function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  const defs = () => Auth.getProfileDefs();
+  const roleName = r => (defs()[r] && defs()[r].name) || r;
+  let editing = null; // perfil em edição: { id, isNew, name, description, perms }
 
   // Mostra/esconde os cards de admin — só fazem sentido pra quem está logado de verdade como admin
   function render() {
     const card = document.getElementById('users-card');
+    const apCard = document.getElementById('access-profiles-card');
     const resetCard = document.getElementById('reset-shared-card');
     const show = (typeof Cloud !== 'undefined') && Cloud.isSignedIn() && Auth.getRole() === 'admin';
     if(card) { card.style.display = show ? '' : 'none'; if(show) refresh(); }
+    if(apCard) { apCard.style.display = show ? '' : 'none'; if(show) renderProfiles(); }
     if(resetCard) resetCard.style.display = show ? '' : 'none';
+  }
+
+  // ── Perfis de acesso: lista, edição das permissões, criação e exclusão ──
+  function renderProfiles() {
+    const root = document.getElementById('access-profiles-root');
+    if(!root) return;
+    const d = defs();
+    const rows = Object.keys(d).map(id => {
+      const p = d[id];
+      const n = AccessProfiles.count(p.perms);
+      const sys = p.is_system !== false && AccessProfiles.LOCAL[id];
+      return `<div class="set-row">
+        <div>
+          <div class="set-lbl">${escapeHtml(p.name)} ${sys ? '<span class="badge">pronto</span>' : '<span class="badge b-acc">personalizado</span>'}</div>
+          <div class="set-sub">${id === 'admin' ? 'Tudo liberado (não pode ser alterado)' : n + ' de ' + AccessProfiles.KEYS.length + ' permissões'}${p.description ? ' · ' + escapeHtml(p.description) : ''}</div>
+        </div>
+        ${id === 'admin' ? '' : `<div style="display:flex;gap:6px"><button class="btn btn-sm" onclick="Users.editProfile('${id}')"><i class="ti ti-edit"></i>Editar</button>${sys ? '' : `<button class="btn btn-sm" aria-label="Apagar o perfil ${escapeHtml(p.name)}" onclick="Users.removeProfile('${id}')"><i class="ti ti-trash"></i></button>`}</div>`}
+      </div>`;
+    }).join('');
+    root.innerHTML = rows + (editing ? editorHtml() : '');
+  }
+  function editorHtml() {
+    const groups = {};
+    AccessProfiles.PERMS.forEach(p => { (groups[p[3]] = groups[p[3]] || []).push(p); });
+    const boxes = Object.keys(groups).map(g => `<fieldset style="border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:0"><legend style="font-size:11px;color:var(--t3);padding:0 4px">${g}</legend>${groups[g].map(p => `<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;margin:4px 0;cursor:pointer"><input type="checkbox" id="ap-perm-${p[0]}"${editing.perms[p[0]] ? ' checked' : ''} style="margin-top:3px"><span><b>${p[1]}</b><br><span style="color:var(--t3);font-size:11px">${p[2]}</span></span></label>`).join('')}</fieldset>`).join('');
+    return `<div class="card" style="margin-top:10px;background:var(--bg2)">
+      <div class="lbl"><i class="ti ti-edit"></i>${editing.isNew ? 'Novo perfil' : 'Editar perfil'}</div>
+      <div class="field"><label for="ap-name">Nome do perfil</label><input class="input" id="ap-name" maxlength="60" value="${escapeHtml(editing.name)}" placeholder="Ex.: Líder técnico"></div>
+      <div class="field"><label for="ap-desc">Para que serve (opcional)</label><input class="input" id="ap-desc" maxlength="200" value="${escapeHtml(editing.description)}"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px;margin:8px 0">${boxes}</div>
+      <div style="display:flex;gap:8px"><button class="btn btn-sm btn-pri" onclick="Users.saveProfile()"><i class="ti ti-check"></i>Salvar perfil</button><button class="btn btn-sm" onclick="Users.cancelProfile()">Cancelar</button></div>
+    </div>`;
+  }
+  function newProfile() { editing = { id:'', isNew:true, name:'', description:'', perms:{} }; renderProfiles(); const el = document.getElementById('ap-name'); if(el) el.focus(); }
+  function editProfile(id) { const p = defs()[id]; if(!p) return; editing = { id, isNew:false, name:p.name, description:p.description || '', perms:{ ...p.perms } }; renderProfiles(); const el = document.getElementById('ap-name'); if(el) el.focus(); }
+  function cancelProfile() { editing = null; renderProfiles(); }
+  async function saveProfile() {
+    if(!editing) return;
+    const name = (document.getElementById('ap-name').value || '').trim();
+    if(name.length < 2) { T.show('⚠️ Dê um nome ao perfil (mínimo 2 letras).'); return; }
+    const perms = {};
+    AccessProfiles.KEYS.forEach(k => { const c = document.getElementById('ap-perm-' + k); if(c && c.checked) perms[k] = true; });
+    const id = editing.isNew ? AccessProfiles.idFromName(name, Object.keys(defs())) : editing.id;
+    const ok = await Cloud.saveAccessProfile({ id, isNew:editing.isNew, name, description:(document.getElementById('ap-desc').value || '').trim(), perms, family:'personalizado' });
+    if(!ok) return;
+    editing = null;
+    await reloadDefs();
+    T.show('✅ Perfil salvo.');
+    refresh();
+  }
+  async function removeProfile(id) {
+    if(!confirm('Apagar o perfil "' + roleName(id) + '"? Só é possível se ninguém o estiver usando.')) return;
+    if(await Cloud.deleteAccessProfile(id)) { await reloadDefs(); T.show('✅ Perfil apagado.'); }
+  }
+  async function reloadDefs() {
+    const aps = await Cloud.listAccessProfiles();
+    if(aps.length) Auth.setProfileDefs(aps);
+    renderProfiles();
   }
 
   async function refresh() {
@@ -4725,7 +4888,7 @@ const Users = (() => {
     const myId = Cloud.getUserId();
     root.innerHTML = profiles.map(p => {
       const isMe = p.id === myId;
-      const opts = Object.keys(ROLE_LABEL).map(r => `<option value="${r}"${r===p.role?' selected':''}>${ROLE_LABEL[r]}</option>`).join('');
+      const opts = Object.keys(defs()).map(r => `<option value="${r}"${r===p.role?' selected':''}>${escapeHtml(roleName(r))}</option>`).join('');
       return `<div class="set-row">
         <div>
           <div class="set-lbl">${escapeHtml(p.name || '(sem nome)')}${isMe ? ' <span class="badge b-acc">você</span>' : ''}</div>
@@ -4750,7 +4913,7 @@ const Users = (() => {
     }
   }
 
-  return { render, refresh, changeRole };
+  return { render, refresh, changeRole, newProfile, editProfile, cancelProfile, saveProfile, removeProfile };
 })();
 </script>
 
@@ -4758,7 +4921,7 @@ const Users = (() => {
      pelo lado da pessoa — evita listar N projetos por usuário quando o portfólio cresce). -->
 <script data-module="ui/project-members">
 const ProjectMembers = (() => {
-  const ROLE_LABEL = { admin:'Administrador', gerente:'Gerente', consulta:'Consulta', manutencao:'TI / Suporte' };
+  const ROLE_LABEL = new Proxy({}, { get: (_, r) => (typeof r === 'string' && Auth.getProfileDefs()[r]) ? Auth.getProfileDefs()[r].name : undefined });
   function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   let profiles = [];
@@ -5481,6 +5644,36 @@ const DB = (() => {
     setTimeout(() => location.reload(), 900);
   }
 
+  // Exclui o projeto ativo por inteiro (cadastro + dados), na nuvem e neste navegador. Só o administrador:
+  // oferece backup, pede para digitar o nome do projeto e registra no log de auditoria.
+  async function deleteProject() {
+    if(Auth.getRole() !== 'admin') { T.show('🔒 Só o Administrador pode excluir um projeto.'); return; }
+    const pid = getActiveProjectId();
+    const name = (loadProjects().find(p => p.id === pid) || {}).name || pid;
+    const signedIn = typeof Cloud !== 'undefined' && Cloud.isSignedIn();
+    if(confirm(`Recomendado: baixar um backup do projeto "${name}" antes de excluí-lo.\n\nClique OK para baixar o backup agora, ou Cancelar para pular.`)) exportBackup();
+    const typed = prompt(`EXCLUIR O PROJETO "${name}"\n\nIsso apaga o projeto e todos os seus dados${signedIn ? ' (inclusive na nuvem, para todas as pessoas)' : ' deste navegador'} e não pode ser desfeito.\n\nPara confirmar, digite o nome do projeto exatamente:`);
+    if(typed === null) { T.show('Exclusão cancelada.'); return; }
+    if(typed.trim() !== name) { T.show('Nome diferente — nenhum dado foi apagado.'); return; }
+    if(signedIn) {
+      T.show('🗑️ Excluindo o projeto na nuvem…');
+      const r = await Cloud.deleteProject(pid);
+      if(!r.ok) { T.show('❌ Não consegui excluir na nuvem: ' + r.error); return; }
+    }
+    try { localStorage.removeItem(storageKeyFor(pid)); if(pid === 'nexus') localStorage.removeItem('pmo_db_v1'); } catch(e){}
+    projects = loadProjects().filter(p => p.id !== pid);
+    if(!projects.length) {
+      const blankId = 'p' + Date.now().toString(36);
+      projects = [{ id:blankId, name:'Meu projeto', client:'', icon:'compass' }];
+      try { localStorage.setItem(storageKeyFor(blankId), JSON.stringify(seedEmpty())); } catch(e){}
+    }
+    persistProjects();
+    activeProjectId = projects[0].id;
+    try { localStorage.setItem(ACTIVE_KEY, activeProjectId); } catch(e){}
+    T.show('🗑️ Projeto excluído. Recarregando…');
+    setTimeout(() => location.reload(), 900);
+  }
+
   // Apaga TUDO que está salvo neste navegador (todos os projetos, inclusive os de demonstração
   // como "Portal Nexus", chaves de IA locais e perfil local) e deixa só um projeto em branco no
   // lugar — chamado pelo reset "para novos usuários" depois de limpar a nuvem. Não recarrega a
@@ -5549,7 +5742,7 @@ const DB = (() => {
     })).sort((a,b) => b.total - a.total);
   }
 
-  return { get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, factoryReset, reloadDemo, setProjectMethodology, listProjects, getActiveProjectId, switchProject, createProject, updateProject, computePortfolioAllocation, setProjectsFromCloud };
+  return { get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, deleteProject, factoryReset, reloadDemo, setProjectMethodology, listProjects, getActiveProjectId, switchProject, createProject, updateProject, computePortfolioAllocation, setProjectsFromCloud };
 })();
 </script>
 
@@ -5793,7 +5986,7 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','raci','kanban','backlog','sprints','ritos','modelos','help','xray'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','raci','kanban','backlog','sprints','ritos','modelos','mywork','help','xray'];
   function go(id) {
     pages.forEach(p => {
       const el = document.getElementById('p-'+p);
@@ -5824,6 +6017,7 @@ const R = (() => {
     if(['kanban','backlog','sprints'].includes(id) && typeof Agile !== 'undefined') Agile.render();
     if(id === 'ritos' && typeof Rites !== 'undefined') Rites.render();
     if(id === 'modelos' && typeof Models !== 'undefined') Models.render();
+    if(id === 'mywork' && typeof MyWork !== 'undefined') MyWork.render();
     if(typeof Agile !== 'undefined') Agile.renderDashboard();
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
     if(id === 'settings' && typeof PmoProfiles !== 'undefined') PmoProfiles.render();
@@ -5942,7 +6136,7 @@ const Nav = (() => {
   const SECTION_OF = { xray:'Painéis', board:'Painéis', execview:'Painéis', pmoview:'Painéis', dashboard:'Projeto' };
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
-    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores', pmoview:'Visão do PMO', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint', modelos:'Modelos',
+    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores', pmoview:'Visão do PMO', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint', modelos:'Modelos', mywork:'Meu trabalho',
     burnout:'Burnout Radar', resources:'Colaboradores', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
     portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
@@ -9785,6 +9979,107 @@ const AgileCalc = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: services/access-profiles ─ Perfis de acesso por permissão (PMI, Ágil e personalizados) — definições e regras puras -->
+<script data-module="services/access-profiles">
+const AccessProfiles = (() => {
+  // [chave, nome, o que permite, grupo]
+  const PERMS = [
+    ['view_costs', 'Ver custos e orçamento', 'Enxerga o orçamento, os lançamentos de custo e os valores em reais.', 'Dinheiro'],
+    ['edit_costs', 'Editar orçamento e custos', 'Cria e altera linhas de orçamento e lançamentos de custo.', 'Dinheiro'],
+    ['edit_plan', 'Editar o plano do projeto', 'WBS, riscos, mudanças de escopo, RACI, linha de base, equipe e documentos.', 'Plano'],
+    ['approve_decisions', 'Aprovar decisões', 'Decide sobre as recomendações e as decisões da diretoria.', 'Plano'],
+    ['manage_backlog', 'Gerir backlog e sprints', 'Cria, prioriza, estima e planeja itens; cria e conduz sprints.', 'Ágil'],
+    ['run_rites', 'Conduzir ritos e modelos', 'Registra planejamento, revisão e retrospectiva; resolve impedimentos; edita os modelos de documentos.', 'Ágil'],
+    ['update_own', 'Atualizar as próprias atividades', 'Move e edita só os itens e tarefas em que é o responsável; registra impedimentos.', 'Time'],
+    ['log_hours', 'Apontar as próprias horas', 'Lança, corrige e apaga apenas as horas que ele mesmo lançou.', 'Time'],
+    ['view_all_hours', 'Ver as horas de todos', 'Enxerga as horas lançadas por toda a equipe.', 'Time'],
+    ['create_projects', 'Criar projetos', 'Cria projetos novos (e ganha acesso a eles).', 'Sistema'],
+    ['manage_settings', 'Configurações do sistema', 'Chaves de IA, integrações e backup deste navegador.', 'Sistema']
+  ];
+  const KEYS = PERMS.map(p => p[0]);
+  const ALL = Object.fromEntries(KEYS.map(k => [k, true]));
+  // Mesmos perfis prontos do banco: usados no modo local (sem nuvem) e enquanto a nuvem não responde
+  const LOCAL = {
+    admin: { name: 'Administrador', perms: ALL },
+    gerente: { name: 'Gerente de Projeto', perms: { view_costs: true, edit_costs: true, edit_plan: true, approve_decisions: true, manage_backlog: true, run_rites: true, update_own: true, log_hours: true, view_all_hours: true, create_projects: true } },
+    patrocinador: { name: 'Patrocinador / Diretoria', perms: { view_costs: true, view_all_hours: true, approve_decisions: true } },
+    po: { name: 'Product Owner', perms: { manage_backlog: true, run_rites: true, update_own: true } },
+    sm: { name: 'Scrum Master', perms: { manage_backlog: true, run_rites: true, update_own: true, log_hours: true, view_all_hours: true } },
+    time: { name: 'Membro do time (Dev, QA, analista)', perms: { update_own: true, log_hours: true } },
+    consulta: { name: 'Consulta (stakeholder)', perms: {} },
+    manutencao: { name: 'TI / Suporte', perms: { manage_settings: true } }
+  };
+  // Só chaves conhecidas, só "true" — qualquer outra coisa é descartada
+  function sanitize(obj) { const o = {}; KEYS.forEach(k => { if(obj && obj[k] === true) o[k] = true; }); return o; }
+  // Identificador do perfil a partir do nome: minúsculas, sem acento, só a-z 0-9 _ , único entre os existentes
+  function idFromName(name, existing) {
+    let base = String(name || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24) || 'perfil';
+    if(base.length < 2) base = 'perfil_' + base;
+    const taken = new Set(existing || []);
+    let id = base, n = 2;
+    while(taken.has(id)) id = base.slice(0, 26) + '_' + (n++);
+    return id;
+  }
+  const count = perms => KEYS.filter(k => perms && perms[k]).length;
+  return { PERMS, KEYS, ALL, LOCAL, sanitize, idFromName, count };
+})();
+</script>
+
+<!-- ■ MODULE: pages/mywork ─ "Meu trabalho": itens, tarefas e horas da pessoa logada no projeto ativo -->
+<script data-module="pages/mywork">
+const MyWork = (() => {
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const key = s => String(s || '').trim().toLowerCase();
+
+  // Nomes que identificam a pessoa: o colaborador ligado à conta; sem ligação, o colaborador com o mesmo nome da conta
+  function myNames() {
+    const team = DB.get('team') || [];
+    const uid = (typeof Cloud !== 'undefined' && Cloud.isSignedIn()) ? Cloud.getUserId() : null;
+    const linked = uid ? team.filter(m => m.userId === uid) : [];
+    const byName = linked.length ? linked : team.filter(m => key(m.name) === key(Auth.getName()));
+    return { names: byName.map(m => m.name), linked: linked.length > 0 };
+  }
+  function weekRange() {
+    const t = Clock.today(); const mon = new Date(t); mon.setDate(t.getDate() - ((t.getDay() + 6) % 7));
+    const end = new Date(mon); end.setDate(mon.getDate() + 6);
+    return [Clock.iso(mon), Clock.iso(end)];
+  }
+  function tasksOf(names) {
+    const set = new Set(names.map(key)), out = [];
+    (DB.get('wbs') || []).forEach(m => {
+      if(set.has(key(m.responsavel)) && m.status !== 'grn') out.push({ label: m.label, parent: '', end: m.end, status: m.status });
+      (m.children || []).forEach(t => { if(set.has(key(t.responsavel)) && t.status !== 'grn') out.push({ label: t.label, parent: m.label, end: t.end, status: t.status }); });
+    });
+    return out;
+  }
+  function render() {
+    const root = document.getElementById('mw-root'); if(!root) return;
+    const me = myNames();
+    if(!me.names.length) {
+      root.innerHTML = `<div class="card"><div class="rk-empty">Não encontrei você na equipe deste projeto. Peça ao administrador para ligar a sua conta ao seu nome em <b>Colaboradores → Editar → Conta vinculada</b>.</div></div>`;
+      return;
+    }
+    const set = new Set(me.names.map(key));
+    const items = (DB.get('backlog') || []).filter(i => set.has(key(i.assignee)));
+    const open = items.filter(i => i.status !== 'done'), done = items.filter(i => i.status === 'done');
+    const tasks = tasksOf(me.names);
+    const [from, to] = weekRange();
+    const hours = (DB.get('timeEntries') || []).filter(e => set.has(key(e.person)) && e.date >= from && e.date <= to).reduce((s, e) => s + (Number(e.hours) || 0), 0);
+    const kpi = (l, v, sub) => `<div class="kpi"><div class="kpi-lbl">${l}</div><div class="kpi-val">${v}</div><div class="kpi-delta">${sub}</div></div>`;
+    const itemRows = open.length ? open.map(i => `<div class="set-row"><div><div class="set-lbl">${esc(i.id)} · ${esc(i.title)}</div><div class="set-sub">${esc(i.status === 'todo' ? 'A fazer' : i.status === 'doing' ? 'Em andamento' : i.status === 'review' ? 'Em revisão' : i.status)}${i.points !== '' && i.points != null ? ' · ' + esc(i.points) + ' pontos' : ''}</div></div></div>`).join('') : '<div class="rk-empty">Nenhum item aberto com você.</div>';
+    const taskRows = tasks.length ? tasks.map(t => `<div class="set-row"><div><div class="set-lbl">${esc(t.label)}</div><div class="set-sub">${t.parent ? esc(t.parent) + ' · ' : ''}${t.end ? 'prazo ' + esc(String(t.end).split('-').reverse().join('/')) : 'sem prazo'}</div></div></div>`).join('') : '<div class="rk-empty">Nenhuma tarefa do cronograma aberta com você.</div>';
+    root.innerHTML = `<div class="kpi-row" style="margin-bottom:12px">${kpi('Itens abertos', open.length, done.length + ' concluído(s)')}${kpi('Tarefas do cronograma', tasks.length, 'em aberto')}${kpi('Horas na semana', (Math.round(hours * 100) / 100).toLocaleString('pt-BR') + ' h', 'lançadas por você')}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">
+        <div class="card"><div class="lbl"><i class="ti ti-list-details"></i>Itens do backlog <button class="link-a" onclick="R.go('kanban')">Abrir o quadro</button></div>${itemRows}</div>
+        <div class="card"><div class="lbl"><i class="ti ti-sitemap"></i>Tarefas do cronograma</div>${taskRows}</div>
+      </div>
+      ${me.linked ? '' : '<div style="font-size:11.5px;color:var(--t3);margin-top:10px"><i class="ti ti-info-circle"></i> Encontrei você pelo nome. Peça ao administrador para vincular a sua conta ao colaborador, assim as permissões do seu perfil valem só para os seus itens.</div>'}`;
+  }
+  const isMine = name => !!name && myNames().names.some(n => key(n) === key(name));
+  return { render, isMine };
+})();
+</script>
+
 <!-- ■ MODULE: services/agile-rites ─ Ritos da sprint (Scrum): duração máxima proporcional à sprint, quem participa, pauta e acompanhamento — regras puras -->
 <script data-module="services/agile-rites">
 const AgileRites = (() => {
@@ -10070,7 +10365,7 @@ const Agile = (() => {
       ${top ? `<div class="kb-meta">${top}</div>` : ''}
       <button type="button" class="kb-title kb-open" aria-label="Abrir ${esc(i.id)}: ${esc(i.title)}" onclick="event.stopPropagation();Agile.openItem('${esc(i.id)}')">${esc(i.title)}</button>
       ${bottom ? `<div class="kb-meta">${bottom}</div>` : ''}
-      <div class="kb-mv" data-perm="business">${prev ? `<button class="btn btn-sm" aria-label="Mover ${esc(i.id)} para ${lbl(prev)}" onclick="event.stopPropagation();Agile.move('${esc(i.id)}',-1)">◀</button>` : ''}${next ? `<button class="btn btn-sm" aria-label="Mover ${esc(i.id)} para ${lbl(next)}" onclick="event.stopPropagation();Agile.move('${esc(i.id)}',1)">▶</button>` : ''}</div></div>`;
+      <div class="kb-mv" data-perm="manage_backlog">${prev ? `<button class="btn btn-sm" aria-label="Mover ${esc(i.id)} para ${lbl(prev)}" onclick="event.stopPropagation();Agile.move('${esc(i.id)}',-1)">◀</button>` : ''}${next ? `<button class="btn btn-sm" aria-label="Mover ${esc(i.id)} para ${lbl(next)}" onclick="event.stopPropagation();Agile.move('${esc(i.id)}',1)">▶</button>` : ''}</div></div>`;
   }
   function setStatus(it, status) {
     const was = it.status;
@@ -10080,9 +10375,16 @@ const Agile = (() => {
     if(over) T.show(`⚠️ Limite de "${over.label}" excedido (${over.count} de ${over.limit}). Termine algo antes de começar mais.`, 4500);
     return was !== status;
   }
+  // Quem gere o backlog mexe em qualquer item; quem só atualiza o próprio trabalho mexe apenas nos itens em que é o responsável
+  function canTouch(it) {
+    if(Auth.can('manage_backlog')) return true;
+    if(Auth.can('update_own') && typeof MyWork !== 'undefined' && MyWork.isMine(it.assignee)) return true;
+    T.show('🔒 Você só pode mexer nos itens em que é o responsável.');
+    return false;
+  }
   function move(id, dir) {
-    if(!Auth.guard('business')) return;
     load(); const it = items.find(x => x.id === id); if(!it) return;
+    if(!canTouch(it)) return;
     const to = AgileCalc.neighbor(it.status, dir, cfg); if(!to) return;
     setStatus(it, to); renderAll();
     const b = document.querySelector(`.kb-card[data-id="${CSS.escape(id)}"]`); if(b) b.focus();
@@ -10091,8 +10393,8 @@ const Agile = (() => {
   function dragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drop'); }
   function drop(e, status) {
     e.preventDefault(); e.currentTarget.classList.remove('drop');
-    if(!Auth.guard('business')) return;
     load(); const it = items.find(x => x.id === dragId); dragId = null; if(!it || it.status === status) return;
+    if(!canTouch(it)) return;
     setStatus(it, status); renderAll();
   }
   function setBoardSprint(v) { boardSprint = v; renderKanban(); }
@@ -10100,7 +10402,7 @@ const Agile = (() => {
   let boardDraft = null;
   const CARD_FIELDS = [['id', 'Código'], ['kind', 'Tipo'], ['points', 'Pontos'], ['assignee', 'Responsável'], ['sprint', 'Sprint']];
   function openBoardCfg() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     load();
     boardDraft = { columns: AgileCalc.cols(cfg).map(c => ({ key: c.key, label: c.label, wip: Number(cfg.wip[c.key]) || 0 })), card: { ...cfg.card } };
     renderBoardCfg();
@@ -10131,7 +10433,7 @@ const Agile = (() => {
   function resetBoardCfg() { boardDraft = { columns: AgileCalc.COLS.map(c => ({ key: c.key, label: c.label, wip: Number((AgileCalc.DEFAULT_CFG.wip || {})[c.key]) || 0 })), card: { ...AgileCalc.DEFAULT_CARD } }; renderBoardCfg(); }
   function closeBoardCfg() { document.getElementById('modal-agile-board').classList.add('hidden'); boardDraft = null; }
   function saveBoardCfg() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     load(); const d = boardDraft; if(!d) return;
     const labels = d.columns.map(c => c.label.replace(/\s+/g, ' ').trim());
     if(labels.some(l => !l)) { T.show('⚠️ Toda coluna precisa de um nome.'); return; }
@@ -10163,13 +10465,13 @@ const Agile = (() => {
     if(!list.length) { root.innerHTML = '<div class="rk-empty">Nenhum item com esse filtro.</div>'; return; }
     const spOpts = sel => '<option value="">Sem sprint</option>' + sprints.filter(s => s.state !== 'encerrada').map(s => `<option value="${esc(s.id)}"${s.id === sel ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
     root.innerHTML = list.map(i => `<div class="ag-row"${i.status === 'done' ? ' style="opacity:1;background:transparent"' : ''}>
-      <div class="ag-rank" data-perm="business"><button class="btn btn-sm" aria-label="Subir prioridade de ${esc(i.id)}" onclick="Agile.rank('${esc(i.id)}',-1)">▲</button><button class="btn btn-sm" aria-label="Descer prioridade de ${esc(i.id)}" onclick="Agile.rank('${esc(i.id)}',1)">▼</button></div>
+      <div class="ag-rank" data-perm="manage_backlog"><button class="btn btn-sm" aria-label="Subir prioridade de ${esc(i.id)}" onclick="Agile.rank('${esc(i.id)}',-1)">▲</button><button class="btn btn-sm" aria-label="Descer prioridade de ${esc(i.id)}" onclick="Agile.rank('${esc(i.id)}',1)">▼</button></div>
       <div class="ag-main"><div class="ag-title">${esc(i.title)}</div><div class="kb-meta" style="margin-top:3px"><span class="chip">${esc(i.id)}</span><span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>${i.points !== '' && i.points != null ? `<span class="badge b-acc">${esc(i.points)} pts</span>` : '<span class="chip c-wa">sem estimativa</span>'}<span class="chip">${esc(AgileCalc.colLabel(cfg, i.status))}</span>${i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : ''}</div></div>
-      <select class="input" data-perm="business" aria-label="Sprint do item ${esc(i.id)}" onchange="Agile.setSprintOf('${esc(i.id)}', this.value)"${i.status === 'done' ? ' disabled' : ''}>${spOpts(i.sprintId)}</select>
-      <button class="btn btn-sm" aria-label="Editar ${esc(i.id)}" data-perm="business" onclick="Agile.openItem('${esc(i.id)}')"><i class="ti ti-edit"></i></button></div>`).join('');
+      <select class="input" data-perm="manage_backlog" aria-label="Sprint do item ${esc(i.id)}" onchange="Agile.setSprintOf('${esc(i.id)}', this.value)"${i.status === 'done' ? ' disabled' : ''}>${spOpts(i.sprintId)}</select>
+      <button class="btn btn-sm" aria-label="Editar ${esc(i.id)}" data-perm="manage_backlog" onclick="Agile.openItem('${esc(i.id)}')"><i class="ti ti-edit"></i></button></div>`).join('');
   }
   function rank(id, dir) {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     load(); const order = items.slice().sort(sortByRank); const i = order.findIndex(x => x.id === id), j = i + dir;
     if(i < 0 || j < 0 || j >= order.length) return;
     [order[i], order[j]] = [order[j], order[i]];
@@ -10178,7 +10480,7 @@ const Agile = (() => {
     const b = document.querySelector(`.ag-rank button[aria-label$="${CSS.escape(id)}"]`); if(b) b.focus();
   }
   function setSprintOf(id, sprintId) {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     load(); const it = items.find(x => x.id === id); if(!it) return;
     it.sprintId = sprintId; saveItems(); pushItem(it); renderAll();
     const sp = sprints.find(s => s.id === sprintId);
@@ -10225,19 +10527,19 @@ const Agile = (() => {
     list.innerHTML = sprints.slice().sort((x, y) => y.startOn.localeCompare(x.startOn)).map(s => {
       const ss = AgileCalc.sprintStats(s, items, today);
       return `<div class="ag-sp"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="font-size:13px;color:var(--t1)">${esc(s.name)}</b><span class="badge ${badge[s.state]}">${s.state === 'ativa' ? 'Ativa' : s.state === 'planejada' ? 'Planejada' : 'Encerrada'}</span><span class="chip">${fmt(s.startOn)} a ${fmt(s.endOn)}</span>${s.capacity !== '' && s.capacity != null ? `<span class="chip">capacidade ${esc(s.capacity)}</span>` : ''}${ss.overCapacity ? '<span class="badge b-amb">acima da capacidade</span>' : ''}
-        <span style="margin-left:auto;display:flex;gap:6px" data-perm="business">${s.state !== 'encerrada' ? `<button class="btn btn-sm" onclick="Agile.openPlan('${esc(s.id)}')"><i class="ti ti-wand"></i>Planejar</button>` : ''}${s.state === 'planejada' ? `<button class="btn btn-sm btn-acc" onclick="Agile.startSprint('${esc(s.id)}')">Iniciar</button>` : ''}${s.state === 'ativa' ? `<button class="btn btn-sm" onclick="Agile.closeSprintNow('${esc(s.id)}')">Encerrar</button>` : ''}<button class="btn btn-sm" aria-label="Editar ${esc(s.name)}" onclick="Agile.openSprint('${esc(s.id)}')"><i class="ti ti-edit"></i></button></span></div>
+        <span style="margin-left:auto;display:flex;gap:6px" data-perm="manage_backlog">${s.state !== 'encerrada' ? `<button class="btn btn-sm" onclick="Agile.openPlan('${esc(s.id)}')"><i class="ti ti-wand"></i>Planejar</button>` : ''}${s.state === 'planejada' ? `<button class="btn btn-sm btn-acc" onclick="Agile.startSprint('${esc(s.id)}')">Iniciar</button>` : ''}${s.state === 'ativa' ? `<button class="btn btn-sm" onclick="Agile.closeSprintNow('${esc(s.id)}')">Encerrar</button>` : ''}<button class="btn btn-sm" aria-label="Editar ${esc(s.name)}" onclick="Agile.openSprint('${esc(s.id)}')"><i class="ti ti-edit"></i></button></span></div>
         <div style="font-size:12px;color:var(--t2);margin-top:5px">${esc(s.goal || 'Sem meta definida.')} · ${ss.count} item(ns), ${ss.done} de ${ss.committed} pts concluídos</div></div>`;
     }).join('');
   }
   function startSprint(id) {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     load(); const s = sprints.find(x => x.id === id); if(!s) return;
     if(active()) { T.show(`⚠️ Já existe uma sprint ativa ("${active().name}"). Encerre-a antes de iniciar outra.`, 4500); return; }
     s.state = 'ativa'; saveSprints(); pushSprint(s); boardSprint = '__auto'; renderAll();
     Trail.log(`Sprint iniciada: ${s.name}`, Auth.getName(), '', 'b-acc'); T.show(`✅ "${s.name}" iniciada.`);
   }
   function closeSprintNow(id) {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     load(); const s = sprints.find(x => x.id === id); if(!s) return;
     const open = items.filter(i => i.sprintId === id && i.status !== 'done');
     if(!confirm(open.length ? `Encerrar "${s.name}"? ${open.length} item(ns) não concluído(s) volta(m) para o backlog, em "A fazer".` : `Encerrar "${s.name}"?`)) return;
@@ -10255,7 +10557,7 @@ const Agile = (() => {
     document.getElementById('ai-sprint').innerHTML = '<option value="">Sem sprint</option>' + sprints.filter(s => s.state !== 'encerrada' || s.id === sel).map(s => `<option value="${esc(s.id)}"${s.id === sel ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
   }
   function openItem(id) {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     load(); const it = id ? items.find(x => x.id === id) : null; itemCtx = it ? it.id : null;
     document.getElementById('ai-title-h').textContent = it ? it.id + ' — editar item' : 'Novo item';
     document.getElementById('ai-title').value = it ? it.title : '';
@@ -10273,7 +10575,7 @@ const Agile = (() => {
   }
   function closeItem() { document.getElementById('modal-agile-item').classList.add('hidden'); }
   function saveItem() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     load();
     const title = val('ai-title').trim();
     if(title.length < 2) { T.show('⚠️ Dê um título ao item (mínimo 2 letras).'); document.getElementById('ai-title').focus(); return; }
@@ -10286,7 +10588,7 @@ const Agile = (() => {
     T.show(`✅ ${it.id} salvo.`);
   }
   function deleteItem() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     load(); const it = items.find(x => x.id === itemCtx); if(!it) return;
     if(!confirm(`Excluir ${it.id}? Isso remove o item do backlog e do quadro.`)) return;
     items = items.filter(x => x.id !== it.id); saveItems();
@@ -10294,7 +10596,7 @@ const Agile = (() => {
     closeItem(); renderAll(); T.show('🗑️ Item excluído.');
   }
   function openSprint(id) {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     load(); const s = id ? sprints.find(x => x.id === id) : null; sprintCtx = s ? s.id : null;
     const last = sprints.slice().sort((a, b) => b.endOn.localeCompare(a.endOn))[0];
     const start = s ? s.startOn : (last ? AgileCalc.addDays(last.endOn, 1) : todayIso());
@@ -10310,7 +10612,7 @@ const Agile = (() => {
   }
   function closeSprint() { document.getElementById('modal-agile-sprint').classList.add('hidden'); }
   function saveSprint() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     load();
     const name = val('as-name').trim(), start = val('as-start'), end = val('as-end'), cap = val('as-cap').trim();
     if(name.length < 2) { T.show('⚠️ Dê um nome à sprint.'); return; }
@@ -10321,7 +10623,7 @@ const Agile = (() => {
     saveSprints(); pushSprint(s); closeSprint(); renderAll(); T.show(`✅ "${s.name}" salva.`);
   }
   function deleteSprint() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     load(); const s = sprints.find(x => x.id === sprintCtx); if(!s) return;
     if(!confirm(`Excluir "${s.name}"? Os itens dela voltam para o backlog, sem sprint.`)) return;
     items.filter(i => i.sprintId === s.id).forEach(i => { i.sprintId = ''; pushItem(i); });
@@ -10399,7 +10701,7 @@ const Agile = (() => {
   }
   function useTeamCapacity() { const c = capRows(); document.getElementById('ap-cap').value = c.total; recalcPlan(); }
   function openPlan(id) {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     load(); const s = sprints.find(x => x.id === id); if(!s) return;
     planSprintId = id; planAvail = JSON.parse(JSON.stringify(s.availability || {}));
     const teamCap = capRows().total;
@@ -10414,7 +10716,7 @@ const Agile = (() => {
     document.getElementById('ap-cap').focus();
   }
   function openPlanNext() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     load();
     const next = sprints.filter(s => s.state === 'planejada').sort((a, b) => a.startOn.localeCompare(b.startOn))[0] || active();
     if(!next) { T.show('Crie uma sprint primeiro: o planejamento sugere os itens para ela.', 4500); openSprint(); return; }
@@ -10441,7 +10743,7 @@ const Agile = (() => {
     document.getElementById('ap-apply').style.opacity = plan.selected.length ? '' : '.5';
   }
   function applyPlan() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     const cur = currentPlan(); if(!cur || !cur.plan.selected.length) return;
     const { s, plan } = cur;
     plan.selected.forEach(id => { const it = items.find(x => x.id === id); if(it) { it.sprintId = s.id; pushItem(it); } });
@@ -10456,7 +10758,7 @@ const Agile = (() => {
   // ───────── IA: estimar pontos e dividir itens grandes (calibrada pelo histórico do time) ─────────
   let aiResult = null;
   async function aiEstimate() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     load();
     const cands = AgileAi.candidates(items);
     if(!cands.length) { T.show('✅ Todos os itens abertos já têm estimativa e cabem em uma sprint.', 4500); return; }
@@ -10483,7 +10785,7 @@ const Agile = (() => {
     document.getElementById('aa-apply').style.display = '';
   }
   function applyAi() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('manage_backlog')) return;
     load(); const r = aiResult; if(!r) return;
     const est = [...document.querySelectorAll('#aa-root input[data-ai-est]:checked')].map(c => r.estimates[+c.dataset.aiEst]);
     const spl = [...document.querySelectorAll('#aa-root input[data-ai-split]:checked')].map(c => r.splits[+c.dataset.aiSplit]);
@@ -10597,7 +10899,7 @@ const Rites = (() => {
     if(!sprintId || !list.some(s => s.id === sprintId)) sprintId = defaultSprint();
     document.getElementById('rt-sprint').innerHTML = list.map(s => `<option value="${esc(s.id)}"${s.id === sprintId ? ' selected' : ''}>${esc(s.name)} (${LBL[s.state] || s.state})</option>`).join('');
     const s = current(), stepsEl = document.getElementById('rt-steps');
-    if(!s) { stepsEl.innerHTML = ''; root.innerHTML = '<div class="card"><div class="rk-empty">Os ritos acontecem dentro de uma sprint. <button class="link-a" data-perm="business" onclick="Agile.openSprint()">Crie a primeira sprint</button> para começar.</div></div>'; return; }
+    if(!s) { stepsEl.innerHTML = ''; root.innerHTML = '<div class="card"><div class="rk-empty">Os ritos acontecem dentro de uma sprint. <button class="link-a" data-perm="run_rites" onclick="Agile.openSprint()">Crie a primeira sprint</button> para começar.</div></div>'; return; }
     const st = AgileRites.status(s, rites.filter(r => r.sprintId === s.id), imps);
     const badge = { feito: ['b-grn', '✓ feito'], pendente: ['b-neu', 'pendente'], continuo: ['b-acc', 'contínuo'], atencao: ['b-amb', 'atenção'] };
     stepsEl.innerHTML = AgileRites.RITES.map((r, i) => { const x = st.find(y => y.kind === r.kind), b = badge[x.state];
@@ -10614,10 +10916,10 @@ const Rites = (() => {
   function foot(kind) {
     const r = rec(kind) || {}, held = !!r.heldOn;
     return `<div class="card"><div class="lbl"><i class="ti ti-clipboard-check"></i>Registro do rito</div>
-      <div class="g2" style="gap:10px"><div class="field-group"><div class="field-label"><label for="rt-att">Quem participou</label></div><input class="input" id="rt-att" maxlength="500" value="${esc(r.attendees || '')}" placeholder="Nomes separados por vírgula" data-perm="business"></div>
+      <div class="g2" style="gap:10px"><div class="field-group"><div class="field-label"><label for="rt-att">Quem participou</label></div><input class="input" id="rt-att" maxlength="500" value="${esc(r.attendees || '')}" placeholder="Nomes separados por vírgula" data-perm="run_rites"></div>
       <div class="field-group"><div class="field-label"><label for="rt-date">Data</label></div><input class="input" id="rt-date" type="date" value="${esc(r.heldOn || todayIso())}"></div></div>
       <div class="field-group"><div class="field-label"><label for="rt-notes">Anotações</label></div><textarea class="input" id="rt-notes" rows="3" maxlength="4000" style="resize:vertical;font-family:inherit">${esc(r.notes || '')}</textarea></div>
-      <div class="btn-row" data-perm="business"><button class="btn btn-sm btn-acc" onclick="Rites.markHeld('${kind}')"><i class="ti ti-check"></i>${held ? 'Atualizar registro' : 'Registrar como realizado'}</button>${held ? `<button class="btn btn-sm" onclick="Rites.reopenHeld('${kind}')">Marcar como não realizado</button><span class="badge b-grn">Realizado em ${fmt(r.heldOn)}</span>` : ''}</div></div>`;
+      <div class="btn-row" data-perm="run_rites"><button class="btn btn-sm btn-acc" onclick="Rites.markHeld('${kind}')"><i class="ti ti-check"></i>${held ? 'Atualizar registro' : 'Registrar como realizado'}</button>${held ? `<button class="btn btn-sm" onclick="Rites.reopenHeld('${kind}')">Marcar como não realizado</button><span class="badge b-grn">Realizado em ${fmt(r.heldOn)}</span>` : ''}</div></div>`;
   }
   function panel(s, x) {
     const r = AgileRites.RITES.find(y => y.kind === sel); load();
@@ -10630,7 +10932,7 @@ const Rites = (() => {
     return `<div class="card"><div class="lbl"><i class="ti ti-target"></i>Esta sprint</div>
       <div style="font-size:12.5px;color:var(--t1);margin-bottom:6px"><b>Meta:</b> ${esc(s.goal || 'ainda sem meta — defina em uma frase o que a sprint quer alcançar')}</div>
       <div class="kb-meta" style="margin-bottom:10px"><span class="chip">${fmt(s.startOn)} a ${fmt(s.endOn)}</span><span class="chip">capacidade ${esc(s.capacity === '' || s.capacity == null ? 'não definida' : s.capacity + ' pts')}</span><span class="chip">${mine.length} item(ns) · ${pts} pts comprometidos</span></div>
-      <div class="btn-row" data-perm="business"><button class="btn btn-sm btn-acc" onclick="Agile.openPlan('${esc(s.id)}')"><i class="ti ti-wand"></i>Planejar com sugestão do sistema</button><button class="btn btn-sm" onclick="Agile.openSprint('${esc(s.id)}')">Editar meta e datas</button><button class="btn btn-sm" onclick="R.go('backlog')">Abrir o backlog</button></div></div>`;
+      <div class="btn-row" data-perm="run_rites"><button class="btn btn-sm btn-acc" onclick="Agile.openPlan('${esc(s.id)}')"><i class="ti ti-wand"></i>Planejar com sugestão do sistema</button><button class="btn btn-sm" onclick="Agile.openSprint('${esc(s.id)}')">Editar meta e datas</button><button class="btn btn-sm" onclick="R.go('backlog')">Abrir o backlog</button></div></div>`;
   }
   // 2. Reunião diária: impedimentos
   function daily(s) {
@@ -10642,12 +10944,12 @@ const Rites = (() => {
       <div class="kb-meta">${Object.keys(by).length ? Object.entries(by).map(([n, c]) => `<span class="chip"><i class="ti ti-user"></i>${esc(n)}: ${c} item(ns)</span>`).join('') : '<span style="font-size:12.5px;color:var(--t3)">Nenhum item em andamento nesta sprint.</span>'}</div>
       <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm" onclick="R.go('kanban')"><i class="ti ti-layout-kanban"></i>Abrir o quadro</button></div></div>
       <div class="card"><div class="lbl"><i class="ti ti-alert-octagon"></i>Impedimentos<span class="help-q" data-help="Impedimento é tudo que trava o time e ele não resolve sozinho (uma decisão, um acesso, uma dependência). Registre aqui na reunião diária, dê um responsável e marque como resolvido quando acabar. Os abertos aparecem no Quadro." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
-      <div class="rk-toolbar" data-perm="business"><input class="input rk-q" id="rt-imp-title" maxlength="200" placeholder="O que está travando?" aria-label="Descrição do impedimento" onkeydown="if(event.key==='Enter'){Rites.addImp()}">
+      <div class="rk-toolbar" data-perm="run_rites"><input class="input rk-q" id="rt-imp-title" maxlength="200" placeholder="O que está travando?" aria-label="Descrição do impedimento" onkeydown="if(event.key==='Enter'){Rites.addImp()}">
         <input class="input" id="rt-imp-owner" list="rt-people" maxlength="80" placeholder="Quem resolve" aria-label="Responsável por resolver" style="max-width:200px"><datalist id="rt-people">${people.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
         <button class="btn btn-sm btn-acc" onclick="Rites.addImp()"><i class="ti ti-plus"></i>Registrar</button></div>
       ${open.length ? open.map(i => `<div class="ag-row"><div class="ag-main"><div class="ag-title">${esc(i.title)}</div><div class="kb-meta" style="margin-top:3px"><span class="chip">${esc(i.id)}</span>${i.owner ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.owner)}</span>` : '<span class="chip c-wa">sem responsável</span>'}<span class="chip">aberto em ${fmt(i.createdOn)}</span></div></div>
-        <span data-perm="business" style="display:flex;gap:6px"><button class="btn btn-sm btn-grn" onclick="Rites.resolveImp('${esc(i.id)}')"><i class="ti ti-check"></i>Resolvido</button><button class="btn btn-sm" aria-label="Excluir ${esc(i.id)}" onclick="Rites.delImp('${esc(i.id)}')"><i class="ti ti-trash"></i></button></span></div>`).join('') : '<div class="rk-empty">Nenhum impedimento aberto. Se algo estiver travando alguém, registre aqui.</div>'}
-      ${done.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--t2)">${done.length} resolvido(s) nesta sprint</summary>${done.map(i => `<div class="ag-row"><div class="ag-main"><div class="ag-title" style="font-weight:500">${esc(i.title)}</div><div style="font-size:11.5px;color:var(--t3)">resolvido em ${fmt(i.resolvedOn)}</div></div><button class="btn btn-sm" data-perm="business" onclick="Rites.reopenImp('${esc(i.id)}')">Reabrir</button></div>`).join('')}</details>` : ''}</div>`;
+        <span data-perm="run_rites" style="display:flex;gap:6px"><button class="btn btn-sm btn-grn" onclick="Rites.resolveImp('${esc(i.id)}')"><i class="ti ti-check"></i>Resolvido</button><button class="btn btn-sm" aria-label="Excluir ${esc(i.id)}" onclick="Rites.delImp('${esc(i.id)}')"><i class="ti ti-trash"></i></button></span></div>`).join('') : '<div class="rk-empty">Nenhum impedimento aberto. Se algo estiver travando alguém, registre aqui.</div>'}
+      ${done.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--t2)">${done.length} resolvido(s) nesta sprint</summary>${done.map(i => `<div class="ag-row"><div class="ag-main"><div class="ag-title" style="font-weight:500">${esc(i.title)}</div><div style="font-size:11.5px;color:var(--t3)">resolvido em ${fmt(i.resolvedOn)}</div></div><button class="btn btn-sm" data-perm="run_rites" onclick="Rites.reopenImp('${esc(i.id)}')">Reabrir</button></div>`).join('')}</details>` : ''}</div>`;
   }
   // 3. Revisão
   function review(s) {
@@ -10659,54 +10961,54 @@ const Rites = (() => {
       ${sum.notDone.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12.5px;color:var(--t2)">${sum.notDone.length} item(ns) não concluído(s)</summary>${sum.notDone.map(i => `<div style="font-size:12.5px;color:var(--t2);padding:3px 0">• ${esc(i.title)} <span class="chip">${esc(i.id)}</span></div>`).join('')}</details>` : ''}</div>
       <div class="card"><div class="lbl"><i class="ti ti-flag"></i>A meta da sprint foi atingida?</div>
       <div style="font-size:12.5px;color:var(--t2);margin-bottom:6px">Meta: ${esc(s.goal || 'não definida')}</div>
-      <select class="input" id="rt-goal" aria-label="A meta da sprint foi atingida" data-perm="business" style="max-width:240px" onchange="Rites.setGoal(this.value)"><option value="">Escolha…</option><option value="sim"${goal === 'sim' ? ' selected' : ''}>Sim, atingida</option><option value="parcial"${goal === 'parcial' ? ' selected' : ''}>Parcialmente</option><option value="nao"${goal === 'nao' ? ' selected' : ''}>Não atingida</option></select></div>
+      <select class="input" id="rt-goal" aria-label="A meta da sprint foi atingida" data-perm="run_rites" style="max-width:240px" onchange="Rites.setGoal(this.value)"><option value="">Escolha…</option><option value="sim"${goal === 'sim' ? ' selected' : ''}>Sim, atingida</option><option value="parcial"${goal === 'parcial' ? ' selected' : ''}>Parcialmente</option><option value="nao"${goal === 'nao' ? ' selected' : ''}>Não atingida</option></select></div>
       <div class="card"><div class="lbl"><i class="ti ti-message-2"></i>Feedback das partes interessadas</div>
-      <div class="rk-toolbar" data-perm="business"><input class="input rk-q" id="rt-new-fb" maxlength="200" placeholder="O que o cliente ou a diretoria disse?" aria-label="Novo feedback" onkeydown="if(event.key==='Enter'){Rites.addFb()}"><button class="btn btn-sm btn-acc" onclick="Rites.addFb()"><i class="ti ti-plus"></i>Adicionar</button></div>
-      ${fb.length ? fb.map((f, i) => `<div class="ag-row"><div class="ag-main"><div class="ag-title" style="font-weight:500">${esc(f.text)}</div></div><button class="btn btn-sm" data-perm="business" aria-label="Remover feedback" onclick="Rites.delFb(${i})"><i class="ti ti-trash"></i></button></div>`).join('') : '<div class="rk-empty" style="padding:10px">Nenhum feedback registrado.</div>'}
-      <div class="field-group" style="margin-top:8px"><div class="field-label"><label for="rt-changes">Mudanças no backlog decididas na revisão</label></div><textarea class="input" id="rt-changes" rows="2" maxlength="1000" data-perm="business" style="resize:vertical;font-family:inherit" onchange="Rites.setChanges(this.value)">${esc(d.changes || '')}</textarea></div></div>`;
+      <div class="rk-toolbar" data-perm="run_rites"><input class="input rk-q" id="rt-new-fb" maxlength="200" placeholder="O que o cliente ou a diretoria disse?" aria-label="Novo feedback" onkeydown="if(event.key==='Enter'){Rites.addFb()}"><button class="btn btn-sm btn-acc" onclick="Rites.addFb()"><i class="ti ti-plus"></i>Adicionar</button></div>
+      ${fb.length ? fb.map((f, i) => `<div class="ag-row"><div class="ag-main"><div class="ag-title" style="font-weight:500">${esc(f.text)}</div></div><button class="btn btn-sm" data-perm="run_rites" aria-label="Remover feedback" onclick="Rites.delFb(${i})"><i class="ti ti-trash"></i></button></div>`).join('') : '<div class="rk-empty" style="padding:10px">Nenhum feedback registrado.</div>'}
+      <div class="field-group" style="margin-top:8px"><div class="field-label"><label for="rt-changes">Mudanças no backlog decididas na revisão</label></div><textarea class="input" id="rt-changes" rows="2" maxlength="1000" data-perm="run_rites" style="resize:vertical;font-family:inherit" onchange="Rites.setChanges(this.value)">${esc(d.changes || '')}</textarea></div></div>`;
   }
   // 4. Retrospectiva
   function retro(s) {
     const d = AgileRites.normalizeRetro((rec('retrospectiva') || {}).data || {}), pend = AgileRites.pendingActions(s, sprints(), rites);
     const col = (key, title, icon, help) => `<div class="card" style="margin:0"><div class="lbl"><i class="ti ti-${icon}"></i>${title}</div>
-      <div class="rk-toolbar" data-perm="business"><input class="input rk-q" id="rt-new-${key}" maxlength="200" placeholder="${help}" aria-label="Novo cartão: ${title}" onkeydown="if(event.key==='Enter'){Rites.addCard('${key}')}"><button class="btn btn-sm" aria-label="Adicionar em ${title}" onclick="Rites.addCard('${key}')"><i class="ti ti-plus"></i></button></div>
-      ${d[key].length ? d[key].map((c, i) => `<div class="ag-row"><div class="ag-main"><div class="ag-title" style="font-weight:500">${esc(c.text)}</div></div><span data-perm="business" style="display:flex;gap:4px"><button class="btn btn-sm" aria-label="Votar: ${esc(c.text)}" onclick="Rites.vote('${key}',${i})">👍 ${c.votes}</button><button class="btn btn-sm" aria-label="Remover cartão" onclick="Rites.delCard('${key}',${i})"><i class="ti ti-trash"></i></button></span></div>`).join('') : '<div style="font-size:12px;color:var(--t3);padding:4px 2px">Nada ainda.</div>'}</div>`;
-    return (pend.length ? `<div class="card card-accent"><div class="lbl"><i class="ti ti-history"></i>Ações combinadas na retrospectiva anterior (${pend.length} em aberto)<span class="help-q" data-help="O que o time prometeu melhorar na sprint passada e ainda não foi concluído. Comece a retrospectiva por aqui: sem acompanhar as ações, a retro vira só conversa." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>${pend.map(a => `<label class="ag-row" style="cursor:pointer"><input type="checkbox" data-perm="business" aria-label="Concluir: ${esc(a.text)}" onchange="Rites.togglePrev('${esc(a.riteId)}','${esc(a.id)}')"><div class="ag-main"><div class="ag-title" style="font-weight:500">${esc(a.text)}</div><div style="font-size:11.5px;color:var(--t3)">${esc(a.fromSprint)}${a.owner ? ' · ' + esc(a.owner) : ''}${a.due ? ' · prazo ' + fmt(a.due) : ''}</div></div></label>`).join('')}</div>` : '')
+      <div class="rk-toolbar" data-perm="run_rites"><input class="input rk-q" id="rt-new-${key}" maxlength="200" placeholder="${help}" aria-label="Novo cartão: ${title}" onkeydown="if(event.key==='Enter'){Rites.addCard('${key}')}"><button class="btn btn-sm" aria-label="Adicionar em ${title}" onclick="Rites.addCard('${key}')"><i class="ti ti-plus"></i></button></div>
+      ${d[key].length ? d[key].map((c, i) => `<div class="ag-row"><div class="ag-main"><div class="ag-title" style="font-weight:500">${esc(c.text)}</div></div><span data-perm="run_rites" style="display:flex;gap:4px"><button class="btn btn-sm" aria-label="Votar: ${esc(c.text)}" onclick="Rites.vote('${key}',${i})">👍 ${c.votes}</button><button class="btn btn-sm" aria-label="Remover cartão" onclick="Rites.delCard('${key}',${i})"><i class="ti ti-trash"></i></button></span></div>`).join('') : '<div style="font-size:12px;color:var(--t3);padding:4px 2px">Nada ainda.</div>'}</div>`;
+    return (pend.length ? `<div class="card card-accent"><div class="lbl"><i class="ti ti-history"></i>Ações combinadas na retrospectiva anterior (${pend.length} em aberto)<span class="help-q" data-help="O que o time prometeu melhorar na sprint passada e ainda não foi concluído. Comece a retrospectiva por aqui: sem acompanhar as ações, a retro vira só conversa." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>${pend.map(a => `<label class="ag-row" style="cursor:pointer"><input type="checkbox" data-perm="run_rites" aria-label="Concluir: ${esc(a.text)}" onchange="Rites.togglePrev('${esc(a.riteId)}','${esc(a.id)}')"><div class="ag-main"><div class="ag-title" style="font-weight:500">${esc(a.text)}</div><div style="font-size:11.5px;color:var(--t3)">${esc(a.fromSprint)}${a.owner ? ' · ' + esc(a.owner) : ''}${a.due ? ' · prazo ' + fmt(a.due) : ''}</div></div></label>`).join('')}</div>` : '')
       + `<div class="g2" style="gap:12px;margin-bottom:12px">${col('well', 'O que funcionou bem', 'mood-smile', 'Algo que queremos manter')}${col('improve', 'O que pode melhorar', 'tool', 'Algo que atrapalhou')}</div>`
       + `<div class="card"><div class="lbl"><i class="ti ti-checklist"></i>Ações de melhoria para a próxima sprint<span class="help-q" data-help="Escolha poucas ações (1 a 3), cada uma com responsável e prazo. Elas voltam a aparecer na próxima retrospectiva até serem concluídas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
-      <div class="rk-toolbar" data-perm="business"><input class="input rk-q" id="rt-act-text" maxlength="200" placeholder="O que vamos tentar?" aria-label="Nova ação de melhoria"><input class="input" id="rt-act-owner" list="rt-people2" maxlength="80" placeholder="Responsável" aria-label="Responsável pela ação" style="max-width:170px"><datalist id="rt-people2">${team().map(n => `<option value="${esc(n)}">`).join('')}</datalist><input class="input" id="rt-act-due" type="date" aria-label="Prazo da ação" style="max-width:160px"><button class="btn btn-sm btn-acc" onclick="Rites.addAction()"><i class="ti ti-plus"></i>Adicionar</button></div>
-      ${d.actions.length ? d.actions.map((a, i) => `<label class="ag-row" style="cursor:pointer"><input type="checkbox" ${a.done ? 'checked' : ''} data-perm="business" aria-label="Ação concluída: ${esc(a.text)}" onchange="Rites.toggleAction(${i})"><div class="ag-main"><div class="ag-title" style="font-weight:500${a.done ? ';text-decoration:line-through' : ''}">${esc(a.text)}</div><div style="font-size:11.5px;color:var(--t3)">${a.owner ? esc(a.owner) : 'sem responsável'}${a.due ? ' · prazo ' + fmt(a.due) : ''}</div></div><button class="btn btn-sm" data-perm="business" aria-label="Remover ação" onclick="event.preventDefault();Rites.delAction(${i})"><i class="ti ti-trash"></i></button></label>`).join('') : '<div class="rk-empty" style="padding:10px">Nenhuma ação combinada ainda.</div>'}</div>`;
+      <div class="rk-toolbar" data-perm="run_rites"><input class="input rk-q" id="rt-act-text" maxlength="200" placeholder="O que vamos tentar?" aria-label="Nova ação de melhoria"><input class="input" id="rt-act-owner" list="rt-people2" maxlength="80" placeholder="Responsável" aria-label="Responsável pela ação" style="max-width:170px"><datalist id="rt-people2">${team().map(n => `<option value="${esc(n)}">`).join('')}</datalist><input class="input" id="rt-act-due" type="date" aria-label="Prazo da ação" style="max-width:160px"><button class="btn btn-sm btn-acc" onclick="Rites.addAction()"><i class="ti ti-plus"></i>Adicionar</button></div>
+      ${d.actions.length ? d.actions.map((a, i) => `<label class="ag-row" style="cursor:pointer"><input type="checkbox" ${a.done ? 'checked' : ''} data-perm="run_rites" aria-label="Ação concluída: ${esc(a.text)}" onchange="Rites.toggleAction(${i})"><div class="ag-main"><div class="ag-title" style="font-weight:500${a.done ? ';text-decoration:line-through' : ''}">${esc(a.text)}</div><div style="font-size:11.5px;color:var(--t3)">${a.owner ? esc(a.owner) : 'sem responsável'}${a.due ? ' · prazo ' + fmt(a.due) : ''}</div></div><button class="btn btn-sm" data-perm="run_rites" aria-label="Remover ação" onclick="event.preventDefault();Rites.delAction(${i})"><i class="ti ti-trash"></i></button></label>`).join('') : '<div class="rk-empty" style="padding:10px">Nenhuma ação combinada ainda.</div>'}</div>`;
   }
   // 5. Refinamento
   function refine(s) {
     const open = items().filter(i => i.status !== 'done'), unest = open.filter(i => i.points === '' || i.points == null), big = open.filter(i => Number(i.points) > AgileAi.SPLIT_ABOVE);
     return `<div class="card"><div class="lbl"><i class="ti ti-list-search"></i>Como está o topo do backlog</div>
       <div class="kb-meta" style="margin-bottom:10px"><span class="badge ${unest.length ? 'b-amb' : 'b-grn'}">${unest.length} sem estimativa</span><span class="badge ${big.length ? 'b-amb' : 'b-grn'}">${big.length} grande(s) demais (acima de ${AgileAi.SPLIT_ABOVE} pts)</span><span class="chip">${open.length} item(ns) abertos</span></div>
-      <div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="R.go('backlog');Agile.aiEstimate()"><i class="ti ti-sparkles"></i>Estimar e dividir com IA</button><button class="btn btn-sm" onclick="R.go('backlog')">Abrir o backlog</button></div></div>`;
+      <div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="run_rites" onclick="R.go('backlog');Agile.aiEstimate()"><i class="ti ti-sparkles"></i>Estimar e dividir com IA</button><button class="btn btn-sm" onclick="R.go('backlog')">Abrir o backlog</button></div></div>`;
   }
 
   // ── Ações ──
   function select(k) { sel = k; render(); }
   function setSprint(id) { sprintId = id; render(); }
   function markHeld(kind) {
-    if(!Auth.guard('business')) return; load();
+    if(!Auth.guard('run_rites')) return; load();
     const r = ensure(kind); r.heldOn = val('rt-date') || todayIso(); r.attendees = val('rt-att'); r.notes = String(document.getElementById('rt-notes').value || '').trim().slice(0, 4000);
     saveRites(r); render();
     Trail.log(`Rito registrado: ${AgileRites.RITES.find(x => x.kind === kind).label} (${(current() || {}).name})`, Auth.getName(), '', 'b-acc'); T.show('✅ Rito registrado.');
   }
-  function reopenHeld(kind) { if(!Auth.guard('business')) return; load(); const r = rec(kind); if(!r) return; r.heldOn = ''; saveRites(r); render(); }
+  function reopenHeld(kind) { if(!Auth.guard('run_rites')) return; load(); const r = rec(kind); if(!r) return; r.heldOn = ''; saveRites(r); render(); }
   function addImp() {
-    if(!Auth.guard('business')) return; load();
+    if(!Auth.guard('run_rites')) return; load();
     const title = val('rt-imp-title'); if(title.length < 2) { T.show('⚠️ Descreva o que está travando.'); return; }
     const i = { id: AgileCalc.nextId('IMP', imps), title, owner: val('rt-imp-owner'), sprintId, status: 'aberto', note: '', createdOn: todayIso(), resolvedOn: '' };
     imps.push(i); saveImps(i); if(typeof Agile !== 'undefined') Agile.render(); render(); T.show('✅ Impedimento registrado.');
   }
-  const impAct = (id, fn) => { if(!Auth.guard('business')) return; load(); const i = imps.find(x => x.id === id); if(!i) return; fn(i); };
+  const impAct = (id, fn) => { if(!Auth.guard('run_rites')) return; load(); const i = imps.find(x => x.id === id); if(!i) return; fn(i); };
   function resolveImp(id) { impAct(id, i => { i.status = 'resolvido'; i.resolvedOn = todayIso(); saveImps(i); Agile.render(); render(); T.show('✅ Impedimento resolvido.'); }); }
   function reopenImp(id) { impAct(id, i => { i.status = 'aberto'; i.resolvedOn = ''; saveImps(i); Agile.render(); render(); }); }
   function delImp(id) { impAct(id, i => { if(!confirm('Excluir este impedimento?')) return; imps = imps.filter(x => x.id !== id); DB.set('impediments', imps); if(typeof Cloud !== 'undefined') Cloud.deleteRow('impediments', id); Agile.render(); render(); }); }
   // dados estruturados do rito (revisão e retrospectiva)
-  function patchData(kind, fn) { if(!Auth.guard('business')) return; load(); const r = ensure(kind); r.data = r.data || {}; fn(r.data); if(kind === 'retrospectiva') r.data = AgileRites.normalizeRetro(r.data); saveRites(r); render(); }
+  function patchData(kind, fn) { if(!Auth.guard('run_rites')) return; load(); const r = ensure(kind); r.data = r.data || {}; fn(r.data); if(kind === 'retrospectiva') r.data = AgileRites.normalizeRetro(r.data); saveRites(r); render(); }
   const clean = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
   function setGoal(v) { patchData('revisao', d => { d.goal = ['sim', 'parcial', 'nao'].includes(v) ? v : ''; }); }
   function addFb() { const t = clean(val('rt-new-fb'), 200); if(!t) return; patchData('revisao', d => { d.feedback = (d.feedback || []).concat({ text: t }).slice(0, 40); }); }
@@ -10718,7 +11020,7 @@ const Rites = (() => {
   function addAction() { const t = clean(val('rt-act-text'), 200); if(!t) { T.show('⚠️ Descreva a ação.'); return; } patchData('retrospectiva', d => { d.actions = (d.actions || []).concat({ id: 'a' + Date.now().toString(36), text: t, owner: clean(val('rt-act-owner'), 80), due: val('rt-act-due'), done: false }); }); }
   function toggleAction(i) { patchData('retrospectiva', d => { if(d.actions && d.actions[i]) d.actions[i].done = !d.actions[i].done; }); }
   function delAction(i) { patchData('retrospectiva', d => { (d.actions || []).splice(i, 1); }); }
-  function togglePrev(riteId, actionId) { if(!Auth.guard('business')) return; load(); const r = rites.find(x => x.id === riteId); if(!r) return; const a = ((r.data || {}).actions || []).find(x => x.id === actionId); if(a) { a.done = true; saveRites(r); render(); T.show('✅ Ação concluída.'); } }
+  function togglePrev(riteId, actionId) { if(!Auth.guard('run_rites')) return; load(); const r = rites.find(x => x.id === riteId); if(!r) return; const a = ((r.data || {}).actions || []).find(x => x.id === actionId); if(a) { a.done = true; saveRites(r); render(); T.show('✅ Ação concluída.'); } }
 
   return { render, resetCache, select, setSprint, markHeld, reopenHeld, addImp, resolveImp, reopenImp, delImp, setGoal, addFb, delFb, setChanges, addCard, vote, delCard, addAction, toggleAction, delAction, togglePrev };
 })();
@@ -10745,11 +11047,11 @@ const Models = (() => {
     else list.innerHTML = `<div class="g3">${docs.slice().sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).map(d => { const k = ModelsCalc.KINDS[d.kind], p = ModelsCalc.progress(d.kind, d.data);
       return `<div class="card${d.id === openId ? ' card-accent' : ''}" style="margin:0"><div class="lbl"><i class="ti ti-${k.icon}"></i>${esc(k.label)}</div><div style="font-size:13.5px;font-weight:600;color:var(--t1);overflow-wrap:anywhere">${esc(d.title)}</div>
         <div style="font-size:11.5px;color:var(--t3);margin:3px 0 8px">atualizado em ${fmtDt(d.updatedAt)}${p ? ` · ${p.done}/${p.total} (${p.pct}%)` : ''}</div>
-        <div class="btn-row"><button class="btn btn-sm btn-acc" onclick="Models.open('${esc(d.id)}')">Abrir</button><button class="btn btn-sm" data-perm="business" aria-label="Excluir ${esc(d.title)}" onclick="Models.remove('${esc(d.id)}')"><i class="ti ti-trash"></i></button></div></div>`; }).join('')}</div>`;
+        <div class="btn-row"><button class="btn btn-sm btn-acc" onclick="Models.open('${esc(d.id)}')">Abrir</button><button class="btn btn-sm" data-perm="run_rites" aria-label="Excluir ${esc(d.title)}" onclick="Models.remove('${esc(d.id)}')"><i class="ti ti-trash"></i></button></div></div>`; }).join('')}</div>`;
     renderEditor();
   }
   function create() {
-    if(!Auth.guard('business')) return; load();
+    if(!Auth.guard('run_rites')) return; load();
     const kind = document.getElementById('md-kind').value, k = ModelsCalc.KINDS[kind]; if(!k) return;
     const d = { id: AgileCalc.nextId('DOC', docs), kind, title: `${k.label} — ${(DB.listProjects().find(p => p.id === DB.getActiveProjectId()) || {}).name || 'projeto'}`, data: ModelsCalc.create(kind), updatedAt: '' };
     docs.push(d); save(d); openId = d.id; render(); T.show(`✅ ${k.label} criado a partir do modelo.`);
@@ -10757,7 +11059,7 @@ const Models = (() => {
   }
   function open(id) { openId = id; render(); const ed = document.getElementById('md-editor'); if(ed) ed.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   function close() { openId = null; render(); }
-  function remove(id) { if(!Auth.guard('business')) return; load(); const d = docs.find(x => x.id === id); if(!d || !confirm(`Excluir "${d.title}"?`)) return; docs = docs.filter(x => x.id !== id); DB.set('projectDocs', docs); if(typeof Cloud !== 'undefined') Cloud.deleteRow('project_docs', id); if(openId === id) openId = null; render(); }
+  function remove(id) { if(!Auth.guard('run_rites')) return; load(); const d = docs.find(x => x.id === id); if(!d || !confirm(`Excluir "${d.title}"?`)) return; docs = docs.filter(x => x.id !== id); DB.set('projectDocs', docs); if(typeof Cloud !== 'undefined') Cloud.deleteRow('project_docs', id); if(openId === id) openId = null; render(); }
 
   function input(t, k, v, i) {
     const base = `class="input" aria-label="${esc(k[1])} da linha ${i + 1}" onchange="Models.setCell(${i},'${k[0]}',this.value)"`;
@@ -10774,25 +11076,25 @@ const Models = (() => {
     let body = '';
     if(k.type === 'table') {
       body = `<div style="overflow-x:auto"><table class="hr-tbl"><thead><tr>${k.cols.map(c => `<th scope="col">${esc(c[1])}</th>`).join('')}<th scope="col"><span style="position:absolute;left:-9999px">Ações</span></th></tr></thead><tbody>
-        ${d.data.rows.map((r, i) => `<tr>${k.cols.map(c => `<td>${input(c[2], c, r[c[0]], i)}</td>`).join('')}<td><button class="btn btn-sm" data-perm="business" aria-label="Remover linha ${i + 1}" onclick="Models.delRow(${i})"><i class="ti ti-trash"></i></button></td></tr>`).join('')}</tbody></table></div>
-        <div class="btn-row" style="margin-top:8px" data-perm="business"><button class="btn btn-sm" onclick="Models.addRow()"><i class="ti ti-plus"></i>Adicionar linha</button>${d.kind === 'comunicacao' ? '<button class="btn btn-sm" onclick="Models.importStakeholders()"><i class="ti ti-users"></i>Trazer os stakeholders do projeto</button>' : ''}</div>`;
+        ${d.data.rows.map((r, i) => `<tr>${k.cols.map(c => `<td>${input(c[2], c, r[c[0]], i)}</td>`).join('')}<td><button class="btn btn-sm" data-perm="run_rites" aria-label="Remover linha ${i + 1}" onclick="Models.delRow(${i})"><i class="ti ti-trash"></i></button></td></tr>`).join('')}</tbody></table></div>
+        <div class="btn-row" style="margin-top:8px" data-perm="run_rites"><button class="btn btn-sm" onclick="Models.addRow()"><i class="ti ti-plus"></i>Adicionar linha</button>${d.kind === 'comunicacao' ? '<button class="btn btn-sm" onclick="Models.importStakeholders()"><i class="ti ti-users"></i>Trazer os stakeholders do projeto</button>' : ''}</div>`;
     } else if(k.type === 'swot') {
       body = `<div class="g2" style="gap:12px">${k.lists.map(([key, label]) => `<div class="card" style="margin:0"><div class="lbl">${esc(label)}</div>
-        <div class="rk-toolbar" data-perm="business"><input class="input rk-q" id="sw-${key}" maxlength="200" aria-label="Novo item em ${esc(label)}" placeholder="Adicionar…" onkeydown="if(event.key==='Enter'){Models.addSwot('${key}')}"><button class="btn btn-sm" aria-label="Adicionar em ${esc(label)}" onclick="Models.addSwot('${key}')"><i class="ti ti-plus"></i></button></div>
-        ${(d.data.lists[key] || []).map((t, i) => `<div class="ag-row"><div class="ag-main"><div class="ag-title" style="font-weight:500">${esc(t)}</div></div><button class="btn btn-sm" data-perm="business" aria-label="Remover: ${esc(t)}" onclick="Models.delSwot('${key}',${i})"><i class="ti ti-trash"></i></button></div>`).join('') || '<div style="font-size:12px;color:var(--t3)">Nada ainda.</div>'}</div>`).join('')}</div>`;
+        <div class="rk-toolbar" data-perm="run_rites"><input class="input rk-q" id="sw-${key}" maxlength="200" aria-label="Novo item em ${esc(label)}" placeholder="Adicionar…" onkeydown="if(event.key==='Enter'){Models.addSwot('${key}')}"><button class="btn btn-sm" aria-label="Adicionar em ${esc(label)}" onclick="Models.addSwot('${key}')"><i class="ti ti-plus"></i></button></div>
+        ${(d.data.lists[key] || []).map((t, i) => `<div class="ag-row"><div class="ag-main"><div class="ag-title" style="font-weight:500">${esc(t)}</div></div><button class="btn btn-sm" data-perm="run_rites" aria-label="Remover: ${esc(t)}" onclick="Models.delSwot('${key}',${i})"><i class="ti ti-trash"></i></button></div>`).join('') || '<div style="font-size:12px;color:var(--t3)">Nada ainda.</div>'}</div>`).join('')}</div>`;
     } else {
       body = k.sections.map(([key, label]) => { const s = d.data.sections[key] || { items: [], note: '' };
         return `<div class="card" style="margin-bottom:10px"><div class="lbl">${esc(label)}</div>
-          ${s.items.map((it, i) => `<label class="ag-row" style="cursor:pointer"><input type="checkbox" ${it.done ? 'checked' : ''} data-perm="business" aria-label="${esc(it.text)}" onchange="Models.toggleItem('${key}',${i})"><div class="ag-main"><div class="ag-title" style="font-weight:500${it.done ? ';text-decoration:line-through' : ''}">${esc(it.text)}</div></div><button class="btn btn-sm" data-perm="business" aria-label="Remover item" onclick="event.preventDefault();Models.delItem('${key}',${i})"><i class="ti ti-trash"></i></button></label>`).join('')}
-          <div class="rk-toolbar" data-perm="business" style="margin-top:6px"><input class="input rk-q" id="hd-${key}" maxlength="200" aria-label="Novo item em ${esc(label)}" placeholder="Adicionar item…" onkeydown="if(event.key==='Enter'){Models.addItem('${key}')}"><button class="btn btn-sm" aria-label="Adicionar em ${esc(label)}" onclick="Models.addItem('${key}')"><i class="ti ti-plus"></i></button></div>
-          <textarea class="input" rows="2" maxlength="1000" aria-label="Observações: ${esc(label)}" placeholder="Observações" data-perm="business" style="resize:vertical;font-family:inherit" onchange="Models.setNote('${key}',this.value)">${esc(s.note)}</textarea></div>`; }).join('');
+          ${s.items.map((it, i) => `<label class="ag-row" style="cursor:pointer"><input type="checkbox" ${it.done ? 'checked' : ''} data-perm="run_rites" aria-label="${esc(it.text)}" onchange="Models.toggleItem('${key}',${i})"><div class="ag-main"><div class="ag-title" style="font-weight:500${it.done ? ';text-decoration:line-through' : ''}">${esc(it.text)}</div></div><button class="btn btn-sm" data-perm="run_rites" aria-label="Remover item" onclick="event.preventDefault();Models.delItem('${key}',${i})"><i class="ti ti-trash"></i></button></label>`).join('')}
+          <div class="rk-toolbar" data-perm="run_rites" style="margin-top:6px"><input class="input rk-q" id="hd-${key}" maxlength="200" aria-label="Novo item em ${esc(label)}" placeholder="Adicionar item…" onkeydown="if(event.key==='Enter'){Models.addItem('${key}')}"><button class="btn btn-sm" aria-label="Adicionar em ${esc(label)}" onclick="Models.addItem('${key}')"><i class="ti ti-plus"></i></button></div>
+          <textarea class="input" rows="2" maxlength="1000" aria-label="Observações: ${esc(label)}" placeholder="Observações" data-perm="run_rites" style="resize:vertical;font-family:inherit" onchange="Models.setNote('${key}',this.value)">${esc(s.note)}</textarea></div>`; }).join('');
     }
     root.innerHTML = `<div class="card" style="margin-top:12px"><div class="lbl"><i class="ti ti-${k.icon}"></i>${esc(k.label)}<span class="help-q" data-help="${esc(k.help)}" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
-      <div class="rk-toolbar"><input class="input rk-q" id="md-title" maxlength="120" value="${esc(d.title)}" aria-label="Título do documento" data-perm="business" onchange="Models.setTitle(this.value)">${p ? `<span class="badge ${p.pct === 100 ? 'b-grn' : 'b-acc'}" id="md-prog">${p.done} de ${p.total} · ${p.pct}%</span>` : ''}
+      <div class="rk-toolbar"><input class="input rk-q" id="md-title" maxlength="120" value="${esc(d.title)}" aria-label="Título do documento" data-perm="run_rites" onchange="Models.setTitle(this.value)">${p ? `<span class="badge ${p.pct === 100 ? 'b-grn' : 'b-acc'}" id="md-prog">${p.done} de ${p.total} · ${p.pct}%</span>` : ''}
         <button class="btn btn-sm" onclick="Models.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button><button class="btn btn-sm" onclick="Models.close()">Fechar</button></div>
       <div style="font-size:12px;color:var(--t2);margin-bottom:10px">${esc(k.help)}</div>${body}</div>`;
   }
-  const mutate = fn => { if(!Auth.guard('business')) return; load(); const d = cur(); if(!d) return; fn(d); d.data = ModelsCalc.sanitize(d.kind, d.data); save(d); };
+  const mutate = fn => { if(!Auth.guard('run_rites')) return; load(); const d = cur(); if(!d) return; fn(d); d.data = ModelsCalc.sanitize(d.kind, d.data); save(d); };
   function setTitle(v) { mutate(d => { d.title = String(v).replace(/\s+/g, ' ').trim().slice(0, 120) || d.title; }); render(); }
   function setCell(i, key, v) { mutate(d => { if(d.data.rows[i]) d.data.rows[i][key] = v; }); const d = cur(), p = d && ModelsCalc.progress(d.kind, d.data), el = document.getElementById('md-prog'); if(p && el) el.textContent = `${p.done} de ${p.total} · ${p.pct}%`; }
   function addRow() { mutate(d => { d.data.rows.push({}); }); render(); }
@@ -11981,7 +12283,7 @@ const Hours = (() => {
     document.getElementById('hr-f-note').value = e ? (e.note || '') : '';
   }
   function openAdd() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('log_hours')) return;
     modalCtx = { mode:'add', id:null };
     document.getElementById('hr-modal-title').textContent = 'Apontar horas';
     document.getElementById('hr-f-delete-btn').style.display = 'none';
@@ -11990,7 +12292,7 @@ const Hours = (() => {
     document.getElementById('hr-f-person-m').focus();
   }
   function openEdit(id) {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('log_hours')) return;
     const e = ensureLoaded().find(x => x.id === id); if(!e) return;
     modalCtx = { mode:'edit', id };
     document.getElementById('hr-modal-title').textContent = 'Editar apontamento';
@@ -12002,7 +12304,7 @@ const Hours = (() => {
   function closeModal() { document.getElementById('modal-hours').classList.add('hidden'); }
 
   function saveFromModal() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('log_hours')) return;
     ensureLoaded();
     const person = document.getElementById('hr-f-person-m').value.trim();
     const date = document.getElementById('hr-f-date').value;
@@ -12025,7 +12327,7 @@ const Hours = (() => {
     T.show(`✅ ${fmtH(fields.hours)} apontadas para ${esc(person)}`);
   }
   function deleteFromModal() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('log_hours')) return;
     ensureLoaded();
     const e = data.find(x => x.id === modalCtx.id); if(!e) return;
     if(!confirm('Excluir este apontamento?')) return;
@@ -12399,7 +12701,7 @@ const Budget = (() => {
           <div class="set-lbl">${escapeHtml(l.label)}${l.isReserve ? ' <span class="badge b-neu">Reserva</span>' : ''}${l.origin==='ia' ? ' <span class="badge" style="background:var(--s2);color:var(--t3)" title="Criado a partir de um documento pelo Raio-X do Projeto"><i class="ti ti-sparkles"></i> IA</span>' : ''}</div>
           <div class="set-sub">${fmtMoney(l.plannedValue)}${wbsLabel ? ' · ' + escapeHtml(wbsLabel) : (l.isReserve ? '' : ' · sem entrega vinculada')}</div>
         </div>
-        <button class="wbs-ic-btn" data-perm="business" title="Editar" onclick="Budget.openEditLine('${l.id}')"><i class="ti ti-edit"></i></button>
+        <button class="wbs-ic-btn" data-perm="edit_costs" title="Editar" onclick="Budget.openEditLine('${l.id}')"><i class="ti ti-edit"></i></button>
       </div>`;
     }).join('');
   }
@@ -12417,7 +12719,7 @@ const Budget = (() => {
           <div class="set-lbl">${escapeHtml(a.label)} ${kindBadge}</div>
           <div class="set-sub">${fmtMoney(a.amount)} · ${a.date||''}${line ? ' · ' + escapeHtml(line.label) : ''}</div>
         </div>
-        <button class="wbs-ic-btn" data-perm="business" title="Editar" onclick="Budget.openEditActual('${a.id}')"><i class="ti ti-edit"></i></button>
+        <button class="wbs-ic-btn" data-perm="edit_costs" title="Editar" onclick="Budget.openEditActual('${a.id}')"><i class="ti ti-edit"></i></button>
       </div>`;
     }).join('');
   }
@@ -12434,7 +12736,7 @@ const Budget = (() => {
   }
 
   function openAddLine() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('edit_costs')) return;
     ensureLoaded();
     lineModalCtx = { mode:'add', id:null };
     document.getElementById('bud-line-modal-title').textContent = 'Nova linha de orçamento';
@@ -12447,7 +12749,7 @@ const Budget = (() => {
   }
 
   function openEditLine(id) {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('edit_costs')) return;
     ensureLoaded();
     const l = lines.find(x => x.id === id);
     if(!l) return;
@@ -12462,7 +12764,7 @@ const Budget = (() => {
   }
 
   function saveLineFromModal() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('edit_costs')) return;
     ensureLoaded();
     const label = document.getElementById('bud-line-f-label').value.trim();
     const plannedValue = parseFloat(document.getElementById('bud-line-f-value').value) || 0;
@@ -12487,7 +12789,7 @@ const Budget = (() => {
   }
 
   function deleteLineFromModal() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('edit_costs')) return;
     ensureLoaded();
     if(!confirm('Excluir esta linha de orçamento?')) return;
     lines = lines.filter(x => x.id !== lineModalCtx.id);
@@ -12509,7 +12811,7 @@ const Budget = (() => {
   }
 
   function openAddActual() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('edit_costs')) return;
     ensureLoaded();
     if(!lines.length) { T.show('⚠️ Cadastre uma linha de orçamento antes de lançar um custo.'); return; }
     actualModalCtx = { mode:'add', id:null };
@@ -12524,7 +12826,7 @@ const Budget = (() => {
   }
 
   function openEditActual(id) {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('edit_costs')) return;
     ensureLoaded();
     const a = actuals.find(x => x.id === id);
     if(!a) return;
@@ -12540,7 +12842,7 @@ const Budget = (() => {
   }
 
   function saveActualFromModal() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('edit_costs')) return;
     ensureLoaded();
     const label = document.getElementById('bud-actual-f-label').value.trim();
     const amount = parseFloat(document.getElementById('bud-actual-f-amount').value) || 0;
@@ -12567,7 +12869,7 @@ const Budget = (() => {
   }
 
   function deleteActualFromModal() {
-    if(!Auth.guard('business')) return;
+    if(!Auth.guard('edit_costs')) return;
     ensureLoaded();
     if(!confirm('Excluir este lançamento de custo?')) return;
     actuals = actuals.filter(x => x.id !== actualModalCtx.id);
@@ -12642,7 +12944,20 @@ const Burnout = (() => {
 
   function openModal() { document.getElementById('modal-burnout').classList.remove('hidden'); }
   function closeModal() { document.getElementById('modal-burnout').classList.add('hidden'); }
-  function fill(name, role, alloc, pct, signals, rec) {
+  // Lista as contas cadastradas para o vínculo (só Administrador logado na nuvem)
+  async function fillAccounts(userId) {
+    const wrap = document.getElementById('burnout-f-account-wrap'), sel = document.getElementById('burnout-f-account');
+    if(!wrap || !sel) return;
+    const ok = typeof Cloud !== 'undefined' && Cloud.isSignedIn() && Auth.getRole() === 'admin';
+    wrap.style.display = ok ? '' : 'none';
+    if(!ok) return;
+    const profiles = await Cloud.listProfiles();
+    const esc = s => (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    sel.innerHTML = '<option value="">Sem conta vinculada</option>' + profiles.map(p => `<option value="${p.id}">${esc(p.name || p.id)}</option>`).join('');
+    sel.value = userId || '';
+  }
+  function fill(name, role, alloc, pct, signals, rec, userId) {
+    fillAccounts(userId);
     document.getElementById('burnout-f-name').value = name || '';
     document.getElementById('burnout-f-role').value = role || '';
     document.getElementById('burnout-f-alloc').value = (alloc===undefined||alloc===null) ? '' : alloc;
@@ -12670,7 +12985,7 @@ const Burnout = (() => {
     modalCtx = { mode:'edit', id, snapshot:{ name:m.name, role:m.role||'', allocationPct:m.allocationPct, workloadPct:m.workloadPct, signals:m.signals||[], recommendation:m.recommendation||'' } };
     document.getElementById('burnout-modal-title').textContent = 'Editar colaborador';
     document.getElementById('burnout-f-delete-btn').style.display = '';
-    fill(m.name, m.role, m.allocationPct, m.workloadPct, m.signals, m.recommendation);
+    fill(m.name, m.role, m.allocationPct, m.workloadPct, m.signals, m.recommendation, m.userId);
     openModal();
   }
 
@@ -12712,6 +13027,8 @@ const Burnout = (() => {
       saved = data.find(x => x.id === modalCtx.id);
       if(saved) { saved.name=name; saved.role=role; saved.allocationPct=alloc; saved.workloadPct=pct; saved.signals=signals; saved.recommendation=rec; }
       T.show('✅ Atualizado!');
+      const acc = document.getElementById('burnout-f-account-wrap');
+      if(saved && acc && acc.style.display !== 'none') saved.userId = document.getElementById('burnout-f-account').value;
       if(statusOf(pct) === 'critico') Trail.log(`${name} entrou em zona crítica de sobrecarga (${pct}%)`, Auth.getName(), 'Atenção necessária', 'b-red');
     }
     persist();
@@ -16336,6 +16653,7 @@ const Messaging = (() => {
       <div><div class="field-label">Carga de trabalho / burnout (%)</div><input class="input" type="number" min="0" max="150" id="burnout-f-pct" placeholder="0-150"><div style="font-size:11px;color:var(--t3);margin-top:4px">Indicador subjetivo de esgotamento — pode ser maior ou menor que a alocação (ex: 100% alocado mas trabalhando tranquilo = carga baixa).</div></div>
       <div><div class="field-label">Sinais de alerta (separados por vírgula)</div><input class="input" id="burnout-f-signals" placeholder="Ex: 14 dias sem folga, +3h extras/dia"></div>
       <div><div class="field-label">Recomendação da IA</div><textarea class="input" id="burnout-f-rec" rows="2" style="resize:vertical;font-family:inherit" placeholder="Ex: Redistribuir tarefa X para Y"></textarea></div>
+      <div data-perm="admin" id="burnout-f-account-wrap" style="display:none"><div class="field-label"><label for="burnout-f-account">Conta de login vinculada</label></div><select class="input" id="burnout-f-account"><option value="">Sem conta vinculada</option></select><div style="font-size:11px;color:var(--t3);margin-top:4px">Liga esta pessoa à conta dela: ela passa a ver e mexer só nos itens em que é a responsável e a apontar as próprias horas. Só o Administrador vincula.</div></div>
     </div>
     <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
       <button class="btn btn-sm btn-red" id="burnout-f-delete-btn" style="display:none" onclick="Burnout.deleteFromModal()"><i class="ti ti-trash"></i>Excluir</button>
