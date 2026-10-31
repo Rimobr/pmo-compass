@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.13.0'
+  version: '2.14.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1917,6 +1917,8 @@ body.icons-failed i[data-fb]::before{
     <div><div class="pg-title">Backlog<span class="help-q" data-help="A lista de tudo que o produto ainda precisa receber, em ordem de prioridade (o de cima é o mais importante). Use ▲ ▼ para priorizar e o campo Sprint para colocar o item no próximo ciclo. Pontos são uma estimativa de esforço relativo, não horas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Itens em ordem de prioridade. Coloque os mais importantes na próxima sprint.</div></div>
     <div class="btn-row">
       <button class="btn btn-sm btn-acc" data-perm="business" onclick="Agile.openItem()"><i class="ti ti-plus"></i>Novo item</button>
+      <button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('backlog')"><i class="ti ti-table-import"></i>Importar planilha<span class="help-q" data-help="Traz vários itens de uma vez de uma planilha Excel ou CSV (inclusive exportada do Jira ou Trello). Colunas reconhecidas: título, tipo, pontos, responsável, situação, sprint, prioridade e descrição. Você vê uma prévia e confere antes de importar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
+      <button class="btn btn-sm" data-perm="business" onclick="Agile.openPlanNext()"><i class="ti ti-wand"></i>Planejar sprint<span class="help-q" data-help="O sistema monta a próxima sprint para você: pega os itens estimados do topo do backlog, na ordem de prioridade, até encher a capacidade (pontos), deixando uma reserva para imprevistos. Ele compara com o ritmo real do time e avisa o que não coube e por quê. Você revisa antes de aplicar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
       <button class="btn btn-sm" onclick="Agile.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button>
     </div>
   </div>
@@ -1960,6 +1962,22 @@ body.icons-failed i[data-fb]::before{
     <div class="btn-row" style="margin-top:14px;justify-content:space-between">
       <button class="btn btn-sm btn-red" id="ai-del" onclick="Agile.deleteItem()"><i class="ti ti-trash"></i>Excluir</button>
       <span style="display:flex;gap:8px"><button class="btn btn-sm" onclick="Agile.closeItem()">Cancelar</button><button class="btn btn-sm btn-acc" onclick="Agile.saveItem()"><i class="ti ti-check"></i>Salvar</button></span>
+    </div>
+  </div>
+</div>
+
+<div class="modal-ov hidden" id="modal-agile-plan" onclick="if(event.target===this)Agile.closePlan()">
+  <div class="modal-box" style="width:620px;max-width:96vw;max-height:92vh;overflow-y:auto" role="dialog" aria-modal="true" aria-labelledby="ap-title-h">
+    <div class="modal-title" id="ap-title-h">Planejar sprint</div>
+    <div class="modal-sub" id="ap-sub">O sistema sugere os itens que cabem na capacidade. Nada muda até você aplicar.</div>
+    <div class="g2" style="gap:10px">
+      <div class="field-group"><div class="field-label"><label for="ap-cap">Capacidade (pontos)</label><span class="help-q" data-help="Quantos pontos o time consegue entregar nesta sprint. Já vem preenchido com a capacidade da sprint ou, se vazia, com a velocidade média das últimas sprints. Ajuste se houver férias, feriados ou pessoas a menos." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="ap-cap" type="number" min="0" max="1000" oninput="Agile.recalcPlan()"></div>
+      <div class="field-group"><div class="field-label"><label for="ap-res">Reserva para imprevistos (%)</label><span class="help-q" data-help="Parte da capacidade que fica livre para bugs, correções e trabalho não previsto. Em geral 10% a 20%. Esse valor fica salvo para as próximas sprints do projeto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="ap-res" type="number" min="0" max="50" oninput="Agile.recalcPlan()"></div>
+    </div>
+    <div id="ap-root"></div>
+    <div class="btn-row" style="margin-top:14px;justify-content:flex-end">
+      <button class="btn btn-sm" onclick="Agile.closePlan()">Cancelar</button>
+      <button class="btn btn-sm btn-acc" id="ap-apply" onclick="Agile.applyPlan()"><i class="ti ti-check"></i>Aplicar sugestão</button>
     </div>
   </div>
 </div>
@@ -8795,7 +8813,16 @@ const SheetImport = (() => {
       { key:'date', label:'Data', req:true, syn:['data','dia','date'] },
       { key:'hours', label:'Horas', req:true, syn:['horas','hs','h','tempo','hours','duracao','esforco'] },
       { key:'wbsRef', label:'Entrega/atividade', syn:['entrega','atividade','tarefa','task','projeto','fase'] },
-      { key:'note', label:'Observação', syn:['observacao','obs','nota','comentario','note','descricao'] } ] }
+      { key:'note', label:'Observação', syn:['observacao','obs','nota','comentario','note','descricao'] } ] },
+    backlog: { label:'Backlog (itens ágeis)', fields:[
+      { key:'title', label:'Item (título)', req:true, syn:['titulo','item','historia','user story','story','nome','summary','resumo','item do backlog','requisito'] },
+      { key:'kind', label:'Tipo (história/bug/tarefa)', syn:['tipo','type','kind','issue type','tipo de item','tipo de issue'] },
+      { key:'points', label:'Pontos (estimativa)', syn:['pontos','points','story points','story point','sp','estimativa','tamanho','esforco'] },
+      { key:'assignee', label:'Responsável', syn:['responsavel','assignee','dono','owner','atribuido a','atribuido'] },
+      { key:'status', label:'Situação', syn:['situacao','status','estado','coluna'] },
+      { key:'sprint', label:'Sprint', syn:['sprint','iteracao','iteration'] },
+      { key:'priority', label:'Prioridade (1 = mais importante)', syn:['prioridade','priority','ordem','rank','posicao'] },
+      { key:'description', label:'Descrição / critérios de aceite', syn:['descricao','description','detalhe','detalhes','criterios de aceite','acceptance criteria'] } ] }
   };
 
   // Escolhe, para cada campo, a coluna cujo cabeçalho melhor combina (igualdade vence "contém"); uma coluna só atende um campo.
@@ -8832,6 +8859,8 @@ const SheetImport = (() => {
   const KIND = { real:'real', realizado:'real', pago:'real', gasto:'real', comprometido:'comprometido', previsto:'comprometido', empenhado:'comprometido' };
   const CATEGORY = Object.fromEntries([['custo','custo'],['cost','custo'],['escopo','escopo'],['scope','escopo'],['externo','externo'],['external','externo'],['legal','legal'],['juridico','legal'],['prazo','prazo'],['schedule','prazo'],['cronograma','prazo'],['qualidade','qualidade'],['quality','qualidade'],['recursos','recursos'],['equipe','recursos'],['pessoas','recursos'],['tecnico','tecnico'],['tecnologia','tecnico'],['technical','tecnico']]);
   const RESPONSE = { aceitar:'aceitar', accept:'aceitar', evitar:'evitar', avoid:'evitar', mitigar:'mitigar', mitigate:'mitigar', transferir:'transferir', transfer:'transferir' };
+  const BKIND = { bug:'bug', defeito:'bug', erro:'bug', falha:'bug', historia:'historia', 'user story':'historia', story:'historia', epico:'historia', tarefa:'tarefa', task:'tarefa', 'sub-tarefa':'tarefa', subtask:'tarefa', melhoria:'tarefa', improvement:'tarefa' };
+  const BSTATUS = { 'a fazer':'todo', todo:'todo', 'to do':'todo', backlog:'todo', novo:'todo', aberto:'todo', pendente:'todo', 'em andamento':'doing', doing:'doing', 'in progress':'doing', fazendo:'doing', desenvolvimento:'doing', 'em revisao':'review', review:'review', 'in review':'review', revisao:'review', teste:'review', testes:'review', qa:'review', homologacao:'review', concluido:'done', concluida:'done', done:'done', pronto:'done', finalizado:'done', fechado:'done', closed:'done' };
   const RSTATUS = { aberto:'aberto', open:'aberto', mitigando:'mitigando', aceito:'aceito', ocorrido:'ocorrido', encerrado:'encerrado', fechado:'encerrado', closed:'encerrado' };
 
   // Converte a matriz (linhas já sem o cabeçalho) em registros do app. Nunca lança: problemas vão para errors/warnings
@@ -8945,6 +8974,31 @@ const SheetImport = (() => {
         seen.add(key);
         out.push({ person, date, hours: h, wbsRef: safeText(cell(r, map, 'wbsRef')), note: safeText(cell(r, map, 'note')), memberId: '' });
       });
+    }
+    else if(target === 'backlog') {
+      const seen = new Set((ctx.existingTitles || []).map(SheetParse.norm));
+      const sprintByName = new Map((ctx.sprints || []).map(s => [SheetParse.norm(s.name), s.id]));
+      rows.forEach((r, i) => {
+        const title = safeText(cell(r, map, 'title')); if(!title && !r.some(c => String(c).trim())) return;
+        if(title.length < 2) { err(i, 'Item sem título (mínimo 2 letras) — ignorado.'); return; }
+        if(seen.has(SheetParse.norm(title))) { warn(i, `"${title}" já existe no backlog — não duplicado.`); return; }
+        seen.add(SheetParse.norm(title));
+        let points = '';
+        if(cell(r, map, 'points') !== '') {
+          const p = SheetParse.parseNumber(raw(r, map, 'points'));
+          if(p == null || p < 0 || p > 100) warn(i, `"${title}": pontos inválidos (use um número de 0 a 100) — importado sem estimativa.`);
+          else points = Math.round(p);
+        }
+        const kindTxt = SheetParse.norm(cell(r, map, 'kind')), kind = BKIND[kindTxt] || 'historia';
+        if(kindTxt && !BKIND[kindTxt]) warn(i, `"${title}": tipo "${cell(r, map, 'kind')}" não reconhecido — usada História.`);
+        const status = BSTATUS[SheetParse.norm(cell(r, map, 'status'))] || 'todo';
+        const spTxt = cell(r, map, 'sprint'); let sprintId = '';
+        if(spTxt) { sprintId = sprintByName.get(SheetParse.norm(spTxt)) || ''; if(!sprintId) warn(i, `"${title}": a sprint "${spTxt}" não existe — o item entrou no backlog, sem sprint. Crie a sprint e atribua depois.`); }
+        const pr = SheetParse.parseNumber(raw(r, map, 'priority'));
+        out.push({ title, kind, points, assignee: safeText(cell(r, map, 'assignee')).slice(0, 80), status, sprintId, description: String(cell(r, map, 'description')).slice(0, 2000), priority: pr == null ? null : pr, doneOn: status === 'done' ? (ctx.today || '') : '', order: i });
+      });
+      // Ordem de prioridade: coluna Prioridade (menor número primeiro); sem ela, a ordem da planilha
+      out.sort((a, b) => (a.priority == null ? 1e9 : a.priority) - (b.priority == null ? 1e9 : b.priority) || a.order - b.order);
     }
     return { rows: out, errors, warnings };
   }
@@ -9436,13 +9490,13 @@ const Risks = (() => {
 const AgileCalc = (() => {
   const COLS = [{ key:'todo', label:'A fazer' }, { key:'doing', label:'Em andamento' }, { key:'review', label:'Em revisão' }, { key:'done', label:'Concluído' }];
   const KINDS = { bug:'Bug', historia:'História', tarefa:'Tarefa' };
-  const DEFAULT_CFG = { wip: { doing: 3, review: 2 } };
+  const DEFAULT_CFG = { wip: { doing: 3, review: 2 }, reservePct: 15 };
   const DAY = 86400000;
   const pts = x => Number(x && x.points) || 0;
   const sum = list => list.reduce((s, x) => s + pts(x), 0);
   const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   const diffDays = (a, b) => Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / DAY);
-  const cfgOf = cfg => ({ wip: { doing: DEFAULT_CFG.wip.doing, review: DEFAULT_CFG.wip.review, ...((cfg && cfg.wip) || {}) } });
+  const cfgOf = cfg => ({ wip: { doing: DEFAULT_CFG.wip.doing, review: DEFAULT_CFG.wip.review, ...((cfg && cfg.wip) || {}) }, reservePct: cfg && cfg.reservePct != null ? Math.max(0, Math.min(50, Number(cfg.reservePct) || 0)) : DEFAULT_CFG.reservePct });
 
   // Por coluna: quantos itens, limite (0 = sem limite) e se passou do limite
   function wip(items, cfg) {
@@ -9491,7 +9545,48 @@ const AgileCalc = (() => {
     const n = list.map(x => parseInt(String(x.id).replace(/\D/g, ''), 10)).filter(v => !isNaN(v));
     return prefix + '-' + String((n.length ? Math.max(...n) : 0) + 1).padStart(3, '0');
   }
-  return { COLS, KINDS, DEFAULT_CFG, cfgOf, wip, moveTo, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+
+  // ── Planejamento assistido da sprint: pontos × capacidade ──
+  // Pega os itens estimados do topo do backlog, na ordem de prioridade, até encher a capacidade ÚTIL
+  // (capacidade menos uma reserva para imprevistos e correções), e explica o que fez e o que não coube.
+  //  opts: { capacity, reservePct (0–50, padrão 15), velocityAvg (média das últimas sprints, ou null) }
+  function planSprint(items, sprint, opts) {
+    const capacity = Math.max(0, Number(opts && opts.capacity) || 0);
+    const reservePct = Math.max(0, Math.min(50, opts && opts.reservePct != null ? Number(opts.reservePct) : 15));
+    const velocityAvg = opts && opts.velocityAvg != null ? Number(opts.velocityAvg) : null;
+    const target = Math.floor(capacity * (1 - reservePct / 100));
+    const committed = sum(items.filter(i => i.sprintId === sprint.id));
+    let remaining = Math.max(0, target - committed), used = 0;
+    const candidates = items.filter(i => i.status !== 'done' && !i.sprintId).slice().sort((a, b) => (a.rank || 0) - (b.rank || 0));
+    const selected = [], skipped = [];
+    let skippedAbove = false, filledBelow = 0;
+    candidates.forEach(c => {
+      if(c.points === '' || c.points == null) { skipped.push({ id: c.id, title: c.title, reason: 'sem estimativa — estime os pontos antes de planejar' }); skippedAbove = true; return; }
+      const p = pts(c);
+      if(target > 0 && p > target) { skipped.push({ id: c.id, title: c.title, reason: `tem ${p} pts, mais que a capacidade útil da sprint (${target}) — divida em itens menores` }); skippedAbove = true; return; }
+      if(p <= remaining) { selected.push(c.id); remaining -= p; used += p; if(skippedAbove) filledBelow++; }
+      else { skipped.push({ id: c.id, title: c.title, reason: `não coube (faltam ${p - remaining} pts)` }); skippedAbove = true; }
+    });
+    const advice = [];
+    if(!capacity) advice.push({ level: 'warn', text: 'Defina a capacidade da sprint (pontos que o time consegue entregar) para eu sugerir os itens.' + (velocityAvg ? ` O time entregou, em média, ${velocityAvg} pts por sprint.` : '') });
+    else if(velocityAvg) {
+      const ratio = capacity / velocityAvg, pct = Math.round(Math.abs(ratio - 1) * 100);
+      if(ratio > 1.15) advice.push({ level: 'warn', text: `A capacidade de ${capacity} pts está ${pct}% acima da velocidade média do time (${velocityAvg} pts). Em geral o time entrega perto do que já entregou — considere ${Math.round(velocityAvg)} pts.` });
+      else if(ratio < 0.7) advice.push({ level: 'info', text: `A capacidade de ${capacity} pts está ${pct}% abaixo da velocidade média (${velocityAvg} pts). Se não há férias ou ausências, dá para planejar mais.` });
+      else advice.push({ level: 'ok', text: `Capacidade em linha com o ritmo do time (média de ${velocityAvg} pts por sprint).` });
+    } else advice.push({ level: 'info', text: 'Ainda não há sprint encerrada para medir o ritmo do time. Use a capacidade como estimativa e confira depois da primeira sprint.' });
+    if(capacity && reservePct > 0) advice.push({ level: 'info', text: `Reservei ${reservePct}% (${capacity - target} pts) para imprevistos e correções — a sprint é planejada com ${target} pts úteis.` });
+    if(committed > 0) advice.push({ level: committed > target ? 'warn' : 'info', text: `A sprint já tem ${committed} pts comprometidos${committed > target ? ', acima da capacidade útil' : ''}.` });
+    const unest = skipped.filter(s => /sem estimativa/.test(s.reason)).length;
+    if(unest) advice.push({ level: 'warn', text: `${unest} item(ns) do backlog estão sem estimativa e ficaram de fora. Estime-os para entrarem no planejamento.` });
+    const big = skipped.filter(s => /divida/.test(s.reason)).length;
+    if(big) advice.push({ level: 'warn', text: `${big} item(ns) são grandes demais para uma sprint. Quebre-os em itens menores.` });
+    if(filledBelow) advice.push({ level: 'info', text: `${filledBelow} item(ns) de menor prioridade entraram para aproveitar o espaço que sobrou (itens maiores acima deles não cabiam).` });
+    if(capacity && !selected.length && remaining > 0) advice.push({ level: 'info', text: 'Nenhum item do backlog coube no espaço restante.' });
+    return { target, capacity, reservePct, committed, used, total: committed + used, free: remaining, selected, skipped, advice };
+  }
+
+  return { COLS, KINDS, DEFAULT_CFG, planSprint, cfgOf, wip, moveTo, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
 })();
 </script>
 
@@ -9658,7 +9753,7 @@ const Agile = (() => {
     list.innerHTML = sprints.slice().sort((x, y) => y.startOn.localeCompare(x.startOn)).map(s => {
       const ss = AgileCalc.sprintStats(s, items, today);
       return `<div class="ag-sp"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="font-size:13px;color:var(--t1)">${esc(s.name)}</b><span class="badge ${badge[s.state]}">${s.state === 'ativa' ? 'Ativa' : s.state === 'planejada' ? 'Planejada' : 'Encerrada'}</span><span class="chip">${fmt(s.startOn)} a ${fmt(s.endOn)}</span>${s.capacity !== '' && s.capacity != null ? `<span class="chip">capacidade ${esc(s.capacity)}</span>` : ''}${ss.overCapacity ? '<span class="badge b-amb">acima da capacidade</span>' : ''}
-        <span style="margin-left:auto;display:flex;gap:6px" data-perm="business">${s.state === 'planejada' ? `<button class="btn btn-sm btn-acc" onclick="Agile.startSprint('${esc(s.id)}')">Iniciar</button>` : ''}${s.state === 'ativa' ? `<button class="btn btn-sm" onclick="Agile.closeSprintNow('${esc(s.id)}')">Encerrar</button>` : ''}<button class="btn btn-sm" aria-label="Editar ${esc(s.name)}" onclick="Agile.openSprint('${esc(s.id)}')"><i class="ti ti-edit"></i></button></span></div>
+        <span style="margin-left:auto;display:flex;gap:6px" data-perm="business">${s.state !== 'encerrada' ? `<button class="btn btn-sm" onclick="Agile.openPlan('${esc(s.id)}')"><i class="ti ti-wand"></i>Planejar</button>` : ''}${s.state === 'planejada' ? `<button class="btn btn-sm btn-acc" onclick="Agile.startSprint('${esc(s.id)}')">Iniciar</button>` : ''}${s.state === 'ativa' ? `<button class="btn btn-sm" onclick="Agile.closeSprintNow('${esc(s.id)}')">Encerrar</button>` : ''}<button class="btn btn-sm" aria-label="Editar ${esc(s.name)}" onclick="Agile.openSprint('${esc(s.id)}')"><i class="ti ti-edit"></i></button></span></div>
         <div style="font-size:12px;color:var(--t2);margin-top:5px">${esc(s.goal || 'Sem meta definida.')} · ${ss.count} item(ns), ${ss.done} de ${ss.committed} pts concluídos</div></div>`;
     }).join('');
   }
@@ -9785,10 +9880,81 @@ const Agile = (() => {
       ...items.slice().sort(sortByRank).map(i => [i.id, i.title, AgileCalc.KINDS[i.kind] || i.kind, i.points === '' ? '' : Number(i.points), AgileCalc.COLS.find(c => c.key === i.status).label, (sprints.find(s => s.id === i.sprintId) || {}).name || '', i.assignee, XlsxExport.fmt(i.doneOn)])] }]);
   }
 
+  // ───────── Importação de planilha (usa o importador comum) ─────────
+  const titles = () => { load(); return items.map(i => i.title); };
+  const sprintRefs = () => { load(); return sprints.map(s => ({ id: s.id, name: s.name })); };
+  function addMany(rows) {
+    load();
+    let rank = Math.max(0, ...items.map(x => x.rank || 0));
+    const created = rows.map(x => {
+      const it = { id: AgileCalc.nextId('US', items), title: x.title, description: x.description || '', kind: x.kind, status: x.status, points: x.points, assignee: x.assignee || '', sprintId: x.sprintId || '', rank: ++rank, createdOn: todayIso(), doneOn: x.doneOn || '' };
+      items.push(it); return it;
+    });
+    saveItems();
+    if(typeof Cloud !== 'undefined') Cloud.pushMany('backlog_items', created);
+    renderAll();
+    return created.length;
+  }
+
+  // ───────── Planejamento assistido: pontos × capacidade ─────────
+  let planSprintId = null;
+  function velocityAvg() { return AgileCalc.velocity(sprints, items).avg; }
+  function openPlan(id) {
+    if(!Auth.guard('business')) return;
+    load(); const s = sprints.find(x => x.id === id); if(!s) return;
+    planSprintId = id;
+    const cap = (s.capacity !== '' && s.capacity != null) ? s.capacity : (velocityAvg() != null ? Math.round(velocityAvg()) : '');
+    document.getElementById('ap-title-h').textContent = 'Planejar ' + s.name;
+    document.getElementById('ap-sub').textContent = (s.goal ? 'Meta: ' + s.goal + '. ' : '') + 'O sistema sugere os itens que cabem na capacidade. Nada muda até você aplicar.';
+    document.getElementById('ap-cap').value = cap;
+    document.getElementById('ap-res').value = cfg.reservePct;
+    document.getElementById('modal-agile-plan').classList.remove('hidden');
+    recalcPlan();
+    document.getElementById('ap-cap').focus();
+  }
+  function openPlanNext() {
+    if(!Auth.guard('business')) return;
+    load();
+    const next = sprints.filter(s => s.state === 'planejada').sort((a, b) => a.startOn.localeCompare(b.startOn))[0] || active();
+    if(!next) { T.show('Crie uma sprint primeiro: o planejamento sugere os itens para ela.', 4500); openSprint(); return; }
+    openPlan(next.id);
+  }
+  function closePlan() { document.getElementById('modal-agile-plan').classList.add('hidden'); planSprintId = null; }
+  function currentPlan() {
+    const s = sprints.find(x => x.id === planSprintId); if(!s) return null;
+    return { s, plan: AgileCalc.planSprint(items, s, { capacity: document.getElementById('ap-cap').value, reservePct: document.getElementById('ap-res').value === '' ? 15 : document.getElementById('ap-res').value, velocityAvg: velocityAvg() }) };
+  }
+  function recalcPlan() {
+    const cur = currentPlan(); const root = document.getElementById('ap-root'); if(!cur || !root) return;
+    const { plan } = cur, byId = id => items.find(i => i.id === id);
+    const icon = { warn: 'alert-triangle', info: 'info-circle', ok: 'circle-check' }, col = { warn: 'var(--amb)', info: 'var(--acc)', ok: 'var(--grn)' };
+    const pct = plan.target ? Math.min(100, Math.round(plan.total / plan.target * 100)) : 0;
+    root.innerHTML = `<div style="margin:10px 0 4px;font-size:12.5px;color:var(--t1)"><b>${plan.total} de ${plan.target} pts úteis</b> ${plan.capacity ? `(capacidade ${plan.capacity}, reserva ${plan.capacity - plan.target})` : ''}<div class="job-bar" style="margin:6px 0 2px"><div class="job-fill" style="width:${pct}%"></div></div></div>
+      <div style="margin:10px 0">${plan.advice.map(a => `<div style="display:flex;gap:6px;font-size:12.5px;color:var(--t1);margin-bottom:5px"><i class="ti ti-${icon[a.level]}" style="color:${col[a.level]};flex-shrink:0;margin-top:2px"></i><span>${esc(a.text)}</span></div>`).join('')}</div>
+      <div class="lbl" style="margin-top:6px">Entram na sprint (${plan.selected.length})</div>
+      ${plan.selected.length ? plan.selected.map(id => { const i = byId(id); return `<div class="ag-row"><div class="ag-main"><div class="ag-title">${esc(i.title)}</div></div><span class="chip">${esc(i.id)}</span><span class="badge b-acc">${esc(i.points)} pts</span></div>`; }).join('') : '<div class="rk-empty" style="padding:10px">Nenhum item novo entra com esses números.</div>'}
+      ${plan.skipped.length ? `<div class="lbl" style="margin-top:10px">Ficam de fora (${plan.skipped.length})</div>${plan.skipped.slice(0, 12).map(s => `<div class="ag-row" style="opacity:1"><div class="ag-main"><div class="ag-title">${esc(s.title)}</div><div style="font-size:11.5px;color:var(--t2)">${esc(s.reason)}</div></div><span class="chip">${esc(s.id)}</span></div>`).join('')}${plan.skipped.length > 12 ? `<div style="font-size:11.5px;color:var(--t3)">… e mais ${plan.skipped.length - 12}.</div>` : ''}` : ''}`;
+    document.getElementById('ap-apply').disabled = !plan.selected.length;
+    document.getElementById('ap-apply').style.opacity = plan.selected.length ? '' : '.5';
+  }
+  function applyPlan() {
+    if(!Auth.guard('business')) return;
+    const cur = currentPlan(); if(!cur || !cur.plan.selected.length) return;
+    const { s, plan } = cur;
+    plan.selected.forEach(id => { const it = items.find(x => x.id === id); if(it) { it.sprintId = s.id; pushItem(it); } });
+    s.capacity = plan.capacity || s.capacity; pushSprint(s);
+    cfg.reservePct = plan.reservePct; DB.set('agileConfig', cfg);
+    if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'agileConfig', cfg);
+    saveItems(); saveSprints(); closePlan(); renderAll();
+    Trail.log(`Sprint planejada com sugestão do sistema: ${s.name} (+${plan.used} pts, ${plan.selected.length} item(ns))`, Auth.getName(), '', 'b-acc');
+    T.show(`✅ ${plan.selected.length} item(ns) (${plan.used} pts) entraram em "${s.name}".`, 5000);
+  }
+
   function renderAll() { renderKanban(); renderBacklog(); renderSprints(); renderDashboard(); }
   function render() { renderAll(); }
   return { render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, setWip, rank, setSprintOf, setBacklogQuery, setShowDone,
-    openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, exportXlsx };
+    openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, exportXlsx,
+    titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan };
 })();
 </script>
 
@@ -11096,7 +11262,7 @@ const ImportUi = (() => {
   const el = id => document.getElementById(id);
   const MAX_BYTES = 5 * 1024 * 1024, MAX_ROWS = 5000;
   const STEPS = ['1. Arquivo', '2. Colunas e prévia', '3. Resultado'];
-  const ALLOWED_TARGETS = ['wbs', 'team', 'costs', 'risks', 'hours'];
+  const ALLOWED_TARGETS = ['wbs', 'team', 'costs', 'risks', 'hours', 'backlog'];
 
   function steps(n) { el('imp-steps').innerHTML = STEPS.map((s, i) => `<span class="imp-step${i + 1 === n ? ' on' : ''}"${i + 1 === n ? ' aria-current="step"' : ''}>${s}</span>`).join(''); }
   function show(n) {
@@ -11195,6 +11361,7 @@ const ImportUi = (() => {
     if(ctx.target === 'team') return { existingNames: (DB.get('team') || []).map(m => m.name) };
     if(ctx.target === 'risks') return { existingTitles: Risks.titles() };
     if(ctx.target === 'hours') return { existingKeys: Hours.keys() };
+    if(ctx.target === 'backlog') return { today, existingTitles: Agile.titles(), sprints: Agile.sprintRefs() };
     if(ctx.target === 'costs') return { today, existingKeys: (DB.get('costActuals') || []).map(a => norm(a.label) + '|' + a.amount + '|' + a.date) };
     return { idSeed: Date.now().toString(36) };
   }
@@ -11215,6 +11382,7 @@ const ImportUi = (() => {
       case 'team': return [r.name, r.role, r.allocationPct + '%', r.workloadPct + '%'];
       case 'costs': return [r.label, 'R$ ' + r.amount.toLocaleString('pt-BR'), r.date, r.kind];
       case 'risks': return [r.title, 'P' + r.probability + ' × I' + r.impact + ' = ' + r.probability * r.impact, r.category, r.owner];
+      case 'backlog': return [r.title, AgileCalc.KINDS[r.kind], r.points === '' ? 'sem pontos' : r.points + ' pts', AgileCalc.COLS.find(c => c.key === r.status).label];
       default: return [r.person, r.date, r.hours + ' h', r.wbsRef];
     }
   }
@@ -11238,6 +11406,7 @@ const ImportUi = (() => {
     try {
       if(ctx.target === 'risks') n = Risks.addMany(r.rows);
       else if(ctx.target === 'hours') n = Hours.addMany(r.rows);
+      else if(ctx.target === 'backlog') n = Agile.addMany(r.rows);
       else if(ctx.target === 'team') {
         const team = DB.get('team') || [];
         const created = r.rows.map(x => ({ id: 'tm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), ...x }));
