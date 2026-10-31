@@ -1,6 +1,6 @@
 {
   "name": "pmo-compass",
-  "version": "2.8.0",
+  "version": "2.8.1",
   "private": true,
   "scripts": {
     "test:unit": "node tests/run.js && node --test tests/unit/*.test.mjs",

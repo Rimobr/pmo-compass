@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.8.0'
+  version: '2.8.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -3819,6 +3819,11 @@ const Cloud = (() => {
     // push* abaixo) — o pull sempre filtra pelo projeto ativo AGORA, pra não misturar dado
     // de um projeto na tela de outro. Antes disso não existia esse filtro: era um pool só.
     const pid = DB.getActiveProjectId();
+    // Progresso com etapas reais: cada consulta que termina conta; só aparece se a sincronização demorar
+    const SYNC_QUERIES = 13;
+    let syncDone = 0;
+    const sync = Progress.start({ title: 'Sincronizando com a nuvem', total: SYNC_QUERIES, cancellable: false });
+    const counted = p => Promise.resolve(p).then(r => { sync.set(++syncDone, SYNC_QUERIES, `${syncDone} de ${SYNC_QUERIES} tabelas lidas`); return r; });
     try {
       const [mods, tasks, decs, docs, budLines, costActs, settings, team, scopeRows, riskRows, timeRows, baseRows, raciRows] = await Promise.all([
         client.from('wbs_modules').select('*').eq('project_id', pid),
@@ -3834,7 +3839,8 @@ const Cloud = (() => {
         client.from('time_entries').select('*').eq('project_id', pid).order('work_date', { ascending:false }).limit(5000),
         client.from('baselines').select('*').eq('project_id', pid).order('created_on', { ascending:true }).order('id', { ascending:true }),
         client.from('raci_entries').select('*').eq('project_id', pid)
-      ]);
+      ].map(counted)).catch(e => { sync.fail('Não consegui ler os dados da nuvem. Seus dados continuam salvos neste navegador.'); throw e; });
+      sync.done();
       // Tabelas que antes só existiam neste navegador: se a nuvem ainda está vazia e há dado local, SOBE o local
       // (migração única, sem perder nada); se a nuvem já tem dado, ela manda.
       [['scope_changes', scopeRows, () => typeof Scope !== 'undefined' && Scope.resetCache(), () => typeof Scope !== 'undefined' && Scope.render()],
@@ -6220,7 +6226,18 @@ Regras obrigatórias:
     return `${SYSTEM_RULES}${profileBlock ? '\n\n' + profileBlock : ''}\n\nContexto real do projeto ativo:\n${context}`;
   }
 
+  // Toda chamada de IA mostra tempo decorrido e botão Cancelar após ~1 s; sem etapas reais não há porcentagem.
+  // Chamadas aninhadas (uma análise que chama a IA várias vezes) usam o indicador da análise: opts.silent.
   async function send(messages, opts) {
+    if(opts && opts.silent) return sendInner(messages, opts);
+    const job = Progress.start({ title: (opts && opts.progressTitle) || 'A IA está analisando' });
+    const res = await Promise.race([sendInner(messages, opts), job.cancelPromise]);
+    if(job.cancelled) return { error: 'Cancelado por você.' };
+    // erro rápido (ex.: chave não configurada) o chamador já mostra; erro depois de uma espera fica no painel
+    if(res && res.error && job.shown) job.fail(res.error); else job.done();
+    return res;
+  }
+  async function sendInner(messages, opts) {
     const provider = (opts && opts.provider) || Store.getProvider();
     const cfg = CONFIG[provider] || CONFIG.anthropic;
 
@@ -8912,6 +8929,105 @@ const Risks = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: ui/progress-css -->
+<style data-module="ui/progress-css">
+.job-wrap{position:fixed;left:20px;bottom:20px;z-index:9998;display:flex;flex-direction:column;gap:8px;max-width:min(360px,calc(100vw - 40px))}
+.job{background:var(--s2);border:1px solid var(--b2);border-radius:var(--r8);padding:10px 12px;box-shadow:var(--shadow-md);font-size:12.5px;color:var(--t1);animation:toastIn .2s ease}
+.job-top{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.job-title{font-weight:600;overflow-wrap:anywhere}
+.job-pct{font-weight:700;font-variant-numeric:tabular-nums}
+.job-bar{height:6px;border-radius:6px;background:var(--s3);overflow:hidden;margin:8px 0 6px}
+.job-fill{height:100%;background:var(--acc);border-radius:6px;transition:width .25s ease}
+.job.indet .job-fill{width:35%;animation:jobSlide 1.4s ease-in-out infinite}
+@keyframes jobSlide{0%{margin-left:-35%}100%{margin-left:100%}}
+@media (prefers-reduced-motion:reduce){.job.indet .job-fill{animation:none;width:100%;opacity:.5}}
+.job-sub{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--t2)}
+.job.fail{border-color:var(--rb)}
+.job.fail .job-fill{background:var(--red,#c0392b)}
+.job .btn{padding:2px 8px;font-size:11.5px}
+</style>
+
+<!-- ■ MODULE: ui/progress ─ Indicador único para processos longos: barra por etapas REAIS (ou só tempo, sem porcentagem inventada), tempo decorrido, cancelar e erro claro -->
+<script data-module="ui/progress">
+const Progress = (() => {
+  const SHOW_AFTER_MS = 1200;   // processos rápidos não piscam na tela
+  const STILL_WORKING_MS = 10000;
+  const pct = (done, total) => (!total || total < 1) ? null : Math.max(0, Math.min(100, Math.round(done / total * 100)));
+  const elapsed = ms => { const s = Math.floor(ms / 1000); return s < 60 ? s + ' s' : Math.floor(s / 60) + ' min ' + String(s % 60).padStart(2, '0') + ' s'; };
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let seq = 0;
+
+  function wrap() {
+    let w = document.getElementById('job-wrap');
+    if(!w) { w = document.createElement('div'); w.id = 'job-wrap'; w.className = 'job-wrap'; document.body.appendChild(w); }
+    return w;
+  }
+
+  // opts: { title, total?, cancellable? (padrão true), onCancel? }
+  function start(opts) {
+    const id = 'job' + (++seq), t0 = Date.now();
+    const st = { done: 0, total: (opts && opts.total) || 0, label: '', closed: false, cancelled: false, failed: false };
+    let el = null, tick = null, showTimer = null, cancelResolve;
+    const cancelPromise = new Promise(r => { cancelResolve = r; });
+
+    function paint() {
+      if(!el) return;
+      const p = pct(st.done, st.total), det = p != null;
+      el.classList.toggle('indet', !det && !st.failed);
+      const shown = det ? Math.min(p, st.closed ? 100 : 99) : null;
+      el.querySelector('.job-pct').textContent = det ? shown + '%' : '';
+      const fill = el.querySelector('.job-fill'); fill.style.width = det ? shown + '%' : '';
+      const bar = el.querySelector('.job-bar');
+      if(det) { bar.setAttribute('aria-valuenow', shown); } else bar.removeAttribute('aria-valuenow');
+      const ms = Date.now() - t0;
+      el.querySelector('.job-label').textContent = st.failed ? st.label : (st.label || (det ? '' : (ms > STILL_WORKING_MS ? 'Ainda trabalhando…' : 'Trabalhando…')));
+      el.querySelector('.job-time').textContent = st.failed ? '' : elapsed(ms);
+    }
+    function mount() {
+      if(el || st.closed && !st.failed) return;
+      el = document.createElement('div');
+      el.className = 'job'; el.id = id; el.setAttribute('role', 'group'); el.setAttribute('aria-label', (opts && opts.title) || 'Processo em andamento');
+      const cancellable = !opts || opts.cancellable !== false;
+      el.innerHTML = `<div class="job-top"><span class="job-title">${esc((opts && opts.title) || 'Processando')}</span><span class="job-pct"></span></div>
+        <div class="job-bar" role="progressbar" aria-label="${esc((opts && opts.title) || 'Progresso')}" aria-valuemin="0" aria-valuemax="100"><div class="job-fill"></div></div>
+        <div class="job-sub"><span class="job-label" role="status" aria-live="polite"></span><span class="job-time"></span>${cancellable ? '<button type="button" class="btn btn-sm job-cancel">Cancelar</button>' : ''}</div>`;
+      const c = el.querySelector('.job-cancel');
+      if(c) c.addEventListener('click', () => { st.cancelled = true; if(opts && opts.onCancel) { try { opts.onCancel(); } catch(e) {} } cancelResolve({ cancelled: true }); close(); });
+      wrap().appendChild(el);
+      paint();
+      tick = setInterval(paint, 1000);
+    }
+    function close() {
+      st.closed = true; clearTimeout(showTimer); clearInterval(tick);
+      if(el && !st.failed) { paint(); const n = el; setTimeout(() => n.remove(), 250); }
+    }
+    showTimer = setTimeout(mount, SHOW_AFTER_MS);
+
+    return {
+      cancelPromise,
+      get cancelled() { return st.cancelled; },
+      get shown() { return !!el; },
+      // done/total contam etapas reais já concluídas; sem total, o indicador mostra só o tempo
+      set(done, total, label) { st.done = done; if(total != null) st.total = total; if(label != null) st.label = label; paint(); },
+      label(label) { st.label = label; paint(); },
+      done() { st.done = st.total; close(); },
+      // erro claro: o painel fica na tela até ser fechado (mesmo se a espera foi curta)
+      fail(msg) {
+        st.failed = true; st.closed = true; clearTimeout(showTimer); clearInterval(tick);
+        st.label = '⚠️ ' + (msg || 'Não foi possível concluir.');
+        if(!el) mount();
+        clearInterval(tick);
+        el.classList.add('fail'); el.classList.remove('indet');
+        const c = el.querySelector('.job-cancel'); if(c) { c.textContent = 'Fechar'; c.onclick = () => el.remove(); }
+        paint(); el.querySelector('.job-fill').style.width = '100%';
+        el.querySelector('.job-label').setAttribute('role', 'alert');
+      }
+    };
+  }
+  return { start, pct, elapsed };
+})();
+</script>
+
 <!-- ■ MODULE: ui/xlsx-export ─ Exportação em Excel (.xlsx) com a biblioteca carregada só quando o usuário pede -->
 <script data-module="ui/xlsx-export">
 const XlsxExport = (() => {
@@ -8936,9 +9052,11 @@ const XlsxExport = (() => {
   }
   // sheets: [{ name, rows: [[cabeçalho...], [linha...]], widths?: [n...] }]
   async function download(fileName, sheets) {
-    T.show('⏳ Gerando a planilha Excel…');
+    const job = Progress.start({ title: 'Gerando a planilha Excel', total: 3, cancellable: false });
     try {
+      job.set(0, 3, 'Carregando o gerador de Excel…');
       const X = await load();
+      job.set(1, 3, 'Montando as abas…');
       const wb = X.utils.book_new();
       sheets.forEach((sh, i) => {
         const ws = X.utils.aoa_to_sheet(sh.rows.map(r => r.map(safeCell)));
@@ -8946,10 +9064,12 @@ const XlsxExport = (() => {
         ws['!cols'] = Array.from({ length: cols }, (_, c) => ({ wch: (sh.widths && sh.widths[c]) || Math.min(60, Math.max(10, ...sh.rows.slice(0, 200).map(r => String(r[c] == null ? '' : r[c]).length + 2))) }));
         X.utils.book_append_sheet(wb, ws, sheetName(sh.name, i));
       });
+      job.set(2, 3, 'Gerando o arquivo…');
       X.writeFile(wb, fileName);
+      job.done();
       T.show('📥 Excel exportado: ' + fileName);
     } catch(e) {
-      T.show('⚠️ Não foi possível gerar o Excel (' + e.message + '). Use o CSV, que abre no Excel do mesmo jeito.');
+      job.fail('Não foi possível gerar o Excel (' + e.message + '). Use o CSV, que abre no Excel do mesmo jeito.');
     }
   }
   const stamp = () => Clock.iso(Clock.today());
@@ -11532,7 +11652,7 @@ Regras: uma entrada por projeto recebido, na mesma ordem. Só sugira "pausar" ou
     const projects = DB.listProjects();
     if(!projects.length) return { error: 'Nenhum projeto no portfólio ainda.' };
     const rollup = buildRollup();
-    const r = await AI.send([{ role:'user', content: rollup }], { system: SYSTEM });
+    const r = await AI.send([{ role:'user', content: rollup }], { system: SYSTEM, progressTitle: 'Analisando o portfólio' });
     if(r.error) return { error: r.error };
     const parsed = parseSuggestions(r.text || '');
     if(!parsed || !parsed.length) return { error: 'A IA respondeu, mas não em um formato que consegui interpretar.' };
@@ -11788,7 +11908,14 @@ const Board = (() => {
     const r = await BoardAdvisor.generate();
     if(r.error) { T.show('⚠️ ' + r.error, 5000); return; }
     render();
-    T.show(`✅ ${r.suggestions.length} sugestão(ões) atualizada(s).`);
+    // Fim da análise: um clique leva às sugestões (cartões dos projetos) e destaca a primeira
+    const goToSuggestions = () => {
+      const root = document.getElementById('board-cards-root'); if(!root) return;
+      root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const first = root.querySelector('[data-sug]') || root.firstElementChild;
+      if(first) { first.style.transition = 'box-shadow .3s'; first.style.boxShadow = '0 0 0 2px var(--acc)'; setTimeout(() => { first.style.boxShadow = ''; }, 2500); }
+    };
+    T.show(`✅ ${r.suggestions.length} sugestão(ões) pronta(s). Clique aqui para ver.`, 9000, goToSuggestions);
   }
 
   function openDecisionModal(projectId, suggestionId) {
