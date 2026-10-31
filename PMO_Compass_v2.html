@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.18.3'
+  version: '2.18.4'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -249,6 +249,15 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 /* A área de gestão do projeto tem um fundo levemente diferente: o olho separa "diretoria/PMO" de "gerente e equipe" */
 .sb-proj-area{display:flex;flex-direction:column;gap:1px;background:var(--s2);background:color-mix(in srgb, var(--acc) 6%, var(--s1));border:1px solid var(--b1);border-radius:var(--r8);padding:0 4px 6px;margin:8px -2px 4px}
 .sb-proj-area .sb-divl{margin-top:8px}
+.sb-divl-btn{background:none;border:0;width:calc(100% - 8px);cursor:pointer;font-family:inherit;border-radius:var(--r8);padding:4px 0}
+.sb-divl-btn:hover{color:var(--t1)}
+.sb-divl-btn:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.sb-divl-chev{font-size:13px;transition:transform .15s;order:3}
+.sb-divl-btn::after{order:2}
+.sb-proj-area.area-closed .sb-divl-chev{transform:rotate(-90deg)}
+.sb-proj-area.area-closed > :not(.sb-divl){display:none !important}
+.sb-proj-area.area-closed{padding-bottom:0}
+.sidebar.collapsed .sb-divl-chev{display:none}
 .sidebar.collapsed .sb-proj-area{padding:0 2px 6px;margin:8px 0 4px}
 .sidebar.collapsed .sb-divl span{display:none}
 .sidebar.collapsed .sb-divl::after{display:none}
@@ -895,8 +904,8 @@ body.icons-failed i[data-fb]::before{
     </div>
   </div>
 
-  <div class="sb-proj-area">
-  <div class="sb-divl" role="separator" aria-label="Gestão do projeto — área do gerente de projeto e da equipe"><span>Gestão do projeto</span></div>
+  <div class="sb-proj-area" id="sb-proj-area">
+  <button class="sb-divl sb-divl-btn" id="sb-area-btn" aria-expanded="true" aria-controls="sb-proj-area" title="Recolher ou abrir a área de gestão do projeto (área do gerente de projeto e da equipe)" onclick="Nav.toggleArea()"><span>Gestão do projeto</span><i class="ti ti-chevron-down sb-divl-chev" aria-hidden="true"></i></button>
   <div class="sb-group" id="sbg-projetos">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-projetos')"><i class="ti ti-layout-grid sb-gico"></i><span class="sb-hdr-txt"><small class="sb-hdr-kicker">Projeto · <span id="sb-method-tag">Híbrido</span></small><b id="sb-proj-name">—</b></span><i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body" id="sbg-projetos-list">
@@ -6028,7 +6037,7 @@ const R = (() => {
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
     if(id === 'settings' && typeof PmoProfiles !== 'undefined') PmoProfiles.render();
     if(id === 'settings' && typeof ProjectMembers !== 'undefined') ProjectMembers.render();
-    if(typeof Nav !== 'undefined') { Nav.expandGroupFor(id); Nav.renderBreadcrumb(id); Nav.closeDrawer(); }
+    if(typeof Nav !== 'undefined') { Nav.revealArea(id); Nav.expandGroupFor(id); Nav.renderBreadcrumb(id); Nav.closeDrawer(); }
     if(typeof Methodology !== 'undefined') { Methodology.apply(); Methodology.notice(id); if(id === 'settings') Methodology.render(); }
   }
   function init() {
@@ -6069,6 +6078,19 @@ const Nav = (() => {
     if(willOpen) el.classList.add('open');
   }
 
+  // Área "Gestão do projeto": recolhe tudo de uma vez (a escolha fica salva neste navegador)
+  const AREA_KEY = 'pmo_sb_area_v1';
+  function setArea(open, save) {
+    const a = document.getElementById('sb-proj-area'), b = document.getElementById('sb-area-btn');
+    if(!a) return;
+    a.classList.toggle('area-closed', !open);
+    if(b) b.setAttribute('aria-expanded', String(open));
+    if(save) { try { localStorage.setItem(AREA_KEY, open ? 'open' : 'closed'); } catch(e){} }
+  }
+  function toggleArea() { const a = document.getElementById('sb-proj-area'); if(a) setArea(a.classList.contains('area-closed'), true); }
+  // Ao navegar para uma tela da área (atalho, busca, link), ela se abre sozinha
+  function revealArea(pageId) { const btn = document.querySelector('.sb-proj-area .si[data-p="' + pageId + '"]'); if(btn) setArea(true, false); }
+  function initArea() { let v = null; try { v = localStorage.getItem(AREA_KEY); } catch(e){} setArea(v !== 'closed', false); }
   function expandGroupFor(pageId) {
     const groupId = GROUP_OF[pageId];
     document.querySelectorAll('.sb-group').forEach(g => {
@@ -6177,7 +6199,7 @@ const Nav = (() => {
   const closeDrawer = () => setDrawer(false);
   document.addEventListener('keydown', e => { if(e.key === 'Escape' && document.body.classList.contains('sb-open')) { closeDrawer(); const b = document.getElementById('tb-burger'); if(b) b.focus(); } });
 
-  return { toggleGroup, expandGroupFor, collapseAll, renderProjects, toggleProjDropdown, closeProjDropdown, renderBreadcrumb, toggleDrawer, closeDrawer };
+  return { toggleGroup, toggleArea, revealArea, initArea, expandGroupFor, collapseAll, renderProjects, toggleProjDropdown, closeProjDropdown, renderBreadcrumb, toggleDrawer, closeDrawer };
 })();
 
 const SettingsTabs = (() => {
@@ -8119,7 +8141,7 @@ document.addEventListener('DOMContentLoaded', () => {
   Store.load();
   Nav.collapseAll();
   Nav.renderProjects();
-  R.init();
+  Nav.initArea(); R.init();
   renderAllModules();
   Onboarding.maybeShow();
 
