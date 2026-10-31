@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.15.3'
+  version: '2.16.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -900,6 +900,7 @@ body.icons-failed i[data-fb]::before{
       <button class="si" data-p="kanban" onclick="R.go('kanban')"><i class="ti ti-layout-kanban"></i>Quadro Kanban</button>
       <button class="si" data-p="backlog" onclick="R.go('backlog')"><i class="ti ti-list-details"></i>Backlog</button>
       <button class="si" data-p="sprints" onclick="R.go('sprints')"><i class="ti ti-rocket"></i>Sprints</button>
+      <button class="si" data-p="ritos" onclick="R.go('ritos')"><i class="ti ti-calendar-event"></i>Ritos da sprint</button>
     </div>
   </div>
 
@@ -944,6 +945,7 @@ body.icons-failed i[data-fb]::before{
       <button class="si" data-p="meetings" onclick="R.go('meetings')"><i class="ti ti-notes"></i>Atas e Ações</button>
       <button class="si" data-p="repository" onclick="R.go('repository')"><i class="ti ti-files"></i>Repositório</button>
       <button class="si" data-p="chat" onclick="R.go('chat')"><i class="ti ti-message-2"></i>Chat contextual</button>
+      <button class="si" data-p="modelos" onclick="R.go('modelos')"><i class="ti ti-template"></i>Modelos</button>
     </div>
   </div>
 
@@ -1876,6 +1878,11 @@ body.icons-failed i[data-fb]::before{
 <!-- ■ MODULE: pages/agile-css -->
 <style data-module="pages/agile-css">
 .kb-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.rt-step{display:flex;gap:8px;align-items:flex-start;text-align:left;padding:8px 12px;flex:1 1 170px}
+.rt-step i{font-size:18px;color:var(--acc);margin-top:2px;flex-shrink:0}
+.rt-step b{display:block;font-size:12.5px;color:var(--t1)}
+.rt-sub{display:block;font-size:11.5px;color:var(--t2);margin-top:2px}
+.rt-step.on{border-color:var(--acc);box-shadow:inset 0 -3px 0 var(--acc);background:var(--s3)}
 .kb-bar .input{width:auto;min-width:130px}
 .kb-wip{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--t2)}
 .kb-wip input{width:62px}
@@ -1925,8 +1932,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
   </div>
   <div class="kb-bar">
     <select class="input" id="kb-sprint" aria-label="Sprint exibida no quadro" onchange="Agile.setBoardSprint(this.value)"></select>
-    <span class="kb-wip">Limite em andamento<span class="help-q" data-help="WIP = trabalho em andamento. O limite é quantos itens podem estar ao mesmo tempo nessa coluna. O quadro avisa quando passa, mas não impede você de mover." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span><input class="input" id="kb-wip-doing" type="number" min="0" max="99" aria-label="Limite de itens Em andamento" onchange="Agile.setWip('doing', this.value)"></span>
-    <span class="kb-wip">Limite em revisão<input class="input" id="kb-wip-review" type="number" min="0" max="99" aria-label="Limite de itens Em revisão" onchange="Agile.setWip('review', this.value)"></span>
+    <button class="btn btn-sm" data-perm="business" onclick="Agile.openBoardCfg()"><i class="ti ti-adjustments"></i>Personalizar quadro<span class="help-q" data-help="Renomeie as colunas, acrescente colunas do seu fluxo (por exemplo Em teste ou Aguardando cliente), defina o limite de itens em andamento de cada uma (WIP) e escolha quais informações aparecem em cada cartão. As colunas A fazer e Concluído são fixas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
+    <span id="kb-imp"></span>
   </div>
   <div id="kb-root"></div>
 </section>
@@ -1963,6 +1970,24 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div class="card"><div class="lbl"><i class="ti ti-chart-bar"></i>Velocidade por sprint<span class="help-q" data-help="Pontos concluídos em cada sprint encerrada. A média das últimas 3 sprints é usada para prever em quantas sprints o backlog termina." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div id="sp-vel"></div></div>
   </div>
   <div class="card"><div class="lbl"><i class="ti ti-list-details"></i>Todas as sprints</div><div id="sp-list"></div></div>
+</section>
+
+<section class="page" id="p-ritos" data-module="pages/ritos">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Ritos da sprint<span class="help-q" data-help="Os ritos (ou cerimônias) do Scrum são encontros com hora marcada que mantêm o time alinhado: planejamento, reunião diária, revisão, retrospectiva e refinamento do backlog. Aqui você vê o que cada um é, quanto tempo pode durar (proporcional à sua sprint), a pauta sugerida e registra o resultado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">O ciclo completo da sprint: planejar, acompanhar todo dia, mostrar o que foi entregue e melhorar.</div></div>
+    <div class="btn-row"><select class="input" id="rt-sprint" aria-label="Sprint dos ritos" onchange="Rites.setSprint(this.value)"></select></div>
+  </div>
+  <div id="rt-steps" role="tablist" aria-label="Ritos da sprint" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+  <div id="rt-panel"></div>
+</section>
+
+<section class="page" id="p-modelos" data-module="pages/modelos">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Modelos de documentos<span class="help-q" data-help="Documentos prontos para preencher, guardados no projeto: plano de ação 5W2H, análise SWOT, plano de comunicação, plano de cutover (virada para produção) e termo de handover (entrega). Cada um já vem com sugestões; ajuste, marque o que foi feito e exporte para Excel." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Comece de um modelo pronto em vez da página em branco.</div></div>
+    <div class="btn-row" data-perm="business"><select class="input" id="md-kind" aria-label="Tipo de modelo"></select><button class="btn btn-sm btn-acc" onclick="Models.create()"><i class="ti ti-plus"></i>Criar a partir do modelo</button></div>
+  </div>
+  <div id="md-list"></div>
+  <div id="md-editor"></div>
 </section>
 
 <div class="modal-ov hidden" id="modal-agile-item" onclick="if(event.target===this)Agile.closeItem()">
@@ -2011,6 +2036,22 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div class="btn-row" style="margin-top:14px;justify-content:flex-end">
       <button class="btn btn-sm" onclick="Agile.closeAi()">Cancelar</button>
       <button class="btn btn-sm btn-acc" id="aa-apply" style="display:none" onclick="Agile.applyAi()"><i class="ti ti-check"></i>Aplicar selecionadas</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-ov hidden" id="modal-agile-board" onclick="if(event.target===this)Agile.closeBoardCfg()">
+  <div class="modal-box" style="width:600px;max-width:96vw;max-height:92vh;overflow-y:auto" role="dialog" aria-modal="true" aria-labelledby="ab-title-h">
+    <div class="modal-title" id="ab-title-h">Personalizar quadro</div>
+    <div class="modal-sub">Monte as colunas do seu fluxo de trabalho. "A fazer" e "Concluído" são fixas; as do meio você escolhe (até 5).</div>
+    <div class="lbl">Colunas e limite de itens em andamento<span class="help-q" data-help="O limite (WIP) é quantos itens podem estar ao mesmo tempo naquela coluna; deixe 0 para não ter limite. O quadro avisa quando passa, mas não impede de mover." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div id="ab-cols"></div>
+    <div class="btn-row" style="margin:6px 0 12px"><button class="btn btn-sm" id="ab-add" onclick="Agile.addCol()"><i class="ti ti-plus"></i>Nova coluna</button></div>
+    <div class="lbl">Informações que aparecem no cartão<span class="help-q" data-help="Cartões mais enxutos deixam o quadro mais limpo; o título sempre aparece. Os dados continuam salvos no item mesmo escondidos." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div id="ab-card" style="display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--t1)"></div>
+    <div class="btn-row" style="margin-top:14px;justify-content:space-between">
+      <button class="btn btn-sm" onclick="Agile.resetBoardCfg()">Restaurar padrão</button>
+      <span style="display:flex;gap:8px"><button class="btn btn-sm" onclick="Agile.closeBoardCfg()">Cancelar</button><button class="btn btn-sm btn-acc" onclick="Agile.saveBoardCfg()"><i class="ti ti-check"></i>Salvar</button></span>
     </div>
   </div>
 </div>
@@ -3688,7 +3729,7 @@ const Cloud = (() => {
   // Tabelas de dados do PROJETO (têm project_id e são apagadas por "Zerar base"/"Limpar projeto"). Fonte única:
   // clearProjectData e resetForNewUsers percorrem esta lista — tabela nova entra aqui, nunca em lista escrita à mão.
   // A ordem respeita chaves estrangeiras (filhas antes das mães). tests/run.js confere esta lista contra o schema.sql.
-  const PROJECT_DATA_TABLES = ['wbs_tasks','cost_actuals','budget_lines','wbs_modules','decisions','documents','scope_changes','risks','time_entries','baselines','raci_entries','backlog_items','sprints'];
+  const PROJECT_DATA_TABLES = ['wbs_tasks','cost_actuals','budget_lines','wbs_modules','decisions','documents','scope_changes','risks','time_entries','baselines','raci_entries','backlog_items','sprints','sprint_rites','impediments','project_docs'];
   // Mapeadores local ⇄ nuvem das tabelas novas (um só lugar para push, pull e importação em lote)
   const ROW = {
     scope_changes: {
@@ -3715,6 +3756,21 @@ const Cloud = (() => {
       toDb: (x, pid) => ({ project_id:pid, id:x.id, name:x.name, goal:x.goal||null, start_on:x.startOn, end_on:x.endOn, capacity:(x.capacity===''||x.capacity==null)?null:x.capacity, state:x.state||'planejada', closed_on:x.closedOn||null, availability:x.availability||{}, updated_at:new Date().toISOString() }),
       fromDb: r => ({ id:r.id, name:r.name, goal:r.goal||'', startOn:r.start_on, endOn:r.end_on, capacity:r.capacity==null?'':r.capacity, state:r.state, closedOn:r.closed_on||'', availability:r.availability||{} }),
       local: 'sprints'
+    },
+    sprint_rites: {
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, sprint_id:x.sprintId, kind:x.kind, held_on:x.heldOn||null, attendees:x.attendees||null, notes:x.notes||null, data:x.data||{}, updated_at:new Date().toISOString() }),
+      fromDb: r => ({ id:r.id, sprintId:r.sprint_id, kind:r.kind, heldOn:r.held_on||'', attendees:r.attendees||'', notes:r.notes||'', data:r.data||{} }),
+      local: 'rites'
+    },
+    impediments: {
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, title:x.title, owner_name:x.owner||null, sprint_id:x.sprintId||null, status:x.status||'aberto', note:x.note||null, created_on:x.createdOn||null, resolved_on:x.resolvedOn||null, updated_at:new Date().toISOString() }),
+      fromDb: r => ({ id:r.id, title:r.title, owner:r.owner_name||'', sprintId:r.sprint_id||'', status:r.status, note:r.note||'', createdOn:r.created_on||'', resolvedOn:r.resolved_on||'' }),
+      local: 'impediments'
+    },
+    project_docs: {
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, kind:x.kind, title:x.title, data:x.data||{}, updated_at:new Date().toISOString() }),
+      fromDb: r => ({ id:r.id, kind:r.kind, title:r.title, data:r.data||{}, updatedAt:r.updated_at||'' }),
+      local: 'projectDocs'
     },
     raci_entries: {
       toDb: (x, pid) => ({ project_id:pid, id:x.id, label:x.label, assignments:x.assignments||{}, updated_at:new Date().toISOString() }),
@@ -4064,12 +4120,12 @@ const Cloud = (() => {
     // de um projeto na tela de outro. Antes disso não existia esse filtro: era um pool só.
     const pid = DB.getActiveProjectId();
     // Progresso com etapas reais: cada consulta que termina conta; só aparece se a sincronização demorar
-    const SYNC_QUERIES = 15;
+    const SYNC_QUERIES = 18;
     let syncDone = 0;
     const sync = Progress.start({ title: 'Sincronizando com a nuvem', total: SYNC_QUERIES, cancellable: false });
     const counted = p => Promise.resolve(p).then(r => { sync.set(++syncDone, SYNC_QUERIES, `${syncDone} de ${SYNC_QUERIES} tabelas lidas`); return r; });
     try {
-      const [mods, tasks, decs, docs, budLines, costActs, settings, team, scopeRows, riskRows, timeRows, baseRows, raciRows, backlogRows, sprintRows] = await Promise.all([
+      const [mods, tasks, decs, docs, budLines, costActs, settings, team, scopeRows, riskRows, timeRows, baseRows, raciRows, backlogRows, sprintRows, riteRows, impRows, docRows] = await Promise.all([
         client.from('wbs_modules').select('*').eq('project_id', pid),
         client.from('wbs_tasks').select('*').eq('project_id', pid),
         client.from('decisions').select('*').eq('project_id', pid),
@@ -4084,7 +4140,10 @@ const Cloud = (() => {
         client.from('baselines').select('*').eq('project_id', pid).order('created_on', { ascending:true }).order('id', { ascending:true }),
         client.from('raci_entries').select('*').eq('project_id', pid),
         client.from('backlog_items').select('*').eq('project_id', pid),
-        client.from('sprints').select('*').eq('project_id', pid)
+        client.from('sprints').select('*').eq('project_id', pid),
+        client.from('sprint_rites').select('*').eq('project_id', pid),
+        client.from('impediments').select('*').eq('project_id', pid),
+        client.from('project_docs').select('*').eq('project_id', pid)
       ].map(counted)).catch(e => { sync.fail('Não consegui ler os dados da nuvem. Seus dados continuam salvos neste navegador.'); throw e; });
       sync.done();
       // Tabelas que antes só existiam neste navegador: se a nuvem ainda está vazia e há dado local, SOBE o local
@@ -4095,7 +4154,10 @@ const Cloud = (() => {
        ['baselines', baseRows, () => typeof Baselines !== 'undefined' && Baselines.resetCache(), () => typeof Baselines !== 'undefined' && Baselines.render()],
        ['raci_entries', raciRows, () => typeof Raci !== 'undefined' && Raci.resetCache(), () => typeof Raci !== 'undefined' && Raci.render()],
        ['backlog_items', backlogRows, () => typeof Agile !== 'undefined' && Agile.resetCache(), () => typeof Agile !== 'undefined' && Agile.render()],
-       ['sprints', sprintRows, () => typeof Agile !== 'undefined' && Agile.resetCache(), () => typeof Agile !== 'undefined' && Agile.render()]
+       ['sprints', sprintRows, () => typeof Agile !== 'undefined' && Agile.resetCache(), () => typeof Agile !== 'undefined' && Agile.render()],
+       ['sprint_rites', riteRows, () => typeof Rites !== 'undefined' && Rites.resetCache(), () => typeof Rites !== 'undefined' && Rites.render()],
+       ['impediments', impRows, () => typeof Rites !== 'undefined' && Rites.resetCache(), () => typeof Rites !== 'undefined' && Rites.render()],
+       ['project_docs', docRows, () => typeof Models !== 'undefined' && Models.resetCache(), () => typeof Models !== 'undefined' && Models.render()]
       ].forEach(([table, res, reset, draw]) => {
         if(!res || res.error || !res.data) return;
         const m = ROW[table];
@@ -4894,7 +4956,7 @@ const DB = (() => {
   function storageKeyFor(projectId) { return projectId === 'nexus' ? 'pmo_db_v1' : ('pmo_db_v1__' + projectId); }
 
   function seedEmpty() {
-    return { version:1, wbs:[], decisions:[], repository:[], stakeholders:[], trail:[], lessons:[], scopeChanges:[], team:[], meetings:[], estimateHistory:[], scenarios:[], budgetLines:[], costActuals:[], risks:[], timeEntries:[], baselines:[], raci:[], backlog:[], sprints:[], pmoProfile:null, methodology:null };
+    return { version:1, wbs:[], decisions:[], repository:[], stakeholders:[], trail:[], lessons:[], scopeChanges:[], team:[], meetings:[], estimateHistory:[], scenarios:[], budgetLines:[], costActuals:[], risks:[], timeEntries:[], baselines:[], raci:[], backlog:[], sprints:[], rites:[], impediments:[], projectDocs:[], pmoProfile:null, methodology:null };
   }
 
   function seed() {
@@ -5118,6 +5180,16 @@ const DB = (() => {
       ['US-019','Aviso de vencimento por e-mail','historia',5,'todo','','SP-005'], ['US-020','Pagamento por Pix','historia',13,'todo','',''], ['US-021','Histórico de segundas vias','historia',3,'todo','','SP-005'], ['US-022','Modo escuro','tarefa','','todo','','']
     ]);
     e.agileConfig = { wip: { doing: 3, review: 2 } };
+    // Valdori (ágil): ritos da sprint, impedimentos e um plano de ação 5W2H de exemplo
+    e.rites = [
+      { id:'RT-001', sprintId:'SP-003', kind:'revisao', heldOn:'2026-06-14', attendees:'Bruna Teixeira, Caio Mendes, Patrocinador', notes:'', data:{ goal:'sim', feedback:[{ text:'Exportar em PDF ficou ótimo; pedir também Excel' }], changes:'Subir a prioridade do saldo em tempo real.' } },
+      { id:'RT-002', sprintId:'SP-003', kind:'retrospectiva', heldOn:'2026-06-14', attendees:'Time completo', notes:'', data:{ well:[{ text:'Revisão de código no mesmo dia', votes:3 }], improve:[{ text:'Dependência da API do parceiro travou 2 dias', votes:4 }], actions:[{ id:'a1', text:'Pedir o ambiente de teste da API ao parceiro', owner:'Caio Mendes', due:'2026-06-24', done:false }, { id:'a2', text:'Reservar 1 hora por semana para refinar o backlog', owner:'Bruna Teixeira', due:'2026-06-20', done:true }] } },
+      { id:'RT-003', sprintId:'SP-004', kind:'planejamento', heldOn:'2026-06-15', attendees:'Time completo', notes:'Capacidade de 26 pts.', data:{} }
+    ];
+    e.impediments = [
+      { id:'IMP-001', title:'API do parceiro sem ambiente de teste', owner:'Caio Mendes', sprintId:'SP-004', status:'aberto', note:'', createdOn:'2026-06-17', resolvedOn:'' },
+      { id:'IMP-002', title:'Acesso ao banco de homologação', owner:'Helena Prado', sprintId:'SP-004', status:'resolvido', note:'', createdOn:'2026-06-16', resolvedOn:'2026-06-18' } ];
+    e.projectDocs = [ { id:'DOC-001', kind:'5w2h', title:'Plano de ação 5W2H — Valdori Dist.', data:{ rows:[{ what:'Obter o ambiente de teste da API do parceiro', why:'Destravar o saldo em tempo real', where:'Banco parceiro', when:'2026-06-24', who:'Caio Mendes', how:'Chamado com o gerente de integração', howmuch:'Sem custo' }] }, updatedAt:'2026-06-17T10:00:00.000Z' } ];
     return e;
   }
   function seedHibrido() {
@@ -5181,6 +5253,15 @@ const DB = (() => {
       ['US-009','Relatório de manutenção preventiva','historia',8,'todo','',''], ['US-010','Mapa da frota em tempo real','historia',13,'todo','','']
     ]);
     e.agileConfig = { wip: { doing: 3, review: 2 } };
+    // Beltrano (híbrido): ritos da parte ágil, impedimento aberto e documentos de planejamento
+    e.rites = [
+      { id:'RT-001', sprintId:'SP-001', kind:'retrospectiva', heldOn:'2026-06-07', attendees:'Time completo', notes:'', data:{ well:[{ text:'Checklist de pneus entregue antes do prazo', votes:3 }], improve:[{ text:'Homologação do GPS atrasou o check-in', votes:4 }], actions:[{ id:'a1', text:'Antecipar a homologação do GPS da segunda frota', owner:'Igor Ferraz', due:'2026-06-20', done:false }] } },
+      { id:'RT-002', sprintId:'SP-002', kind:'planejamento', heldOn:'2026-06-08', attendees:'Igor Ferraz, Júlia Rocha, Otávio Lima', notes:'Meta: alerta de fadiga e ocorrências.', data:{} }
+    ];
+    e.impediments = [ { id:'IMP-001', title:'Fornecedor do GPS ainda não liberou o kit da segunda frota', owner:'Igor Ferraz', sprintId:'SP-002', status:'aberto', note:'', createdOn:'2026-06-17', resolvedOn:'' } ];
+    const cut = typeof ModelsCalc !== 'undefined' ? ModelsCalc.create('cutover') : { rows: [] }; cut.rows.slice(0, 3).forEach(r => { r.status = 'concluido'; });
+    const com = typeof ModelsCalc !== 'undefined' ? ModelsCalc.create('comunicacao') : { rows: [] };
+    e.projectDocs = [ { id:'DOC-001', kind:'cutover', title:'Plano de cutover — Grupo Beltrano', data:cut, updatedAt:'2026-06-18T10:00:00.000Z' }, { id:'DOC-002', kind:'comunicacao', title:'Plano de comunicação — Grupo Beltrano', data:com, updatedAt:'2026-06-10T10:00:00.000Z' } ];
     return e;
   }
   function seedFor(projectId) { return projectId === 'nexus' ? seed() : projectId === 'valdori' ? seedAgil() : projectId === 'beltrano' ? seedHibrido() : seedEmpty(); }
@@ -5209,6 +5290,9 @@ const DB = (() => {
     if(!Array.isArray(c.raci)) c.raci = [];
     if(!Array.isArray(c.backlog)) c.backlog = defaults.backlog || [];
     if(!Array.isArray(c.sprints)) c.sprints = defaults.sprints || [];
+    if(!Array.isArray(c.rites)) c.rites = defaults.rites || [];
+    if(!Array.isArray(c.impediments)) c.impediments = defaults.impediments || [];
+    if(!Array.isArray(c.projectDocs)) c.projectDocs = defaults.projectDocs || [];
     if(c.methodology === undefined) c.methodology = defaults.methodology;
     if(c.pmoProfile === undefined) c.pmoProfile = defaults.pmoProfile;
     return c;
@@ -5247,7 +5331,7 @@ const DB = (() => {
     cache = null;
     load();
     // Cada módulo de página guarda os dados numa variável própria — precisa ser avisado da troca
-    [WBS, Repo, Decisions, Trail, Stakeholders, Lessons, Scope, Burnout, Meetings, Estimates, WI, Budget, Risks, Hours, StatusMsg, Baselines, Raci, Agile].forEach(mod => {
+    [WBS, Repo, Decisions, Trail, Stakeholders, Lessons, Scope, Burnout, Meetings, Estimates, WI, Budget, Risks, Hours, StatusMsg, Baselines, Raci, Agile, Rites, Models].forEach(mod => {
       if(typeof mod !== 'undefined' && mod && typeof mod.resetCache === 'function') mod.resetCache();
     });
     if(typeof renderAllModules === 'function') renderAllModules();
@@ -5708,7 +5792,7 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','raci','kanban','backlog','sprints','help','xray'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','raci','kanban','backlog','sprints','ritos','modelos','help','xray'];
   function go(id) {
     pages.forEach(p => {
       const el = document.getElementById('p-'+p);
@@ -5737,6 +5821,8 @@ const R = (() => {
     if(id === 'hours' && typeof Hours !== 'undefined') Hours.render();
     if(id === 'raci' && typeof Raci !== 'undefined') Raci.render();
     if(['kanban','backlog','sprints'].includes(id) && typeof Agile !== 'undefined') Agile.render();
+    if(id === 'ritos' && typeof Rites !== 'undefined') Rites.render();
+    if(id === 'modelos' && typeof Models !== 'undefined') Models.render();
     if(typeof Agile !== 'undefined') Agile.renderDashboard();
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
     if(id === 'settings' && typeof PmoProfiles !== 'undefined') PmoProfiles.render();
@@ -5765,7 +5851,7 @@ const Nav = (() => {
     dashboard:'sbg-indicadores', pfkpi:'sbg-indicadores', portfolio:'sbg-indicadores', prioritization:'sbg-indicadores', report:'sbg-indicadores',
     settings:'sbg-sistema', help:'sbg-sistema',
     decisions:'sbg-decisao', loop:'sbg-decisao', trail:'sbg-decisao', statusmsg:'sbg-decisao',
-    kanban:'sbg-agil', backlog:'sbg-agil', sprints:'sbg-agil',
+    kanban:'sbg-agil', backlog:'sbg-agil', sprints:'sbg-agil', ritos:'sbg-agil', modelos:'sbg-conhecimento',
     wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento', risks:'sbg-planejamento', baseline:'sbg-planejamento',
     burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe', hours:'sbg-equipe', raci:'sbg-equipe',
     lessons:'sbg-conhecimento', meetings:'sbg-conhecimento', repository:'sbg-conhecimento', chat:'sbg-conhecimento',
@@ -5855,7 +5941,7 @@ const Nav = (() => {
   const SECTION_OF = { xray:'Painéis', board:'Painéis', execview:'Painéis', pmoview:'Painéis' };
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
-    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores', pmoview:'Visão do PMO', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints',
+    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores', pmoview:'Visão do PMO', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint', modelos:'Modelos',
     burnout:'Burnout Radar', resources:'Colaboradores', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
     portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
@@ -5932,6 +6018,8 @@ const CmdK = (() => {
     { label:'Quadro Kanban', page:'kanban', icon:'layout-kanban', group:'Execução ágil' },
     { label:'Backlog', page:'backlog', icon:'list-details', group:'Execução ágil' },
     { label:'Sprints', page:'sprints', icon:'rocket', group:'Execução ágil' },
+    { label:'Ritos da sprint', page:'ritos', icon:'calendar-event', group:'Execução ágil' },
+    { label:'Modelos de documentos', page:'modelos', icon:'template', group:'Conhecimento' },
     { label:'Stakeholders', page:'stakeholders', icon:'users', group:'Equipe' },
     { label:'Lições Aprendidas', page:'lessons', icon:'books', group:'Conhecimento' },
     { label:'Atas e Ações', page:'meetings', icon:'notes', group:'Conhecimento' },
@@ -7797,6 +7885,8 @@ function renderAllModules() {
   Hours.render();
   Raci.render();
   Agile.render();
+  Rites.render();
+  Models.render();
   Burnout.render();
   Meetings.render();
   Report.render();
@@ -9531,19 +9621,32 @@ const AgileCalc = (() => {
   const sum = list => list.reduce((s, x) => s + pts(x), 0);
   const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   const diffDays = (a, b) => Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / DAY);
-  const cfgOf = cfg => ({ wip: { doing: DEFAULT_CFG.wip.doing, review: DEFAULT_CFG.wip.review, ...((cfg && cfg.wip) || {}) }, reservePct: cfg && cfg.reservePct != null ? Math.max(0, Math.min(50, Number(cfg.reservePct) || 0)) : DEFAULT_CFG.reservePct });
+  // Colunas do quadro: "todo" sempre a primeira e "done" sempre a última; no meio de 0 a 5 colunas livres (nome técnico curto, rótulo à vontade)
+  const KEY_RE = /^[a-z0-9]{1,12}$/;
+  const DEFAULT_CARD = { id: true, kind: true, points: true, assignee: true, sprint: true };
+  function cols(cfg) {
+    const raw = cfg && Array.isArray(cfg.columns) ? cfg.columns : null;
+    if(!raw) return COLS.map(c => ({ ...c }));
+    const seen = new Set(), ok = [];
+    raw.forEach(c => { const key = String(c && c.key || ''), label = String(c && c.label || '').replace(/\s+/g, ' ').trim().slice(0, 30); if(!KEY_RE.test(key) || !label || seen.has(key)) return; seen.add(key); ok.push({ key, label }); });
+    const todo = ok.find(c => c.key === 'todo'), done = ok.find(c => c.key === 'done');
+    if(!todo || !done) return COLS.map(c => ({ ...c }));
+    return [todo, ...ok.filter(c => c.key !== 'todo' && c.key !== 'done').slice(0, 5), done];
+  }
+  const colLabel = (cfg, key) => { const c = cols(cfg).find(x => x.key === key); return c ? c.label : (key === 'done' ? 'Concluído' : 'A fazer'); };
+  const cfgOf = cfg => ({ columns: cols(cfg), card: { ...DEFAULT_CARD, ...((cfg && cfg.card) || {}) }, wip: { doing: DEFAULT_CFG.wip.doing, review: DEFAULT_CFG.wip.review, ...((cfg && cfg.wip) || {}) }, reservePct: cfg && cfg.reservePct != null ? Math.max(0, Math.min(50, Number(cfg.reservePct) || 0)) : DEFAULT_CFG.reservePct });
 
   // Por coluna: quantos itens, limite (0 = sem limite) e se passou do limite
   function wip(items, cfg) {
     const c = cfgOf(cfg);
-    return COLS.map(col => {
+    return c.columns.map(col => {
       const n = items.filter(i => i.status === col.key).length, limit = Number(c.wip[col.key]) || 0;
       return { key: col.key, label: col.label, count: n, limit, over: limit > 0 && n > limit };
     });
   }
   // Mover de coluna: a data de conclusão só existe enquanto o item está Concluído
   function moveTo(item, status, today) { item.status = status; item.doneOn = status === 'done' ? (item.doneOn || today) : ''; return item; }
-  function neighbor(status, dir) { const i = COLS.findIndex(c => c.key === status) + dir; return COLS[i] ? COLS[i].key : null; }
+  function neighbor(status, dir, cfg) { const list = cols(cfg), i = list.findIndex(c => c.key === status) + dir; return list[i] ? list[i].key : null; }
 
   function sprintStats(sprint, items, today) {
     const mine = items.filter(i => i.sprintId === sprint.id);
@@ -9675,7 +9778,170 @@ const AgileCalc = (() => {
     return advice;
   }
 
-  return { COLS, KINDS, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+  return { COLS, cols, colLabel, DEFAULT_CARD, KINDS, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+})();
+</script>
+
+<!-- ■ MODULE: services/agile-rites ─ Ritos da sprint (Scrum): duração máxima proporcional à sprint, quem participa, pauta e acompanhamento — regras puras -->
+<script data-module="services/agile-rites">
+const AgileRites = (() => {
+  const DAY = 86400000;
+  const diffDays = (a, b) => Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / DAY);
+  // Duração máxima do Guia do Scrum para sprint de 1 mês (4 semanas), proporcional ao tamanho da sprint:
+  // planejamento 8 h, revisão 4 h, retrospectiva 3 h; reunião diária 15 min fixos.
+  const RITES = [
+    { kind: 'planejamento', label: 'Planejamento da sprint', icon: 'target', hoursPerWeek: 2,
+      who: 'Todo o time: dono do produto, Scrum Master e desenvolvedores',
+      what: 'O time decide o que entregará na sprint e por quê, definindo a meta da sprint e puxando os itens do backlog.',
+      agenda: ['Rever a meta do produto e o que mais importa agora', 'Definir a meta da sprint em uma frase', 'Conferir a capacidade do time (folgas, férias, alocação)', 'Puxar do topo do backlog os itens que cabem na capacidade', 'Combinar como cada item será feito e quem começa por quê'],
+      output: 'Meta da sprint e itens da sprint' },
+    { kind: 'daily', label: 'Reunião diária', icon: 'sun', fixedMinutes: 15,
+      who: 'Desenvolvedores (dono do produto e Scrum Master participam se estiverem trabalhando em itens)',
+      what: 'Encontro rápido, em pé, para alinhar o dia e revelar o que está travando o time.',
+      agenda: ['O que fiz desde a última reunião que ajuda a atingir a meta?', 'O que vou fazer até a próxima reunião?', 'Existe algo me impedindo? (registre como impedimento)'],
+      output: 'Impedimentos registrados e resolvidos' },
+    { kind: 'revisao', label: 'Revisão da sprint', icon: 'presentation', hoursPerWeek: 1,
+      who: 'Time Scrum e as partes interessadas (clientes, gestores, stakeholders)',
+      what: 'Mostrar o que foi entregue (o incremento), ouvir o feedback e ajustar o backlog.',
+      agenda: ['Dizer se a meta da sprint foi atingida', 'Demonstrar o que ficou pronto', 'Coletar feedback das partes interessadas', 'Ajustar o backlog e as prioridades com base no que se ouviu'],
+      output: 'Feedback registrado e backlog ajustado' },
+    { kind: 'retrospectiva', label: 'Retrospectiva', icon: 'refresh', hoursPerWeek: 0.75,
+      who: 'Time Scrum: dono do produto, Scrum Master e desenvolvedores',
+      what: 'O time avalia a si mesmo: o que funcionou, o que melhorar, e combina ações concretas para a próxima sprint.',
+      agenda: ['Rever as ações da retrospectiva anterior', 'O que funcionou bem?', 'O que pode melhorar?', 'Escolher as 1 a 3 melhorias que vamos tentar e quem cuida de cada uma'],
+      output: 'Ações de melhoria com responsável e prazo' },
+    { kind: 'refinamento', label: 'Refinamento do backlog', icon: 'list-search', percentOfSprint: 10,
+      who: 'Dono do produto e desenvolvedores',
+      what: 'Atividade contínua para deixar o topo do backlog claro, estimado e do tamanho certo para a próxima sprint.',
+      agenda: ['Esclarecer os itens do topo e os critérios de aceite', 'Estimar os itens sem pontos', 'Dividir os itens grandes demais para uma sprint', 'Reordenar por prioridade'],
+      output: 'Backlog pronto para a próxima sprint' }
+  ];
+  const weeks = sprint => Math.max(0.2, Math.round((diffDays(sprint.startOn, sprint.endOn) + 1) / 7 * 10) / 10);
+  function minutes(rite, sprint) {
+    if(rite.fixedMinutes) return rite.fixedMinutes;
+    if(rite.hoursPerWeek) return Math.round(rite.hoursPerWeek * weeks(sprint) * 60);
+    if(rite.percentOfSprint) return Math.round((diffDays(sprint.startOn, sprint.endOn) + 1) / 7 * 5 * 8 * 60 * rite.percentOfSprint / 100); // 10% das horas úteis da sprint, por pessoa
+    return 0;
+  }
+  function fmtDuration(min) {
+    if(min < 60) return `${min} min`;
+    const h = Math.floor(min / 60), m = min % 60;
+    return m ? `${h} h ${m} min` : `${h} h`;
+  }
+  // Estado de cada rito na sprint. Planejamento conta como feito quando a sprint já começou ou há registro.
+  function status(sprint, rites, impediments) {
+    const mine = rites.filter(r => r.sprintId === sprint.id), by = k => mine.find(r => r.kind === k);
+    const open = impediments.filter(i => i.status === 'aberto' && (!i.sprintId || i.sprintId === sprint.id)).length;
+    return RITES.map(r => {
+      const rec = by(r.kind);
+      let state = rec && rec.heldOn ? 'feito' : 'pendente', note = rec && rec.heldOn ? rec.heldOn : '';
+      if(r.kind === 'planejamento' && state === 'pendente' && sprint.state !== 'planejada') { state = 'feito'; note = 'sprint iniciada'; }
+      if(r.kind === 'daily') { state = open ? 'atencao' : 'continuo'; note = open ? `${open} impedimento(s) aberto(s)` : 'sem impedimentos'; }
+      if(r.kind === 'refinamento') { state = rec && rec.heldOn ? 'feito' : 'continuo'; if(!note) note = 'atividade contínua'; }
+      return { kind: r.kind, state, note, minutes: minutes(r, sprint) };
+    });
+  }
+  // Ações da retrospectiva da sprint ANTERIOR que ainda não foram concluídas (o time precisa vê-las na retro seguinte)
+  function pendingActions(sprint, sprints, rites) {
+    const prev = sprints.filter(s => s.id !== sprint.id && s.startOn < sprint.startOn).sort((a, b) => b.startOn.localeCompare(a.startOn));
+    const out = [];
+    prev.forEach(s => { const r = rites.find(x => x.sprintId === s.id && x.kind === 'retrospectiva'); ((r && r.data && r.data.actions) || []).forEach(a => { if(!a.done) out.push({ ...a, fromSprint: s.name, riteId: r.id }); }); });
+    return out;
+  }
+  // Resumo para a revisão: o que foi entregue e se a meta foi atingida
+  function reviewSummary(sprint, items) {
+    const mine = items.filter(i => i.sprintId === sprint.id), done = mine.filter(i => i.status === 'done');
+    const pts = l => l.reduce((s, i) => s + (Number(i.points) || 0), 0);
+    return { delivered: done, notDone: mine.filter(i => i.status !== 'done'), points: pts(done), committed: pts(mine), pct: mine.length ? Math.round(done.length / mine.length * 100) : 0 };
+  }
+  const clean = (s, n) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, n);
+  // Dados da retrospectiva: nunca aceita lixo (tamanhos e quantidades limitados)
+  function normalizeRetro(d) {
+    const card = c => ({ text: clean(c && c.text, 200), votes: Math.max(0, Math.min(99, parseInt(c && c.votes, 10) || 0)) });
+    const list = a => (Array.isArray(a) ? a : []).map(card).filter(c => c.text).slice(0, 30);
+    const actions = (Array.isArray(d && d.actions) ? d.actions : []).map(a => ({ id: clean(a && a.id, 40) || 'a' + Math.random().toString(36).slice(2, 8), text: clean(a && a.text, 200), owner: clean(a && a.owner, 80), due: /^\d{4}-\d{2}-\d{2}$/.test(a && a.due) ? a.due : '', done: !!(a && a.done) })).filter(a => a.text).slice(0, 20);
+    return { well: list(d && d.well), improve: list(d && d.improve), actions };
+  }
+  return { RITES, minutes, fmtDuration, weeks, status, pendingActions, reviewSummary, normalizeRetro };
+})();
+</script>
+
+<!-- ■ MODULE: services/models-calc ─ Modelos de documentos de projeto (5W2H, SWOT, plano de comunicação, cutover, handover) — definições e regras puras -->
+<script data-module="services/models-calc">
+const ModelsCalc = (() => {
+  const clean = (s, n) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, n || 500);
+  const MAX_ROWS = 200;
+  const KINDS = {
+    '5w2h': { label: 'Plano de ação 5W2H', icon: 'list-check', type: 'table',
+      help: 'Para cada ação, responda as 7 perguntas: o quê, por quê, onde, quando, quem, como e quanto custa. É o jeito mais simples de transformar uma decisão em tarefas com dono e prazo.',
+      cols: [['what', 'O quê (What)', 'text'], ['why', 'Por quê (Why)', 'text'], ['where', 'Onde (Where)', 'text'], ['when', 'Quando (When)', 'date'], ['who', 'Quem (Who)', 'text'], ['how', 'Como (How)', 'text'], ['howmuch', 'Quanto custa (How much)', 'text']],
+      starter: [{}] },
+    'swot': { label: 'Análise SWOT', icon: 'chart-radar', type: 'swot',
+      help: 'Forças e fraquezas são internas (da equipe ou do projeto); oportunidades e ameaças vêm de fora. Liste poucos itens e, ao final, escolha ações para usar as forças e reduzir as ameaças.',
+      lists: [['forcas', 'Forças (interno, positivo)'], ['fraquezas', 'Fraquezas (interno, negativo)'], ['oportunidades', 'Oportunidades (externo, positivo)'], ['ameacas', 'Ameaças (externo, negativo)']] },
+    'comunicacao': { label: 'Plano de comunicação', icon: 'messages', type: 'table',
+      help: 'Define quem recebe qual informação, com que frequência, por qual canal e quem é responsável. Evita que alguém importante fique sem saber do andamento.',
+      cols: [['audience', 'Público / Stakeholder', 'text'], ['info', 'Informação', 'text'], ['freq', 'Frequência', 'text'], ['channel', 'Canal', 'text'], ['owner', 'Responsável', 'text'], ['note', 'Observação', 'text']],
+      starter: [{ audience: 'Patrocinador', info: 'Status do projeto e decisões pendentes', freq: 'Semanal', channel: 'Relatório executivo / e-mail' }, { audience: 'Equipe do projeto', info: 'Prioridades e impedimentos', freq: 'Diária', channel: 'Reunião diária' }, { audience: 'Cliente / usuários-chave', info: 'Marcos entregues e próximos passos', freq: 'Quinzenal', channel: 'Reunião de revisão' }] },
+    'cutover': { label: 'Plano de cutover (virada)', icon: 'rocket', type: 'table', progress: 'status',
+      help: 'Roteiro minuto a minuto da virada para produção (go-live): o que fazer, quem faz, quando começa, quanto dura e como voltar atrás se algo der errado.',
+      cols: [['activity', 'Atividade', 'text'], ['owner', 'Responsável', 'text'], ['start', 'Início previsto', 'datetime'], ['minutes', 'Duração (min)', 'number'], ['status', 'Situação', 'status'], ['rollback', 'Plano de retorno', 'text']],
+      starter: [{ activity: 'Comunicar a janela de congelamento aos usuários' }, { activity: 'Congelar alterações no ambiente atual' }, { activity: 'Fazer backup completo e conferir a restauração' }, { activity: 'Executar a migração / implantação' }, { activity: 'Validar com os usuários-chave (checklist de aceite)' }, { activity: 'Decidir seguir ou voltar atrás (go / no-go)' }, { activity: 'Comunicar a entrada em produção' }, { activity: 'Acompanhar o suporte reforçado nas primeiras horas' }] },
+    'handover': { label: 'Termo de handover (entrega)', icon: 'file-certificate', type: 'sections', progress: 'sections',
+      help: 'Checklist de passagem do projeto para a operação ou para o cliente: o que foi entregue, onde está a documentação, quem dá suporte e o que ficou pendente. Não registre senhas aqui.',
+      sections: [['escopo', 'Escopo entregue', ['Funcionalidades entregues conferidas com o escopo contratado', 'Itens fora do escopo ou adiados registrados']],
+        ['docs', 'Documentação entregue', ['Manual do usuário', 'Documentação técnica e de arquitetura', 'Procedimentos de operação e de backup']],
+        ['acessos', 'Acessos e responsáveis (nunca registre senhas)', ['Lista de quem tem acesso a cada ambiente', 'Responsável pela conta administrativa definido']],
+        ['pendencias', 'Pendências conhecidas', ['Pendências listadas com responsável e prazo']],
+        ['treinamento', 'Treinamento e transferência de conhecimento', ['Treinamento dos usuários realizado', 'Sessão de transferência técnica realizada']],
+        ['suporte', 'Suporte pós-entrega', ['Canal e horário de suporte combinados', 'Prazo de garantia / acompanhamento definido']],
+        ['aceite', 'Aceite formal', ['Aceite assinado pelo cliente ou patrocinador']]] }
+  };
+  const STATUS = [['pendente', 'Pendente'], ['andamento', 'Em andamento'], ['concluido', 'Concluído'], ['bloqueado', 'Bloqueado']];
+  const ORDER = ['5w2h', 'comunicacao', 'cutover', 'handover', 'swot'];
+  // Documento novo com conteúdo inicial útil (ctx.stakeholders: nomes para o plano de comunicação)
+  function create(kind) {
+    const k = KINDS[kind]; if(!k) return null;
+    if(k.type === 'table') return { rows: (k.starter || [{}]).map(r => ({ ...r })) };
+    if(k.type === 'swot') return { lists: Object.fromEntries(k.lists.map(([key]) => [key, []])) };
+    return { sections: Object.fromEntries(k.sections.map(([key, , items]) => [key, { items: items.map(text => ({ text, done: false })), note: '' }])) };
+  }
+  // Aceita só o formato conhecido de cada modelo, com limites de tamanho
+  function sanitize(kind, data) {
+    const k = KINDS[kind]; if(!k) return null;
+    if(k.type === 'table') {
+      const rows = (Array.isArray(data && data.rows) ? data.rows : []).slice(0, MAX_ROWS).map(r => Object.fromEntries(k.cols.map(([key, , t]) => {
+        let v = r && r[key];
+        if(t === 'status') v = STATUS.some(([s]) => s === v) ? v : 'pendente';
+        else if(t === 'number') v = v === '' || v == null ? '' : Math.max(0, Math.min(100000, parseInt(v, 10) || 0));
+        else if(t === 'date') v = /^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v : '';
+        else if(t === 'datetime') v = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v || '') ? v : '';
+        else v = clean(v, 300);
+        return [key, v];
+      })));
+      return { rows };
+    }
+    if(k.type === 'swot') return { lists: Object.fromEntries(k.lists.map(([key]) => { const l = data && data.lists && data.lists[key]; return [key, (Array.isArray(l) ? l : []).map(s => clean(s, 200)).filter(Boolean).slice(0, 30)]; })) };
+    return { sections: Object.fromEntries(k.sections.map(([key]) => { const s = (data && data.sections && data.sections[key]) || {}; return [key, { items: (Array.isArray(s.items) ? s.items : []).map(i => ({ text: clean(i && i.text, 200), done: !!(i && i.done) })).filter(i => i.text).slice(0, 40), note: clean(s.note, 1000) }]; })) };
+  }
+  // Andamento: cutover = atividades concluídas; handover = itens marcados
+  function progress(kind, data) {
+    const k = KINDS[kind]; if(!k || !k.progress) return null;
+    let done = 0, total = 0;
+    if(k.progress === 'status') (data.rows || []).forEach(r => { if(r.activity) { total++; if(r.status === 'concluido') done++; } });
+    else Object.values(data.sections || {}).forEach(s => (s.items || []).forEach(i => { total++; if(i.done) done++; }));
+    return { done, total, pct: total ? Math.round(done / total * 100) : 0 };
+  }
+  // Linhas para exportar em Excel
+  function excelRows(kind, doc) {
+    const k = KINDS[kind], d = doc.data || {};
+    if(k.type === 'table') return [k.cols.map(c => c[1]), ...(d.rows || []).map(r => k.cols.map(([key, , t]) => t === 'status' ? (STATUS.find(s => s[0] === r[key]) || [, ''])[1] : r[key]))];
+    if(k.type === 'swot') { const n = Math.max(1, ...k.lists.map(([key]) => (d.lists[key] || []).length)); return [k.lists.map(l => l[1]), ...Array.from({ length: n }, (_, i) => k.lists.map(([key]) => (d.lists[key] || [])[i] || ''))]; }
+    const rows = [['Seção', 'Item', 'Feito', 'Observação']];
+    k.sections.forEach(([key, label]) => { const s = (d.sections || {})[key] || { items: [], note: '' }; (s.items || []).forEach((i, n) => rows.push([label, i.text, i.done ? 'Sim' : 'Não', n === 0 ? s.note : ''])); if(!(s.items || []).length && s.note) rows.push([label, '', '', s.note]); });
+    return rows;
+  }
+  return { KINDS, STATUS, ORDER, create, sanitize, progress, excelRows };
 })();
 </script>
 
@@ -9774,26 +10040,33 @@ const Agile = (() => {
       const opts = [['__auto', 'Sprint ativa'], ['__all', 'Todos os itens'], ...sprints.map(s => [s.id, s.name + (s.state === 'ativa' ? ' (ativa)' : '')])];
       sel.innerHTML = opts.map(([v, l]) => `<option value="${esc(v)}"${v === boardSprint ? ' selected' : ''}>${esc(l)}</option>`).join('');
     }
-    const d = document.getElementById('kb-wip-doing'), r = document.getElementById('kb-wip-review');
-    if(d && document.activeElement !== d) d.value = cfg.wip.doing; if(r && document.activeElement !== r) r.value = cfg.wip.review;
-    const list = boardItems().sort(sortByRank), stats = AgileCalc.wip(list, cfg);
+    const columns = AgileCalc.cols(cfg), keys = columns.map(c => c.key);
+    // item cuja coluna foi removida (ou importado de outro quadro) aparece na primeira coluna, nunca some
+    const keyOf = i => keys.includes(i.status) ? i.status : (i.status === 'done' ? 'done' : keys[0]);
+    const list = boardItems().map(i => (keys.includes(i.status) ? i : { ...i, status: keyOf(i) })).sort(sortByRank), stats = AgileCalc.wip(list, cfg);
+    const open = impediments().filter(x => x.status === 'aberto').length;
+    const imp = document.getElementById('kb-imp');
+    if(imp) imp.innerHTML = open ? `<button class="btn btn-sm" onclick="R.go('ritos')"><i class="ti ti-alert-octagon"></i>${open} impedimento(s) aberto(s)</button>` : '';
     if(!items.length) { root.innerHTML = '<div class="rk-empty">Nenhum item ainda. Use “Novo item” para cadastrar a primeira história — ela aparece em “A fazer”.</div>'; return; }
-    root.innerHTML = '<div class="kb-board">' + AgileCalc.COLS.map(col => {
+    root.innerHTML = `<div class="kb-board" style="grid-template-columns:repeat(${columns.length},minmax(${columns.length > 4 ? 210 : 0}px,1fr))">` + columns.map(col => {
       const st = stats.find(s => s.key === col.key);
       const cards = list.filter(i => i.status === col.key).map(i => card(i)).join('') || '<div style="font-size:11.5px;color:var(--t3);padding:6px 2px">Nenhum item</div>';
-      return `<div class="kb-col${st.over ? ' over-wip' : ''}" data-status="${col.key}" ondragover="Agile.dragOver(event)" ondragleave="this.classList.remove('drop')" ondrop="Agile.drop(event,'${col.key}')" role="group" aria-label="${col.label}: ${st.count} item(ns)">
-        <div class="kb-hdr"><b>${col.label}</b><span class="kb-count">${st.count}${st.limit ? ' / ' + st.limit : ''}</span>${st.over ? '<span class="badge b-red">limite excedido</span>' : ''}</div>${cards}</div>`;
+      return `<div class="kb-col${st.over ? ' over-wip' : ''}" data-status="${esc(col.key)}" ondragover="Agile.dragOver(event)" ondragleave="this.classList.remove('drop')" ondrop="Agile.drop(event,'${esc(col.key)}')" role="group" aria-label="${esc(col.label)}: ${st.count} item(ns)">
+        <div class="kb-hdr"><b>${esc(col.label)}</b><span class="kb-count">${st.count}${st.limit ? ' / ' + st.limit : ''}</span>${st.over ? '<span class="badge b-red">limite excedido</span>' : ''}</div>${cards}</div>`;
     }).join('') + '</div>';
   }
+  const impediments = () => DB.get('impediments') || [];
   function card(i) {
     const sp = sprints.find(s => s.id === i.sprintId);
-    const prev = AgileCalc.neighbor(i.status, -1), next = AgileCalc.neighbor(i.status, 1);
-    const lbl = k => AgileCalc.COLS.find(c => c.key === k).label;
+    const prev = AgileCalc.neighbor(i.status, -1, cfg), next = AgileCalc.neighbor(i.status, 1, cfg);
+    const lbl = k => AgileCalc.colLabel(cfg, k), f = cfg.card;
+    const top = [f.id && `<span class="chip">${esc(i.id)}</span>`, f.kind && `<span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>`, f.points && i.points !== '' && i.points != null && `<span class="badge b-acc">${esc(i.points)} pts</span>`].filter(Boolean).join('');
+    const bottom = [f.assignee && (i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'), f.sprint && sp && `<span class="chip">${esc(sp.name)}</span>`].filter(Boolean).join('');
     // O cartão é um grupo; só o título é o botão de abrir (botão dentro de botão não é acessível por leitor de tela)
     return `<div class="kb-card" draggable="true" role="group" data-id="${esc(i.id)}" ondragstart="Agile.dragStart(event,'${esc(i.id)}')" ondragend="this.classList.remove('dragging')" onclick="Agile.openItem('${esc(i.id)}')" aria-label="${esc(i.id)}: ${esc(i.title)}">
-      <div class="kb-meta"><span class="chip">${esc(i.id)}</span><span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>${i.points !== '' && i.points != null ? `<span class="badge b-acc">${esc(i.points)} pts</span>` : ''}</div>
+      ${top ? `<div class="kb-meta">${top}</div>` : ''}
       <button type="button" class="kb-title kb-open" aria-label="Abrir ${esc(i.id)}: ${esc(i.title)}" onclick="event.stopPropagation();Agile.openItem('${esc(i.id)}')">${esc(i.title)}</button>
-      <div class="kb-meta">${i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'}${sp ? `<span class="chip">${esc(sp.name)}</span>` : ''}</div>
+      ${bottom ? `<div class="kb-meta">${bottom}</div>` : ''}
       <div class="kb-mv" data-perm="business">${prev ? `<button class="btn btn-sm" aria-label="Mover ${esc(i.id)} para ${lbl(prev)}" onclick="event.stopPropagation();Agile.move('${esc(i.id)}',-1)">◀</button>` : ''}${next ? `<button class="btn btn-sm" aria-label="Mover ${esc(i.id)} para ${lbl(next)}" onclick="event.stopPropagation();Agile.move('${esc(i.id)}',1)">▶</button>` : ''}</div></div>`;
   }
   function setStatus(it, status) {
@@ -9807,7 +10080,7 @@ const Agile = (() => {
   function move(id, dir) {
     if(!Auth.guard('business')) return;
     load(); const it = items.find(x => x.id === id); if(!it) return;
-    const to = AgileCalc.neighbor(it.status, dir); if(!to) return;
+    const to = AgileCalc.neighbor(it.status, dir, cfg); if(!to) return;
     setStatus(it, to); renderAll();
     const b = document.querySelector(`.kb-card[data-id="${CSS.escape(id)}"]`); if(b) b.focus();
   }
@@ -9820,12 +10093,55 @@ const Agile = (() => {
     setStatus(it, status); renderAll();
   }
   function setBoardSprint(v) { boardSprint = v; renderKanban(); }
-  function setWip(col, v) {
+  // ───────── Personalizar o quadro (colunas, limites e campos do cartão) ─────────
+  let boardDraft = null;
+  const CARD_FIELDS = [['id', 'Código'], ['kind', 'Tipo'], ['points', 'Pontos'], ['assignee', 'Responsável'], ['sprint', 'Sprint']];
+  function openBoardCfg() {
     if(!Auth.guard('business')) return;
-    load(); cfg.wip[col] = Math.max(0, Math.min(99, parseInt(v, 10) || 0));
-    DB.set('agileConfig', cfg);
+    load();
+    boardDraft = { columns: AgileCalc.cols(cfg).map(c => ({ key: c.key, label: c.label, wip: Number(cfg.wip[c.key]) || 0 })), card: { ...cfg.card } };
+    renderBoardCfg();
+    document.getElementById('modal-agile-board').classList.remove('hidden');
+  }
+  function renderBoardCfg() {
+    const d = boardDraft, last = d.columns.length - 1;
+    document.getElementById('ab-cols').innerHTML = d.columns.map((c, i) => {
+      const fixed = i === 0 || i === last;
+      return `<div class="ag-row"><input class="input" style="flex:1 1 160px;min-width:120px" maxlength="30" value="${esc(c.label)}" aria-label="Nome da coluna ${i + 1}" oninput="Agile.setColLabel(${i}, this.value)">
+        ${fixed ? '<span class="chip" title="Coluna fixa">fixa</span>' : `<label style="font-size:12px;color:var(--t2)">Limite <input class="input" type="number" min="0" max="99" value="${c.wip}" aria-label="Limite de itens na coluna ${esc(c.label)}" style="width:64px" oninput="Agile.setColWip(${i}, this.value)"></label>
+        <button class="btn btn-sm" aria-label="Mover coluna ${esc(c.label)} para a esquerda" ${i <= 1 ? 'disabled' : ''} onclick="Agile.moveCol(${i}, -1)">◀</button><button class="btn btn-sm" aria-label="Mover coluna ${esc(c.label)} para a direita" ${i >= last - 1 ? 'disabled' : ''} onclick="Agile.moveCol(${i}, 1)">▶</button>
+        <button class="btn btn-sm btn-red" aria-label="Remover coluna ${esc(c.label)}" onclick="Agile.removeCol(${i})"><i class="ti ti-trash"></i></button>`}</div>`;
+    }).join('');
+    document.getElementById('ab-add').disabled = d.columns.length >= 7;
+    document.getElementById('ab-card').innerHTML = CARD_FIELDS.map(([k, l]) => `<label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" ${d.card[k] ? 'checked' : ''} onchange="Agile.setCardField('${k}', this.checked)"> ${l}</label>`).join('');
+  }
+  const setColLabel = (i, v) => { boardDraft.columns[i].label = v; };
+  const setColWip = (i, v) => { boardDraft.columns[i].wip = Math.max(0, Math.min(99, parseInt(v, 10) || 0)); };
+  const setCardField = (k, on) => { boardDraft.card[k] = !!on; };
+  function addCol() {
+    const d = boardDraft; if(d.columns.length >= 7) return;
+    const n = Math.max(0, ...d.columns.map(c => /^x(\d+)$/.test(c.key) ? +c.key.slice(1) : 0)) + 1;
+    d.columns.splice(d.columns.length - 1, 0, { key: 'x' + n, label: 'Nova coluna', wip: 0 }); renderBoardCfg();
+  }
+  function removeCol(i) { boardDraft.columns.splice(i, 1); renderBoardCfg(); }
+  function moveCol(i, dir) { const c = boardDraft.columns, j = i + dir; if(j < 1 || j > c.length - 2) return; [c[i], c[j]] = [c[j], c[i]]; renderBoardCfg(); }
+  function resetBoardCfg() { boardDraft = { columns: AgileCalc.COLS.map(c => ({ key: c.key, label: c.label, wip: Number((AgileCalc.DEFAULT_CFG.wip || {})[c.key]) || 0 })), card: { ...AgileCalc.DEFAULT_CARD } }; renderBoardCfg(); }
+  function closeBoardCfg() { document.getElementById('modal-agile-board').classList.add('hidden'); boardDraft = null; }
+  function saveBoardCfg() {
+    if(!Auth.guard('business')) return;
+    load(); const d = boardDraft; if(!d) return;
+    const labels = d.columns.map(c => c.label.replace(/\s+/g, ' ').trim());
+    if(labels.some(l => !l)) { T.show('⚠️ Toda coluna precisa de um nome.'); return; }
+    if(new Set(labels.map(l => l.toLowerCase())).size !== labels.length) { T.show('⚠️ Dois nomes de coluna iguais. Use nomes diferentes.'); return; }
+    const before = AgileCalc.cols(cfg), after = d.columns.map((c, i) => ({ key: c.key, label: labels[i] }));
+    // itens de colunas removidas passam para a coluna que vinha antes delas — nenhum item some
+    before.forEach((c, i) => { if(!after.some(a => a.key === c.key)) items.filter(it => it.status === c.key).forEach(it => { it.status = before[Math.max(0, i - 1)].key; pushItem(it); }); });
+    // 0 é gravado de propósito ("sem limite"), para não voltar ao limite padrão das colunas Em andamento/Em revisão
+    const wip = {}; d.columns.forEach(c => { if(c.key !== 'todo' && c.key !== 'done') wip[c.key] = c.wip; });
+    cfg = AgileCalc.cfgOf({ columns: after, wip, card: d.card, reservePct: cfg.reservePct });
+    saveItems(); DB.set('agileConfig', cfg);
     if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'agileConfig', cfg);
-    renderKanban();
+    closeBoardCfg(); renderAll(); T.show('✅ Quadro personalizado.');
   }
 
   // ───────── Backlog ─────────
@@ -9845,7 +10161,7 @@ const Agile = (() => {
     const spOpts = sel => '<option value="">Sem sprint</option>' + sprints.filter(s => s.state !== 'encerrada').map(s => `<option value="${esc(s.id)}"${s.id === sel ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
     root.innerHTML = list.map(i => `<div class="ag-row"${i.status === 'done' ? ' style="opacity:1;background:transparent"' : ''}>
       <div class="ag-rank" data-perm="business"><button class="btn btn-sm" aria-label="Subir prioridade de ${esc(i.id)}" onclick="Agile.rank('${esc(i.id)}',-1)">▲</button><button class="btn btn-sm" aria-label="Descer prioridade de ${esc(i.id)}" onclick="Agile.rank('${esc(i.id)}',1)">▼</button></div>
-      <div class="ag-main"><div class="ag-title">${esc(i.title)}</div><div class="kb-meta" style="margin-top:3px"><span class="chip">${esc(i.id)}</span><span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>${i.points !== '' && i.points != null ? `<span class="badge b-acc">${esc(i.points)} pts</span>` : '<span class="chip c-wa">sem estimativa</span>'}<span class="chip">${esc(AgileCalc.COLS.find(c => c.key === i.status).label)}</span>${i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : ''}</div></div>
+      <div class="ag-main"><div class="ag-title">${esc(i.title)}</div><div class="kb-meta" style="margin-top:3px"><span class="chip">${esc(i.id)}</span><span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>${i.points !== '' && i.points != null ? `<span class="badge b-acc">${esc(i.points)} pts</span>` : '<span class="chip c-wa">sem estimativa</span>'}<span class="chip">${esc(AgileCalc.colLabel(cfg, i.status))}</span>${i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : ''}</div></div>
       <select class="input" data-perm="business" aria-label="Sprint do item ${esc(i.id)}" onchange="Agile.setSprintOf('${esc(i.id)}', this.value)"${i.status === 'done' ? ' disabled' : ''}>${spOpts(i.sprintId)}</select>
       <button class="btn btn-sm" aria-label="Editar ${esc(i.id)}" data-perm="business" onclick="Agile.openItem('${esc(i.id)}')"><i class="ti ti-edit"></i></button></div>`).join('');
   }
@@ -10030,7 +10346,7 @@ const Agile = (() => {
   function exportXlsx() {
     load();
     XlsxExport.download('backlog-' + XlsxExport.stamp() + '.xlsx', [{ name: 'Backlog', rows: [['Código', 'Item', 'Tipo', 'Pontos', 'Situação', 'Sprint', 'Responsável', 'Concluído em'],
-      ...items.slice().sort(sortByRank).map(i => [i.id, i.title, AgileCalc.KINDS[i.kind] || i.kind, i.points === '' ? '' : Number(i.points), AgileCalc.COLS.find(c => c.key === i.status).label, (sprints.find(s => s.id === i.sprintId) || {}).name || '', i.assignee, XlsxExport.fmt(i.doneOn)])] }]);
+      ...items.slice().sort(sortByRank).map(i => [i.id, i.title, AgileCalc.KINDS[i.kind] || i.kind, i.points === '' ? '' : Number(i.points), AgileCalc.colLabel(cfg, i.status), (sprints.find(s => s.id === i.sprintId) || {}).name || '', i.assignee, XlsxExport.fmt(i.doneOn)])] }]);
   }
 
   // ───────── Importação de planilha (usa o importador comum) ─────────
@@ -10191,10 +10507,11 @@ const Agile = (() => {
 
   function renderAll() { renderKanban(); renderBacklog(); renderSprints(); renderDashboard(); }
   function render() { renderAll(); }
-  return { render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, setWip, rank, setSprintOf, setBacklogQuery, setShowDone,
+  return { render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, rank, setSprintOf, setBacklogQuery, setShowDone,
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
-    aiEstimate, applyAi, closeAi };
+    aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, moveCol, setColLabel, setColWip, setCardField,
+    cfgNow: () => { load(); return cfg; } };
 })();
 </script>
 
@@ -10240,6 +10557,257 @@ const MethodCompare = (() => {
     return { dates: allDays, series, delta };
   }
   return { summarize, evolution, code, avg };
+})();
+</script>
+
+<!-- ■ MODULE: pages/rites-js ─ Ritos da sprint: planejamento, reunião diária (impedimentos), revisão, retrospectiva e refinamento -->
+<script data-module="pages/rites-js">
+const Rites = (() => {
+  let rites = null, imps = null, sprintId = null, sel = 'planejamento';
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const todayIso = () => Clock.iso(Clock.today());
+  const fmt = iso => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}` : ''; };
+  const load = () => { if(!rites) rites = DB.get('rites') || []; if(!imps) imps = DB.get('impediments') || []; };
+  const resetCache = () => { rites = null; imps = null; };
+  const sprints = () => DB.get('sprints') || [], items = () => DB.get('backlog') || [], team = () => (DB.get('team') || []).map(m => m.name).filter(Boolean);
+  const current = () => sprints().find(s => s.id === sprintId) || null;
+  const rec = kind => rites.find(r => r.sprintId === sprintId && r.kind === kind);
+  const saveRites = r => { DB.set('rites', rites); if(r && typeof Cloud !== 'undefined') Cloud.pushRow('sprint_rites', r); };
+  const saveImps = i => { DB.set('impediments', imps); if(i && typeof Cloud !== 'undefined') Cloud.pushRow('impediments', i); };
+  const val = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+  function ensure(kind) {
+    let r = rec(kind);
+    if(!r) { r = { id: AgileCalc.nextId('RT', rites), sprintId, kind, heldOn: '', attendees: '', notes: '', data: {} }; rites.push(r); }
+    return r;
+  }
+  function defaultSprint() {
+    const s = sprints();
+    const pick = s.find(x => x.state === 'ativa') || s.filter(x => x.state === 'planejada').sort((a, b) => a.startOn.localeCompare(b.startOn))[0] || s.slice().sort((a, b) => b.startOn.localeCompare(a.startOn))[0];
+    return pick ? pick.id : null;
+  }
+  const LBL = { planejada: 'planejada', ativa: 'ativa', encerrada: 'encerrada' };
+
+  function render() {
+    const root = document.getElementById('rt-panel'); if(!root) return;
+    load();
+    const list = sprints().slice().sort((a, b) => b.startOn.localeCompare(a.startOn));
+    if(!sprintId || !list.some(s => s.id === sprintId)) sprintId = defaultSprint();
+    document.getElementById('rt-sprint').innerHTML = list.map(s => `<option value="${esc(s.id)}"${s.id === sprintId ? ' selected' : ''}>${esc(s.name)} (${LBL[s.state] || s.state})</option>`).join('');
+    const s = current(), stepsEl = document.getElementById('rt-steps');
+    if(!s) { stepsEl.innerHTML = ''; root.innerHTML = '<div class="card"><div class="rk-empty">Os ritos acontecem dentro de uma sprint. <button class="link-a" data-perm="business" onclick="Agile.openSprint()">Crie a primeira sprint</button> para começar.</div></div>'; return; }
+    const st = AgileRites.status(s, rites.filter(r => r.sprintId === s.id), imps);
+    const badge = { feito: ['b-grn', '✓ feito'], pendente: ['b-neu', 'pendente'], continuo: ['b-acc', 'contínuo'], atencao: ['b-amb', 'atenção'] };
+    stepsEl.innerHTML = AgileRites.RITES.map((r, i) => { const x = st.find(y => y.kind === r.kind), b = badge[x.state];
+      return `<button type="button" role="tab" aria-selected="${r.kind === sel}" class="btn rt-step${r.kind === sel ? ' on' : ''}" onclick="Rites.select('${r.kind}')"><i class="ti ti-${r.icon}"></i><span><b>${i + 1}. ${esc(r.label)}</b><span class="rt-sub">até ${AgileRites.fmtDuration(x.minutes)} · <span class="badge ${b[0]}">${b[1]}</span></span></span></button>`; }).join('');
+    root.innerHTML = panel(s, st.find(y => y.kind === sel));
+  }
+  function head(r, s, x) {
+    return `<div class="card"><div class="lbl"><i class="ti ti-${r.icon}"></i>${esc(r.label)}<span class="chip" style="margin-left:6px">duração máxima sugerida: ${AgileRites.fmtDuration(x.minutes)}${r.kind === 'refinamento' ? ' por pessoa' : ''}</span></div>
+      <p style="font-size:12.5px;color:var(--t1);margin:6px 0">${esc(r.what)}</p><p style="font-size:12px;color:var(--t2);margin:0 0 8px"><b>Quem participa:</b> ${esc(r.who)}</p>
+      <details style="margin-bottom:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--t1)">Pauta sugerida</summary><ol style="font-size:12.5px;color:var(--t2);margin:6px 0 0 18px;line-height:1.6">${r.agenda.map(a => `<li>${esc(a)}</li>`).join('')}</ol></details>
+      <div style="font-size:11.5px;color:var(--t3)"><b>Resultado esperado:</b> ${esc(r.output)} · Referência: Guia do Scrum, proporcional à sprint de ${AgileRites.weeks(s)} semana(s).</div></div>`;
+  }
+  // Rodapé comum: quem participou, observações e o botão de registrar que o rito aconteceu
+  function foot(kind) {
+    const r = rec(kind) || {}, held = !!r.heldOn;
+    return `<div class="card"><div class="lbl"><i class="ti ti-clipboard-check"></i>Registro do rito</div>
+      <div class="g2" style="gap:10px"><div class="field-group"><div class="field-label"><label for="rt-att">Quem participou</label></div><input class="input" id="rt-att" maxlength="500" value="${esc(r.attendees || '')}" placeholder="Nomes separados por vírgula" data-perm="business"></div>
+      <div class="field-group"><div class="field-label"><label for="rt-date">Data</label></div><input class="input" id="rt-date" type="date" value="${esc(r.heldOn || todayIso())}"></div></div>
+      <div class="field-group"><div class="field-label"><label for="rt-notes">Anotações</label></div><textarea class="input" id="rt-notes" rows="3" maxlength="4000" style="resize:vertical;font-family:inherit">${esc(r.notes || '')}</textarea></div>
+      <div class="btn-row" data-perm="business"><button class="btn btn-sm btn-acc" onclick="Rites.markHeld('${kind}')"><i class="ti ti-check"></i>${held ? 'Atualizar registro' : 'Registrar como realizado'}</button>${held ? `<button class="btn btn-sm" onclick="Rites.reopenHeld('${kind}')">Marcar como não realizado</button><span class="badge b-grn">Realizado em ${fmt(r.heldOn)}</span>` : ''}</div></div>`;
+  }
+  function panel(s, x) {
+    const r = AgileRites.RITES.find(y => y.kind === sel); load();
+    return head(r, s, x) + ({ planejamento: planning, daily, revisao: review, retrospectiva: retro, refinamento: refine }[sel])(s) + (sel === 'daily' ? '' : foot(sel));
+  }
+
+  // 1. Planejamento
+  function planning(s) {
+    const mine = items().filter(i => i.sprintId === s.id), pts = mine.reduce((a, i) => a + (Number(i.points) || 0), 0);
+    return `<div class="card"><div class="lbl"><i class="ti ti-target"></i>Esta sprint</div>
+      <div style="font-size:12.5px;color:var(--t1);margin-bottom:6px"><b>Meta:</b> ${esc(s.goal || 'ainda sem meta — defina em uma frase o que a sprint quer alcançar')}</div>
+      <div class="kb-meta" style="margin-bottom:10px"><span class="chip">${fmt(s.startOn)} a ${fmt(s.endOn)}</span><span class="chip">capacidade ${esc(s.capacity === '' || s.capacity == null ? 'não definida' : s.capacity + ' pts')}</span><span class="chip">${mine.length} item(ns) · ${pts} pts comprometidos</span></div>
+      <div class="btn-row" data-perm="business"><button class="btn btn-sm btn-acc" onclick="Agile.openPlan('${esc(s.id)}')"><i class="ti ti-wand"></i>Planejar com sugestão do sistema</button><button class="btn btn-sm" onclick="Agile.openSprint('${esc(s.id)}')">Editar meta e datas</button><button class="btn btn-sm" onclick="R.go('backlog')">Abrir o backlog</button></div></div>`;
+  }
+  // 2. Reunião diária: impedimentos
+  function daily(s) {
+    const open = imps.filter(i => i.status === 'aberto' && (!i.sprintId || i.sprintId === s.id)), done = imps.filter(i => i.status === 'resolvido' && i.sprintId === s.id);
+    const cols = AgileCalc.cols(Agile.cfgNow()), mid = cols.slice(1, -1).map(c => c.key);
+    const by = {}; items().filter(i => i.sprintId === s.id && mid.includes(i.status)).forEach(i => { const n = i.assignee || 'sem responsável'; by[n] = (by[n] || 0) + 1; });
+    const people = team();
+    return `<div class="card"><div class="lbl"><i class="ti ti-user-check"></i>Em andamento agora<span class="help-q" data-help="Itens que estão nas colunas de trabalho do quadro (nem A fazer, nem Concluído), por pessoa. Ajuda a conduzir a reunião: quem está com o quê." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+      <div class="kb-meta">${Object.keys(by).length ? Object.entries(by).map(([n, c]) => `<span class="chip"><i class="ti ti-user"></i>${esc(n)}: ${c} item(ns)</span>`).join('') : '<span style="font-size:12.5px;color:var(--t3)">Nenhum item em andamento nesta sprint.</span>'}</div>
+      <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm" onclick="R.go('kanban')"><i class="ti ti-layout-kanban"></i>Abrir o quadro</button></div></div>
+      <div class="card"><div class="lbl"><i class="ti ti-alert-octagon"></i>Impedimentos<span class="help-q" data-help="Impedimento é tudo que trava o time e ele não resolve sozinho (uma decisão, um acesso, uma dependência). Registre aqui na reunião diária, dê um responsável e marque como resolvido quando acabar. Os abertos aparecem no Quadro." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+      <div class="rk-toolbar" data-perm="business"><input class="input rk-q" id="rt-imp-title" maxlength="200" placeholder="O que está travando?" aria-label="Descrição do impedimento" onkeydown="if(event.key==='Enter'){Rites.addImp()}">
+        <input class="input" id="rt-imp-owner" list="rt-people" maxlength="80" placeholder="Quem resolve" aria-label="Responsável por resolver" style="max-width:200px"><datalist id="rt-people">${people.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+        <button class="btn btn-sm btn-acc" onclick="Rites.addImp()"><i class="ti ti-plus"></i>Registrar</button></div>
+      ${open.length ? open.map(i => `<div class="ag-row"><div class="ag-main"><div class="ag-title">${esc(i.title)}</div><div class="kb-meta" style="margin-top:3px"><span class="chip">${esc(i.id)}</span>${i.owner ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.owner)}</span>` : '<span class="chip c-wa">sem responsável</span>'}<span class="chip">aberto em ${fmt(i.createdOn)}</span></div></div>
+        <span data-perm="business" style="display:flex;gap:6px"><button class="btn btn-sm btn-grn" onclick="Rites.resolveImp('${esc(i.id)}')"><i class="ti ti-check"></i>Resolvido</button><button class="btn btn-sm" aria-label="Excluir ${esc(i.id)}" onclick="Rites.delImp('${esc(i.id)}')"><i class="ti ti-trash"></i></button></span></div>`).join('') : '<div class="rk-empty">Nenhum impedimento aberto. Se algo estiver travando alguém, registre aqui.</div>'}
+      ${done.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--t2)">${done.length} resolvido(s) nesta sprint</summary>${done.map(i => `<div class="ag-row"><div class="ag-main"><div class="ag-title" style="font-weight:500">${esc(i.title)}</div><div style="font-size:11.5px;color:var(--t3)">resolvido em ${fmt(i.resolvedOn)}</div></div><button class="btn btn-sm" data-perm="business" onclick="Rites.reopenImp('${esc(i.id)}')">Reabrir</button></div>`).join('')}</details>` : ''}</div>`;
+  }
+  // 3. Revisão
+  function review(s) {
+    const sum = AgileRites.reviewSummary(s, items()), d = (rec('revisao') || {}).data || {}, fb = d.feedback || [];
+    const goal = d.goal || '';
+    return `<div class="card"><div class="lbl"><i class="ti ti-presentation"></i>O que foi entregue</div>
+      <div class="kb-meta" style="margin-bottom:8px"><span class="badge ${sum.pct >= 80 ? 'b-grn' : sum.pct >= 50 ? 'b-amb' : 'b-red'}">${sum.delivered.length} de ${sum.delivered.length + sum.notDone.length} item(ns) concluídos (${sum.pct}%)</span><span class="chip">${sum.points} de ${sum.committed} pts</span></div>
+      ${sum.delivered.length ? sum.delivered.map(i => `<div class="ag-row"><div class="ag-main"><div class="ag-title">${esc(i.title)}</div></div><span class="chip">${esc(i.id)}</span>${i.points !== '' && i.points != null ? `<span class="badge b-acc">${esc(i.points)} pts</span>` : ''}</div>`).join('') : '<div class="rk-empty" style="padding:10px">Nada concluído nesta sprint ainda.</div>'}
+      ${sum.notDone.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12.5px;color:var(--t2)">${sum.notDone.length} item(ns) não concluído(s)</summary>${sum.notDone.map(i => `<div style="font-size:12.5px;color:var(--t2);padding:3px 0">• ${esc(i.title)} <span class="chip">${esc(i.id)}</span></div>`).join('')}</details>` : ''}</div>
+      <div class="card"><div class="lbl"><i class="ti ti-flag"></i>A meta da sprint foi atingida?</div>
+      <div style="font-size:12.5px;color:var(--t2);margin-bottom:6px">Meta: ${esc(s.goal || 'não definida')}</div>
+      <select class="input" id="rt-goal" aria-label="A meta da sprint foi atingida" data-perm="business" style="max-width:240px" onchange="Rites.setGoal(this.value)"><option value="">Escolha…</option><option value="sim"${goal === 'sim' ? ' selected' : ''}>Sim, atingida</option><option value="parcial"${goal === 'parcial' ? ' selected' : ''}>Parcialmente</option><option value="nao"${goal === 'nao' ? ' selected' : ''}>Não atingida</option></select></div>
+      <div class="card"><div class="lbl"><i class="ti ti-message-2"></i>Feedback das partes interessadas</div>
+      <div class="rk-toolbar" data-perm="business"><input class="input rk-q" id="rt-new-fb" maxlength="200" placeholder="O que o cliente ou a diretoria disse?" aria-label="Novo feedback" onkeydown="if(event.key==='Enter'){Rites.addFb()}"><button class="btn btn-sm btn-acc" onclick="Rites.addFb()"><i class="ti ti-plus"></i>Adicionar</button></div>
+      ${fb.length ? fb.map((f, i) => `<div class="ag-row"><div class="ag-main"><div class="ag-title" style="font-weight:500">${esc(f.text)}</div></div><button class="btn btn-sm" data-perm="business" aria-label="Remover feedback" onclick="Rites.delFb(${i})"><i class="ti ti-trash"></i></button></div>`).join('') : '<div class="rk-empty" style="padding:10px">Nenhum feedback registrado.</div>'}
+      <div class="field-group" style="margin-top:8px"><div class="field-label"><label for="rt-changes">Mudanças no backlog decididas na revisão</label></div><textarea class="input" id="rt-changes" rows="2" maxlength="1000" data-perm="business" style="resize:vertical;font-family:inherit" onchange="Rites.setChanges(this.value)">${esc(d.changes || '')}</textarea></div></div>`;
+  }
+  // 4. Retrospectiva
+  function retro(s) {
+    const d = AgileRites.normalizeRetro((rec('retrospectiva') || {}).data || {}), pend = AgileRites.pendingActions(s, sprints(), rites);
+    const col = (key, title, icon, help) => `<div class="card" style="margin:0"><div class="lbl"><i class="ti ti-${icon}"></i>${title}</div>
+      <div class="rk-toolbar" data-perm="business"><input class="input rk-q" id="rt-new-${key}" maxlength="200" placeholder="${help}" aria-label="Novo cartão: ${title}" onkeydown="if(event.key==='Enter'){Rites.addCard('${key}')}"><button class="btn btn-sm" aria-label="Adicionar em ${title}" onclick="Rites.addCard('${key}')"><i class="ti ti-plus"></i></button></div>
+      ${d[key].length ? d[key].map((c, i) => `<div class="ag-row"><div class="ag-main"><div class="ag-title" style="font-weight:500">${esc(c.text)}</div></div><span data-perm="business" style="display:flex;gap:4px"><button class="btn btn-sm" aria-label="Votar: ${esc(c.text)}" onclick="Rites.vote('${key}',${i})">👍 ${c.votes}</button><button class="btn btn-sm" aria-label="Remover cartão" onclick="Rites.delCard('${key}',${i})"><i class="ti ti-trash"></i></button></span></div>`).join('') : '<div style="font-size:12px;color:var(--t3);padding:4px 2px">Nada ainda.</div>'}</div>`;
+    return (pend.length ? `<div class="card card-accent"><div class="lbl"><i class="ti ti-history"></i>Ações combinadas na retrospectiva anterior (${pend.length} em aberto)<span class="help-q" data-help="O que o time prometeu melhorar na sprint passada e ainda não foi concluído. Comece a retrospectiva por aqui: sem acompanhar as ações, a retro vira só conversa." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>${pend.map(a => `<label class="ag-row" style="cursor:pointer"><input type="checkbox" data-perm="business" aria-label="Concluir: ${esc(a.text)}" onchange="Rites.togglePrev('${esc(a.riteId)}','${esc(a.id)}')"><div class="ag-main"><div class="ag-title" style="font-weight:500">${esc(a.text)}</div><div style="font-size:11.5px;color:var(--t3)">${esc(a.fromSprint)}${a.owner ? ' · ' + esc(a.owner) : ''}${a.due ? ' · prazo ' + fmt(a.due) : ''}</div></div></label>`).join('')}</div>` : '')
+      + `<div class="g2" style="gap:12px;margin-bottom:12px">${col('well', 'O que funcionou bem', 'mood-smile', 'Algo que queremos manter')}${col('improve', 'O que pode melhorar', 'tool', 'Algo que atrapalhou')}</div>`
+      + `<div class="card"><div class="lbl"><i class="ti ti-checklist"></i>Ações de melhoria para a próxima sprint<span class="help-q" data-help="Escolha poucas ações (1 a 3), cada uma com responsável e prazo. Elas voltam a aparecer na próxima retrospectiva até serem concluídas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+      <div class="rk-toolbar" data-perm="business"><input class="input rk-q" id="rt-act-text" maxlength="200" placeholder="O que vamos tentar?" aria-label="Nova ação de melhoria"><input class="input" id="rt-act-owner" list="rt-people2" maxlength="80" placeholder="Responsável" aria-label="Responsável pela ação" style="max-width:170px"><datalist id="rt-people2">${team().map(n => `<option value="${esc(n)}">`).join('')}</datalist><input class="input" id="rt-act-due" type="date" aria-label="Prazo da ação" style="max-width:160px"><button class="btn btn-sm btn-acc" onclick="Rites.addAction()"><i class="ti ti-plus"></i>Adicionar</button></div>
+      ${d.actions.length ? d.actions.map((a, i) => `<label class="ag-row" style="cursor:pointer"><input type="checkbox" ${a.done ? 'checked' : ''} data-perm="business" aria-label="Ação concluída: ${esc(a.text)}" onchange="Rites.toggleAction(${i})"><div class="ag-main"><div class="ag-title" style="font-weight:500${a.done ? ';text-decoration:line-through' : ''}">${esc(a.text)}</div><div style="font-size:11.5px;color:var(--t3)">${a.owner ? esc(a.owner) : 'sem responsável'}${a.due ? ' · prazo ' + fmt(a.due) : ''}</div></div><button class="btn btn-sm" data-perm="business" aria-label="Remover ação" onclick="event.preventDefault();Rites.delAction(${i})"><i class="ti ti-trash"></i></button></label>`).join('') : '<div class="rk-empty" style="padding:10px">Nenhuma ação combinada ainda.</div>'}</div>`;
+  }
+  // 5. Refinamento
+  function refine(s) {
+    const open = items().filter(i => i.status !== 'done'), unest = open.filter(i => i.points === '' || i.points == null), big = open.filter(i => Number(i.points) > AgileAi.SPLIT_ABOVE);
+    return `<div class="card"><div class="lbl"><i class="ti ti-list-search"></i>Como está o topo do backlog</div>
+      <div class="kb-meta" style="margin-bottom:10px"><span class="badge ${unest.length ? 'b-amb' : 'b-grn'}">${unest.length} sem estimativa</span><span class="badge ${big.length ? 'b-amb' : 'b-grn'}">${big.length} grande(s) demais (acima de ${AgileAi.SPLIT_ABOVE} pts)</span><span class="chip">${open.length} item(ns) abertos</span></div>
+      <div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="R.go('backlog');Agile.aiEstimate()"><i class="ti ti-sparkles"></i>Estimar e dividir com IA</button><button class="btn btn-sm" onclick="R.go('backlog')">Abrir o backlog</button></div></div>`;
+  }
+
+  // ── Ações ──
+  function select(k) { sel = k; render(); }
+  function setSprint(id) { sprintId = id; render(); }
+  function markHeld(kind) {
+    if(!Auth.guard('business')) return; load();
+    const r = ensure(kind); r.heldOn = val('rt-date') || todayIso(); r.attendees = val('rt-att'); r.notes = String(document.getElementById('rt-notes').value || '').trim().slice(0, 4000);
+    saveRites(r); render();
+    Trail.log(`Rito registrado: ${AgileRites.RITES.find(x => x.kind === kind).label} (${(current() || {}).name})`, Auth.getName(), '', 'b-acc'); T.show('✅ Rito registrado.');
+  }
+  function reopenHeld(kind) { if(!Auth.guard('business')) return; load(); const r = rec(kind); if(!r) return; r.heldOn = ''; saveRites(r); render(); }
+  function addImp() {
+    if(!Auth.guard('business')) return; load();
+    const title = val('rt-imp-title'); if(title.length < 2) { T.show('⚠️ Descreva o que está travando.'); return; }
+    const i = { id: AgileCalc.nextId('IMP', imps), title, owner: val('rt-imp-owner'), sprintId, status: 'aberto', note: '', createdOn: todayIso(), resolvedOn: '' };
+    imps.push(i); saveImps(i); if(typeof Agile !== 'undefined') Agile.render(); render(); T.show('✅ Impedimento registrado.');
+  }
+  const impAct = (id, fn) => { if(!Auth.guard('business')) return; load(); const i = imps.find(x => x.id === id); if(!i) return; fn(i); };
+  function resolveImp(id) { impAct(id, i => { i.status = 'resolvido'; i.resolvedOn = todayIso(); saveImps(i); Agile.render(); render(); T.show('✅ Impedimento resolvido.'); }); }
+  function reopenImp(id) { impAct(id, i => { i.status = 'aberto'; i.resolvedOn = ''; saveImps(i); Agile.render(); render(); }); }
+  function delImp(id) { impAct(id, i => { if(!confirm('Excluir este impedimento?')) return; imps = imps.filter(x => x.id !== id); DB.set('impediments', imps); if(typeof Cloud !== 'undefined') Cloud.deleteRow('impediments', id); Agile.render(); render(); }); }
+  // dados estruturados do rito (revisão e retrospectiva)
+  function patchData(kind, fn) { if(!Auth.guard('business')) return; load(); const r = ensure(kind); r.data = r.data || {}; fn(r.data); if(kind === 'retrospectiva') r.data = AgileRites.normalizeRetro(r.data); saveRites(r); render(); }
+  const clean = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
+  function setGoal(v) { patchData('revisao', d => { d.goal = ['sim', 'parcial', 'nao'].includes(v) ? v : ''; }); }
+  function addFb() { const t = clean(val('rt-new-fb'), 200); if(!t) return; patchData('revisao', d => { d.feedback = (d.feedback || []).concat({ text: t }).slice(0, 40); }); }
+  function delFb(i) { patchData('revisao', d => { (d.feedback || []).splice(i, 1); }); }
+  function setChanges(v) { patchData('revisao', d => { d.changes = clean(v, 1000); }); }
+  function addCard(key) { const t = clean(val('rt-new-' + key), 200); if(!t) return; patchData('retrospectiva', d => { d[key] = (d[key] || []).concat({ text: t, votes: 0 }); }); }
+  function vote(key, i) { patchData('retrospectiva', d => { if(d[key] && d[key][i]) d[key][i].votes = (d[key][i].votes || 0) + 1; }); }
+  function delCard(key, i) { patchData('retrospectiva', d => { (d[key] || []).splice(i, 1); }); }
+  function addAction() { const t = clean(val('rt-act-text'), 200); if(!t) { T.show('⚠️ Descreva a ação.'); return; } patchData('retrospectiva', d => { d.actions = (d.actions || []).concat({ id: 'a' + Date.now().toString(36), text: t, owner: clean(val('rt-act-owner'), 80), due: val('rt-act-due'), done: false }); }); }
+  function toggleAction(i) { patchData('retrospectiva', d => { if(d.actions && d.actions[i]) d.actions[i].done = !d.actions[i].done; }); }
+  function delAction(i) { patchData('retrospectiva', d => { (d.actions || []).splice(i, 1); }); }
+  function togglePrev(riteId, actionId) { if(!Auth.guard('business')) return; load(); const r = rites.find(x => x.id === riteId); if(!r) return; const a = ((r.data || {}).actions || []).find(x => x.id === actionId); if(a) { a.done = true; saveRites(r); render(); T.show('✅ Ação concluída.'); } }
+
+  return { render, resetCache, select, setSprint, markHeld, reopenHeld, addImp, resolveImp, reopenImp, delImp, setGoal, addFb, delFb, setChanges, addCard, vote, delCard, addAction, toggleAction, delAction, togglePrev };
+})();
+</script>
+
+<!-- ■ MODULE: pages/models-js ─ Modelos de documentos (5W2H, SWOT, comunicação, cutover, handover) -->
+<script data-module="pages/models-js">
+const Models = (() => {
+  let docs = null, openId = null;
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const todayIso = () => Clock.iso(Clock.today());
+  const load = () => { if(!docs) docs = DB.get('projectDocs') || []; };
+  const resetCache = () => { docs = null; openId = null; };
+  const save = d => { d.updatedAt = new Date().toISOString(); DB.set('projectDocs', docs); if(typeof Cloud !== 'undefined') Cloud.pushRow('project_docs', d); };
+  const cur = () => docs.find(d => d.id === openId) || null;
+  const fmtDt = iso => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
+
+  function render() {
+    const list = document.getElementById('md-list'); if(!list) return;
+    load();
+    const kindSel = document.getElementById('md-kind');
+    if(kindSel && !kindSel.options.length) kindSel.innerHTML = ModelsCalc.ORDER.map(k => `<option value="${k}">${esc(ModelsCalc.KINDS[k].label)}</option>`).join('');
+    if(!docs.length) list.innerHTML = '<div class="card"><div class="rk-empty">Nenhum documento ainda. Escolha um modelo acima e clique em “Criar a partir do modelo”.</div></div>';
+    else list.innerHTML = `<div class="g3">${docs.slice().sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).map(d => { const k = ModelsCalc.KINDS[d.kind], p = ModelsCalc.progress(d.kind, d.data);
+      return `<div class="card${d.id === openId ? ' card-accent' : ''}" style="margin:0"><div class="lbl"><i class="ti ti-${k.icon}"></i>${esc(k.label)}</div><div style="font-size:13.5px;font-weight:600;color:var(--t1);overflow-wrap:anywhere">${esc(d.title)}</div>
+        <div style="font-size:11.5px;color:var(--t3);margin:3px 0 8px">atualizado em ${fmtDt(d.updatedAt)}${p ? ` · ${p.done}/${p.total} (${p.pct}%)` : ''}</div>
+        <div class="btn-row"><button class="btn btn-sm btn-acc" onclick="Models.open('${esc(d.id)}')">Abrir</button><button class="btn btn-sm" data-perm="business" aria-label="Excluir ${esc(d.title)}" onclick="Models.remove('${esc(d.id)}')"><i class="ti ti-trash"></i></button></div></div>`; }).join('')}</div>`;
+    renderEditor();
+  }
+  function create() {
+    if(!Auth.guard('business')) return; load();
+    const kind = document.getElementById('md-kind').value, k = ModelsCalc.KINDS[kind]; if(!k) return;
+    const d = { id: AgileCalc.nextId('DOC', docs), kind, title: `${k.label} — ${(DB.listProjects().find(p => p.id === DB.getActiveProjectId()) || {}).name || 'projeto'}`, data: ModelsCalc.create(kind), updatedAt: '' };
+    docs.push(d); save(d); openId = d.id; render(); T.show(`✅ ${k.label} criado a partir do modelo.`);
+    const ed = document.getElementById('md-editor'); if(ed) ed.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function open(id) { openId = id; render(); const ed = document.getElementById('md-editor'); if(ed) ed.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  function close() { openId = null; render(); }
+  function remove(id) { if(!Auth.guard('business')) return; load(); const d = docs.find(x => x.id === id); if(!d || !confirm(`Excluir "${d.title}"?`)) return; docs = docs.filter(x => x.id !== id); DB.set('projectDocs', docs); if(typeof Cloud !== 'undefined') Cloud.deleteRow('project_docs', id); if(openId === id) openId = null; render(); }
+
+  function input(t, k, v, i) {
+    const base = `class="input" aria-label="${esc(k[1])} da linha ${i + 1}" onchange="Models.setCell(${i},'${k[0]}',this.value)"`;
+    if(t === 'status') return `<select ${base}>${ModelsCalc.STATUS.map(([s, l]) => `<option value="${s}"${v === s ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
+    if(t === 'date') return `<input ${base} type="date" value="${esc(v)}">`;
+    if(t === 'datetime') return `<input ${base} type="datetime-local" value="${esc(v)}">`;
+    if(t === 'number') return `<input ${base} type="number" min="0" value="${esc(v)}" style="width:90px">`;
+    return `<input ${base} maxlength="300" value="${esc(v)}">`;
+  }
+  function renderEditor() {
+    const root = document.getElementById('md-editor'); if(!root) return;
+    const d = cur(); if(!d) { root.innerHTML = ''; return; }
+    const k = ModelsCalc.KINDS[d.kind], p = ModelsCalc.progress(d.kind, d.data);
+    let body = '';
+    if(k.type === 'table') {
+      body = `<div style="overflow-x:auto"><table class="hr-tbl"><thead><tr>${k.cols.map(c => `<th scope="col">${esc(c[1])}</th>`).join('')}<th scope="col"><span style="position:absolute;left:-9999px">Ações</span></th></tr></thead><tbody>
+        ${d.data.rows.map((r, i) => `<tr>${k.cols.map(c => `<td>${input(c[2], c, r[c[0]], i)}</td>`).join('')}<td><button class="btn btn-sm" data-perm="business" aria-label="Remover linha ${i + 1}" onclick="Models.delRow(${i})"><i class="ti ti-trash"></i></button></td></tr>`).join('')}</tbody></table></div>
+        <div class="btn-row" style="margin-top:8px" data-perm="business"><button class="btn btn-sm" onclick="Models.addRow()"><i class="ti ti-plus"></i>Adicionar linha</button>${d.kind === 'comunicacao' ? '<button class="btn btn-sm" onclick="Models.importStakeholders()"><i class="ti ti-users"></i>Trazer os stakeholders do projeto</button>' : ''}</div>`;
+    } else if(k.type === 'swot') {
+      body = `<div class="g2" style="gap:12px">${k.lists.map(([key, label]) => `<div class="card" style="margin:0"><div class="lbl">${esc(label)}</div>
+        <div class="rk-toolbar" data-perm="business"><input class="input rk-q" id="sw-${key}" maxlength="200" aria-label="Novo item em ${esc(label)}" placeholder="Adicionar…" onkeydown="if(event.key==='Enter'){Models.addSwot('${key}')}"><button class="btn btn-sm" aria-label="Adicionar em ${esc(label)}" onclick="Models.addSwot('${key}')"><i class="ti ti-plus"></i></button></div>
+        ${(d.data.lists[key] || []).map((t, i) => `<div class="ag-row"><div class="ag-main"><div class="ag-title" style="font-weight:500">${esc(t)}</div></div><button class="btn btn-sm" data-perm="business" aria-label="Remover: ${esc(t)}" onclick="Models.delSwot('${key}',${i})"><i class="ti ti-trash"></i></button></div>`).join('') || '<div style="font-size:12px;color:var(--t3)">Nada ainda.</div>'}</div>`).join('')}</div>`;
+    } else {
+      body = k.sections.map(([key, label]) => { const s = d.data.sections[key] || { items: [], note: '' };
+        return `<div class="card" style="margin-bottom:10px"><div class="lbl">${esc(label)}</div>
+          ${s.items.map((it, i) => `<label class="ag-row" style="cursor:pointer"><input type="checkbox" ${it.done ? 'checked' : ''} data-perm="business" aria-label="${esc(it.text)}" onchange="Models.toggleItem('${key}',${i})"><div class="ag-main"><div class="ag-title" style="font-weight:500${it.done ? ';text-decoration:line-through' : ''}">${esc(it.text)}</div></div><button class="btn btn-sm" data-perm="business" aria-label="Remover item" onclick="event.preventDefault();Models.delItem('${key}',${i})"><i class="ti ti-trash"></i></button></label>`).join('')}
+          <div class="rk-toolbar" data-perm="business" style="margin-top:6px"><input class="input rk-q" id="hd-${key}" maxlength="200" aria-label="Novo item em ${esc(label)}" placeholder="Adicionar item…" onkeydown="if(event.key==='Enter'){Models.addItem('${key}')}"><button class="btn btn-sm" aria-label="Adicionar em ${esc(label)}" onclick="Models.addItem('${key}')"><i class="ti ti-plus"></i></button></div>
+          <textarea class="input" rows="2" maxlength="1000" aria-label="Observações: ${esc(label)}" placeholder="Observações" data-perm="business" style="resize:vertical;font-family:inherit" onchange="Models.setNote('${key}',this.value)">${esc(s.note)}</textarea></div>`; }).join('');
+    }
+    root.innerHTML = `<div class="card" style="margin-top:12px"><div class="lbl"><i class="ti ti-${k.icon}"></i>${esc(k.label)}<span class="help-q" data-help="${esc(k.help)}" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+      <div class="rk-toolbar"><input class="input rk-q" id="md-title" maxlength="120" value="${esc(d.title)}" aria-label="Título do documento" data-perm="business" onchange="Models.setTitle(this.value)">${p ? `<span class="badge ${p.pct === 100 ? 'b-grn' : 'b-acc'}" id="md-prog">${p.done} de ${p.total} · ${p.pct}%</span>` : ''}
+        <button class="btn btn-sm" onclick="Models.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button><button class="btn btn-sm" onclick="Models.close()">Fechar</button></div>
+      <div style="font-size:12px;color:var(--t2);margin-bottom:10px">${esc(k.help)}</div>${body}</div>`;
+  }
+  const mutate = fn => { if(!Auth.guard('business')) return; load(); const d = cur(); if(!d) return; fn(d); d.data = ModelsCalc.sanitize(d.kind, d.data); save(d); };
+  function setTitle(v) { mutate(d => { d.title = String(v).replace(/\s+/g, ' ').trim().slice(0, 120) || d.title; }); render(); }
+  function setCell(i, key, v) { mutate(d => { if(d.data.rows[i]) d.data.rows[i][key] = v; }); const d = cur(), p = d && ModelsCalc.progress(d.kind, d.data), el = document.getElementById('md-prog'); if(p && el) el.textContent = `${p.done} de ${p.total} · ${p.pct}%`; }
+  function addRow() { mutate(d => { d.data.rows.push({}); }); render(); }
+  function delRow(i) { mutate(d => { d.data.rows.splice(i, 1); }); render(); }
+  function addSwot(key) { const e = document.getElementById('sw-' + key), t = e && e.value.trim(); if(!t) return; mutate(d => { d.data.lists[key].push(t); }); render(); }
+  function delSwot(key, i) { mutate(d => { d.data.lists[key].splice(i, 1); }); render(); }
+  function toggleItem(key, i) { mutate(d => { const it = d.data.sections[key].items[i]; if(it) it.done = !it.done; }); render(); }
+  function delItem(key, i) { mutate(d => { d.data.sections[key].items.splice(i, 1); }); render(); }
+  function addItem(key) { const e = document.getElementById('hd-' + key), t = e && e.value.trim(); if(!t) return; mutate(d => { d.data.sections[key].items.push({ text: t, done: false }); }); render(); }
+  function setNote(key, v) { mutate(d => { d.data.sections[key].note = v; }); }
+  // Plano de comunicação: traz os stakeholders já cadastrados (sem duplicar quem já está na tabela)
+  function importStakeholders() {
+    mutate(d => { const have = new Set(d.data.rows.map(r => String(r.audience || '').toLowerCase())); (DB.get('stakeholders') || []).forEach(s => { if(s.name && !have.has(s.name.toLowerCase())) d.data.rows.push({ audience: s.name, info: 'Status do projeto', freq: s.influence === 'alta' ? 'Semanal' : 'Quinzenal', channel: '', owner: '', note: s.role || '' }); }); });
+    render(); T.show('✅ Stakeholders trazidos para o plano.');
+  }
+  function exportXlsx() { load(); const d = cur(); if(!d) return; XlsxExport.download(`${d.kind}-${XlsxExport.stamp()}.xlsx`, [{ name: ModelsCalc.KINDS[d.kind].label, rows: ModelsCalc.excelRows(d.kind, d) }]); }
+
+  return { render, resetCache, create, open, close, remove, setTitle, setCell, addRow, delRow, addSwot, delSwot, toggleItem, delItem, addItem, setNote, importStakeholders, exportXlsx };
 })();
 </script>
 
@@ -10303,7 +10871,7 @@ const Methodology = (() => {
   const ONLY = {
     baseline: ['cascata', 'hibrido'], scope: ['cascata', 'hibrido'], estimates: ['cascata', 'hibrido'],
     whatif: ['cascata', 'hibrido'], raci: ['cascata', 'hibrido'],
-    kanban: ['agil', 'hibrido'], backlog: ['agil', 'hibrido'], sprints: ['agil', 'hibrido']
+    kanban: ['agil', 'hibrido'], backlog: ['agil', 'hibrido'], sprints: ['agil', 'hibrido'], ritos: ['agil', 'hibrido']
   };
   const SHOW_ALL_KEY = 'pmo_show_all_screens';
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -10389,7 +10957,7 @@ const Methodology = (() => {
     const root = document.getElementById('method-root'); if(!root) return;
     const cur = type(), all = showAll();
     const hiddenFor = t => Object.keys(ONLY).filter(p => !visibleFor(p, t));
-    const label = { baseline:'Linha de base', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints' };
+    const label = { baseline:'Linha de base', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint' };
     root.innerHTML = ORDER.map(t => {
       const hid = hiddenFor(t);
       return `<button type="button" class="m-opt" role="radio" aria-checked="${t === cur}" data-perm="business" onclick="Methodology.set('${t}')">

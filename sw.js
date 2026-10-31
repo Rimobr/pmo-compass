@@ -3,7 +3,7 @@
 // com fallback para o cache quando estiver offline. Tudo que não é do app shell
 // (CDNs de ícones/fontes, chamadas às APIs de IA) passa direto, sem interferência.
 
-const CACHE_NAME = 'pmo-compass-v2.15.3';
+const CACHE_NAME = 'pmo-compass-v2.16.0';
 const APP_SHELL = [
   './PMO_Compass_v2.html',
   './manifest.json',
