@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.9.1'
+  version: '2.9.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1727,11 +1727,12 @@ body.icons-failed i[data-fb]::before{
     <div><div class="pg-title">Controle de Mudanças — Scope Changes<span class="help-q" data-help="Toda vez que o escopo do projeto muda, registre o impacto em prazo e custo antes de aprovar — evita que mudanças pequenas se acumulem e estourem o projeto sem ninguém perceber." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Dor real PMI 2025: scope creep afeta 40% dos projetos. Cada mudança com impacto quantificado antes da aprovação.</div></div>
     <div class="btn-row">
       <button class="btn btn-sm btn-acc" data-perm="business" onclick="Scope.openAdd()"><i class="ti ti-plus"></i>Registrar mudança</button>
-      <button class="btn btn-sm" onclick="T.show('IA analisando impacto consolidado…')"><i class="ti ti-brain"></i>Análise IA</button>
-      <button class="btn btn-sm"><i class="ti ti-chart-bar"></i>Relatório scope creep</button>
+      <button class="btn btn-sm" onclick="Scope.analyzeAi()"><i class="ti ti-brain"></i>Análise IA<span class="help-q" data-help="A IA lê as mudanças abertas (prazo, custo e risco de cada uma) e sugere o que aprovar, rejeitar ou mover para a Fase 2, e o efeito se todas forem aprovadas. É uma sugestão: a decisão continua sendo sua. Precisa de uma chave de IA em Configurações." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
+      <button class="btn btn-sm" onclick="Scope.showReport()"><i class="ti ti-chart-bar"></i>Relatório scope creep<span class="help-q" data-help="Resumo sem IA: quantas mudanças foram aprovadas, rejeitadas, adiadas e quantas estão abertas, com os dias e o custo que cada grupo soma. O 'scope creep' aprovado é o que já entrou no plano." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
     </div>
   </div>
 
+  <div id="scope-extra-root"></div>
   <div id="scope-summary-root"></div>
   <div id="scope-list-root"></div>
 </section>
@@ -8750,7 +8751,64 @@ const Scope = (() => {
     T.show(`✅ ${id} ${s.label.toLowerCase()}!`);
   }
 
-  return { render, openAdd, openEdit, saveFromModal, deleteFromModal, setStatus, closeModal, resetCache };
+  // ── Cartão de resultado (análise da IA ou relatório): fica acima da lista até o usuário fechar ──
+  function showCard(title, icon, bodyHtml, foot) {
+    const root = document.getElementById('scope-extra-root'); if(!root) return;
+    root.innerHTML = `<div class="card" style="margin-bottom:14px" role="region" aria-label="${escapeHtml(title)}">
+      <div class="lbl" style="display:flex;align-items:center;gap:6px"><i class="ti ti-${icon}"></i>${escapeHtml(title)}<button class="btn btn-sm" style="margin-left:auto" aria-label="Fechar" onclick="Scope.closeCard()"><i class="ti ti-x"></i></button></div>
+      ${bodyHtml}${foot ? `<div style="font-size:11.5px;color:var(--t3);margin-top:10px">${foot}</div>` : ''}</div>`;
+    root.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+  function closeCard() { const r = document.getElementById('scope-extra-root'); if(r) r.innerHTML = ''; }
+
+  const SCOPE_AI_SYSTEM = `Você é a IA do ${BRAND.name}, apoio à decisão do gerente de projeto. Vai receber as mudanças de escopo de um projeto (abertas e já decididas) com impacto em dias e custo. Analise o impacto CONSOLIDADO e recomende, usando só os números recebidos (não invente dados).
+Responda em português, texto simples (sem markdown pesado), até 8 linhas, neste formato:
+Resumo: uma frase com o impacto total se todas as abertas forem aprovadas.
+Recomendações: uma linha por mudança aberta — o ID, "aprovar", "rejeitar" ou "mover para a Fase 2" e o motivo em poucas palavras.
+Atenção: o principal risco de acumular essas mudanças.`;
+
+  async function analyzeAi() {
+    if(!Auth.guard('business')) return;
+    ensureLoaded();
+    const open = data.filter(x => x.status === 'pending' || x.status === 'analysis');
+    if(!open.length) { showCard('Análise da IA', 'brain', '<div class="rk-empty">Não há mudanças abertas para analisar. Registre uma mudança ou volte quando houver alguma em análise.</div>'); return; }
+    if(!Store.hasKeyOrCloud()) { showCard('Análise da IA', 'brain', '<div style="font-size:12.5px;color:var(--t2)"><i class="ti ti-info-circle"></i> Falta a chave de IA. Configure em <button class="link-a" onclick="R.go(\'settings\')">Configurações → Provedor de IA</button> e tente de novo.</div>'); return; }
+    showCard('Análise da IA', 'brain', '<div style="font-size:12.5px;color:var(--t2);display:flex;align-items:center;gap:8px"><i class="ti ti-loader-2" style="animation:fi-spin 1s linear infinite"></i>Analisando ' + open.length + ' mudança(s) aberta(s)… pode levar alguns segundos.</div>');
+    const line = x => `${x.id} [${(STATUS[x.status] || {}).label}] ${x.title} — ${x.impactDays >= 0 ? '+' : ''}${x.impactDays || 0} dias, +${fmtMoney(x.impactCost)}${x.riskNote ? ', risco: ' + x.riskNote : ''}${x.body ? ' — ' + String(x.body).slice(0, 300) : ''}`;
+    const decided = data.filter(x => !open.includes(x)).map(x => `${x.id} [${(STATUS[x.status] || {}).label}] ${x.title} — ${x.impactDays || 0} dias, ${fmtMoney(x.impactCost)}`);
+    const msg = `MUDANÇAS ABERTAS:\n${open.map(line).join('\n')}\n\nJÁ DECIDIDAS:\n${decided.length ? decided.join('\n') : '(nenhuma)'}`;
+    const r = await AI.send([{ role:'user', content: msg }], { system: SCOPE_AI_SYSTEM + '\n\nContexto do projeto:\n' + (typeof ContextBuilder !== 'undefined' ? ContextBuilder.build() : ''), progressTitle: 'Analisando mudanças de escopo' });
+    if(r.error) { showCard('Análise da IA', 'brain', `<div class="card-danger" style="border-radius:var(--r8);padding:10px 12px;font-size:12.5px;color:var(--t1)"><i class="ti ti-alert-triangle"></i> Não consegui analisar: ${escapeHtml(r.error)}</div>`, 'Tente de novo em instantes.'); return; }
+    showCard('Análise da IA', 'brain', `<div style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:12.5px;color:var(--t1);line-height:1.6">${escapeHtml((r.text || '').trim())}</div>`, 'Sugestão da IA com base só nos números cadastrados — confira antes de decidir. Nada foi alterado.');
+  }
+
+  // Relatório sem IA: o que entrou, o que saiu, o que está aberto
+  function report() {
+    ensureLoaded();
+    const groups = [['approved', 'Aprovadas (já entraram no plano)'], ['pending', 'Não aprovadas'], ['analysis', 'Em análise'], ['phase2', 'Movidas para a Fase 2'], ['rejected', 'Rejeitadas']];
+    const rows = groups.map(([k, label]) => { const l = data.filter(x => x.status === k); return { key: k, label, n: l.length, days: l.reduce((s, x) => s + (Number(x.impactDays) || 0), 0), cost: l.reduce((s, x) => s + (Number(x.impactCost) || 0), 0) }; });
+    return { rows, total: data.length };
+  }
+  function showReport() {
+    const { rows, total } = report();
+    if(!total) { showCard('Relatório de scope creep', 'chart-bar', '<div class="rk-empty">Nenhuma mudança de escopo registrada ainda.</div>'); return; }
+    const ap = rows.find(r => r.key === 'approved'), op = [rows.find(r => r.key === 'pending'), rows.find(r => r.key === 'analysis')];
+    const opDays = op.reduce((s, r) => s + r.days, 0), opCost = op.reduce((s, r) => s + r.cost, 0), opN = op.reduce((s, r) => s + r.n, 0);
+    const tr = r => `<tr><td>${escapeHtml(r.label)}</td><td class="num">${r.n}</td><td class="num">${r.days >= 0 ? '+' : ''}${r.days} dias</td><td class="num">+${fmtMoney(r.cost)}</td></tr>`;
+    showCard('Relatório de scope creep', 'chart-bar',
+      `<div style="font-size:12.5px;color:var(--t1);margin-bottom:8px"><b>Scope creep aprovado:</b> ${ap.n} mudança(s), ${ap.days >= 0 ? '+' : ''}${ap.days} dias e +${fmtMoney(ap.cost)} já incorporados ao plano. <b>Ainda em aberto:</b> ${opN} mudança(s), podendo somar ${opDays >= 0 ? '+' : ''}${opDays} dias e +${fmtMoney(opCost)}.</div>
+       <div class="rc-scroll"><table class="hr-tbl"><thead><tr><th>Situação</th><th class="num">Mudanças</th><th class="num">Prazo</th><th class="num">Custo</th></tr></thead><tbody>${rows.map(tr).join('')}</tbody></table></div>
+       <div class="btn-row" style="margin-top:10px"><button class="btn btn-sm" onclick="Scope.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button></div>`,
+      'Calculado só com o que está cadastrado nesta tela (sem IA).');
+  }
+  function exportXlsx() {
+    ensureLoaded();
+    XlsxExport.download('scope-changes-' + XlsxExport.stamp() + '.xlsx', [
+      { name: 'Mudanças', rows: [['Código', 'Mudança', 'Situação', 'Prazo (dias)', 'Custo (R$)', 'Risco', 'Registrada em'], ...data.map(x => [x.id, x.title, (STATUS[x.status] || {}).label || x.status, Number(x.impactDays) || 0, Number(x.impactCost) || 0, x.riskNote || '', XlsxExport.fmt(x.createdAt)])] },
+      { name: 'Resumo', rows: [['Situação', 'Mudanças', 'Prazo (dias)', 'Custo (R$)'], ...report().rows.map(r => [r.label, r.n, r.days, r.cost])] }]);
+  }
+
+  return { render, openAdd, openEdit, saveFromModal, deleteFromModal, setStatus, closeModal, resetCache, analyzeAi, showReport, closeCard, exportXlsx, report };
 })();
 </script>
 
