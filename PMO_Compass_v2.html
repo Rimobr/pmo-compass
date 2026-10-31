@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.9.2'
+  version: '2.9.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1638,7 +1638,7 @@ body.icons-failed i[data-fb]::before{
     <p style="font-size:12.5px;color:var(--t2);margin-bottom:10px">Digite qualquer pergunta sobre o projeto — a IA busca nos documentos e responde com citação de fonte.</p>
     <div style="display:flex;gap:8px">
       <input class="input" id="repo-search" type="text" placeholder="Ex: qual é o requisito RF-ERP-008? quais são os critérios de aceite da HU-001?">
-      <button class="btn btn-acc" onclick="T.show('Buscando nos documentos…')"><i class="ti ti-search"></i>Buscar</button>
+      <button class="btn btn-acc" title="Abre o Chat contextual e envia a pergunta" onclick="Chat.ask(document.getElementById('repo-search').value)"><i class="ti ti-message-2"></i>Perguntar à IA</button>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
       <span style="font-size:11px;color:var(--t3)">Sugestões:</span>
@@ -1683,7 +1683,7 @@ body.icons-failed i[data-fb]::before{
         <div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><span style="font-size:12.5px;font-weight:500;color:var(--t1)">Coord. Operacional</span><span class="badge b-neu">Próximos 7 dias</span></div>
           <div style="font-size:12px;color:var(--t2);margin-bottom:8px">Check-in sobre o piloto operacional. Tom: parceiro, informal.</div>
-          <button class="btn btn-sm" onclick="T.show('✅ Lembrete agendado para 5 dias!')"><i class="ti ti-calendar"></i>Agendar lembrete</button>
+          <button class="btn btn-sm" onclick="T.show('🔒 Em breve — lembretes agendados. Por enquanto, anote o contato na Trilha ou numa ata.', 4500)"><i class="ti ti-calendar"></i>Agendar lembrete · em breve</button>
         </div>
       </div>
     </div>
@@ -7368,8 +7368,16 @@ const Chat = (() => {
     inp.disabled=false; inp.focus();
   }
   function sug(btn) { const inp=document.getElementById('chat-in'); if(inp){inp.value=btn.textContent.trim();send();} }
+  // Abre o Chat contextual já com a pergunta enviada (usado pela consulta do Repositório e pelo "Reengajar")
+  function ask(question) {
+    const q = String(question || '').trim();
+    if(!q) { T.show('⚠️ Digite a pergunta primeiro.'); return; }
+    R.go('chat');
+    const inp = document.getElementById('chat-in');
+    if(inp) { inp.value = q; send(); }
+  }
   function clear() { hist=[]; const log=document.getElementById('chat-log'); if(log) log.innerHTML='<div class="chat-msg"><div class="chat-ico" style="background:var(--ad)"><i class="ti ti-compass" style="color:var(--acc)"></i></div><div class="bub ai">Conversa reiniciada. Como posso ajudar?</div></div>'; }
-  return { send, sug, clear, render };
+  return { send, sug, clear, render, ask };
 })();
 </script>
 
@@ -7652,7 +7660,7 @@ const Stakeholders = (() => {
               <div style="font-size:13.5px;font-weight:600;color:var(--t1)">1 stakeholder crítico sem contato há ${d===null?'—':d} dias</div>
               <div style="font-size:12px;color:var(--t2);margin-top:2px">${escapeHtml(critical.name)} — ${escapeHtml(critical.role)}. ${escapeHtml(critical.notes||'')}</div>
             </div>
-            <button class="btn btn-red btn-sm" style="flex-shrink:0;margin-left:auto" onclick="T.show('Mensagem de reengajamento gerada pela IA!')"><i class="ti ti-send"></i>Reengajar agora</button>
+            <button class="btn btn-red btn-sm" style="flex-shrink:0;margin-left:auto" title="A IA escreve uma mensagem de reaproximação no Chat contextual" data-q="${escapeHtml(`Escreva uma mensagem curta e cordial para reengajar ${critical.name} (${critical.role}), que está sem contato há ${d === null ? 'muito tempo' : d + ' dias'}. Contexto: ${critical.notes || 'sem observações'}. Tom profissional, com um convite claro para uma conversa de 15 minutos.`)}" onclick="Chat.ask(this.dataset.q)"><i class="ti ti-message-2"></i>Redigir mensagem (IA)</button>
           </div>
         </div>`;
       } else {
@@ -8627,7 +8635,7 @@ const Scope = (() => {
             <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:2px">${open.length} mudança(s) aberta(s) — impacto total estimado: +${totalDays} dias e +${fmtMoney(totalCost)}</div>
             <div style="font-size:12px;color:var(--t2)">Revise e decida antes que o impacto acumule.</div>
           </div>
-          <button class="btn btn-red btn-sm" data-perm="business" style="flex-shrink:0;margin-left:auto" onclick="T.show('✅ Congelamento ativado — novas solicitações bloqueadas!')"><i class="ti ti-lock"></i>Congelar</button>
+          <button class="btn btn-red btn-sm" data-perm="business" style="flex-shrink:0;margin-left:auto" onclick="T.show('🔒 Em breve — congelar novas solicitações. Por enquanto, use Rejeitar ou Mover para a Fase 2 em cada mudança.', 5000)"><i class="ti ti-lock"></i>Congelar · em breve</button>
         </div>`;
       } else {
         summaryRoot.innerHTML = '';
@@ -10866,7 +10874,7 @@ const Meetings = (() => {
         <div class="btn-row" style="margin-top:12px" data-perm="business">
           <button class="btn btn-sm" onclick="Meetings.openAddAction('${mt.id}')"><i class="ti ti-plus"></i>Nova ação</button>
           ${pending ? `<button class="btn btn-grn btn-sm" onclick="Meetings.confirmAll('${mt.id}')"><i class="ti ti-check"></i>Confirmar todas</button>` : ''}
-          <button class="btn btn-sm" onclick="T.show('✅ Enviado aos responsáveis!')"><i class="ti ti-send"></i>Enviar aos responsáveis</button>
+          <button class="btn btn-sm" title="Copia as ações pendentes em texto, para colar no WhatsApp ou e-mail" onclick="Meetings.copyActions('${mt.id}')"><i class="ti ti-copy"></i>Copiar ações pendentes</button>
         </div>
       </div>`;
     }).join('');
@@ -10987,7 +10995,18 @@ const Meetings = (() => {
     T.show('✅ Ações confirmadas! Responsáveis notificados.');
   }
 
-  return { render, openAdd, openEdit, saveFromModal, deleteFromModal, openAddAction, closeActionModal, saveAction, toggleAction, confirmAll, closeModal, resetCache };
+  // Copia as ações da ata em texto pronto para colar no WhatsApp, e-mail ou chat (o app ainda não envia por conta própria)
+  function copyActions(id) {
+    ensureLoaded();
+    const mt = data.find(x => x.id === id); if(!mt) return;
+    const acts = (mt.actions || []).filter(a => !a.done);
+    if(!acts.length) { T.show('Esta ata não tem ações pendentes para copiar.'); return; }
+    const text = `Ações da ata "${mt.title}" (${fmtDateBR(mt.date)}):\n` + acts.map(a => `• ${a.who}: ${a.text}${a.due ? ' — até ' + fmtDateBR(a.due) : ''}`).join('\n');
+    const done = () => T.show('📋 Ações copiadas. Cole no WhatsApp, e-mail ou chat para enviar aos responsáveis.', 4500);
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => T.show('⚠️ Não consegui copiar. Selecione e copie as ações manualmente.'));
+    else T.show('⚠️ Seu navegador não permite copiar automaticamente. Selecione e copie as ações manualmente.');
+  }
+  return { render, openAdd, openEdit, saveFromModal, deleteFromModal, openAddAction, closeActionModal, saveAction, toggleAction, confirmAll, closeModal, resetCache, copyActions };
 })();
 </script>
 
