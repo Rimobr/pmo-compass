@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.15.2'
+  version: '2.15.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1885,12 +1885,20 @@ body.icons-failed i[data-fb]::before{
 .kb-col.over-wip{border-color:var(--rb)}
 .kb-col.drop{outline:2px dashed var(--acc);outline-offset:-3px}
 .kb-hdr{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12.5px;margin-bottom:8px;color:var(--t1)}
-.kb-count{font-size:11px;background:var(--s3);border-radius:20px;padding:1px 8px;color:var(--t2)}
+.kb-count{font-size:11px;background:var(--s3);border-radius:20px;padding:1px 8px;color:var(--t1)}
 .kb-card{background:var(--s2);border:1px solid var(--b1);border-radius:var(--r8);padding:8px 10px;margin-bottom:8px;cursor:grab}
 .kb-card:hover{border-color:var(--b3)}
 .kb-card:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 .kb-card.dragging{opacity:.5}
 .kb-title{font-size:12.5px;font-weight:600;color:var(--t1);overflow-wrap:anywhere;margin:4px 0}
+.kb-open{display:block;width:100%;text-align:left;background:none;border:0;padding:0;font-family:inherit;cursor:pointer}
+.kb-open:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:4px}
+/* Alvos de toque: 28px no mouse, 40px em tela de toque (WCAG 2.5.8 pede no mínimo 24px) */
+.kb-mv button,.ag-rank button,.wbs-ic-btn{min-width:28px;min-height:28px}
+.ag-rank button{padding:2px 8px;line-height:1}
+input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
+@media (pointer:coarse){.btn-sm,.kb-mv button,.ag-rank button,.wbs-ic-btn,.ico-btn{min-width:40px;min-height:40px}}
+.help-q{color:var(--t2)}
 .kb-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
 .kb-mv{display:flex;gap:4px;justify-content:flex-end;margin-top:6px}
 .kb-mv button{padding:1px 8px}
@@ -7806,6 +7814,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // configuração no <head>. Roda antes de qualquer outra coisa pra não haver flash
   // do nome padrão antes do nome da instância aparecer.
   document.querySelectorAll('[data-brand="name"]').forEach(el => { el.textContent = BRAND.name; });
+  // O título de cada tela é um título de verdade para leitor de tela (navegar por títulos), sem mudar o visual
+  document.querySelectorAll('.pg-title').forEach(el => { el.setAttribute('role', 'heading'); el.setAttribute('aria-level', '1'); });
   document.querySelectorAll('[data-brand="shortName"]').forEach(el => { el.textContent = BRAND.shortName; });
   document.querySelectorAll('[data-brand="tagline"]').forEach(el => { el.textContent = BRAND.tagline; });
   document.querySelectorAll('[data-brand="version"]').forEach(el => { el.textContent = BRAND.version; });
@@ -9779,9 +9789,10 @@ const Agile = (() => {
     const sp = sprints.find(s => s.id === i.sprintId);
     const prev = AgileCalc.neighbor(i.status, -1), next = AgileCalc.neighbor(i.status, 1);
     const lbl = k => AgileCalc.COLS.find(c => c.key === k).label;
-    return `<div class="kb-card" draggable="true" tabindex="0" role="button" data-id="${esc(i.id)}" ondragstart="Agile.dragStart(event,'${esc(i.id)}')" ondragend="this.classList.remove('dragging')" onclick="Agile.openItem('${esc(i.id)}')" onkeydown="if(event.key==='Enter'){Agile.openItem('${esc(i.id)}')}" aria-label="${esc(i.id)}: ${esc(i.title)}. Abrir para editar">
+    // O cartão é um grupo; só o título é o botão de abrir (botão dentro de botão não é acessível por leitor de tela)
+    return `<div class="kb-card" draggable="true" role="group" data-id="${esc(i.id)}" ondragstart="Agile.dragStart(event,'${esc(i.id)}')" ondragend="this.classList.remove('dragging')" onclick="Agile.openItem('${esc(i.id)}')" aria-label="${esc(i.id)}: ${esc(i.title)}">
       <div class="kb-meta"><span class="chip">${esc(i.id)}</span><span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>${i.points !== '' && i.points != null ? `<span class="badge b-acc">${esc(i.points)} pts</span>` : ''}</div>
-      <div class="kb-title">${esc(i.title)}</div>
+      <button type="button" class="kb-title kb-open" aria-label="Abrir ${esc(i.id)}: ${esc(i.title)}" onclick="event.stopPropagation();Agile.openItem('${esc(i.id)}')">${esc(i.title)}</button>
       <div class="kb-meta">${i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'}${sp ? `<span class="chip">${esc(sp.name)}</span>` : ''}</div>
       <div class="kb-mv" data-perm="business">${prev ? `<button class="btn btn-sm" aria-label="Mover ${esc(i.id)} para ${lbl(prev)}" onclick="event.stopPropagation();Agile.move('${esc(i.id)}',-1)">◀</button>` : ''}${next ? `<button class="btn btn-sm" aria-label="Mover ${esc(i.id)} para ${lbl(next)}" onclick="event.stopPropagation();Agile.move('${esc(i.id)}',1)">▶</button>` : ''}</div></div>`;
   }
