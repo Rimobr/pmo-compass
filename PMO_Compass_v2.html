@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.14.0'
+  version: '2.15.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1918,6 +1918,7 @@ body.icons-failed i[data-fb]::before{
     <div class="btn-row">
       <button class="btn btn-sm btn-acc" data-perm="business" onclick="Agile.openItem()"><i class="ti ti-plus"></i>Novo item</button>
       <button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('backlog')"><i class="ti ti-table-import"></i>Importar planilha<span class="help-q" data-help="Traz vários itens de uma vez de uma planilha Excel ou CSV (inclusive exportada do Jira ou Trello). Colunas reconhecidas: título, tipo, pontos, responsável, situação, sprint, prioridade e descrição. Você vê uma prévia e confere antes de importar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
+      <button class="btn btn-sm" data-perm="business" onclick="Agile.aiEstimate()"><i class="ti ti-sparkles"></i>Estimar com IA<span class="help-q" data-help="A IA estima os pontos dos itens sem estimativa e sugere dividir os itens grandes (acima de 8 pontos), comparando com o que o seu próprio time já entregou. Cada sugestão cita o item parecido usado como referência. Você revisa e escolhe o que aplicar; nada muda sozinho." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
       <button class="btn btn-sm" data-perm="business" onclick="Agile.openPlanNext()"><i class="ti ti-wand"></i>Planejar sprint<span class="help-q" data-help="O sistema monta a próxima sprint para você: pega os itens estimados do topo do backlog, na ordem de prioridade, até encher a capacidade (pontos), deixando uma reserva para imprevistos. Ele compara com o ritmo real do time e avisa o que não coube e por quê. Você revisa antes de aplicar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
       <button class="btn btn-sm" onclick="Agile.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button>
     </div>
@@ -1974,10 +1975,23 @@ body.icons-failed i[data-fb]::before{
       <div class="field-group"><div class="field-label"><label for="ap-cap">Capacidade (pontos)</label><span class="help-q" data-help="Quantos pontos o time consegue entregar nesta sprint. Já vem preenchido com a capacidade da sprint ou, se vazia, com a velocidade média das últimas sprints. Ajuste se houver férias, feriados ou pessoas a menos." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="ap-cap" type="number" min="0" max="1000" oninput="Agile.recalcPlan()"></div>
       <div class="field-group"><div class="field-label"><label for="ap-res">Reserva para imprevistos (%)</label><span class="help-q" data-help="Parte da capacidade que fica livre para bugs, correções e trabalho não previsto. Em geral 10% a 20%. Esse valor fica salvo para as próximas sprints do projeto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="ap-res" type="number" min="0" max="50" oninput="Agile.recalcPlan()"></div>
     </div>
+    <div id="ap-people"></div>
     <div id="ap-root"></div>
     <div class="btn-row" style="margin-top:14px;justify-content:flex-end">
       <button class="btn btn-sm" onclick="Agile.closePlan()">Cancelar</button>
       <button class="btn btn-sm btn-acc" id="ap-apply" onclick="Agile.applyPlan()"><i class="ti ti-check"></i>Aplicar sugestão</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-ov hidden" id="modal-agile-ai" onclick="if(event.target===this)Agile.closeAi()">
+  <div class="modal-box" style="width:680px;max-width:96vw;max-height:92vh;overflow-y:auto" role="dialog" aria-modal="true" aria-labelledby="aa-title-h">
+    <div class="modal-title" id="aa-title-h"><i class="ti ti-sparkles"></i> Estimativas sugeridas pela IA</div>
+    <div class="modal-sub" id="aa-sub">Compara cada item com o que o seu time já entregou. Revise e marque o que quer aplicar.</div>
+    <div id="aa-root"></div>
+    <div class="btn-row" style="margin-top:14px;justify-content:flex-end">
+      <button class="btn btn-sm" onclick="Agile.closeAi()">Cancelar</button>
+      <button class="btn btn-sm btn-acc" id="aa-apply" style="display:none" onclick="Agile.applyAi()"><i class="ti ti-check"></i>Aplicar selecionadas</button>
     </div>
   </div>
 </div>
@@ -3679,8 +3693,8 @@ const Cloud = (() => {
       local: 'backlog'
     },
     sprints: {
-      toDb: (x, pid) => ({ project_id:pid, id:x.id, name:x.name, goal:x.goal||null, start_on:x.startOn, end_on:x.endOn, capacity:(x.capacity===''||x.capacity==null)?null:x.capacity, state:x.state||'planejada', closed_on:x.closedOn||null, updated_at:new Date().toISOString() }),
-      fromDb: r => ({ id:r.id, name:r.name, goal:r.goal||'', startOn:r.start_on, endOn:r.end_on, capacity:r.capacity==null?'':r.capacity, state:r.state, closedOn:r.closed_on||'' }),
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, name:x.name, goal:x.goal||null, start_on:x.startOn, end_on:x.endOn, capacity:(x.capacity===''||x.capacity==null)?null:x.capacity, state:x.state||'planejada', closed_on:x.closedOn||null, availability:x.availability||{}, updated_at:new Date().toISOString() }),
+      fromDb: r => ({ id:r.id, name:r.name, goal:r.goal||'', startOn:r.start_on, endOn:r.end_on, capacity:r.capacity==null?'':r.capacity, state:r.state, closedOn:r.closed_on||'', availability:r.availability||{} }),
       local: 'sprints'
     },
     raci_entries: {
@@ -9586,7 +9600,124 @@ const AgileCalc = (() => {
     return { target, capacity, reservePct, committed, used, total: committed + used, free: remaining, selected, skipped, advice };
   }
 
-  return { COLS, KINDS, DEFAULT_CFG, planSprint, cfgOf, wip, moveTo, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+  // ── Capacidade por pessoa (alocação e folgas) ──
+  // Dias úteis (segunda a sexta) entre duas datas, inclusive
+  function workingDays(startOn, endOn) {
+    let n = 0; const total = diffDays(startOn, endOn);
+    for(let d = 0; d <= total; d++) { const wd = new Date(addDays(startOn, d) + 'T00:00:00Z').getUTCDay(); if(wd !== 0 && wd !== 6) n++; }
+    return n;
+  }
+  // Ritmo real de cada pessoa: média de pontos concluídos por sprint nas últimas 3 sprints encerradas em que ela teve item
+  function personRhythm(sprints, items) {
+    const closed = sprints.filter(s => s.state === 'encerrada').sort((a, b) => a.startOn.localeCompare(b.startOn)).slice(-3);
+    const acc = {};
+    closed.forEach(s => {
+      const mine = items.filter(i => i.sprintId === s.id && i.assignee);
+      const names = [...new Set(mine.map(i => i.assignee))];
+      names.forEach(n => {
+        const done = sum(mine.filter(i => i.assignee === n && i.status === 'done'));
+        (acc[n] = acc[n] || { total: 0, sprints: 0 }); acc[n].total += done; acc[n].sprints++;
+      });
+    });
+    const out = {};
+    Object.entries(acc).forEach(([n, v]) => { out[n] = { avg: Math.round(v.total / v.sprints * 10) / 10, sprints: v.sprints }; });
+    return out;
+  }
+  // Capacidade de cada pessoa na sprint: ritmo histórico × disponibilidade (dias úteis sem folga).
+  // Sem histórico da pessoa: média por pessoa do time × alocação no projeto × disponibilidade.
+  function teamCapacity(sprint, team, availability, rhythm, velocityAvg) {
+    const wd = Math.max(1, workingDays(sprint.startOn, sprint.endOn));
+    const perHead = velocityAvg != null && team.length ? velocityAvg / team.length : null;
+    const rows = team.map(m => {
+      const off = Math.max(0, Math.min(wd, Number(availability && availability[m.name] && availability[m.name].daysOff) || 0));
+      const factor = (wd - off) / wd;
+      const alloc = Math.max(0, Math.min(1, (m.allocationPct == null ? 100 : Number(m.allocationPct)) / 100));
+      const r = rhythm && rhythm[m.name];
+      const base = r ? r.avg : (perHead != null ? perHead * alloc : null);
+      return { name: m.name, role: m.role || '', daysOff: off, workingDays: wd, factor, allocationPct: Math.round(alloc * 100), base, source: r ? 'histórico' : (perHead != null ? 'média do time' : 'sem referência'),
+        capacity: base == null ? 0 : Math.round(base * factor * 10) / 10 };
+    });
+    return { rows, total: Math.round(rows.reduce((s, r) => s + r.capacity, 0)), workingDays: wd };
+  }
+  // Compara os pontos de cada pessoa na sprint (já atribuídos + sugeridos) com a capacidade dela
+  function loadAdvice(items, sprint, selectedIds, capRows) {
+    const pick = new Set(selectedIds);
+    const mine = items.filter(i => (i.sprintId === sprint.id || pick.has(i.id)) && i.status !== 'done');
+    const by = {}; let noOwner = 0;
+    mine.forEach(i => { if(!i.assignee) noOwner += pts(i); else by[i.assignee] = (by[i.assignee] || 0) + pts(i); });
+    const advice = [];
+    Object.entries(by).forEach(([name, points]) => {
+      const row = capRows.find(r => r.name === name);
+      if(row && row.capacity > 0 && points > row.capacity * 1.1) advice.push({ level: 'warn', text: `${name} ficaria com ${points} pts, acima da capacidade dela nesta sprint (${row.capacity} pts${row.daysOff ? `, com ${row.daysOff} dia(s) de folga` : ''}). Redistribua ou retire itens.` });
+    });
+    if(noOwner > 0) advice.push({ level: 'info', text: `${noOwner} pts ainda estão sem responsável — atribua para eu conferir a carga de cada pessoa.` });
+    return advice;
+  }
+
+  return { COLS, KINDS, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+})();
+</script>
+
+<!-- ■ MODULE: services/agile-ai ─ IA que estima pontos e sugere a divisão de itens grandes, calibrada pelo histórico do próprio time -->
+<script data-module="services/agile-ai">
+const AgileAi = (() => {
+  const SCALE = [1, 2, 3, 5, 8, 13];
+  const MAX_ITEMS = 20, MAX_HISTORY = 40, SPLIT_ABOVE = 8;
+  const clip = (s, n) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, n);
+  // Nota da escala mais próxima; em empate (ex.: 4 entre 3 e 5) vale a MAIOR, a escolha prudente para não comprometer demais a sprint
+  const nearest = p => SCALE.reduce((best, v) => Math.abs(v - p) <= Math.abs(best - p) ? v : best, SCALE[0]);
+
+  // Itens entregues pelo time (sprints encerradas) com pontos: a "régua" para a IA comparar
+  function history(items, sprints) {
+    const closed = new Set(sprints.filter(s => s.state === 'encerrada').map(s => s.id));
+    return items.filter(i => i.status === 'done' && closed.has(i.sprintId) && i.points !== '' && i.points != null && Number(i.points) > 0)
+      .sort((a, b) => String(b.doneOn || '').localeCompare(String(a.doneOn || ''))).slice(0, MAX_HISTORY)
+      .map(i => ({ id: i.id, title: clip(i.title, 120), points: Number(i.points), kind: i.kind }));
+  }
+  // O que precisa de ajuda: sem estimativa, ou grande demais para uma sprint (> 8 pontos)
+  function candidates(items) {
+    return items.filter(i => i.status !== 'done' && (i.points === '' || i.points == null || Number(i.points) > SPLIT_ABOVE))
+      .sort((a, b) => (a.rank || 0) - (b.rank || 0)).slice(0, MAX_ITEMS);
+  }
+  function buildPrompt(cands, hist) {
+    const system = `Você é o estimador de um time ágil. Estime esforço RELATIVO em pontos usando SOMENTE a escala ${SCALE.join(', ')}.
+Compare cada item com os itens que o time já entregou (histórico abaixo) e cite o item de referência mais parecido. Se não houver item parecido, diga isso.
+Itens com mais de ${SPLIT_ABOVE} pontos devem ser DIVIDIDOS em 2 a 5 partes entregáveis (cada uma com no máximo ${SPLIT_ABOVE} pontos), em vez de estimados inteiros.
+Não invente requisitos; use só o título e a descrição. Responda APENAS com JSON válido, sem texto antes ou depois, neste formato:
+{"estimativas":[{"id":"US-001","pontos":5,"referencia":"US-004 (5 pts) ou 'sem item parecido'","motivo":"uma frase"}],"divisoes":[{"id":"US-020","motivo":"uma frase","partes":[{"titulo":"parte 1","pontos":5}]}]}
+Cada item aparece em "estimativas" OU em "divisoes", nunca nos dois.`;
+    const h = hist.length ? hist.map(x => `${x.id} | ${x.points} pts | ${x.title}`).join('\n') : '(o time ainda não tem itens concluídos com pontos — a estimativa será genérica)';
+    const c = cands.map(x => `${x.id} | atual: ${x.points === '' || x.points == null ? 'sem pontos' : x.points + ' pts'} | tipo: ${x.kind} | ${clip(x.title, 160)}${x.description ? ' | ' + clip(x.description, 300) : ''}`).join('\n');
+    return { system, user: `HISTÓRICO DO TIME (entregue):\n${h}\n\nITENS PARA ESTIMAR OU DIVIDIR:\n${c}` };
+  }
+  // Valida a resposta: só ids que existem, só pontos da escala, divisão com 2 a 5 partes. Nunca lança.
+  function parse(text, validIds) {
+    const tryParse = s => { try { return JSON.parse(s); } catch(e) { return null; } };
+    let obj = tryParse(String(text || '').trim());
+    if(!obj) { const m = String(text || '').match(/\{[\s\S]*\}/); if(m) obj = tryParse(m[0]); }
+    if(!obj || typeof obj !== 'object') return null;
+    const ok = new Set(validIds), seen = new Set(), estimates = [], splits = [];
+    (Array.isArray(obj.estimativas) ? obj.estimativas : []).forEach(e => {
+      if(!e || !ok.has(e.id) || seen.has(e.id)) return;
+      const p = Number(e.pontos); if(!isFinite(p) || p <= 0 || p > 20) return; // valor absurdo é recusado, não "encolhido" para a escala
+      seen.add(e.id); estimates.push({ id: e.id, points: nearest(p), reference: clip(e.referencia, 120), reason: clip(e.motivo, 200) });
+    });
+    (Array.isArray(obj.divisoes) ? obj.divisoes : []).forEach(d => {
+      if(!d || !ok.has(d.id) || seen.has(d.id) || !Array.isArray(d.partes)) return;
+      const parts = d.partes.map(p => ({ title: clip(p && p.titulo, 200), points: nearest(Number(p && p.pontos) || 0) })).filter(p => p.title.length >= 2 && Number(p.points) > 0);
+      if(parts.length < 2 || parts.length > 6) return;
+      seen.add(d.id); splits.push({ id: d.id, reason: clip(d.motivo, 200), parts });
+    });
+    return { estimates, splits };
+  }
+  // Troca um item grande pelas partes sugeridas (mesma posição de prioridade, mesmo responsável, sprint e tipo)
+  function applySplit(items, split, nextIdFn, today) {
+    const orig = items.find(i => i.id === split.id); if(!orig) return [];
+    const created = split.parts.map((p, k) => ({ id: nextIdFn(), title: p.title, description: `Parte ${k + 1} de ${split.parts.length} de ${orig.id} — ${orig.title}`, kind: orig.kind, status: 'todo', points: p.points,
+      assignee: orig.assignee || '', sprintId: orig.sprintId || '', rank: (orig.rank || 0) + (k + 1) / (split.parts.length + 1), createdOn: today, doneOn: '' }));
+    return created;
+  }
+  return { SCALE, SPLIT_ABOVE, history, candidates, buildPrompt, parse, applySplit };
 })();
 </script>
 
@@ -9897,18 +10028,47 @@ const Agile = (() => {
   }
 
   // ───────── Planejamento assistido: pontos × capacidade ─────────
-  let planSprintId = null;
+  let planSprintId = null, planAvail = {};
   function velocityAvg() { return AgileCalc.velocity(sprints, items).avg; }
+  // Capacidade por pessoa: ritmo real de cada uma, folgas e alocação
+  function capRows() {
+    const s = sprints.find(x => x.id === planSprintId); if(!s) return { rows: [], total: 0, workingDays: 0 };
+    const team = (DB.get('team') || []).filter(m => m && m.name);
+    return AgileCalc.teamCapacity(s, team, planAvail, AgileCalc.personRhythm(sprints, items), velocityAvg());
+  }
+  function renderPeople() {
+    const root = document.getElementById('ap-people'); if(!root) return;
+    const c = capRows();
+    if(!c.rows.length) { root.innerHTML = '<div style="font-size:12px;color:var(--t3);margin:6px 0"><i class="ti ti-info-circle"></i> Cadastre os colaboradores em <button class="link-a" onclick="Agile.closePlan();R.go(\'resources\')">Equipe → Colaboradores</button> para planejar a capacidade por pessoa (folgas e alocação).</div>'; return; }
+    root.innerHTML = `<div class="lbl" style="margin-top:8px">Capacidade por pessoa<span class="help-q" data-help="Cada pessoa entra com o ritmo que ela realmente entregou nas últimas sprints (pontos concluídos por sprint), reduzido pelos dias de folga ou férias nesta sprint. Quem ainda não tem histórico usa a média do time ajustada pela alocação no projeto. A soma sugere a capacidade da sprint." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+      <div style="overflow-x:auto"><table class="hr-tbl"><thead><tr><th scope="col">Pessoa</th><th scope="col" class="num">Ritmo (pts/sprint)</th><th scope="col" class="num">Dias de folga (de ${c.workingDays})</th><th scope="col" class="num">Capacidade</th></tr></thead><tbody>
+      ${c.rows.map((r, i) => `<tr><td>${esc(r.name)}${r.role ? `<div style="font-size:11px;color:var(--t3)">${esc(r.role)}</div>` : ''}</td><td class="num">${r.base == null ? '—' : Math.round(r.base * 10) / 10}<div style="font-size:11px;color:var(--t3)">${esc(r.source)}</div></td>
+        <td class="num"><input class="input" type="number" min="0" max="${c.workingDays}" value="${r.daysOff}" aria-label="Dias de folga de ${esc(r.name)} nesta sprint" style="width:70px;text-align:right" oninput="Agile.setDaysOff(${i}, this.value)"></td><td class="num" id="ap-cap-${i}"><b>${r.capacity}</b></td></tr>`).join('')}
+      </tbody></table></div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 2px;font-size:12.5px;color:var(--t1)"><span>Soma da equipe: <b id="ap-cap-total">${c.total}</b> pts</span><button class="btn btn-sm" onclick="Agile.useTeamCapacity()">Usar como capacidade da sprint</button></div>`;
+  }
+  function setDaysOff(i, v) {
+    const c = capRows(), name = c.rows[i] && c.rows[i].name; if(!name) return;
+    const n = Math.max(0, Math.min(c.workingDays, parseInt(v, 10) || 0));
+    if(n) planAvail[name] = { daysOff: n }; else delete planAvail[name];
+    const c2 = capRows();
+    c2.rows.forEach((r, k) => { const cell = document.getElementById('ap-cap-' + k); if(cell) cell.innerHTML = `<b>${r.capacity}</b>`; });
+    const tot = document.getElementById('ap-cap-total'); if(tot) tot.textContent = c2.total;
+    recalcPlan();
+  }
+  function useTeamCapacity() { const c = capRows(); document.getElementById('ap-cap').value = c.total; recalcPlan(); }
   function openPlan(id) {
     if(!Auth.guard('business')) return;
     load(); const s = sprints.find(x => x.id === id); if(!s) return;
-    planSprintId = id;
-    const cap = (s.capacity !== '' && s.capacity != null) ? s.capacity : (velocityAvg() != null ? Math.round(velocityAvg()) : '');
+    planSprintId = id; planAvail = JSON.parse(JSON.stringify(s.availability || {}));
+    const teamCap = capRows().total;
+    const cap = (s.capacity !== '' && s.capacity != null) ? s.capacity : (teamCap > 0 ? teamCap : (velocityAvg() != null ? Math.round(velocityAvg()) : ''));
     document.getElementById('ap-title-h').textContent = 'Planejar ' + s.name;
     document.getElementById('ap-sub').textContent = (s.goal ? 'Meta: ' + s.goal + '. ' : '') + 'O sistema sugere os itens que cabem na capacidade. Nada muda até você aplicar.';
     document.getElementById('ap-cap').value = cap;
     document.getElementById('ap-res').value = cfg.reservePct;
     document.getElementById('modal-agile-plan').classList.remove('hidden');
+    renderPeople();
     recalcPlan();
     document.getElementById('ap-cap').focus();
   }
@@ -9927,6 +10087,8 @@ const Agile = (() => {
   function recalcPlan() {
     const cur = currentPlan(); const root = document.getElementById('ap-root'); if(!cur || !root) return;
     const { plan } = cur, byId = id => items.find(i => i.id === id);
+    // carga de cada pessoa (já na sprint + sugeridos) contra a capacidade dela
+    plan.advice = plan.advice.concat(AgileCalc.loadAdvice(items, cur.s, plan.selected, capRows().rows));
     const icon = { warn: 'alert-triangle', info: 'info-circle', ok: 'circle-check' }, col = { warn: 'var(--amb)', info: 'var(--acc)', ok: 'var(--grn)' };
     const pct = plan.target ? Math.min(100, Math.round(plan.total / plan.target * 100)) : 0;
     root.innerHTML = `<div style="margin:10px 0 4px;font-size:12.5px;color:var(--t1)"><b>${plan.total} de ${plan.target} pts úteis</b> ${plan.capacity ? `(capacidade ${plan.capacity}, reserva ${plan.capacity - plan.target})` : ''}<div class="job-bar" style="margin:6px 0 2px"><div class="job-fill" style="width:${pct}%"></div></div></div>
@@ -9942,7 +10104,7 @@ const Agile = (() => {
     const cur = currentPlan(); if(!cur || !cur.plan.selected.length) return;
     const { s, plan } = cur;
     plan.selected.forEach(id => { const it = items.find(x => x.id === id); if(it) { it.sprintId = s.id; pushItem(it); } });
-    s.capacity = plan.capacity || s.capacity; pushSprint(s);
+    s.capacity = plan.capacity || s.capacity; s.availability = planAvail; pushSprint(s);
     cfg.reservePct = plan.reservePct; DB.set('agileConfig', cfg);
     if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'agileConfig', cfg);
     saveItems(); saveSprints(); closePlan(); renderAll();
@@ -9950,11 +10112,67 @@ const Agile = (() => {
     T.show(`✅ ${plan.selected.length} item(ns) (${plan.used} pts) entraram em "${s.name}".`, 5000);
   }
 
+  // ───────── IA: estimar pontos e dividir itens grandes (calibrada pelo histórico do time) ─────────
+  let aiResult = null;
+  async function aiEstimate() {
+    if(!Auth.guard('business')) return;
+    load();
+    const cands = AgileAi.candidates(items);
+    if(!cands.length) { T.show('✅ Todos os itens abertos já têm estimativa e cabem em uma sprint.', 4500); return; }
+    const hist = AgileAi.history(items, sprints);
+    const box = document.getElementById('aa-root'), applyBtn = document.getElementById('aa-apply');
+    document.getElementById('modal-agile-ai').classList.remove('hidden');
+    applyBtn.style.display = 'none'; aiResult = null;
+    if(!Store.hasKeyOrCloud()) { box.innerHTML = '<div style="font-size:12.5px;color:var(--t2)"><i class="ti ti-info-circle"></i> Falta a chave de IA. Configure em <button class="link-a" onclick="Agile.closeAi();R.go(\'settings\')">Configurações → Provedor de IA</button> e tente de novo.</div>'; return; }
+    box.innerHTML = `<div style="font-size:12.5px;color:var(--t2);display:flex;align-items:center;gap:8px"><i class="ti ti-loader-2" style="animation:fi-spin 1s linear infinite"></i>Analisando ${cands.length} item(ns) com base em ${hist.length} item(ns) já entregues pelo time…</div>`;
+    const p = AgileAi.buildPrompt(cands, hist);
+    const r = await AI.send([{ role: 'user', content: p.user }], { system: p.system, progressTitle: 'Estimando itens do backlog' });
+    if(r.error) { box.innerHTML = `<div class="card-danger" style="border-radius:var(--r8);padding:10px 12px;font-size:12.5px;color:var(--t1)"><i class="ti ti-alert-triangle"></i> Não consegui estimar: ${esc(r.error)}</div>`; return; }
+    const parsed = AgileAi.parse(r.text || '', cands.map(c => c.id));
+    if(!parsed || (!parsed.estimates.length && !parsed.splits.length)) { box.innerHTML = '<div class="card-danger" style="border-radius:var(--r8);padding:10px 12px;font-size:12.5px;color:var(--t1)"><i class="ti ti-alert-triangle"></i> A IA respondeu, mas não em um formato que consegui interpretar. Tente de novo.</div>'; return; }
+    aiResult = { ...parsed, histCount: hist.length };
+    renderAi();
+  }
+  function renderAi() {
+    const box = document.getElementById('aa-root'), r = aiResult; if(!box || !r) return;
+    const t = id => (items.find(i => i.id === id) || {}).title || id;
+    box.innerHTML = (r.histCount ? `<div style="font-size:12px;color:var(--t2);margin-bottom:8px"><i class="ti ti-chart-bar"></i> Calibrada com ${r.histCount} item(ns) já entregues pelo seu time.</div>` : '<div class="m-notice" style="margin-bottom:8px"><i class="ti ti-alert-triangle"></i><span>O time ainda não tem itens concluídos com pontos, então estas estimativas são genéricas. Confira com a equipe antes de aplicar.</span></div>')
+      + (r.estimates.length ? `<div class="lbl">Estimativas (${r.estimates.length})</div>` + r.estimates.map((e, i) => `<label class="ag-row" style="cursor:pointer"><input type="checkbox" checked data-ai-est="${i}" aria-label="Aplicar ${esc(e.points)} pontos em ${esc(e.id)}"><div class="ag-main"><div class="ag-title">${esc(t(e.id))}</div><div style="font-size:11.5px;color:var(--t2)">${esc(e.reason)}${e.reference ? ' · Referência: ' + esc(e.reference) : ''}</div></div><span class="chip">${esc(e.id)}</span><span class="badge b-acc">${esc(e.points)} pts</span></label>`).join('') : '')
+      + (r.splits.length ? `<div class="lbl" style="margin-top:10px">Divisões sugeridas (${r.splits.length})</div>` + r.splits.map((s, i) => `<div class="ag-row" style="display:block"><label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer"><input type="checkbox" checked data-ai-split="${i}" aria-label="Dividir ${esc(s.id)}" style="margin-top:3px"><span><span class="ag-title">${esc(t(s.id))}</span> <span class="chip">${esc(s.id)}</span><div style="font-size:11.5px;color:var(--t2);margin:2px 0 4px">${esc(s.reason)} O item original é substituído pelas partes.</div></span></label>${s.parts.map(p => `<div style="margin-left:26px;font-size:12px;color:var(--t1)">• ${esc(p.title)} <span class="badge b-acc">${esc(p.points)} pts</span></div>`).join('')}</div>`).join('') : '');
+    document.getElementById('aa-apply').style.display = '';
+  }
+  function applyAi() {
+    if(!Auth.guard('business')) return;
+    load(); const r = aiResult; if(!r) return;
+    const est = [...document.querySelectorAll('#aa-root input[data-ai-est]:checked')].map(c => r.estimates[+c.dataset.aiEst]);
+    const spl = [...document.querySelectorAll('#aa-root input[data-ai-split]:checked')].map(c => r.splits[+c.dataset.aiSplit]);
+    if(!est.length && !spl.length) { T.show('Nada marcado para aplicar.'); return; }
+    est.forEach(e => { const it = items.find(x => x.id === e.id); if(it) { it.points = e.points; pushItem(it); } });
+    let created = 0;
+    const taken = [], nextFn = () => { const id = AgileCalc.nextId('US', items.concat(taken)); taken.push({ id }); return id; };
+    spl.forEach(s => {
+      const parts = AgileAi.applySplit(items, s, nextFn, todayIso());
+      const orig = items.find(x => x.id === s.id); if(!orig || !parts.length) return;
+      items = items.filter(x => x.id !== s.id);
+      if(typeof Cloud !== 'undefined') Cloud.deleteRow('backlog_items', s.id);
+      parts.forEach(p => { items.push(p); });
+      created += parts.length;
+    });
+    // renumera a prioridade (as partes entraram "entre" o item original e o seguinte)
+    items.slice().sort(sortByRank).forEach((x, n) => { if(x.rank !== n + 1) { x.rank = n + 1; } });
+    saveItems(); if(typeof Cloud !== 'undefined') Cloud.pushMany('backlog_items', items);
+    Trail.log(`Estimativas da IA aplicadas: ${est.length} item(ns) estimado(s), ${spl.length} dividido(s) em ${created} parte(s)`, Auth.getName(), '', 'b-acc');
+    closeAi(); renderAll();
+    T.show(`✅ ${est.length} estimativa(s) aplicada(s)${spl.length ? ` e ${spl.length} item(ns) dividido(s) em ${created} parte(s)` : ''}.`, 5000);
+  }
+  function closeAi() { document.getElementById('modal-agile-ai').classList.add('hidden'); aiResult = null; }
+
   function renderAll() { renderKanban(); renderBacklog(); renderSprints(); renderDashboard(); }
   function render() { renderAll(); }
   return { render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, setWip, rank, setSprintOf, setBacklogQuery, setShowDone,
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, exportXlsx,
-    titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan };
+    titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
+    aiEstimate, applyAi, closeAi };
 })();
 </script>
 

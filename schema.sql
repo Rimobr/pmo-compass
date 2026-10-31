@@ -1,6 +1,6 @@
 -- =========================================================================
 -- PMO Compass — esquema completo (GERADO por scripts/build-schema.mjs — não edite à mão)
--- Fonte: supabase/migrations/ (14 arquivos). Para instalação do zero, rode este arquivo inteiro
+-- Fonte: supabase/migrations/ (15 arquivos). Para instalação do zero, rode este arquivo inteiro
 -- no SQL Editor; para um banco que já existe, use `node scripts/db-apply.mjs` (aplica só o que falta).
 -- =========================================================================
 
@@ -1180,3 +1180,9 @@ revoke all on public.org_settings from anon;
 -- sem precisar abrir cada um. Nulo = projeto antigo, tratado como híbrido (todas as telas).
 alter table public.projects add column if not exists methodology text
   check (methodology is null or methodology in ('agil','cascata','hibrido'));
+
+-- ▼▼▼ 20261023101300_sprint_availability.sql ▼▼▼
+-- Disponibilidade por pessoa em cada sprint (folgas, férias, ausências), usada no planejamento da capacidade.
+-- Formato: {"Nome da pessoa": {"daysOff": 3}} — dias úteis em que a pessoa não trabalha na sprint.
+alter table public.sprints add column if not exists availability jsonb not null default '{}'::jsonb
+  check (jsonb_typeof(availability) = 'object' and pg_column_size(availability) < 20000);
