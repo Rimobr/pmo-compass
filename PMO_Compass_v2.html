@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.12.1'
+  version: '2.13.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1342,6 +1342,11 @@ body.icons-failed i[data-fb]::before{
   </div>
 
   <div class="card" style="margin-bottom:16px">
+    <div class="lbl"><i class="ti ti-route"></i>Comparativo por metodologia<span class="help-q" data-help="Agrupa os projetos pela metodologia (Ágil, Cascata, Híbrido) e mostra a nota média de saúde, a situação de cada grupo e como a nota mudou ao longo do tempo. Serve para ver qual forma de conduzir projetos está dando mais resultado na organização — compare com cuidado, pois projetos de tamanhos e riscos diferentes não são equivalentes. A evolução usa o histórico diário salvo na nuvem." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div id="board-method-root"></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-size:11.5px;color:var(--t3)">Mostrar:</span>
@@ -2526,7 +2531,7 @@ const StatusMsg = (() => {
     const box = el('sm-projects'); if(!box) return;
     const all = DB.listProjects();
     if(!selected) selected = all.map(p => p.id);
-    box.innerHTML = all.map(p => `<label class="sm-check"><input type="checkbox" data-pid="${esc(p.id)}"${selected.includes(p.id) ? ' checked' : ''} onchange="StatusMsg.pick()"> ${esc(p.name)}</label>`).join('');
+    box.innerHTML = all.map(p => `<label class="sm-check"><input type="checkbox" data-pid="${esc(p.id)}"${selected.includes(p.id) ? ' checked' : ''} onchange="StatusMsg.pick()"> ${Methodology.iconFor(p.id)} ${esc(p.name)}</label>`).join('');
   }
   function pick() { selected = [...document.querySelectorAll('#sm-projects input:checked')].map(i => i.dataset.pid); render(true); }
 
@@ -2856,7 +2861,7 @@ const PfKpi = (() => {
       const f = FAROL[r.ev.farol];
       const d = r.days;
       const stale = d != null && d > 14;
-      return `<tr><td style="font-weight:600">${esc(r.name)}${r.usesRef ? ' <span class="chip" title="Projeto de demonstração: números na data de referência">demo</span>' : ''}</td><td>${esc(r.area || '—')}</td><td>${f ? `<span class="badge ${f[0]}">${f[1]}</span>` : '<span class="badge b-neu">sem dados</span>'}</td><td class="num">${MARK(r.ev.prazo)}</td><td class="num">${MARK(r.ev.custo)}</td><td class="num">${MARK(r.ev.escopo)}</td><td class="num">${r.ev.atrasadas}</td><td class="num">${r.ev.decisoesCriticas}</td><td class="num">${r.ev.riscosCriticos}</td><td style="white-space:nowrap">${d == null ? '—' : d + ' dia(s)'}${stale ? ' <span class="badge b-amb">desatualizado</span>' : ''}</td><td><button class="btn btn-sm" data-perm="business" data-id="${esc(r.id)}" onclick="PfKpi.openEditEl(this)"><i class="ti ti-edit"></i>Editar</button></td></tr>`;
+      return `<tr><td style="font-weight:600">${Methodology.tag(r.id)}${esc(r.name)}${r.usesRef ? ' <span class="chip" title="Projeto de demonstração: números na data de referência">demo</span>' : ''}</td><td>${esc(r.area || '—')}</td><td>${f ? `<span class="badge ${f[0]}">${f[1]}</span>` : '<span class="badge b-neu">sem dados</span>'}</td><td class="num">${MARK(r.ev.prazo)}</td><td class="num">${MARK(r.ev.custo)}</td><td class="num">${MARK(r.ev.escopo)}</td><td class="num">${r.ev.atrasadas}</td><td class="num">${r.ev.decisoesCriticas}</td><td class="num">${r.ev.riscosCriticos}</td><td style="white-space:nowrap">${d == null ? '—' : d + ' dia(s)'}${stale ? ' <span class="badge b-amb">desatualizado</span>' : ''}</td><td><button class="btn btn-sm" data-perm="business" data-id="${esc(r.id)}" onclick="PfKpi.openEditEl(this)"><i class="ti ti-edit"></i>Editar</button></td></tr>`;
     }).join('')}</tbody></table>`;
     if(typeof ColumnDrag !== 'undefined') { ColumnDrag.enable(el('pk-areas').querySelector('table'), 'pfkpi-areas'); ColumnDrag.enable(el('pk-projects').querySelector('table'), 'pfkpi-projetos'); }
   }
@@ -2886,15 +2891,15 @@ const PfKpi = (() => {
   const ynTxt = v => v === null ? 'sem dados' : v ? 'sim' : 'não';
   function exportXlsx() {
     XlsxExport.download('indicadores-portfolio-' + XlsxExport.stamp() + '.xlsx', [{ name: 'Indicadores', rows: [
-      ['Projeto', 'Área', 'Farol', 'No prazo', 'No custo', 'No escopo', 'Entregas atrasadas', 'Decisões críticas', 'Riscos críticos', 'Atualizado há (dias)'],
-      ...lastRows.map(r => [r.name, r.area, r.ev.farol || 'sem dados', ynTxt(r.ev.prazo), ynTxt(r.ev.custo), ynTxt(r.ev.escopo), r.ev.atrasadas, r.ev.decisoesCriticas, r.ev.riscosCriticos, r.days == null ? '' : r.days])] }]);
+      ['Projeto', 'Metodologia', 'Área', 'Farol', 'No prazo', 'No custo', 'No escopo', 'Entregas atrasadas', 'Decisões críticas', 'Riscos críticos', 'Atualizado há (dias)'],
+      ...lastRows.map(r => [r.name, Methodology.TYPES[Methodology.typeFor(r.id)].short, r.area, r.ev.farol || 'sem dados', ynTxt(r.ev.prazo), ynTxt(r.ev.custo), ynTxt(r.ev.escopo), r.ev.atrasadas, r.ev.decisoesCriticas, r.ev.riscosCriticos, r.days == null ? '' : r.days])] }]);
   }
   // CSV com proteção contra injeção de fórmula
   function exportCsv() {
     const q = v => { let s = String(v == null ? '' : v); if(/^[=+\-@\t\r]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
     const yn = ynTxt;
-    const lines = [['Projeto', 'Área', 'Farol', 'No prazo', 'No custo', 'No escopo', 'Entregas atrasadas', 'Decisões críticas', 'Riscos críticos', 'Atualizado há (dias)'],
-      ...lastRows.map(r => [r.name, r.area, r.ev.farol || 'sem dados', yn(r.ev.prazo), yn(r.ev.custo), yn(r.ev.escopo), r.ev.atrasadas, r.ev.decisoesCriticas, r.ev.riscosCriticos, r.days == null ? '' : r.days])];
+    const lines = [['Projeto', 'Metodologia', 'Área', 'Farol', 'No prazo', 'No custo', 'No escopo', 'Entregas atrasadas', 'Decisões críticas', 'Riscos críticos', 'Atualizado há (dias)'],
+      ...lastRows.map(r => [r.name, Methodology.TYPES[Methodology.typeFor(r.id)].short, r.area, r.ev.farol || 'sem dados', yn(r.ev.prazo), yn(r.ev.custo), yn(r.ev.escopo), r.ev.atrasadas, r.ev.decisoesCriticas, r.ev.riscosCriticos, r.days == null ? '' : r.days])];
     const blob = new Blob(['﻿' + lines.map(l => l.map(q).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'indicadores-portfolio-' + Clock.iso(new Date()) + '.csv';
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
@@ -3103,7 +3108,7 @@ const PmoView = (() => {
     el('pv-kpis').innerHTML = v.kpis.map(x => `<div class="kpi"><div class="kpi-lbl"><span class="sdot ${DOT[x.tone] || 'sdot-acc'}"></span>${esc(x.label)}${x.tip ? `<span class="help-q" data-help="${esc(x.tip)}" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>` : ''}</div><div class="kpi-val" style="color:${TONE[x.tone] || 'var(--t1)'}">${esc(x.value)}</div><div class="kpi-delta">${esc(x.sub)}</div></div>`).join('');
     el('pv-list-title').textContent = v.listTitle;
     el('pv-list').innerHTML = v.list.length
-      ? v.list.map(it => `<div class="rk-item" style="cursor:default"><div class="rk-main"><div class="rk-title">${esc(it.name)}</div><div class="rk-meta">${it.reasons.map(r => `<span class="chip">${esc(r)}</span>`).join('')}</div></div><button class="btn btn-sm" data-id="${esc(it.id)}" onclick="PmoView.openProject(this)"><i class="ti ti-arrow-right"></i>Abrir</button></div>`).join('')
+      ? v.list.map(it => `<div class="rk-item" style="cursor:default"><div class="rk-main"><div class="rk-title">${Methodology.tag(it.id)}${esc(it.name)}</div><div class="rk-meta">${it.reasons.map(r => `<span class="chip">${esc(r)}</span>`).join('')}</div></div><button class="btn btn-sm" data-id="${esc(it.id)}" onclick="PmoView.openProject(this)"><i class="ti ti-arrow-right"></i>Abrir</button></div>`).join('')
       : `<div class="rk-empty">${v.projects ? 'Nada pedindo atenção neste momento. 👍' : 'Nenhum projeto nesta visão.'}</div>`;
     el('pv-note').textContent = v.note;
     renderGuide();
@@ -7577,7 +7582,7 @@ const BatchXray = (() => {
     const root = document.getElementById('batchxray-picker-root');
     if(!root || typeof DB === 'undefined') return;
     const projects = DB.listProjects();
-    root.innerHTML = projects.map(p => `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12.5px;cursor:pointer"><input type="checkbox" checked class="batchxray-pick" value="${p.id}"> ${escapeHtml(p.name)}${p.client?' <span style="color:var(--t3)">— '+escapeHtml(p.client)+'</span>':''}</label>`).join('') +
+    root.innerHTML = projects.map(p => `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12.5px;cursor:pointer"><input type="checkbox" checked class="batchxray-pick" value="${p.id}"> ${Methodology.iconFor(p.id)} ${escapeHtml(p.name)}${p.client?' <span style="color:var(--t3)">— '+escapeHtml(p.client)+'</span>':''}</label>`).join('') +
       `<button class="btn btn-sm btn-acc" style="margin-top:8px" onclick="BatchXray.start()"><i class="ti ti-player-play"></i>Iniciar lote</button>`;
     root.style.display = '';
   }
@@ -9787,6 +9792,51 @@ const Agile = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: services/method-compare ─ Comparativo de projetos por metodologia (situação atual e evolução) — regras puras -->
+<script data-module="services/method-compare">
+const MethodCompare = (() => {
+  const code = h => h == null ? 'none' : h >= 80 ? 'grn' : h >= 60 ? 'amb' : 'red';
+  const avg = list => { const v = list.filter(x => x != null && !isNaN(x)); return v.length ? Math.round(v.reduce((s, x) => s + x, 0) / v.length) : null; };
+  // rows: [{ id, name, method, health, dims:{schedule,budget,team,quality}, criticalDecisions }] -> um resumo por metodologia (na ordem recebida)
+  function summarize(rows, order) {
+    return order.map(method => {
+      const mine = rows.filter(r => r.method === method);
+      const counts = { grn: 0, amb: 0, red: 0, none: 0 };
+      mine.forEach(r => { counts[code(r.health)]++; });
+      const dim = k => avg(mine.map(r => r.dims && r.dims[k]));
+      return { method, n: mine.length, names: mine.map(r => r.name), avgHealth: avg(mine.map(r => r.health)), counts,
+        dims: { schedule: dim('schedule'), budget: dim('budget'), team: dim('team'), quality: dim('quality') },
+        criticalDecisions: mine.reduce((s, r) => s + (r.criticalDecisions || 0), 0) };
+    });
+  }
+  // snaps: [{ project_id, captured_at, health_score }]. Usa o ÚLTIMO registro de cada projeto em cada dia e tira a média por método.
+  function evolution(snaps, methodOf, order, maxDays) {
+    const latest = new Map(); // dia|projeto -> {t, score}
+    (snaps || []).forEach(s => {
+      if(s.health_score == null || !s.captured_at) return;
+      const day = String(s.captured_at).slice(0, 10), key = day + '|' + s.project_id, t = String(s.captured_at);
+      const cur = latest.get(key);
+      if(!cur || t > cur.t) latest.set(key, { t, score: Number(s.health_score), day, pid: s.project_id });
+    });
+    const byDay = {}; order.forEach(m => { byDay[m] = new Map(); });
+    latest.forEach(v => {
+      const m = methodOf(v.pid); if(!byDay[m]) return;
+      if(!byDay[m].has(v.day)) byDay[m].set(v.day, []);
+      byDay[m].get(v.day).push(v.score);
+    });
+    const allDays = [...new Set([].concat(...order.map(m => [...byDay[m].keys()])))].sort().slice(-(maxDays || 30));
+    const series = {}, delta = {};
+    order.forEach(m => {
+      series[m] = allDays.map(d => byDay[m].has(d) ? { date: d, avg: avg(byDay[m].get(d)), n: byDay[m].get(d).length } : { date: d, avg: null, n: 0 });
+      const pts = series[m].filter(p => p.avg != null);
+      delta[m] = pts.length >= 2 ? { from: pts[0].date, to: pts[pts.length - 1].date, first: pts[0].avg, last: pts[pts.length - 1].avg, diff: pts[pts.length - 1].avg - pts[0].avg } : null;
+    });
+    return { dates: allDays, series, delta };
+  }
+  return { summarize, evolution, code, avg };
+})();
+</script>
+
 <!-- ■ MODULE: core/org-settings ─ Configurações da organização (valem para todos os projetos): hoje, o Perfil de PMO -->
 <script data-module="core/org-settings">
 const OrgSettings = (() => {
@@ -9807,6 +9857,8 @@ const OrgSettings = (() => {
 <style data-module="core/methodology-css">
 .m-hidden{display:none!important}
 .m-ico{color:var(--acc)}
+.m-tag{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--t2);background:var(--s2);border:1px solid var(--b1);border-radius:20px;padding:1px 7px;margin-right:6px;white-space:nowrap;vertical-align:middle}
+.m-tag i{font-size:12px;color:var(--acc)}
 .m-legend{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:6px 10px 2px;padding:6px 8px;border:1px dashed var(--b2);border-radius:var(--r6);font-size:11px;color:var(--t2)}
 .m-legend span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
 .m-legend i{font-size:13px;color:var(--acc)}
@@ -9865,6 +9917,12 @@ const Methodology = (() => {
     const t = typeFor(projectId), d = TYPES[t];
     return `<i class="ti ti-${d.icon} m-ico" role="img" aria-label="Metodologia ${esc(d.short)}" title="${esc(d.short)} — ${esc(d.resumo)}"></i>`;
   }
+  // Ícone + nome do método, para tabelas e cartões onde cabe texto (Diretoria, portfólio, indicadores, Visão do PMO)
+  function tagOf(t) {
+    const d = TYPES[t] || TYPES.hibrido;
+    return `<span class="m-tag" title="${esc(d.short)} — ${esc(d.resumo)}"><i class="ti ti-${d.icon}" aria-hidden="true"></i>${esc(d.short)}</span>`;
+  }
+  function tag(projectId) { return tagOf(typeFor(projectId)); }
   // Legenda curta dos três ícones (usada no menu e na lista de projetos)
   function legend() {
     return `<div class="m-legend" role="note" aria-label="Legenda das metodologias">${ORDER.map(k => `<span title="${esc(TYPES[k].short)} — ${esc(TYPES[k].resumo)}"><i class="ti ti-${TYPES[k].icon}" aria-hidden="true"></i>${esc(TYPES[k].short)}</span>`).join('')}<span class="help-q" data-help="O ícone antes do nome mostra como cada projeto é conduzido. Ágil (↻): ciclos curtos em sprints, menu enxuto. Cascata (linha do tempo): plano completo antes de executar, com linha de base e controle de mudanças. Híbrido (⇄): mistura os dois e mostra todas as telas. Mude em Configurações → Perfil de PMO." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>`;
@@ -9935,7 +9993,7 @@ const Methodology = (() => {
   }
 
   function systemGuidance() { return TYPES[type()].guidance; }
-  return { TYPES, ORDER, ONLY, type, typeFor, typeOf, iconFor, legend, visibleFor, visible, apply, notice, set, setShowAll, render, systemGuidance, methodsOf };
+  return { TYPES, ORDER, ONLY, type, typeFor, typeOf, iconFor, tag, tagOf, legend, visibleFor, visible, apply, notice, set, setShowAll, render, systemGuidance, methodsOf };
 })();
 </script>
 
@@ -10786,7 +10844,7 @@ const ExecReport = (() => {
     const charts = {
       progress: single
         ? (r0.items || []).slice(0, 8).map(i => ({ label: clip(i.label, 34), real: i.pct, expected: i.expected }))
-        : rows.map(r => ({ label: clip(r.name, 34), real: r.f.schedule.avgPct == null ? 0 : r.f.schedule.avgPct, expected: avg((r.items || []).map(i => i.expected).filter(v => v != null)) })),
+        : rows.map(r => ({ label: clip(r.name, 26) + ' · ' + Methodology.TYPES[Methodology.typeFor(r.id)].short, real: r.f.schedule.avgPct == null ? 0 : r.f.schedule.avgPct, expected: avg((r.items || []).map(i => i.expected).filter(v => v != null)) })),
       budget: (() => { const bs = rows.filter(r => r.f.budget.hasBudget && r.f.budget.amounts); if(!bs.length || !o.money) return null; return { bac: sum(bs, r => r.f.budget.amounts.bac), ac: sum(bs, r => r.f.budget.amounts.ac), eac: sum(bs, r => r.f.budget.amounts.eac) }; })(),
       budgetPct: (() => { const bs = rows.filter(r => r.f.budget.hasBudget); return bs.length ? { consumo: avg(bs.map(r => r.f.budget.consumoPct)), previsao: avg(bs.map(r => r.f.budget.eacPctOfBac)) } : null; })(),
       risks: { critico: sum(rows, r => r.f.risks.byLevel['crítico']), alto: sum(rows, r => r.f.risks.byLevel.alto), medio: sum(rows, r => r.f.risks.byLevel['médio']), baixo: sum(rows, r => r.f.risks.byLevel.baixo) },
@@ -11970,7 +12028,7 @@ const Report = (() => {
     const projects = DB.listProjects();
     if(!scope) { try { scope = localStorage.getItem(K); } catch(e) {} }
     if(scope !== 'all' && !projects.some(p => p.id === scope)) scope = DB.getActiveProjectId();
-    el('rp-scope').innerHTML = (projects.length > 1 ? `<option value="all"${scope === 'all' ? ' selected' : ''}>Todos os projetos (${projects.length})</option>` : '') + projects.map(p => `<option value="${esc(p.id)}"${p.id === scope ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
+    el('rp-scope').innerHTML = (projects.length > 1 ? `<option value="all"${scope === 'all' ? ' selected' : ''}>Todos os projetos (${projects.length})</option>` : '') + projects.map(p => `<option value="${esc(p.id)}"${p.id === scope ? ' selected' : ''}>${esc(p.name)} · ${esc(Methodology.TYPES[Methodology.typeFor(p.id)].short)}</option>`).join('');
     if(projects.length < 2 && scope === 'all') scope = projects[0].id;
     const money = el('rp-money').checked;
     const alloc = new Set(DB.computePortfolioAllocation().filter(p => p.overallocated).map(p => p.name.trim().toLowerCase()));
@@ -12147,7 +12205,7 @@ const Portfolio = (() => {
       const budgetColor = hasBudget ? barColor(100 - Math.min(budgetPct, 100)) : 'var(--s3)';
       return `<div class="pc-card${isActive?' sel':''}" onclick="DB.switchProject('${p.id}');R.go('dashboard')">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-          <div><div class="pc-name">${escapeHtml(p.name)}${isActive?' <span style=\"font-size:11px;color:var(--acc);font-weight:400\">· ativo</span>':''}</div><div class="pc-client">${escapeHtml(p.client||'')}</div></div>
+          <div><div class="pc-name">${Methodology.tag(p.id)}${escapeHtml(p.name)}${isActive?' <span style=\"font-size:11px;color:var(--acc);font-weight:400\">· ativo</span>':''}</div><div class="pc-client">${escapeHtml(p.client||'')}</div></div>
           <span class="badge ${s.status}" title="Índice de saúde multidimensional — mesmo cálculo do Dashboard">${s.statusLabel}${s.healthScoreValue!=null?' · '+s.healthScoreValue:''}</span>
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">${badges}</div>
@@ -12340,7 +12398,7 @@ const Prioritization = (() => {
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono)">#${i+1}</span>
-            <div class="set-lbl">${escapeHtml(r.project.name)}</div>
+            <div class="set-lbl">${Methodology.tag(r.project.id)}${escapeHtml(r.project.name)}</div>
             ${r.value!=null ? `<span class="badge b-acc">Valor: ${r.value}</span>` : `<span class="badge b-neu">Sem pontuação</span>`}
             ${vrBadge}
           </div>
@@ -12811,7 +12869,7 @@ const Board = (() => {
         return `<td style="padding:3px 4px;text-align:center"><div title="${word}${detail ? ' · ' + escapeHtml(String(detail)) : ''}" style="background:${st.bg};color:${st.fg};border:1px solid ${st.bd};border-radius:var(--r6);padding:5px 4px;font-size:12px;font-weight:700;line-height:1.25"><span>${word}</span>${detail ? `<span style="display:block;font-size:11px;font-weight:500;color:var(--t2);font-variant-numeric:tabular-nums">${escapeHtml(String(detail))}</span>` : ''}</div></td>`;
       }).join('');
       return `<tr class="kpi-link" role="button" tabindex="0" aria-label="Abrir ${escapeHtml(r.project.name)}" onclick="DB.switchProject('${r.project.id}');R.go('dashboard')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();DB.switchProject('${r.project.id}');R.go('dashboard')}">
-        <td style="padding:6px 10px;font-size:12.5px;color:var(--t1);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(r.project.name)}">${escapeHtml(r.project.name)}</td>
+        <td style="padding:6px 10px;font-size:12.5px;color:var(--t1);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(r.project.name)}">${Methodology.tag(r.project.id)}${escapeHtml(r.project.name)}</td>
         ${cells}
       </tr>`;
     }).join('');
@@ -12834,7 +12892,7 @@ const Board = (() => {
     const sorted = [...rows].sort((a,b) => (a.health==null?-1:a.health) - (b.health==null?-1:b.health));
     const color = (r) => r.statusCode==='grn' ? 'var(--grn)' : r.statusCode==='amb' ? 'var(--amb)' : r.statusCode==='red' ? 'var(--red)' : 'var(--t3)';
     root.innerHTML = sorted.map(r => `<div class="kpi-link" role="button" tabindex="0" aria-label="Abrir ${escapeHtml(r.project.name)}" style="display:flex;align-items:center;gap:10px;margin-bottom:2px;padding:4px 6px;border-radius:var(--r6)" onclick="DB.switchProject('${r.project.id}');R.go('dashboard')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();DB.switchProject('${r.project.id}');R.go('dashboard')}">
-      <div style="width:150px;flex-shrink:0;font-size:12px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(r.project.name)}">${escapeHtml(r.project.name)}</div>
+      <div style="width:150px;flex-shrink:0;font-size:12px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(r.project.name)}">${Methodology.iconFor(r.project.id)} ${escapeHtml(r.project.name)}</div>
       <div style="flex:1;height:10px;background:var(--s3);border-radius:5px;overflow:hidden"><div style="width:${r.health||0}%;height:100%;background:${color(r)}"></div></div>
       <div style="width:30px;text-align:right;font-size:11.5px;color:var(--t2);font-variant-numeric:tabular-nums">${r.health==null?'—':r.health}</div>
     </div>`).join('') + `<div style="font-size:11px;color:var(--t3);margin-top:6px">Nota de situação geral (0-100) — combina prazo, orçamento, equipe e qualidade. Quem está pior aparece primeiro. Clique num projeto pra abrir o Dashboard dele.</div>`;
@@ -12853,6 +12911,50 @@ const Board = (() => {
       { lbl:'Riscos críticos abertos', val: riscos, icon:'alert-triangle', help:'Decisões marcadas como críticas que ainda não foram resolvidas, somadas de todos os projetos.', page:'decisions' }
     ];
     root.innerHTML = tiles.map(t => `<div class="card kpi-link" role="button" tabindex="0" aria-label="Ver ${escapeHtml(t.lbl)}" style="padding:14px" onclick="R.go('${t.page}')" onkeydown="R.goKey(event,'${t.page}')"><div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t3);margin-bottom:6px"><i class="ti ti-${t.icon}"></i>${t.lbl}${t.help?`<span class="help-q" data-help="${escapeHtml(t.help)}" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>`:''}</div><div style="font-size:22px;font-weight:600;color:var(--t1)">${t.val}</div></div>`).join('');
+  }
+
+  // ── Comparativo por metodologia: situação atual (sempre) + evolução da nota ao longo do tempo (precisa do histórico da nuvem) ──
+  const MC_STYLE = { agil: { color: 'var(--pur)', dash: '' }, cascata: { color: 'var(--acc)', dash: '6 4' }, hibrido: { color: 'var(--amb)', dash: '2 3' } };
+  function methodEvoChart(ev) {
+    const W = 520, H = 190, L = 30, R = 10, T0 = 8, B = 22, n = ev.dates.length;
+    const x = i => L + (n > 1 ? i / (n - 1) : 0.5) * (W - L - R), y = v => T0 + (1 - v / 100) * (H - T0 - B);
+    const grid = [0, 50, 100].map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--b1)"/><text x="${L - 4}" y="${y(v) + 4}" text-anchor="end" style="font-size:11px;fill:var(--t2)">${v}</text>`).join('');
+    const lines = Methodology.ORDER.map(m => {
+      const pts = ev.series[m].map((p, i) => p.avg == null ? null : [x(i), y(p.avg)]).filter(Boolean);
+      if(!pts.length) return '';
+      const st = MC_STYLE[m];
+      return `<polyline points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}" fill="none" stroke="${st.color}" stroke-width="2.5" ${st.dash ? `stroke-dasharray="${st.dash}"` : ''}/>` + pts.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="${st.color}"/>`).join('');
+    }).join('');
+    const fmt = d => d.split('-').reverse().slice(0, 2).join('/');
+    const legend = Methodology.ORDER.filter(m => ev.series[m].some(p => p.avg != null)).map(m => `<span style="display:inline-flex;align-items:center;gap:5px"><svg width="26" height="8" aria-hidden="true"><line x1="0" x2="26" y1="4" y2="4" stroke="${MC_STYLE[m].color}" stroke-width="2.5" ${MC_STYLE[m].dash ? `stroke-dasharray="${MC_STYLE[m].dash}"` : ''}/></svg>${Methodology.TYPES[m].short}</span>`).join('');
+    return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:640px;height:auto;display:block" role="img" aria-label="Evolução da nota média de saúde por metodologia, de ${fmt(ev.dates[0])} a ${fmt(ev.dates[n - 1])}">${grid}${lines}<text x="${L}" y="${H - 6}" style="font-size:11px;fill:var(--t2)">${fmt(ev.dates[0])}</text><text x="${W - R}" y="${H - 6}" text-anchor="end" style="font-size:11px;fill:var(--t2)">${fmt(ev.dates[n - 1])}</text></svg><div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--t2);margin-top:6px">${legend}</div>`;
+  }
+  async function renderMethodCompare(rows) {
+    const root = document.getElementById('board-method-root'); if(!root) return;
+    const data = rows.map(r => ({ id: r.project.id, name: r.project.name, method: Methodology.typeFor(r.project.id), health: r.health, dims: r.dims || {}, criticalDecisions: (r.criticas || []).length }));
+    const sum = MethodCompare.summarize(data, Methodology.ORDER).filter(s => s.n > 0);
+    if(!sum.length) { root.innerHTML = '<div style="text-align:center;padding:14px 10px;color:var(--t3);font-size:12.5px">Nenhum projeto para comparar.</div>'; return; }
+    const cell = v => v == null ? '<span style="color:var(--t3)">—</span>' : `<span style="color:${v >= 80 ? 'var(--grn)' : v >= 60 ? 'var(--amb)' : 'var(--red)'};font-weight:700">${v}</span>`;
+    const th = (t, num) => `<th scope="col" style="padding:6px 8px;font-size:11px;color:var(--t3);font-weight:600;text-align:${num ? 'center' : 'left'};white-space:nowrap">${t}</th>`;
+    const body = sum.map(s => `<tr><td style="padding:7px 8px;font-size:12.5px;font-weight:600;color:var(--t1);white-space:nowrap">${Methodology.tagOf(s.method)}</td>
+      <td style="text-align:center;font-size:12.5px" title="${escapeHtml(s.names.join(', '))}">${s.n}</td><td style="text-align:center;font-size:13px">${cell(s.avgHealth)}</td>
+      <td style="text-align:center">${cell(s.dims.schedule)}</td><td style="text-align:center">${cell(s.dims.budget)}</td><td style="text-align:center">${cell(s.dims.team)}</td><td style="text-align:center">${cell(s.dims.quality)}</td>
+      <td style="text-align:center;font-size:12px;white-space:nowrap"><span style="color:var(--grn)">${s.counts.grn} saudável</span> · <span style="color:var(--amb)">${s.counts.amb} atenção</span> · <span style="color:var(--red)">${s.counts.red} crítico</span></td>
+      <td style="text-align:center;font-size:12px" id="mc-delta-${s.method}"><span style="color:var(--t3)">…</span></td></tr>`).join('');
+    root.innerHTML = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:640px"><caption style="position:absolute;left:-9999px">Comparativo de projetos por metodologia</caption><thead><tr>${th('Metodologia')}${th('Projetos', 1)}${th('Saúde média', 1)}${th('Prazo', 1)}${th('Custo', 1)}${th('Equipe', 1)}${th('Qualidade', 1)}${th('Situação', 1)}${th('Evolução', 1)}</tr></thead><tbody>${body}</tbody></table></div>
+      ${sum.length < 2 ? '<div style="font-size:12px;color:var(--t3);margin-top:8px"><i class="ti ti-info-circle"></i> Só há projetos de uma metodologia. Crie projetos em outra para poder comparar.</div>' : ''}
+      <div id="board-method-evo" style="margin-top:14px"></div>
+      <div style="font-size:11.5px;color:var(--t3);margin-top:8px">Notas de 0 a 100 (médias dos projetos de cada grupo). Compare com cautela: projetos de tamanho, risco e fase diferentes não são equivalentes.</div>`;
+    const evoBox = document.getElementById('board-method-evo');
+    const none = (msg) => { sum.forEach(s => { const c = document.getElementById('mc-delta-' + s.method); if(c) c.innerHTML = '<span style="color:var(--t3)">—</span>'; }); if(evoBox) evoBox.innerHTML = `<div style="font-size:12.5px;color:var(--t3)"><i class="ti ti-cloud-off"></i> ${msg}</div>`; };
+    if(typeof Cloud === 'undefined' || !Cloud.isSignedIn()) { none('A evolução ao longo do tempo aparece quando você está conectado à nuvem — o histórico diário é salvo lá, não neste navegador.'); return; }
+    const snaps = await Cloud.fetchAllSnapshots(1500);
+    const ev = MethodCompare.evolution(snaps, pid => Methodology.typeFor(pid), Methodology.ORDER, 30);
+    sum.forEach(s => {
+      const c = document.getElementById('mc-delta-' + s.method), d = ev.delta[s.method]; if(!c) return;
+      c.innerHTML = d ? `<span style="color:${d.diff >= 0 ? 'var(--grn)' : 'var(--red)'};font-weight:700"><i class="ti ti-trending-${d.diff >= 0 ? 'up' : 'down'}"></i> ${d.diff >= 0 ? '+' : ''}${d.diff} pts</span><div style="font-size:11px;color:var(--t3)">desde ${d.from.split('-').reverse().slice(0, 2).join('/')}</div>` : '<span style="color:var(--t3)" title="Precisa de pelo menos 2 dias de histórico">sem histórico</span>';
+    });
+    if(evoBox) evoBox.innerHTML = ev.dates.length >= 2 && Methodology.ORDER.some(m => ev.delta[m]) ? methodEvoChart(ev) : '<div style="font-size:12.5px;color:var(--t3)"><i class="ti ti-clock-hour-4"></i> Ainda não há histórico suficiente (é preciso pelo menos 2 dias com dados) para mostrar a evolução.</div>';
   }
 
   function renderCards(rows) {
@@ -12876,7 +12978,7 @@ const Board = (() => {
         : '';
       return `<div class="card" style="display:flex;flex-direction:column">
         <div class="kpi-link" role="button" tabindex="0" aria-label="Abrir ${escapeHtml(p.name)}" style="display:flex;align-items:center;justify-content:space-between;margin:-6px -6px 4px;padding:6px;border-radius:var(--r6)" onclick="DB.switchProject('${p.id}');R.go('dashboard')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();DB.switchProject('${p.id}');R.go('dashboard')}">
-          <div style="font-size:14px;font-weight:600;color:var(--t1)">${escapeHtml(p.name)}</div>
+          <div style="font-size:14px;font-weight:600;color:var(--t1)">${escapeHtml(p.name)}<div style="margin-top:3px;font-weight:400">${Methodology.tag(p.id)}</div></div>
           <span class="badge ${r.status.badge}" style="font-size:11px">${escapeHtml(r.status.label)}</span>
         </div>
         ${dimsHtml}
@@ -12928,6 +13030,7 @@ const Board = (() => {
     const filtered = applyFilters(rows);
     renderHeatmap(filtered);
     renderComparisonChart(filtered);
+    renderMethodCompare(rows);
     renderCards(filtered);
     renderHistory();
   }
@@ -13055,7 +13158,7 @@ const ExecView = (() => {
           <th style="padding:6px 8px;font-size:11px;color:var(--t3);font-weight:600;text-align:right">ROI</th>
         </tr></thead>
         <tbody>${rows.map(r => `<tr class="kpi-link" role="button" tabindex="0" aria-label="Abrir orçamento de ${escapeHtml(r.project.name)}" onclick="ExecView.open('${r.project.id}','budget')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ExecView.open('${r.project.id}','budget')}">
-          <td style="padding:7px 10px;font-size:12.5px;color:var(--t1);white-space:nowrap">${escapeHtml(r.project.name)}</td>
+          <td style="padding:7px 10px;font-size:12.5px;color:var(--t1);white-space:nowrap">${Methodology.tag(r.project.id)}${escapeHtml(r.project.name)}</td>
           <td style="padding:7px 8px;font-size:12px;color:var(--t2);text-align:right;font-variant-numeric:tabular-nums">${fmtMoney(r.bac)}</td>
           <td style="padding:7px 8px;font-size:12px;color:var(--t2);text-align:right;font-variant-numeric:tabular-nums">${fmtMoney(r.ac)}</td>
           <td style="padding:7px 8px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;color:${r.eac>r.bac*1.05?'var(--red)':'var(--t2)'}">${fmtMoney(r.eac)}</td>
@@ -13098,7 +13201,7 @@ const ExecView = (() => {
     root.innerHTML = items.map(it => `<div class="set-row kpi-link" role="button" tabindex="0" onclick="${it.onclick}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${it.onclick}}">
       <div style="display:flex;align-items:center;gap:10px;min-width:0">
         <span class="badge ${it.cls}" style="flex-shrink:0">${it.label}</span>
-        <div style="min-width:0"><div class="set-lbl" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(it.title)}</div>${it.project?`<div class="set-sub">${escapeHtml(it.project.name)}</div>`:''}</div>
+        <div style="min-width:0"><div class="set-lbl" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(it.title)}</div>${it.project?`<div class="set-sub">${Methodology.tag(it.project.id)}${escapeHtml(it.project.name)}</div>`:''}</div>
       </div>
       <i class="ti ti-chevron-right" style="color:var(--t3);flex-shrink:0"></i>
     </div>`).join('');
