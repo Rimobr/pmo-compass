@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.9.3'
+  version: '2.10.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -873,7 +873,7 @@ body.icons-failed i[data-fb]::before{
 
   <div class="sb-div"></div>
   <div class="sb-group" id="sbg-projetos">
-    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-projetos')"><i class="ti ti-layout-grid sb-gico"></i><span class="sb-hdr-txt"><small class="sb-hdr-kicker">Projeto</small><b id="sb-proj-name">—</b></span><i class="ti ti-chevron-right sb-gchev"></i></button>
+    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-projetos')"><i class="ti ti-layout-grid sb-gico"></i><span class="sb-hdr-txt"><small class="sb-hdr-kicker">Projeto · <span id="sb-method-tag">Híbrido</span></small><b id="sb-proj-name">—</b></span><i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body" id="sbg-projetos-list">
       <div id="sb-projects-root"></div>
       <button class="si" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
@@ -1442,6 +1442,11 @@ body.icons-failed i[data-fb]::before{
 
   <div id="settings-panel-pmo" style="display:none">
   <div class="card">
+    <div class="lbl"><i class="ti ti-route"></i>Metodologia deste projeto<span class="help-q" data-help="Define quais telas aparecem no menu deste projeto. Esconder uma tela não apaga nenhum dado: se você mudar de ideia, tudo volta. Projetos antigos ficam como Híbrido (todas as telas). Você pode abrir uma tela escondida pela busca (Ctrl+K) ou ligando 'Mostrar todas as telas'." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Escolha como este projeto é conduzido. O menu mostra só o que faz sentido para o método — menos telas, menos ruído.</p>
+    <div id="method-root" role="radiogroup" aria-label="Metodologia do projeto"></div>
+  </div>
+  <div class="card">
     <div class="lbl"><i class="ti ti-sitemap"></i>Perfil de PMO deste projeto</div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px">Muda o <strong style="color:var(--t1)">tom</strong> das recomendações da IA (Chat, Decisões, Relatório) — mais consultivo, mais rigoroso ou mais prescritivo, conforme o papel real do seu PMO. A IA também ajusta o tom sozinha com base na taxa de aceitação das próprias recomendações neste projeto.</p>
     <div id="pmo-profile-root"></div>
@@ -1558,6 +1563,7 @@ body.icons-failed i[data-fb]::before{
       <input type="file" id="db-import-inp" aria-label="Arquivo de backup para restaurar" accept="application/json,.json" style="display:none" onchange="DB.importBackup(this.files[0])">
       <button class="btn btn-sm" onclick="ExportSvc.copyLink()"><i class="ti ti-share"></i>Copiar link</button>
       <button class="btn btn-sm" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
+      <button class="btn btn-sm" data-perm="settings" title="Volta os 3 projetos de exemplo (Cascata, Ágil e Híbrido) neste navegador; não mexe na nuvem" onclick="DB.reloadDemo()"><i class="ti ti-database-import"></i>Recarregar dados de demonstração</button>
       <button class="btn btn-sm btn-red" data-perm="settings" onclick="DB.clearAll()"><i class="ti ti-trash"></i>Limpar dados</button>
     </div>
     <div style="margin-top:10px;padding:10px 12px;background:var(--s2);border-radius:var(--r8);font-size:11.5px;color:var(--t3)">
@@ -3918,6 +3924,7 @@ const Cloud = (() => {
         settings.data.forEach(row => { if(row.key) DB.set(row.key, row.value || {}); });
         if(typeof Prioritization !== 'undefined') Prioritization.render();
         if(typeof PmoProfiles !== 'undefined') PmoProfiles.render();
+        if(typeof Methodology !== 'undefined') { Methodology.apply(); Methodology.render(); }
       }
       if(team.data) {
         DB.set('team', team.data.map(x => ({ id:x.id, name:x.name, role:x.role||'', allocationPct:x.allocation_pct, workloadPct:x.workload_pct, signals:x.signals||[], recommendation:x.recommendation||'', actionPage:x.action_page||'' })));
@@ -4666,7 +4673,7 @@ const DB = (() => {
   function storageKeyFor(projectId) { return projectId === 'nexus' ? 'pmo_db_v1' : ('pmo_db_v1__' + projectId); }
 
   function seedEmpty() {
-    return { version:1, wbs:[], decisions:[], repository:[], stakeholders:[], trail:[], lessons:[], scopeChanges:[], team:[], meetings:[], estimateHistory:[], scenarios:[], budgetLines:[], costActuals:[], risks:[], timeEntries:[], baselines:[], raci:[], pmoProfile:null };
+    return { version:1, wbs:[], decisions:[], repository:[], stakeholders:[], trail:[], lessons:[], scopeChanges:[], team:[], meetings:[], estimateHistory:[], scenarios:[], budgetLines:[], costActuals:[], risks:[], timeEntries:[], baselines:[], raci:[], pmoProfile:null, methodology:null };
   }
 
   function seed() {
@@ -4822,18 +4829,118 @@ const DB = (() => {
         { id:'te3', person:'Diego Almeida', date:'2026-06-16', hours:6, wbsRef:'', note:'Reunião e revisão de código' },
         { id:'te4', person:'Diego Almeida', date:'2026-06-17', hours:8.5, wbsRef:'', note:'' }
       ],
-      pmoProfile: { type:'controle', setAt:'2026-06-01T00:00:00.000Z' }
+      pmoProfile: { type:'controle', setAt:'2026-06-01T00:00:00.000Z' },
+      methodology: { type:'cascata', setAt:'2026-06-01T00:00:00.000Z' }
     };
   }
+
+  // ── Dados de DEMONSTRAÇÃO dos outros dois projetos: um ÁGIL (Valdori) e um HÍBRIDO (Beltrano), para mostrar o menu e os painéis por metodologia ──
+  function seedAgil() {
+    const e = seedEmpty();
+    e.methodology = { type:'agil', setAt:'2026-05-01T00:00:00.000Z' };
+    e.pmoProfile = { type:'agil', setAt:'2026-05-01T00:00:00.000Z' };
+    e.wbs = [
+      { id:'v1', label:'Épico 1 — Cadastro e acesso do cliente', status:'grn', pct:100, start:'2026-05-04', end:'2026-06-05', critical:false, children:[
+        { id:'v1t1', label:'História: cadastro com CPF e validação', status:'grn', start:'2026-05-04', end:'2026-05-20' },
+        { id:'v1t2', label:'História: login e recuperação de senha', status:'grn', start:'2026-05-18', end:'2026-06-05' } ] },
+      { id:'v2', label:'Épico 2 — Consulta de extrato e saldo', status:'amb', pct:60, start:'2026-05-25', end:'2026-06-30', critical:false, children:[
+        { id:'v2t1', label:'História: extrato dos últimos 90 dias', status:'grn', start:'2026-05-25', end:'2026-06-12' },
+        { id:'v2t2', label:'História: filtros e exportação do extrato', status:'amb', start:'2026-06-10', end:'2026-06-26' },
+        { id:'v2t3', label:'História: saldo em tempo real', status:'neu', start:'2026-06-22', end:'2026-06-30' } ] },
+      { id:'v3', label:'Épico 3 — Segunda via de boleto', status:'neu', pct:10, start:'2026-06-15', end:'2026-07-20', critical:false, children:[
+        { id:'v3t1', label:'História: listar boletos em aberto', status:'amb', start:'2026-06-15', end:'2026-06-30' },
+        { id:'v3t2', label:'História: gerar segunda via em PDF', status:'neu', start:'2026-06-29', end:'2026-07-20' } ] }
+    ];
+    e.team = [
+      { id:'va1', name:'Bruna Teixeira', role:'Product Owner', allocationPct:80, workloadPct:62, signals:['Carga equilibrada'], recommendation:'', actionPage:'' },
+      { id:'va2', name:'Caio Mendes', role:'Desenvolvedor', allocationPct:100, workloadPct:78, signals:['Sprint cheia'], recommendation:'', actionPage:'' },
+      { id:'va3', name:'Helena Prado', role:'Scrum Master', allocationPct:60, workloadPct:48, signals:['Carga equilibrada'], recommendation:'', actionPage:'' }
+    ];
+    e.risks = [
+      { id:'RK-001', title:'Mudança frequente de prioridade no backlog', category:'escopo', probability:3, impact:3, status:'aberto', response:'mitigar', mitigation:'Congelar o escopo da sprint em andamento e priorizar só na revisão.', contingency:'', owner:'Bruna Teixeira', reviewOn:'2026-06-27', identifiedOn:'2026-05-12' },
+      { id:'RK-002', title:'Dependência da API do banco parceiro para saldo em tempo real', category:'externo', probability:3, impact:4, status:'aberto', response:'mitigar', mitigation:'Simular a API no ambiente de teste e combinar janela de homologação.', contingency:'Mostrar saldo do dia anterior com aviso.', owner:'Caio Mendes', reviewOn:'2026-06-25', identifiedOn:'2026-05-30' }
+    ];
+    e.decisions = [
+      { id:'vd1', severity:'medio', pct:74, title:'Priorizar a história de saldo em tempo real antes dos filtros do extrato', body:'A API do parceiro precisa de homologação; começar cedo reduz o risco de a sprint 5 estourar.', sources:[{ico:'shield-exclamation',label:'RK-002'}], status:'pending', actions:['accept','postpone3','reject'] }
+    ];
+    e.stakeholders = [
+      { id:'vs1', name:'Patrocinador — Diretoria Financeira', role:'Alta influência · Engajamento ativo', influence:'alta', engagement:'saudavel', lastContact:'2026-06-18', notes:'Participa da revisão de cada sprint.' },
+      { id:'vs2', name:'Atendimento ao cliente', role:'Média influência · Neutro', influence:'media', engagement:'atencao', lastContact:'2026-06-08', notes:'Quer ver o fluxo de segunda via antes do piloto.' }
+    ];
+    e.budgetLines = [
+      { id:'vb1', label:'Épico 1 — Cadastro e acesso', plannedValue:40000, wbsModuleId:'v1', isReserve:false },
+      { id:'vb2', label:'Épico 2 — Extrato e saldo', plannedValue:55000, wbsModuleId:'v2', isReserve:false },
+      { id:'vb3', label:'Épico 3 — Segunda via de boleto', plannedValue:35000, wbsModuleId:'v3', isReserve:false },
+      { id:'vbr', label:'Reserva de contingência', plannedValue:13000, wbsModuleId:'', isReserve:true }
+    ];
+    e.costActuals = [
+      { id:'vc1', label:'Equipe — sprints 1 a 3', amount:38000, date:'2026-06-05', budgetLineId:'vb1', kind:'real' },
+      { id:'vc2', label:'Equipe — sprint 4', amount:21000, date:'2026-06-15', budgetLineId:'vb2', kind:'real' }
+    ];
+    e.trail = [ { id:'vt1', date:'2026-06-12', text:'Revisão da sprint 4 aprovada pelo patrocinador', by:'Bruna Teixeira · revisão de sprint', outcome:'Extrato aprovado', cls:'b-grn' } ];
+    return e;
+  }
+  function seedHibrido() {
+    const e = seedEmpty();
+    e.methodology = { type:'hibrido', setAt:'2026-05-01T00:00:00.000Z' };
+    e.pmoProfile = { type:'controle', setAt:'2026-05-01T00:00:00.000Z' };
+    e.wbs = [
+      { id:'b1', label:'1. Infraestrutura e integração dos rastreadores', status:'grn', pct:100, start:'2026-05-04', end:'2026-06-10', critical:false, children:[
+        { id:'b1t1', label:'1.1 Homologação dos rastreadores GPS', status:'grn', start:'2026-05-04', end:'2026-05-22' },
+        { id:'b1t2', label:'1.2 Integração com a plataforma de mapas', status:'grn', start:'2026-05-20', end:'2026-06-10', predecessors:['b1t1'] } ] },
+      { id:'b2', label:'2. Aplicativo do motorista (entrega ágil em sprints)', status:'amb', pct:55, start:'2026-05-25', end:'2026-07-15', critical:true, children:[
+        { id:'b2t1', label:'2.1 Check-in e checklist do veículo', status:'grn', start:'2026-05-25', end:'2026-06-12' },
+        { id:'b2t2', label:'2.2 Alerta de fadiga do motorista', status:'amb', start:'2026-06-10', end:'2026-06-30', predecessors:['b2t1'] },
+        { id:'b2t3', label:'2.3 Registro de ocorrências na rota', status:'neu', start:'2026-06-29', end:'2026-07-15', predecessors:['b2t2'] } ] },
+      { id:'b3', label:'3. Painel de gestão da frota', status:'neu', pct:10, start:'2026-06-15', end:'2026-08-05', critical:false, children:[
+        { id:'b3t1', label:'3.1 Mapa em tempo real', status:'amb', start:'2026-06-15', end:'2026-07-10' },
+        { id:'b3t2', label:'3.2 Relatórios de consumo e manutenção', status:'neu', start:'2026-07-08', end:'2026-08-05', predecessors:['b3t1'] } ] }
+    ];
+    e.team = [
+      { id:'hb1', name:'Igor Ferraz', role:'Gerente de Projeto', allocationPct:70, workloadPct:55, signals:['Carga equilibrada'], recommendation:'', actionPage:'' },
+      { id:'hb2', name:'Júlia Rocha', role:'Desenvolvedora Mobile', allocationPct:100, workloadPct:88, signals:['3 semanas sem folga','Sprint cheia'], recommendation:'Redistribuir parte do alerta de fadiga.', actionPage:'resources' },
+      { id:'hb3', name:'Otávio Lima', role:'Engenheiro de Integração', allocationPct:100, workloadPct:64, signals:['Carga equilibrada'], recommendation:'', actionPage:'' }
+    ];
+    e.risks = [
+      { id:'RK-001', title:'Atraso na entrega dos rastreadores do fornecedor para a segunda frota', category:'externo', probability:3, impact:4, status:'aberto', response:'mitigar', mitigation:'Antecipar o pedido e manter fornecedor alternativo.', contingency:'Operar a segunda frota sem GPS por 2 semanas.', owner:'Igor Ferraz', reviewOn:'2026-06-26', identifiedOn:'2026-05-15' },
+      { id:'RK-002', title:'Sobrecarga da desenvolvedora mobile no caminho crítico', category:'recursos', probability:4, impact:4, status:'mitigando', response:'mitigar', mitigation:'Alocar um segundo desenvolvedor por 3 semanas.', contingency:'', owner:'Igor Ferraz', reviewOn:'2026-06-24', identifiedOn:'2026-06-02' },
+      { id:'RK-003', title:'Pedidos novos de relatório fora do escopo contratado', category:'escopo', probability:3, impact:3, status:'aberto', response:'evitar', mitigation:'Todo pedido passa pelo controle de mudanças.', contingency:'', owner:'', reviewOn:'2026-07-02', identifiedOn:'2026-06-05' }
+    ];
+    e.scopeChanges = [
+      { id:'SC-001', status:'analysis', title:'Inclusão de alerta de fadiga do motorista no painel', body:'Cliente quer ver, no painel de gestão, os alertas de fadiga enviados pelo aplicativo.', impactDays:6, impactCost:9500, riskNote:'Pressiona o caminho crítico', createdAt:'2026-06-14' },
+      { id:'SC-002', status:'approved', title:'Relatório de consumo por veículo', body:'Aprovado pelo comitê em 05/06, entra na fase 3.', impactDays:3, impactCost:4200, riskNote:'', createdAt:'2026-06-05' }
+    ];
+    e.decisions = [
+      { id:'hd1', severity:'alto', pct:81, title:'Reforçar o aplicativo do motorista com um segundo desenvolvedor', body:'A desenvolvedora mobile está acima de 85% de carga e o item está no caminho crítico.', sources:[{ico:'heartbeat',label:'Burnout Radar'},{ico:'shield-exclamation',label:'RK-002'}], status:'pending', actions:['accept','postpone3','reject'] }
+    ];
+    e.stakeholders = [
+      { id:'hs1', name:'Diretor de Operações', role:'Alta influência · Engajamento ativo', influence:'alta', engagement:'saudavel', lastContact:'2026-06-17', notes:'Acompanha o piloto da primeira frota.' },
+      { id:'hs2', name:'Gerente de Manutenção', role:'Média influência · Neutro', influence:'media', engagement:'atencao', lastContact:'2026-06-06', notes:'Pediu os relatórios de manutenção mais cedo.' }
+    ];
+    e.budgetLines = [
+      { id:'hl1', label:'1. Infraestrutura e integração', plannedValue:70000, wbsModuleId:'b1', isReserve:false },
+      { id:'hl2', label:'2. Aplicativo do motorista', plannedValue:90000, wbsModuleId:'b2', isReserve:false },
+      { id:'hl3', label:'3. Painel de gestão da frota', plannedValue:60000, wbsModuleId:'b3', isReserve:false },
+      { id:'hlr', label:'Reserva de contingência', plannedValue:22000, wbsModuleId:'', isReserve:true }
+    ];
+    e.costActuals = [
+      { id:'hc1', label:'Rastreadores e integração', amount:68000, date:'2026-06-10', budgetLineId:'hl1', kind:'real' },
+      { id:'hc2', label:'Aplicativo — sprints 1 a 3', amount:52000, date:'2026-06-16', budgetLineId:'hl2', kind:'real' },
+      { id:'hc3', label:'Licença da plataforma de mapas', amount:9000, date:'2026-06-18', budgetLineId:'hl3', kind:'comprometido' }
+    ];
+    e.trail = [ { id:'ht1', date:'2026-06-10', text:'Fase 1 (infraestrutura) encerrada e aceita', by:'Igor Ferraz · comitê', outcome:'Entregue no prazo', cls:'b-grn' } ];
+    return e;
+  }
+  function seedFor(projectId) { return projectId === 'nexus' ? seed() : projectId === 'valdori' ? seedAgil() : projectId === 'beltrano' ? seedHibrido() : seedEmpty(); }
 
   function loadCacheFor(projectId) {
     const key = storageKeyFor(projectId);
     let c;
     try { const raw = localStorage.getItem(key); c = raw ? JSON.parse(raw) : null; } catch(e) { c = null; }
-    if(!c) c = (projectId === 'nexus') ? seed() : seedEmpty();
-    if(!raw_ok(c)) c = (projectId === 'nexus') ? seed() : seedEmpty();
+    if(!c) c = seedFor(projectId);
+    if(!raw_ok(c)) c = seedFor(projectId);
     // Migração: bases salvas antes destas tabelas existirem ganham os valores padrão agora
-    const defaults = (projectId === 'nexus') ? seed() : seedEmpty();
+    const defaults = seedFor(projectId);
     if(!Array.isArray(c.stakeholders)) c.stakeholders = defaults.stakeholders;
     if(!Array.isArray(c.trail)) c.trail = defaults.trail;
     if(!Array.isArray(c.lessons)) c.lessons = defaults.lessons;
@@ -4848,6 +4955,7 @@ const DB = (() => {
     if(!Array.isArray(c.timeEntries)) c.timeEntries = defaults.timeEntries;
     if(!Array.isArray(c.baselines)) c.baselines = defaults.baselines || [];
     if(!Array.isArray(c.raci)) c.raci = [];
+    if(c.methodology === undefined) c.methodology = defaults.methodology;
     if(c.pmoProfile === undefined) c.pmoProfile = defaults.pmoProfile;
     return c;
   }
@@ -5054,6 +5162,22 @@ const DB = (() => {
     projects = null; activeProjectId = null; cache = null;
   }
 
+  // Recarrega SÓ os dados de demonstração deste navegador (os 3 projetos de exemplo, um por metodologia).
+  // Mantém chaves de IA e perfil local. Não toca na nuvem: quem está conectado e quer limpar a nuvem usa
+  // "Resetar dados para novos usuários" (só administrador, com backup e confirmação digitada).
+  function reloadDemo() {
+    if(!Auth.guard('settings')) return;
+    if(!confirm('Recarregar os dados de DEMONSTRAÇÃO neste navegador?\n\nOs projetos de exemplo (Portal Nexus, Valdori Dist. e Grupo Beltrano) voltam ao estado inicial, um por metodologia (Cascata, Ágil e Híbrido). Projetos que você criou aqui também são removidos deste navegador. A nuvem não é alterada.')) return;
+    try {
+      const toRemove = [];
+      for(let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if(k === 'pmo_db_v1' || (k && k.indexOf('pmo_db_v1__') === 0)) toRemove.push(k); }
+      toRemove.forEach(k => localStorage.removeItem(k));
+      localStorage.removeItem(PROJECTS_KEY); localStorage.removeItem(ACTIVE_KEY);
+    } catch(e) { T.show('⚠️ Não consegui limpar os dados locais.'); return; }
+    T.show('✅ Dados de demonstração recarregados. Atualizando…');
+    setTimeout(() => location.reload(), 700);
+  }
+
   // Aloca uma pessoa entre projetos de verdade, lendo o 'team' de CADA projeto do portfólio
   // (via getForProject) e casando por nome — substitui o antigo otherAllocationPct/Label, que
   // nunca tinha um campo de formulário pra preencher (só existia na semente de demonstração;
@@ -5079,7 +5203,7 @@ const DB = (() => {
     })).sort((a,b) => b.total - a.total);
   }
 
-  return { get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, factoryReset, listProjects, getActiveProjectId, switchProject, createProject, updateProject, computePortfolioAllocation, setProjectsFromCloud };
+  return { get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, factoryReset, reloadDemo, listProjects, getActiveProjectId, switchProject, createProject, updateProject, computePortfolioAllocation, setProjectsFromCloud };
 })();
 </script>
 
@@ -5355,6 +5479,7 @@ const R = (() => {
     if(id === 'settings' && typeof PmoProfiles !== 'undefined') PmoProfiles.render();
     if(id === 'settings' && typeof ProjectMembers !== 'undefined') ProjectMembers.render();
     if(typeof Nav !== 'undefined') { Nav.expandGroupFor(id); Nav.renderBreadcrumb(id); Nav.closeDrawer(); }
+    if(typeof Methodology !== 'undefined') { Methodology.apply(); Methodology.notice(id); if(id === 'settings') Methodology.render(); }
   }
   function init() {
     const h = location.hash.replace('#','');
@@ -5425,6 +5550,7 @@ const Nav = (() => {
     const nm = document.getElementById('sb-proj-name'), cx = document.getElementById('sb-ctx-name');
     if(active) { if(nm) nm.textContent = active.name; if(cx) cx.textContent = active.name; }
     renderProjDropdown();
+    if(typeof Methodology !== 'undefined') Methodology.apply(); // cada projeto tem o seu menu
   }
 
   function renderProjDropdown() {
@@ -5557,7 +5683,7 @@ const CmdK = (() => {
     const projectEntries = (typeof DB !== 'undefined' ? DB.listProjects() : []).map(p => ({
       label: p.name, icon: p.icon || 'compass', group: 'Trocar projeto', isProject: true, projectId: p.id
     }));
-    return PAGES.map(p => ({ ...p, isProject:false })).concat(projectEntries);
+    return PAGES.map(p => ({ ...p, isProject:false, offMethod: typeof Methodology !== 'undefined' && !Methodology.visible(p.page) })).concat(projectEntries);
   }
 
   function open() {
@@ -5582,7 +5708,7 @@ const CmdK = (() => {
     if(!root) return;
     if(!currentResults.length) { root.innerHTML = '<div class="cmdk-empty">Nada encontrado</div>'; return; }
     root.innerHTML = currentResults.map((e,i) => `<div class="cmdk-item${i===selIndex?' sel':''}" onclick="CmdK.activate(${i})">
-      <i class="ti ti-${escapeHtml(e.icon)}"></i>${escapeHtml(e.label)}
+      <i class="ti ti-${escapeHtml(e.icon)}"></i>${escapeHtml(e.label)}${e.offMethod ? ' <span style="font-size:11px;color:var(--t3)">· fora da metodologia deste projeto</span>' : ''}
       ${e.group ? `<span class="cmdk-grp">${escapeHtml(e.group)}</span>` : ''}
     </div>`).join('');
   }
@@ -6286,6 +6412,7 @@ Regras obrigatórias:
     try { context = ContextBuilder.build(); } catch(e) { console.warn('ContextBuilder falhou', e); }
     let profileBlock = '';
     try { if(typeof PmoProfiles !== 'undefined') profileBlock = PmoProfiles.systemGuidance(); } catch(e) { console.warn('PmoProfiles falhou', e); }
+    try { if(typeof Methodology !== 'undefined') profileBlock += (profileBlock ? '\n' : '') + Methodology.systemGuidance(); } catch(e) { console.warn('Methodology falhou', e); }
     return `${SYSTEM_RULES}${profileBlock ? '\n\n' + profileBlock : ''}\n\nContexto real do projeto ativo:\n${context}`;
   }
 
@@ -9055,6 +9182,113 @@ const Risks = (() => {
   function listOpen(projectId) { return (projectId ? DB.getForProject(projectId, 'risks') : ensureLoaded()).filter(RiskMatrix.isOpen); }
 
   return { render, resetCache, openAdd, openEdit, openEditEl, keyEl, saveFromModal, deleteFromModal, closeModal, previewScore, setQuery, setFilter, pickCell, clearCell, addMany, listOpen, titles: () => ensureLoaded().map(r => r.title) };
+})();
+</script>
+
+<!-- ■ MODULE: core/methodology-css -->
+<style data-module="core/methodology-css">
+.m-hidden{display:none!important}
+.m-opt{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;padding:10px 12px;border:1px solid var(--b1);border-radius:var(--r8);background:var(--s2);color:var(--t1);cursor:pointer;margin-bottom:8px;font:inherit}
+.m-opt:hover{border-color:var(--b3)}
+.m-opt:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.m-opt[aria-checked="true"]{border-color:var(--acc);box-shadow:inset 3px 0 0 var(--acc);background:var(--s3)}
+.m-opt i{font-size:18px;color:var(--acc);flex-shrink:0;margin-top:1px}
+.m-opt b{font-size:12.5px}
+.m-opt .m-sub{display:block;font-size:12px;color:var(--t2);margin-top:2px;line-height:1.5}
+.m-opt .m-hide{display:block;font-size:11.5px;color:var(--t3);margin-top:4px}
+.m-notice{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 12px;border:1px solid var(--ab);background:var(--ad);border-radius:var(--r8);font-size:12.5px;color:var(--t1)}
+.m-notice i{color:var(--acc);flex-shrink:0}
+.m-notice span{flex:1 1 220px}
+</style>
+
+<!-- ■ MODULE: core/methodology ─ Metodologia do projeto (Cascata, Ágil, Híbrido): decide quais telas aparecem. Esconder nunca apaga dado. -->
+<script data-module="core/methodology">
+const Methodology = (() => {
+  const TYPES = {
+    agil:    { label:'Ágil (Scrum ou Kanban)', short:'Ágil', icon:'refresh',
+      resumo:'Entrega em ciclos curtos e prioridade ajustada o tempo todo. Esconde as telas de plano rígido.',
+      guidance:'Este projeto é ÁGIL: fale em entrega incremental, impedimentos, prioridade do backlog e ritmo da equipe; evite exigir linha de base, caminho crítico ou controle formal de mudanças.' },
+    cascata: { label:'Cascata (preditivo)', short:'Cascata', icon:'timeline',
+      resumo:'Plano completo antes de executar: entregas na WBS, linha de base, controle formal de mudanças e orçamento por CPI/SPI.',
+      guidance:'Este projeto é em CASCATA (preditivo): cobre aderência ao plano, linha de base, caminho crítico, controle formal de mudanças e desvios de prazo e custo.' },
+    hibrido: { label:'Híbrido', short:'Híbrido', icon:'arrows-split',
+      resumo:'Mistura planejamento preditivo e entrega ágil. Mostra todas as telas.',
+      guidance:'Este projeto é HÍBRIDO: planejamento preditivo nas macro-entregas e execução ágil dentro delas; trate prazos e custos do plano e o ritmo das entregas.' }
+  };
+  const ORDER = ['agil', 'cascata', 'hibrido'];
+  // Telas que só fazem sentido em alguns métodos. O que não está aqui aparece em todos.
+  // Obs.: a WBS continua em todos até existir o quadro Kanban — um projeto ágil não pode ficar sem onde acompanhar as entregas.
+  const ONLY = {
+    baseline: ['cascata', 'hibrido'], scope: ['cascata', 'hibrido'], estimates: ['cascata', 'hibrido'],
+    whatif: ['cascata', 'hibrido'], raci: ['cascata', 'hibrido']
+  };
+  const SHOW_ALL_KEY = 'pmo_show_all_screens';
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function typeOf(obj) { return obj && TYPES[obj.type] ? obj.type : 'hibrido'; } // sem escolha (projetos antigos) = híbrido: nada some
+  function type() { try { return typeOf(DB.get('methodology')); } catch(e) { return 'hibrido'; } }
+  function typeFor(projectId) { try { return typeOf(DB.getForProject(projectId, 'methodology')); } catch(e) { return 'hibrido'; } }
+  function showAll() { try { return localStorage.getItem(SHOW_ALL_KEY) === '1'; } catch(e) { return false; } }
+  function visibleFor(pageId, t) { return !ONLY[pageId] || ONLY[pageId].includes(t); }
+  function visible(pageId) { return showAll() || visibleFor(pageId, type()); }
+  const methodsOf = pageId => (ONLY[pageId] || []).map(m => TYPES[m].short);
+
+  function apply() {
+    document.querySelectorAll('.si[data-p], .ntab[data-p]').forEach(b => b.classList.toggle('m-hidden', !visible(b.dataset.p)));
+    document.querySelectorAll('.sb-group').forEach(g => {
+      const items = [...g.querySelectorAll('.si[data-p]')];
+      g.classList.toggle('m-hidden', items.length > 0 && items.every(b => b.classList.contains('m-hidden')));
+    });
+    const tag = document.getElementById('sb-method-tag'); if(tag) tag.textContent = TYPES[type()].short;
+  }
+
+  // Quem abre uma tela escondida (link, busca, favorito) vê a tela e um aviso claro — nada é bloqueado nem perdido
+  function notice(pageId) {
+    document.querySelectorAll('.m-notice').forEach(n => n.remove());
+    if(visible(pageId)) return;
+    const page = document.getElementById('p-' + pageId), hdr = page && page.querySelector('.pg-hdr'); if(!hdr) return;
+    const d = document.createElement('div'); d.className = 'm-notice'; d.setAttribute('role', 'status');
+    d.innerHTML = `<i class="ti ti-info-circle"></i><span>Esta tela é da metodologia <b>${esc(methodsOf(pageId).join(' e '))}</b>; este projeto usa <b>${esc(TYPES[type()].short)}</b>. Seus dados continuam salvos.</span>
+      <button class="btn btn-sm" onclick="Methodology.setShowAll(true)">Mostrar todas as telas</button>
+      <button class="btn btn-sm" onclick="R.go('settings');SettingsTabs.show('pmo')">Mudar a metodologia</button>`;
+    hdr.insertAdjacentElement('afterend', d);
+  }
+
+  function set(t, opts) {
+    if(!TYPES[t]) return;
+    if(!(opts && opts.silent) && !Auth.guard('business')) return;
+    const value = { type: t, setAt: new Date().toISOString() };
+    DB.set('methodology', value);
+    if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'methodology', value);
+    if(!(opts && opts.silent)) {
+      if(typeof Trail !== 'undefined') Trail.log(`Metodologia do projeto definida como "${TYPES[t].short}"`, Auth.getName(), '', 'b-acc');
+      T.show(`✅ Metodologia: ${TYPES[t].short}. O menu foi ajustado — nenhum dado foi apagado.`);
+    }
+    apply(); render();
+    const cur = document.querySelector('.page.on'); if(cur) notice(cur.id.replace(/^p-/, ''));
+  }
+  function setShowAll(on) {
+    try { localStorage.setItem(SHOW_ALL_KEY, on ? '1' : '0'); } catch(e) {}
+    apply(); render();
+    const cur = document.querySelector('.page.on'); if(cur) notice(cur.id.replace(/^p-/, ''));
+    T.show(on ? 'Mostrando todas as telas, de todas as metodologias.' : 'Mostrando só as telas da metodologia do projeto.');
+  }
+
+  function render() {
+    const root = document.getElementById('method-root'); if(!root) return;
+    const cur = type(), all = showAll();
+    const hiddenFor = t => Object.keys(ONLY).filter(p => !visibleFor(p, t));
+    const label = { baseline:'Linha de base', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', raci:'Matriz RACI' };
+    root.innerHTML = ORDER.map(t => {
+      const hid = hiddenFor(t);
+      return `<button type="button" class="m-opt" role="radio" aria-checked="${t === cur}" data-perm="business" onclick="Methodology.set('${t}')">
+        <i class="ti ti-${TYPES[t].icon}"></i><span><b>${esc(TYPES[t].label)}</b><span class="m-sub">${esc(TYPES[t].resumo)}</span>
+        <span class="m-hide">${hid.length ? 'Fica fora do menu: ' + esc(hid.map(p => label[p]).join(', ')) + '.' : 'Nenhuma tela fica de fora.'}</span></span></button>`;
+    }).join('') + `<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--t2);margin-top:4px;cursor:pointer"><input type="checkbox" ${all ? 'checked' : ''} onchange="Methodology.setShowAll(this.checked)"> Mostrar todas as telas, de todas as metodologias (neste navegador)</label>`;
+  }
+
+  function systemGuidance() { return TYPES[type()].guidance; }
+  return { TYPES, ORDER, ONLY, type, typeFor, typeOf, visibleFor, visible, apply, notice, set, setShowAll, render, systemGuidance, methodsOf };
 })();
 </script>
 
@@ -13434,13 +13668,11 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
         <input class="input" id="wz-refs" type="text" placeholder="Ex: Portal Nexus v1, PRJ-67, Valdori Distribuidora">
       </div>
       <div class="field-group">
-        <div class="field-label">Metodologia</div>
-        <select class="input" id="wz-method">
-          <option>Ágil (Scrum)</option>
-          <option>Ágil (Kanban)</option>
-          <option>Híbrido</option>
-          <option>Cascata</option>
-          <option>PMI/PMBOK</option>
+        <div class="field-label">Metodologia<span class="help-q" data-help="Define quais telas aparecem no menu deste projeto. Ágil esconde as telas de plano rígido (linha de base, controle formal de mudanças, estimativas, What-If e RACI); Cascata e Híbrido mostram todas. Nada é apagado e dá para mudar depois em Configurações → Perfil de PMO." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+        <select class="input" id="wz-method" aria-label="Metodologia do projeto">
+          <option value="agil">Ágil (Scrum ou Kanban)</option>
+          <option value="cascata">Cascata (PMBOK, plano completo antes)</option>
+          <option value="hibrido" selected>Híbrido (mistura os dois)</option>
         </select>
       </div>
     </div>
@@ -14589,9 +14821,11 @@ const Wizard = (() => {
     const name = document.getElementById('wz-name')?.value.trim() || 'Novo projeto';
     const client = document.getElementById('wz-client')?.value.trim() || '';
     const area = document.getElementById('wz-area')?.value.trim() || '';
+    const method = document.getElementById('wz-method')?.value || 'hibrido';
     close();
     const id = DB.createProject(name, client, area);
     if(id) {
+      if(typeof Methodology !== 'undefined') Methodology.set(method, { silent: true }); // o projeto novo já nasce com o menu do seu método
       T.show('✅ Projeto "' + name + '" criado e ativo! Repositório vazio — adicione documentos para habilitar a IA.', 5000);
       R.go('dashboard');
     }
