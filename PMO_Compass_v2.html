@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.12.0'
+  version: '2.12.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -802,6 +802,7 @@ body.icons-failed i[data-fb]::before{
   <div class="tb-proj-wrap">
     <button class="tb-proj" onclick="Nav.toggleProjDropdown(event)">
       <span class="proj-dot"></span>
+      <span id="tb-proj-ico" style="display:inline-flex"></span>
       <span id="proj-name">Portal Nexus</span>
       <i class="ti ti-chevron-down" style="font-size:11px"></i>
     </button>
@@ -876,6 +877,7 @@ body.icons-failed i[data-fb]::before{
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-projetos')"><i class="ti ti-layout-grid sb-gico"></i><span class="sb-hdr-txt"><small class="sb-hdr-kicker">Projeto · <span id="sb-method-tag">Híbrido</span></small><b id="sb-proj-name">—</b></span><i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body" id="sbg-projetos-list">
       <div id="sb-projects-root"></div>
+      <div id="sb-method-legend"></div>
       <button class="si" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
     </div>
   </div>
@@ -3978,16 +3980,16 @@ const Cloud = (() => {
     if(!client || !session || typeof DB === 'undefined') return;
     try {
       const local = DB.listProjects();
-      await Promise.all(local.map(p => client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', created_by:session.user.id, area:p.area||null, ...(p.refDate ? { reference_date:p.refDate } : {}) }).then(()=>{}).catch(()=>{})));
+      await Promise.all(local.map(p => client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', created_by:session.user.id, area:p.area||null, ...(p.refDate ? { reference_date:p.refDate } : {}), ...(p.methodology ? { methodology:p.methodology } : {}) }).then(()=>{}).catch(()=>{})));
       const { data, error } = await client.from('projects').select('*').order('created_at', { ascending:true });
       if(error || !data) return;
-      DB.setProjectsFromCloud(data.map(p => ({ id:p.id, name:p.name, client:p.client||'', icon:p.icon||'compass', area:p.area||'', refDate:p.reference_date||'' })));
+      DB.setProjectsFromCloud(data.map(p => ({ id:p.id, name:p.name, client:p.client||'', icon:p.icon||'compass', area:p.area||'', refDate:p.reference_date||'', methodology:p.methodology||'' })));
     } catch(e) { console.warn('Supabase: falha ao sincronizar projetos', e); }
   }
 
   function pushProject(p) {
     if(!client || !session) return;
-    track(client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', area:p.area||null, created_by:session.user.id }).then(()=>{}).catch(cloudSyncFailed));
+    track(client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', area:p.area||null, ...(p.methodology ? { methodology:p.methodology } : {}), created_by:session.user.id }).then(()=>{}).catch(cloudSyncFailed));
   }
   // Quem cria o projeto precisa conseguir vê-lo — a policy "project_access_self_grant" só deixa
   // conceder acesso PRA SI MESMO, nunca pra outra pessoa (isso continua exigindo um admin).
@@ -4786,9 +4788,9 @@ const DB = (() => {
 
   function defaultProjects() {
     return [
-      { id:'nexus', name:'Portal Nexus', client:'Controle de estoque', icon:'compass', refDate:'2026-06-20' },
-      { id:'valdori', name:'Valdori Dist.', client:'Autoatendimento financeiro', icon:'building', refDate:'2026-06-20' },
-      { id:'beltrano', name:'Grupo Beltrano', client:'Gestão de frota', icon:'truck', refDate:'2026-06-20' }
+      { id:'nexus', name:'Portal Nexus', client:'Controle de estoque', icon:'compass', refDate:'2026-06-20', methodology:'cascata' },
+      { id:'valdori', name:'Valdori Dist.', client:'Autoatendimento financeiro', icon:'building', refDate:'2026-06-20', methodology:'agil' },
+      { id:'beltrano', name:'Grupo Beltrano', client:'Gestão de frota', icon:'truck', refDate:'2026-06-20', methodology:'hibrido' }
     ];
   }
 
@@ -5216,6 +5218,13 @@ const DB = (() => {
     return p;
   }
 
+  // Grava a metodologia no cadastro do projeto (aparece na lista de projetos e vai para a nuvem junto com o projeto)
+  function setProjectMethodology(projectId, type) {
+    const p = loadProjects().find(x => x.id === projectId); if(!p) return;
+    p.methodology = type; persistProjects();
+    if(typeof Cloud !== 'undefined') Cloud.pushProject(p);
+  }
+
   function createProject(name, client, area) {
     if(!Auth.guard('business')) return null;
     const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
@@ -5399,7 +5408,7 @@ const DB = (() => {
     })).sort((a,b) => b.total - a.total);
   }
 
-  return { get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, factoryReset, reloadDemo, listProjects, getActiveProjectId, switchProject, createProject, updateProject, computePortfolioAllocation, setProjectsFromCloud };
+  return { get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, factoryReset, reloadDemo, setProjectMethodology, listProjects, getActiveProjectId, switchProject, createProject, updateProject, computePortfolioAllocation, setProjectsFromCloud };
 })();
 </script>
 
@@ -5741,7 +5750,10 @@ const Nav = (() => {
     if(!root || typeof DB === 'undefined') return;
     const projects = DB.listProjects();
     const activeId = DB.getActiveProjectId();
-    root.innerHTML = projects.map(p => `<button class="si${p.id===activeId?' proj-active':''}" style="padding-left:22px" onclick="DB.switchProject('${p.id}')"><i class="ti ti-${escapeHtml(p.icon||'compass')}"></i>${escapeHtml(p.name)}</button>`).join('');
+    // O ícone antes do nome é o da METODOLOGIA do projeto (legenda logo abaixo da lista)
+    root.innerHTML = projects.map(p => `<button class="si${p.id===activeId?' proj-active':''}" style="padding-left:22px" onclick="DB.switchProject('${p.id}')">${typeof Methodology !== 'undefined' ? Methodology.iconFor(p.id) : `<i class="ti ti-${escapeHtml(p.icon||'compass')}"></i>`}${escapeHtml(p.name)}</button>`).join('');
+    const lg = document.getElementById('sb-method-legend'); if(lg && typeof Methodology !== 'undefined') lg.innerHTML = Methodology.legend();
+    const tIco = document.getElementById('tb-proj-ico'); if(tIco && typeof Methodology !== 'undefined') tIco.innerHTML = Methodology.iconFor(activeId);
     const tag = document.getElementById('proj-name');
     const active = projects.find(x=>x.id===activeId);
     if(tag && active) tag.textContent = active.name;
@@ -5757,7 +5769,7 @@ const Nav = (() => {
     if(!list || typeof DB === 'undefined') return;
     const projects = DB.listProjects();
     const activeId = DB.getActiveProjectId();
-    list.innerHTML = projects.map(p => `<button class="tb-proj-dd-item${p.id===activeId?' active':''}" onclick="Nav.closeProjDropdown();DB.switchProject('${p.id}')"><i class="ti ti-${escapeHtml(p.icon||'compass')}"></i>${escapeHtml(p.name)}${p.id===activeId?'<i class="ti ti-check tb-proj-check"></i>':''}</button>`).join('');
+    list.innerHTML = projects.map(p => `<button class="tb-proj-dd-item${p.id===activeId?' active':''}" onclick="Nav.closeProjDropdown();DB.switchProject('${p.id}')">${typeof Methodology !== 'undefined' ? Methodology.iconFor(p.id) : `<i class="ti ti-${escapeHtml(p.icon||'compass')}"></i>`}${escapeHtml(p.name)}${p.id===activeId?'<i class="ti ti-check tb-proj-check"></i>':''}</button>`).join('') + (typeof Methodology !== 'undefined' ? Methodology.legend() : '');
   }
 
   function toggleProjDropdown(e) {
@@ -5883,7 +5895,7 @@ const CmdK = (() => {
 
   function allEntries() {
     const projectEntries = (typeof DB !== 'undefined' ? DB.listProjects() : []).map(p => ({
-      label: p.name, icon: p.icon || 'compass', group: 'Trocar projeto', isProject: true, projectId: p.id
+      label: p.name, icon: (typeof Methodology !== 'undefined' ? Methodology.TYPES[Methodology.typeFor(p.id)].icon : (p.icon || 'compass')), group: 'Trocar projeto', isProject: true, projectId: p.id
     }));
     return PAGES.map(p => ({ ...p, isProject:false, offMethod: typeof Methodology !== 'undefined' && !Methodology.visible(p.page) })).concat(projectEntries);
   }
@@ -9794,6 +9806,12 @@ const OrgSettings = (() => {
 <!-- ■ MODULE: core/methodology-css -->
 <style data-module="core/methodology-css">
 .m-hidden{display:none!important}
+.m-ico{color:var(--acc)}
+.m-legend{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:6px 10px 2px;padding:6px 8px;border:1px dashed var(--b2);border-radius:var(--r6);font-size:11px;color:var(--t2)}
+.m-legend span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.m-legend i{font-size:13px;color:var(--acc)}
+.m-legend .help-q{margin-left:auto}
+.sidebar.collapsed .m-legend{display:none}
 .m-opt{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;padding:10px 12px;border:1px solid var(--b1);border-radius:var(--r8);background:var(--s2);color:var(--t1);cursor:pointer;margin-bottom:8px;font:inherit}
 .m-opt:hover{border-color:var(--b3)}
 .m-opt:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
@@ -9833,8 +9851,24 @@ const Methodology = (() => {
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   function typeOf(obj) { return obj && TYPES[obj.type] ? obj.type : 'hibrido'; } // sem escolha (projetos antigos) = híbrido: nada some
-  function type() { try { return typeOf(DB.get('methodology')); } catch(e) { return 'hibrido'; } }
-  function typeFor(projectId) { try { return typeOf(DB.getForProject(projectId, 'methodology')); } catch(e) { return 'hibrido'; } }
+  // Fonte principal: o cadastro do projeto (vem na lista, inclusive da nuvem). Reserva: a configuração gravada no projeto.
+  function typeFor(projectId) {
+    try {
+      const rec = DB.listProjects().find(p => p.id === projectId);
+      if(rec && TYPES[rec.methodology]) return rec.methodology;
+      return typeOf(DB.getForProject(projectId, 'methodology'));
+    } catch(e) { return 'hibrido'; }
+  }
+  function type() { try { return typeFor(DB.getActiveProjectId()); } catch(e) { return 'hibrido'; } }
+  // Ícone da metodologia para ir antes do nome do projeto (com texto para leitor de tela e dica ao passar o mouse)
+  function iconFor(projectId) {
+    const t = typeFor(projectId), d = TYPES[t];
+    return `<i class="ti ti-${d.icon} m-ico" role="img" aria-label="Metodologia ${esc(d.short)}" title="${esc(d.short)} — ${esc(d.resumo)}"></i>`;
+  }
+  // Legenda curta dos três ícones (usada no menu e na lista de projetos)
+  function legend() {
+    return `<div class="m-legend" role="note" aria-label="Legenda das metodologias">${ORDER.map(k => `<span title="${esc(TYPES[k].short)} — ${esc(TYPES[k].resumo)}"><i class="ti ti-${TYPES[k].icon}" aria-hidden="true"></i>${esc(TYPES[k].short)}</span>`).join('')}<span class="help-q" data-help="O ícone antes do nome mostra como cada projeto é conduzido. Ágil (↻): ciclos curtos em sprints, menu enxuto. Cascata (linha do tempo): plano completo antes de executar, com linha de base e controle de mudanças. Híbrido (⇄): mistura os dois e mostra todas as telas. Mude em Configurações → Perfil de PMO." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>`;
+  }
   function showAll() { try { return localStorage.getItem(SHOW_ALL_KEY) === '1'; } catch(e) { return false; } }
   function visibleFor(pageId, t) { return !ONLY[pageId] || ONLY[pageId].includes(t); }
   function visible(pageId) { return showAll() || visibleFor(pageId, type()); }
@@ -9870,12 +9904,14 @@ const Methodology = (() => {
     if(!(opts && opts.silent) && !Auth.guard('business')) return;
     const value = { type: t, setAt: new Date().toISOString() };
     DB.set('methodology', value);
+    DB.setProjectMethodology(DB.getActiveProjectId(), t); // no cadastro do projeto: aparece na lista de projetos e sincroniza
     if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'methodology', value);
     if(!(opts && opts.silent)) {
       if(typeof Trail !== 'undefined') Trail.log(`Metodologia do projeto definida como "${TYPES[t].short}"`, Auth.getName(), '', 'b-acc');
       T.show(`✅ Metodologia: ${TYPES[t].short}. O menu foi ajustado — nenhum dado foi apagado.`);
     }
     apply(); render();
+    if(typeof Nav !== 'undefined') Nav.renderProjects(); // o ícone do projeto na lista acompanha o método
     const cur = document.querySelector('.page.on'); if(cur) notice(cur.id.replace(/^p-/, ''));
   }
   function setShowAll(on) {
@@ -9899,7 +9935,7 @@ const Methodology = (() => {
   }
 
   function systemGuidance() { return TYPES[type()].guidance; }
-  return { TYPES, ORDER, ONLY, type, typeFor, typeOf, visibleFor, visible, apply, notice, set, setShowAll, render, systemGuidance, methodsOf };
+  return { TYPES, ORDER, ONLY, type, typeFor, typeOf, iconFor, legend, visibleFor, visible, apply, notice, set, setShowAll, render, systemGuidance, methodsOf };
 })();
 </script>
 

@@ -1,6 +1,6 @@
 -- =========================================================================
 -- PMO Compass — esquema completo (GERADO por scripts/build-schema.mjs — não edite à mão)
--- Fonte: supabase/migrations/ (13 arquivos). Para instalação do zero, rode este arquivo inteiro
+-- Fonte: supabase/migrations/ (14 arquivos). Para instalação do zero, rode este arquivo inteiro
 -- no SQL Editor; para um banco que já existe, use `node scripts/db-apply.mjs` (aplica só o que falta).
 -- =========================================================================
 
@@ -1173,3 +1173,10 @@ create policy "org_settings_write" on public.org_settings for all
 
 grant select, insert, update, delete on public.org_settings to authenticated;
 revoke all on public.org_settings from anon;
+
+-- ▼▼▼ 20261023101200_projects_methodology.sql ▼▼▼
+-- Metodologia do projeto (agil, cascata ou hibrido), guardada no próprio cadastro do projeto.
+-- Assim a lista de projetos (menu, busca, portfólio) mostra o método de TODOS os projetos de uma vez,
+-- sem precisar abrir cada um. Nulo = projeto antigo, tratado como híbrido (todas as telas).
+alter table public.projects add column if not exists methodology text
+  check (methodology is null or methodology in ('agil','cascata','hibrido'));
