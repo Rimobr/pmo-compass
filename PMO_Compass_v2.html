@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.11.0'
+  version: '2.12.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1464,8 +1464,8 @@ body.icons-failed i[data-fb]::before{
     <div id="method-root" role="radiogroup" aria-label="Metodologia do projeto"></div>
   </div>
   <div class="card">
-    <div class="lbl"><i class="ti ti-sitemap"></i>Perfil de PMO deste projeto</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px">Muda o <strong style="color:var(--t1)">tom</strong> das recomendações da IA (Chat, Decisões, Relatório) — mais consultivo, mais rigoroso ou mais prescritivo, conforme o papel real do seu PMO. A IA também ajusta o tom sozinha com base na taxa de aceitação das próprias recomendações neste projeto.</p>
+    <div class="lbl"><i class="ti ti-sitemap"></i>Perfil de PMO da organização<span class="help-q" data-help="O tipo de PMO descreve a sua organização, então vale para TODOS os projetos de uma vez (a metodologia é que muda por projeto). Só o administrador altera. Projetos antigos que tinham um perfil próprio continuam usando-o até a organização escolher o seu." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px">Vale para <strong style="color:var(--t1)">todos os projetos</strong>. Muda o <strong style="color:var(--t1)">tom</strong> das recomendações da IA (Chat, Decisões, Relatório) — mais consultivo, mais rigoroso ou mais prescritivo, conforme o papel real do seu PMO. A IA também ajusta o tom sozinha com base na taxa de aceitação das próprias recomendações neste projeto.</p>
     <div id="pmo-profile-root"></div>
   </div>
 
@@ -4081,6 +4081,14 @@ const Cloud = (() => {
         if(typeof Burnout !== 'undefined') { Burnout.resetCache(); Burnout.render(); }
         if(typeof Resources !== 'undefined') Resources.render();
       }
+      // Configurações da organização (perfil de PMO): a nuvem manda; se a tabela ainda não existe, segue sem erro
+      try {
+        const org = await client.from('org_settings').select('*');
+        if(org && !org.error && org.data && org.data.length) {
+          org.data.forEach(r => { if(r.key) OrgSettings.setLocal(r.key, r.value); });
+          if(typeof PmoProfiles !== 'undefined') PmoProfiles.render();
+        }
+      } catch(e) { /* sem org_settings: usa o valor local */ }
       T.show('☁️ Dados sincronizados do Supabase.');
     } catch(e) { console.warn('Supabase: falha ao sincronizar', e); T.show('⚠️ Não consegui buscar os dados mais recentes da nuvem — mostrando o que já estava salvo neste navegador.'); }
   }
@@ -4137,6 +4145,11 @@ const Cloud = (() => {
   // "Objeto único por projeto" (prioritization, pmoProfile, valueRealization) — recebe o
   // projectId explícito porque Priorização edita o portfólio inteiro de uma tela só, sem trocar
   // o projeto ativo (mesmo motivo de DB.setForProject aceitar projectId em vez de usar o ativo).
+  // Configuração da ORGANIZAÇÃO (vale para todos os projetos); só administrador grava (a regra está no banco)
+  function pushOrgSetting(key, value) {
+    if(!client || !session || !key) return;
+    track(client.from('org_settings').upsert({ key, value, updated_by:(typeof Auth!=='undefined'?Auth.getName():null), updated_at:new Date().toISOString() }, { onConflict:'key' }).then(()=>{}).catch(cloudSyncFailed));
+  }
   function pushProjectSetting(projectId, key, value) {
     if(!client || !session || !projectId) return;
     track(client.from('project_settings').upsert({ project_id:projectId, key, value, updated_by:(typeof Auth!=='undefined'?Auth.getName():null) }, { onConflict:'project_id,key' }).then(()=>{}).catch(cloudSyncFailed));
@@ -4341,7 +4354,7 @@ const Cloud = (() => {
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument, pushRow, pushMany, deleteRow, msgTable, invokeFn,
     pushBudgetLine, deleteBudgetLine, pushCostActual, deleteCostActual, resetForNewUsers, clearProjectData,
-    pushAuditEvent, fetchAuditLog, pushSnapshot, fetchSnapshots, fetchAllSnapshots, pushProjectSetting,
+    pushAuditEvent, fetchAuditLog, pushSnapshot, fetchSnapshots, fetchAllSnapshots, pushProjectSetting, pushOrgSetting,
     pushBoardDecision, deleteBoardDecision, pullBoardDecisions, pushProject, grantSelfProjectAccess,
     listAllProjects, listAllProjectAccess, setProjectAccess };
 })();
@@ -4979,7 +4992,7 @@ const DB = (() => {
         { id:'te3', person:'Diego Almeida', date:'2026-06-16', hours:6, wbsRef:'', note:'Reunião e revisão de código' },
         { id:'te4', person:'Diego Almeida', date:'2026-06-17', hours:8.5, wbsRef:'', note:'' }
       ],
-      pmoProfile: { type:'controle', setAt:'2026-06-01T00:00:00.000Z' },
+      pmoProfile: null,
       methodology: { type:'cascata', setAt:'2026-06-01T00:00:00.000Z' }
     };
   }
@@ -4991,7 +5004,7 @@ const DB = (() => {
   function seedAgil() {
     const e = seedEmpty();
     e.methodology = { type:'agil', setAt:'2026-05-01T00:00:00.000Z' };
-    e.pmoProfile = { type:'agil', setAt:'2026-05-01T00:00:00.000Z' };
+    e.pmoProfile = null; // o perfil de PMO é da organização (OrgSettings)
     e.wbs = [
       { id:'v1', label:'Épico 1 — Cadastro e acesso do cliente', status:'grn', pct:100, start:'2026-05-04', end:'2026-06-05', critical:false, children:[
         { id:'v1t1', label:'História: cadastro com CPF e validação', status:'grn', start:'2026-05-04', end:'2026-05-20' },
@@ -5052,7 +5065,7 @@ const DB = (() => {
   function seedHibrido() {
     const e = seedEmpty();
     e.methodology = { type:'hibrido', setAt:'2026-05-01T00:00:00.000Z' };
-    e.pmoProfile = { type:'controle', setAt:'2026-05-01T00:00:00.000Z' };
+    e.pmoProfile = null;
     e.wbs = [
       { id:'b1', label:'1. Infraestrutura e integração dos rastreadores', status:'grn', pct:100, start:'2026-05-04', end:'2026-06-10', critical:false, children:[
         { id:'b1t1', label:'1.1 Homologação dos rastreadores GPS', status:'grn', start:'2026-05-04', end:'2026-05-22' },
@@ -5355,7 +5368,7 @@ const DB = (() => {
       const toRemove = [];
       for(let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if(k === 'pmo_db_v1' || (k && k.indexOf('pmo_db_v1__') === 0)) toRemove.push(k); }
       toRemove.forEach(k => localStorage.removeItem(k));
-      localStorage.removeItem(PROJECTS_KEY); localStorage.removeItem(ACTIVE_KEY);
+      localStorage.removeItem(PROJECTS_KEY); localStorage.removeItem(ACTIVE_KEY); localStorage.removeItem('pmo_org_v1');
     } catch(e) { T.show('⚠️ Não consegui limpar os dados locais.'); return; }
     T.show('✅ Dados de demonstração recarregados. Atualizando…');
     setTimeout(() => location.reload(), 700);
@@ -6372,15 +6385,19 @@ const PmoProfiles = (() => {
   const ORDER = ['suporte','controle','diretivo','estrategico','agil','departamental'];
 
   function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-  function get() { return (typeof DB !== 'undefined') ? DB.get('pmoProfile') : null; }
+  // O perfil de PMO é da ORGANIZAÇÃO. Reserva: o valor antigo gravado por projeto, enquanto a organização não escolher.
+  function get() {
+    const org = (typeof OrgSettings !== 'undefined') ? OrgSettings.get('pmoProfile') : null;
+    if(org && DEFS[org.type]) return org;
+    return (typeof DB !== 'undefined') ? DB.get('pmoProfile') : null;
+  }
 
   function set(type) {
     if(!Auth.guard('settings')) return;
     if(!DEFS[type]) return;
     const profile = { type, setAt: new Date().toISOString() };
-    DB.set('pmoProfile', profile);
-    if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'pmoProfile', profile);
-    if(typeof Trail !== 'undefined') Trail.log(`Perfil de PMO definido como "${DEFS[type].label}"`, Auth.getName(), '', 'b-acc');
+    OrgSettings.set('pmoProfile', profile);
+    if(typeof Trail !== 'undefined') Trail.log(`Perfil de PMO da organização definido como "${DEFS[type].label}"`, Auth.getName(), '', 'b-acc');
     render();
     T.show(`✅ Perfil de PMO definido: ${DEFS[type].label}`);
   }
@@ -6415,7 +6432,7 @@ const PmoProfiles = (() => {
     const profile = get();
     if(profile && DEFS[profile.type]) {
       const d = DEFS[profile.type];
-      parts.push(`Perfil de PMO deste projeto: ${d.label} (nível de controle: ${d.controlLevel}). ${d.guidance}`);
+      parts.push(`Perfil de PMO da organização: ${d.label} (nível de controle: ${d.controlLevel}). ${d.guidance}`);
     }
     const signal = adaptationSignal();
     if(signal) parts.push(signal);
@@ -9755,6 +9772,22 @@ const Agile = (() => {
   function render() { renderAll(); }
   return { render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, setWip, rank, setSprintOf, setBacklogQuery, setShowDone,
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, exportXlsx };
+})();
+</script>
+
+<!-- ■ MODULE: core/org-settings ─ Configurações da organização (valem para todos os projetos): hoje, o Perfil de PMO -->
+<script data-module="core/org-settings">
+const OrgSettings = (() => {
+  const KEY = 'pmo_org_v1';
+  // Estado inicial da demonstração (só vale se nunca houve escolha neste navegador e a nuvem não trouxe outra)
+  const DEMO = { pmoProfile: { type: 'controle', setAt: '2026-06-01T00:00:00.000Z' } };
+  function read() { try { const raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : null; } catch(e) { return null; } }
+  function get(key) { const o = read(); return (o && o[key] !== undefined) ? o[key] : (o ? null : (DEMO[key] || null)); }
+  // Grava só neste navegador (usado ao receber da nuvem)
+  function setLocal(key, value) { const o = read() || {}; o[key] = value; try { localStorage.setItem(KEY, JSON.stringify(o)); } catch(e) {} }
+  // Grava aqui e na nuvem
+  function set(key, value) { setLocal(key, value); if(typeof Cloud !== 'undefined') Cloud.pushOrgSetting(key, value); }
+  return { get, set, setLocal, KEY };
 })();
 </script>
 
