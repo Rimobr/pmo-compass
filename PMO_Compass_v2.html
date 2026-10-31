@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.18.1'
+  version: '2.18.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -13027,10 +13027,10 @@ const Burnout = (() => {
       saved = data.find(x => x.id === modalCtx.id);
       if(saved) { saved.name=name; saved.role=role; saved.allocationPct=alloc; saved.workloadPct=pct; saved.signals=signals; saved.recommendation=rec; }
       T.show('✅ Atualizado!');
-      const acc = document.getElementById('burnout-f-account-wrap');
-      if(saved && acc && acc.style.display !== 'none') saved.userId = document.getElementById('burnout-f-account').value;
       if(statusOf(pct) === 'critico') Trail.log(`${name} entrou em zona crítica de sobrecarga (${pct}%)`, Auth.getName(), 'Atenção necessária', 'b-red');
     }
+    const acc = document.getElementById('burnout-f-account-wrap');
+    if(saved && acc && acc.style.display !== 'none') saved.userId = document.getElementById('burnout-f-account').value;
     persist();
     if(saved && typeof Cloud !== 'undefined') {
       Cloud.pushTeamMember(saved);
@@ -16649,7 +16649,7 @@ const Messaging = (() => {
   <div class="modal-box" style="width:460px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
       <div class="modal-title" id="burnout-modal-title">Novo colaborador</div>
-      <button class="btn btn-sm" onclick="Burnout.closeModal()"><i class="ti ti-x"></i></button>
+      <button class="btn btn-sm" aria-label="Fechar" onclick="Burnout.closeModal()"><i class="ti ti-x"></i></button>
     </div>
     <div class="modal-sub">Carga de trabalho e sinais de sobrecarga</div>
     <div style="display:flex;flex-direction:column;gap:12px">
