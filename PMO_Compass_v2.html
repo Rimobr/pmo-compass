@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.15.1'
+  version: '2.15.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -246,6 +246,10 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 /* Divisor com título: acima, painéis e indicadores (diretoria/PMO); abaixo, a área de quem conduz o projeto */
 .sb-divl{display:flex;align-items:center;gap:8px;margin:12px 4px 6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);white-space:nowrap}
 .sb-divl::before,.sb-divl::after{content:'';flex:1;height:1px;background:var(--b2)}
+/* A área de gestão do projeto tem um fundo levemente diferente: o olho separa "diretoria/PMO" de "gerente e equipe" */
+.sb-proj-area{display:flex;flex-direction:column;gap:1px;background:var(--s2);background:color-mix(in srgb, var(--acc) 6%, var(--s1));border:1px solid var(--b1);border-radius:var(--r8);padding:0 4px 6px;margin:8px -2px 4px}
+.sb-proj-area .sb-divl{margin-top:8px}
+.sidebar.collapsed .sb-proj-area{padding:0 2px 6px;margin:8px 0 4px}
 .sidebar.collapsed .sb-divl span{display:none}
 .sidebar.collapsed .sb-divl::after{display:none}
 .sb-hdr-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;text-transform:none;letter-spacing:0;text-align:left}
@@ -877,6 +881,7 @@ body.icons-failed i[data-fb]::before{
     </div>
   </div>
 
+  <div class="sb-proj-area">
   <div class="sb-divl" role="separator" aria-label="Gestão do projeto — área do gerente de projeto e da equipe"><span>Gestão do projeto</span></div>
   <div class="sb-group" id="sbg-projetos">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-projetos')"><i class="ti ti-layout-grid sb-gico"></i><span class="sb-hdr-txt"><small class="sb-hdr-kicker">Projeto · <span id="sb-method-tag">Híbrido</span></small><b id="sb-proj-name">—</b></span><i class="ti ti-chevron-right sb-gchev"></i></button>
@@ -942,6 +947,7 @@ body.icons-failed i[data-fb]::before{
     </div>
   </div>
 
+  </div><!-- /sb-proj-area -->
   <div class="sb-bottom">
   <div class="sb-group" id="sbg-sistema">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-sistema')"><i class="ti ti-settings sb-gico"></i>Sistema<i class="ti ti-chevron-right sb-gchev"></i></button>
