@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.18.2'
+  version: '2.18.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1448,14 +1448,75 @@ body.icons-failed i[data-fb]::before{
   </div>
 
   <div class="settings-tabs">
-    <button class="settings-tab on" id="stab-ia" onclick="SettingsTabs.show('ia')"><i class="ti ti-cpu"></i>Provedor de IA</button>
-    <button class="settings-tab" id="stab-pmo" onclick="SettingsTabs.show('pmo')"><i class="ti ti-sitemap"></i>Perfil de PMO</button>
-    <button class="settings-tab" id="stab-cloud" onclick="SettingsTabs.show('cloud')"><i class="ti ti-cloud"></i>Nuvem &amp; Automação</button>
-    <button class="settings-tab" id="stab-notif" onclick="SettingsTabs.show('notif')"><i class="ti ti-bell"></i>Notificações &amp; Dados</button>
-    <button class="settings-tab" id="stab-msg" onclick="SettingsTabs.show('msg')"><i class="ti ti-brand-whatsapp"></i>WhatsApp &amp; E-mail</button>
+    <button class="settings-tab on" id="stab-pmo" onclick="SettingsTabs.show('pmo')"><i class="ti ti-route"></i>Projeto &amp; organização</button>
+    <button class="settings-tab" id="stab-acesso" onclick="SettingsTabs.show('acesso')"><i class="ti ti-users"></i>Pessoas &amp; acesso</button>
+    <button class="settings-tab" id="stab-ia" onclick="SettingsTabs.show('ia')"><i class="ti ti-cpu"></i>Inteligência artificial</button>
+    <button class="settings-tab" id="stab-comunic" onclick="SettingsTabs.show('comunic')"><i class="ti ti-bell"></i>Comunicação</button>
+    <button class="settings-tab" id="stab-dados" onclick="SettingsTabs.show('dados')"><i class="ti ti-cloud"></i>Nuvem &amp; dados</button>
   </div>
 
-  <div id="settings-panel-ia">
+  <div id="settings-panel-pmo">
+  <div class="card">
+    <div class="lbl"><i class="ti ti-route"></i>Metodologia deste projeto<span class="help-q" data-help="Define quais telas aparecem no menu deste projeto. Esconder uma tela não apaga nenhum dado: se você mudar de ideia, tudo volta. Projetos antigos ficam como Híbrido (todas as telas). Você pode abrir uma tela escondida pela busca (Ctrl+K) ou ligando 'Mostrar todas as telas'." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Escolha como este projeto é conduzido. O menu mostra só o que faz sentido para o método — menos telas, menos ruído.</p>
+    <div id="method-root" role="radiogroup" aria-label="Metodologia do projeto"></div>
+  </div>
+  <div class="card">
+    <div class="lbl"><i class="ti ti-sitemap"></i>Perfil de PMO da organização<span class="help-q" data-help="O tipo de PMO descreve a sua organização, então vale para TODOS os projetos de uma vez (a metodologia é que muda por projeto). Só o administrador altera. Projetos antigos que tinham um perfil próprio continuam usando-o até a organização escolher o seu." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px">Vale para <strong style="color:var(--t1)">todos os projetos</strong>. Muda o <strong style="color:var(--t1)">tom</strong> das recomendações da IA (Chat, Decisões, Relatório) — mais consultivo, mais rigoroso ou mais prescritivo, conforme o papel real do seu PMO. A IA também ajusta o tom sozinha com base na taxa de aceitação das próprias recomendações neste projeto.</p>
+    <div id="pmo-profile-root"></div>
+  </div>
+  </div><!-- /settings-panel-pmo -->
+
+  <div id="settings-panel-acesso" style="display:none">
+  <div class="card">
+    <div class="lbl"><i class="ti ti-lock-access"></i>Como o acesso funciona</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin:0">Três camadas, nesta ordem: <strong style="color:var(--t1)">1. a conta</strong> (quem entra) tem um <strong style="color:var(--t1)">2. perfil de acesso</strong> (o que pode fazer, em todos os projetos) e é <strong style="color:var(--t1)">3. membro de cada projeto</strong> que pode ver. Só o Administrador altera essas três camadas; os demais perfis veem apenas o que o perfil libera.</p>
+  </div>
+
+  <!-- Só aparece para quem está logado como Administrador via Supabase — antes, promover alguém exigia SQL manual -->
+  <div class="card" id="users-card" style="display:none">
+    <div class="lbl"><i class="ti ti-user-cog"></i>Contas e perfil de cada pessoa</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Promova ou rebaixe o perfil de qualquer conta cadastrada — não precisa mais rodar SQL manual no Supabase (exceto para o primeiríssimo Administrador, que precisa existir antes de qualquer promoção pelo app).</p>
+    <div id="users-list-root"></div>
+    <button class="btn btn-sm" style="margin-top:8px" onclick="Users.refresh()"><i class="ti ti-refresh"></i>Atualizar lista</button>
+  </div>
+
+  <div class="card" id="access-profiles-card" style="display:none">
+    <div class="lbl"><i class="ti ti-id-badge-2"></i>Perfis de acesso</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Cada perfil é um conjunto de permissões. Os perfis prontos cobrem o PMI (gerente, patrocinador), o ágil (dono do produto, Scrum Master, time) e o básico (consulta, suporte); crie outros combinando as permissões. O banco aplica as regras — esconder o botão na tela não é a única barreira.</p>
+    <div id="access-profiles-root"></div>
+    <button class="btn btn-sm" style="margin-top:8px" onclick="Users.newProfile()"><i class="ti ti-plus"></i>Novo perfil</button>
+  </div>
+
+  <!-- Só aparece para quem está logado como Administrador via Supabase — gestão de acesso pelo
+       lado do PROJETO (não do usuário), pra escalar quando o portfólio tiver dezenas de projetos:
+       ver [[feedback_permission_ui_scale]]. -->
+  <div class="card" id="project-members-card" style="display:none">
+    <div class="lbl"><i class="ti ti-users"></i>Membros deste projeto</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Administradores sempre veem o portfólio inteiro. Para os outros perfis, escolha aqui quem tem acesso a <strong style="color:var(--t1)" id="project-members-name">este projeto</strong> — a lista fica por projeto, não por pessoa, pra continuar simples mesmo com muitos projetos.</p>
+    <div id="project-members-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
+    <div class="btn-row">
+      <select class="input" id="project-members-add-select" aria-label="Adicionar pessoa ao projeto" style="width:auto;min-width:220px"></select>
+      <button class="btn btn-sm btn-acc" onclick="ProjectMembers.add()"><i class="ti ti-user-plus"></i>Adicionar</button>
+    </div>
+  </div>
+
+  <!-- Só aparece para Administrador logado — registro append-only de eventos sensíveis (login,
+       promoção de perfil, backup, reset de dados, tentativa bloqueada por permissão). Ver
+       schema.sql seção 9: nem um Administrador consegue editar/apagar uma linha via API. -->
+  <div class="card" id="audit-log-card" style="display:none">
+    <div class="lbl"><i class="ti ti-shield-check"></i>Log de auditoria</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Registro append-only de eventos sensíveis de governança — ninguém, nem Administrador, consegue editar ou apagar uma linha depois de gravada (nem pela tela, nem pela API). Só os últimos 500 eventos são exibidos aqui; exporte em CSV para um histórico maior.</p>
+    <div class="btn-row" style="margin-bottom:10px">
+      <button class="btn btn-sm" onclick="AuditLog.refresh()"><i class="ti ti-refresh"></i>Atualizar</button>
+      <button class="btn btn-sm" onclick="AuditLog.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button>
+    </div>
+    <div id="audit-log-root" style="max-height:340px;overflow-y:auto"></div>
+  </div>
+  </div><!-- /settings-panel-acesso -->
+
+  <div id="settings-panel-ia" style="display:none">
   <div class="card">
     <div class="lbl"><i class="ti ti-cpu"></i>Provedor de IA</div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px">Escolha qual IA processa o Chat, as decisões e a análise de documentos. Você pode configurar mais de um provedor e trocar quando quiser.</p>
@@ -1492,35 +1553,34 @@ body.icons-failed i[data-fb]::before{
     </div>
   </div>
 
+  <div class="card">
+    <div class="lbl"><i class="ti ti-brain"></i>IA e análise</div>
+    <div class="set-row"><div><div class="set-lbl">Sugestões automáticas de decisão</div><div class="set-sub">O Raio-X do Projeto propõe decisões a partir do que a IA extrai do documento</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Sugestões automáticas de decisão" data-pref="autoSuggestDecisions" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Detecção de riscos em novos documentos</div><div class="set-sub">O Raio-X do Projeto inclui os riscos futuros que a IA identificar no documento</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Detecção de riscos em novos documentos" data-pref="autoRiskDetection" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Comparação com projetos históricos</div><div class="set-sub">Lições Aprendidas entram no contexto enviado à IA (Chat e Decisões)</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Comparação com projetos históricos" data-pref="useHistoricalContext" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Burnout Radar automático</div><div class="set-sub">Mostra no Dashboard quando algum colaborador atinge 80%+ de carga</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Burnout Radar automático" data-pref="autoBurnoutRadar" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+  </div>
   </div><!-- /settings-panel-ia -->
 
-  <div id="settings-panel-pmo" style="display:none">
+  <div id="settings-panel-comunic" style="display:none">
   <div class="card">
-    <div class="lbl"><i class="ti ti-route"></i>Metodologia deste projeto<span class="help-q" data-help="Define quais telas aparecem no menu deste projeto. Esconder uma tela não apaga nenhum dado: se você mudar de ideia, tudo volta. Projetos antigos ficam como Híbrido (todas as telas). Você pode abrir uma tela escondida pela busca (Ctrl+K) ou ligando 'Mostrar todas as telas'." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Escolha como este projeto é conduzido. O menu mostra só o que faz sentido para o método — menos telas, menos ruído.</p>
-    <div id="method-root" role="radiogroup" aria-label="Metodologia do projeto"></div>
+    <div class="lbl"><i class="ti ti-bell"></i>Notificações</div>
+    <div class="set-row"><div><div class="set-lbl">Alertas de risco crítico</div><div class="set-sub">Mostra no Dashboard quando há decisão crítica pendente (você precisa abrir o app)</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Alertas de risco crítico" data-pref="criticalRiskAlerts" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Status report semanal automático <span class="badge b-amb" style="margin-left:4px">Versão futura</span></div><div class="set-sub">Geração e envio agendados (toda segunda às 08h) sem precisar abrir o app — depende de um processo de servidor ainda não construído (roadmap P7)</div></div><div class="toggle" role="switch" aria-checked="false" aria-disabled="true" tabindex="-1" aria-label="Status report semanal automático — versão futura, indisponível" style="opacity:.4;cursor:not-allowed" onclick="T.show('🔒 Versão futura — depende de um processo agendado no servidor (roadmap P7), ainda não construído.')"></div></div>
+    <div class="set-row"><div><div class="set-lbl">Lembrete de decisões pendentes</div><div class="set-sub">Mostra no Dashboard quando uma decisão fica mais de 5 dias sem ação (você precisa abrir o app)</div></div><div class="toggle" role="switch" aria-checked="false" tabindex="0" aria-label="Lembrete de decisões pendentes" data-pref="pendingDecisionReminder" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+  </div>
+  <div id="settings-panel-msg" style="display:none">
+    <div id="msg-root"></div>
   </div>
   <div class="card">
-    <div class="lbl"><i class="ti ti-sitemap"></i>Perfil de PMO da organização<span class="help-q" data-help="O tipo de PMO descreve a sua organização, então vale para TODOS os projetos de uma vez (a metodologia é que muda por projeto). Só o administrador altera. Projetos antigos que tinham um perfil próprio continuam usando-o até a organização escolher o seu." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px">Vale para <strong style="color:var(--t1)">todos os projetos</strong>. Muda o <strong style="color:var(--t1)">tom</strong> das recomendações da IA (Chat, Decisões, Relatório) — mais consultivo, mais rigoroso ou mais prescritivo, conforme o papel real do seu PMO. A IA também ajusta o tom sozinha com base na taxa de aceitação das próprias recomendações neste projeto.</p>
-    <div id="pmo-profile-root"></div>
+    <div class="lbl"><i class="ti ti-plug"></i>Integrações</div>
+    <div class="set-row"><div><div class="set-lbl">Google Drive</div><div class="set-sub">Indexar documentos automaticamente de uma pasta do Drive</div></div><button class="btn btn-sm" data-perm="settings" onclick="T.show('🔒 Versão futura — exige registrar um app OAuth no Google Cloud (fora do escopo desta instância por enquanto).')"><i class="ti ti-plug"></i>Em breve</button></div>
+    <div class="set-row"><div><div class="set-lbl">Microsoft Teams</div><div class="set-sub">Enviar status report e alertas via canal do Teams</div></div><button class="btn btn-sm" data-perm="settings" onclick="T.show('Em breve — Microsoft Teams')"><i class="ti ti-plug"></i>Em breve</button></div>
+    <div class="set-row"><div><div class="set-lbl">Slack</div><div class="set-sub">Receber decisões e alertas no canal do Slack</div></div><button class="btn btn-sm" data-perm="settings" onclick="T.show('Em breve — Slack')"><i class="ti ti-plug"></i>Em breve</button></div>
   </div>
+  </div><!-- /settings-panel-comunic -->
 
-  <!-- Só aparece para quem está logado como Administrador via Supabase — gestão de acesso pelo
-       lado do PROJETO (não do usuário), pra escalar quando o portfólio tiver dezenas de projetos:
-       ver [[feedback_permission_ui_scale]]. -->
-  <div class="card" id="project-members-card" style="display:none">
-    <div class="lbl"><i class="ti ti-users"></i>Membros deste projeto</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Administradores sempre veem o portfólio inteiro. Para os outros perfis, escolha aqui quem tem acesso a <strong style="color:var(--t1)" id="project-members-name">este projeto</strong> — a lista fica por projeto, não por pessoa, pra continuar simples mesmo com muitos projetos.</p>
-    <div id="project-members-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
-    <div class="btn-row">
-      <select class="input" id="project-members-add-select" aria-label="Adicionar pessoa ao projeto" style="width:auto;min-width:220px"></select>
-      <button class="btn btn-sm btn-acc" onclick="ProjectMembers.add()"><i class="ti ti-user-plus"></i>Adicionar</button>
-    </div>
-  </div>
-  </div><!-- /settings-panel-pmo -->
-
-  <div id="settings-panel-cloud" style="display:none">
+  <div id="settings-panel-dados" style="display:none">
   <div class="card" data-perm="settings">
     <div class="lbl"><i class="ti ti-cloud"></i>Backend em nuvem (Supabase) — opcional</div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px">Sem configurar nada aqui, o app continua funcionando 100% localmente neste navegador (como hoje). Conectar um projeto Supabase faz WBS, Decisões e Repositório serem salvos de verdade na nuvem, sincronizados entre dispositivos, com os 4 perfis de acesso validados pelo próprio banco de dados.</p>
@@ -1547,71 +1607,8 @@ body.icons-failed i[data-fb]::before{
     </div>
   </div>
 
-  <!-- Só aparece para quem está logado como Administrador via Supabase — antes, promover alguém exigia SQL manual -->
-  <div class="card" id="users-card" style="display:none">
-    <div class="lbl"><i class="ti ti-users"></i>Usuários (perfis do Supabase)</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Promova ou rebaixe o perfil de qualquer conta cadastrada — não precisa mais rodar SQL manual no Supabase (exceto para o primeiríssimo Administrador, que precisa existir antes de qualquer promoção pelo app).</p>
-    <div id="users-list-root"></div>
-    <button class="btn btn-sm" style="margin-top:8px" onclick="Users.refresh()"><i class="ti ti-refresh"></i>Atualizar lista</button>
-  </div>
-
-  <div class="card" id="access-profiles-card" style="display:none">
-    <div class="lbl"><i class="ti ti-id-badge-2"></i>Perfis de acesso</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Cada perfil é um conjunto de permissões. Os perfis prontos cobrem o PMI (gerente, patrocinador), o ágil (dono do produto, Scrum Master, time) e o básico (consulta, suporte); crie outros combinando as permissões. O banco aplica as regras — esconder o botão na tela não é a única barreira.</p>
-    <div id="access-profiles-root"></div>
-    <button class="btn btn-sm" style="margin-top:8px" onclick="Users.newProfile()"><i class="ti ti-plus"></i>Novo perfil</button>
-  </div>
-
-  <!-- Só aparece para Administrador logado — registro append-only de eventos sensíveis (login,
-       promoção de perfil, backup, reset de dados, tentativa bloqueada por permissão). Ver
-       schema.sql seção 9: nem um Administrador consegue editar/apagar uma linha via API. -->
-  <div class="card" id="audit-log-card" style="display:none">
-    <div class="lbl"><i class="ti ti-shield-check"></i>Log de auditoria</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Registro append-only de eventos sensíveis de governança — ninguém, nem Administrador, consegue editar ou apagar uma linha depois de gravada (nem pela tela, nem pela API). Só os últimos 500 eventos são exibidos aqui; exporte em CSV para um histórico maior.</p>
-    <div class="btn-row" style="margin-bottom:10px">
-      <button class="btn btn-sm" onclick="AuditLog.refresh()"><i class="ti ti-refresh"></i>Atualizar</button>
-      <button class="btn btn-sm" onclick="AuditLog.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button>
-    </div>
-    <div id="audit-log-root" style="max-height:340px;overflow-y:auto"></div>
-  </div>
-
-  <!-- Só aparece para Administrador logado — apaga os dados COMPARTILHADOS na nuvem (visíveis pra
-       qualquer pessoa que logar) e os dados de demonstração deste navegador, pra preparar o app
-       antes de convidar usuários reais. -->
-  <div class="card" id="reset-shared-card" style="display:none">
-    <div class="lbl"><i class="ti ti-alert-triangle" style="color:var(--red)"></i>Zona de risco — resetar para novos usuários</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Apaga <strong style="color:var(--t1)">todos</strong> os dados compartilhados na nuvem (WBS, decisões, documentos, orçamento e custos — visíveis pra qualquer pessoa que fizer login, não só você) e os dados de demonstração salvos neste navegador. Contas de usuário e chaves de IA de cada pessoa não são afetadas. Use antes de convidar novos usuários reais, pra que ninguém veja dado de teste.</p>
-    <button class="btn btn-sm btn-red" onclick="Cloud.resetForNewUsers()"><i class="ti ti-eraser"></i>Resetar dados para novos usuários</button>
-  </div>
-
   <div class="card">
-    <div class="lbl"><i class="ti ti-brain"></i>IA e análise</div>
-    <div class="set-row"><div><div class="set-lbl">Sugestões automáticas de decisão</div><div class="set-sub">O Raio-X do Projeto propõe decisões a partir do que a IA extrai do documento</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Sugestões automáticas de decisão" data-pref="autoSuggestDecisions" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
-    <div class="set-row"><div><div class="set-lbl">Detecção de riscos em novos documentos</div><div class="set-sub">O Raio-X do Projeto inclui os riscos futuros que a IA identificar no documento</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Detecção de riscos em novos documentos" data-pref="autoRiskDetection" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
-    <div class="set-row"><div><div class="set-lbl">Comparação com projetos históricos</div><div class="set-sub">Lições Aprendidas entram no contexto enviado à IA (Chat e Decisões)</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Comparação com projetos históricos" data-pref="useHistoricalContext" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
-    <div class="set-row"><div><div class="set-lbl">Burnout Radar automático</div><div class="set-sub">Mostra no Dashboard quando algum colaborador atinge 80%+ de carga</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Burnout Radar automático" data-pref="autoBurnoutRadar" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
-  </div>
-  </div><!-- /settings-panel-cloud -->
-
-  <div id="settings-panel-msg" style="display:none">
-    <div id="msg-root"></div>
-  </div>
-
-  <div id="settings-panel-notif" style="display:none">
-  <div class="card">
-    <div class="lbl"><i class="ti ti-bell"></i>Notificações</div>
-    <div class="set-row"><div><div class="set-lbl">Alertas de risco crítico</div><div class="set-sub">Mostra no Dashboard quando há decisão crítica pendente (você precisa abrir o app)</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Alertas de risco crítico" data-pref="criticalRiskAlerts" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
-    <div class="set-row"><div><div class="set-lbl">Status report semanal automático <span class="badge b-amb" style="margin-left:4px">Versão futura</span></div><div class="set-sub">Geração e envio agendados (toda segunda às 08h) sem precisar abrir o app — depende de um processo de servidor ainda não construído (roadmap P7)</div></div><div class="toggle" role="switch" aria-checked="false" aria-disabled="true" tabindex="-1" aria-label="Status report semanal automático — versão futura, indisponível" style="opacity:.4;cursor:not-allowed" onclick="T.show('🔒 Versão futura — depende de um processo agendado no servidor (roadmap P7), ainda não construído.')"></div></div>
-    <div class="set-row"><div><div class="set-lbl">Lembrete de decisões pendentes</div><div class="set-sub">Mostra no Dashboard quando uma decisão fica mais de 5 dias sem ação (você precisa abrir o app)</div></div><div class="toggle" role="switch" aria-checked="false" tabindex="0" aria-label="Lembrete de decisões pendentes" data-pref="pendingDecisionReminder" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
-  </div>
-  <div class="card">
-    <div class="lbl"><i class="ti ti-plug"></i>Integrações</div>
-    <div class="set-row"><div><div class="set-lbl">Google Drive</div><div class="set-sub">Indexar documentos automaticamente de uma pasta do Drive</div></div><button class="btn btn-sm" data-perm="settings" onclick="T.show('🔒 Versão futura — exige registrar um app OAuth no Google Cloud (fora do escopo desta instância por enquanto).')"><i class="ti ti-plug"></i>Em breve</button></div>
-    <div class="set-row"><div><div class="set-lbl">Microsoft Teams</div><div class="set-sub">Enviar status report e alertas via canal do Teams</div></div><button class="btn btn-sm" data-perm="settings" onclick="T.show('Em breve — Microsoft Teams')"><i class="ti ti-plug"></i>Em breve</button></div>
-    <div class="set-row"><div><div class="set-lbl">Slack</div><div class="set-sub">Receber decisões e alertas no canal do Slack</div></div><button class="btn btn-sm" data-perm="settings" onclick="T.show('Em breve — Slack')"><i class="ti ti-plug"></i>Em breve</button></div>
-  </div>
-  <div class="card">
-    <div class="lbl"><i class="ti ti-info-circle"></i>Sobre o <span data-brand="name">PMO Compass</span></div>
+    <div class="lbl"><i class="ti ti-database-cog"></i>Dados, backup e sobre o <span data-brand="name">PMO Compass</span></div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:12px"><strong style="color:var(--t1)"><span data-brand="name">PMO Compass</span> v<span data-brand="version">2.0.0</span></strong><br>
       Aplicação HTML standalone · 147 KB · 18 páginas · 52 módulos. Funciona 100% localmente sem nenhuma configuração — nuvem (Supabase) e IA são opcionais e só trocam dados pela rede quando você conecta um provedor.<br><br>
       Compartilhe o arquivo <code style="font-family:var(--font-mono);font-size:11px;background:var(--s2);padding:1px 5px;border-radius:3px">.html</code> em branco com qualquer pessoa — zero instalação, zero dado seu junto (dados ficam no navegador de quem abre, não no arquivo).<br>
@@ -1636,7 +1633,16 @@ body.icons-failed i[data-fb]::before{
       D=Dashboard &nbsp;E=Decisões &nbsp;B=Burnout &nbsp;R=Colaboradores &nbsp;W=What-If &nbsp;L=Lições &nbsp;A=Atas &nbsp;T=Trilha &nbsp;P=Report &nbsp;C=Chat &nbsp;F=Repositório &nbsp;K=Stakeholders &nbsp;X=Scope &nbsp;I=Estimativas &nbsp;J=Loop &nbsp;Z=WBS &nbsp;?=Ajuda
     </div>
   </div>
-  </div><!-- /settings-panel-notif -->
+
+  <!-- Só aparece para Administrador logado — apaga os dados COMPARTILHADOS na nuvem (visíveis pra
+       qualquer pessoa que logar) e os dados de demonstração deste navegador, pra preparar o app
+       antes de convidar usuários reais. -->
+  <div class="card" id="reset-shared-card" style="display:none">
+    <div class="lbl"><i class="ti ti-alert-triangle" style="color:var(--red)"></i>Zona de risco — resetar para novos usuários</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Apaga <strong style="color:var(--t1)">todos</strong> os dados compartilhados na nuvem (WBS, decisões, documentos, orçamento e custos — visíveis pra qualquer pessoa que fizer login, não só você) e os dados de demonstração salvos neste navegador. Contas de usuário e chaves de IA de cada pessoa não são afetadas. Use antes de convidar novos usuários reais, pra que ninguém veja dado de teste.</p>
+    <button class="btn btn-sm btn-red" onclick="Cloud.resetForNewUsers()"><i class="ti ti-eraser"></i>Resetar dados para novos usuários</button>
+  </div>
+  </div><!-- /settings-panel-dados -->
 </section>
 
 
@@ -6175,9 +6181,9 @@ const Nav = (() => {
 })();
 
 const SettingsTabs = (() => {
-  const TABS = ['ia','pmo','cloud','notif','msg'];
+  const TABS = ['pmo','acesso','ia','comunic','dados'];
   function show(tab) {
-    if(tab === 'msg' && typeof Messaging !== 'undefined') Messaging.render();
+    if(tab === 'comunic' && typeof Messaging !== 'undefined') Messaging.render();
     TABS.forEach(t => {
       const panel = document.getElementById('settings-panel-' + t);
       const btn = document.getElementById('stab-' + t);
