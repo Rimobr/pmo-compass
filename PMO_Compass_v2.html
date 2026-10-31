@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.18.5'
+  version: '2.18.6'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1483,12 +1483,15 @@ body.icons-failed i[data-fb]::before{
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin:0">Três camadas, nesta ordem: <strong style="color:var(--t1)">1. a conta</strong> (quem entra) tem um <strong style="color:var(--t1)">2. perfil de acesso</strong> (o que pode fazer, em todos os projetos) e é <strong style="color:var(--t1)">3. membro de cada projeto</strong> que pode ver. Só o Administrador altera essas três camadas; os demais perfis veem apenas o que o perfil libera.</p>
   </div>
 
-  <!-- Só aparece para quem está logado como Administrador via Supabase — antes, promover alguém exigia SQL manual -->
   <div class="card" id="users-card" style="display:none">
-    <div class="lbl"><i class="ti ti-user-cog"></i>Contas e perfil de cada pessoa</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Promova ou rebaixe o perfil de qualquer conta cadastrada — não precisa mais rodar SQL manual no Supabase (exceto para o primeiríssimo Administrador, que precisa existir antes de qualquer promoção pelo app).</p>
+    <div class="lbl"><i class="ti ti-users"></i>Pessoas e acesso<span class="help-q" data-help="Cada pessoa tem um perfil (o que ela pode fazer) e os projetos que ela pode abrir. Administradores veem todos os projetos. Aqui você muda as duas coisas no mesmo lugar, sem trocar de tela." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Para cada pessoa: escolha o <strong style="color:var(--t1)">perfil</strong> e inclua nos <strong style="color:var(--t1)">projetos</strong> que ela pode ver. Quem acabou de criar a conta aparece sem projetos até você incluí-la.</p>
+    <div class="btn-row" style="margin-bottom:10px">
+      <input class="input" id="users-q" type="search" placeholder="Buscar pessoa…" aria-label="Buscar pessoa" style="max-width:240px" oninput="Users.setFilter()">
+      <select class="input" id="users-proj" aria-label="Filtrar por projeto" style="width:auto;max-width:300px" onchange="Users.setFilter()"></select>
+      <button class="btn btn-sm" onclick="Users.refresh()"><i class="ti ti-refresh"></i>Atualizar</button>
+    </div>
     <div id="users-list-root"></div>
-    <button class="btn btn-sm" style="margin-top:8px" onclick="Users.refresh()"><i class="ti ti-refresh"></i>Atualizar lista</button>
   </div>
 
   <div class="card" id="access-profiles-card" style="display:none">
@@ -1496,19 +1499,6 @@ body.icons-failed i[data-fb]::before{
     <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Cada perfil é um conjunto de permissões. Os perfis prontos cobrem o PMI (gerente, patrocinador), o ágil (dono do produto, Scrum Master, time) e o básico (consulta, suporte); crie outros combinando as permissões. O banco aplica as regras — esconder o botão na tela não é a única barreira.</p>
     <div id="access-profiles-root"></div>
     <button class="btn btn-sm" style="margin-top:8px" onclick="Users.newProfile()"><i class="ti ti-plus"></i>Novo perfil</button>
-  </div>
-
-  <!-- Só aparece para quem está logado como Administrador via Supabase — gestão de acesso pelo
-       lado do PROJETO (não do usuário), pra escalar quando o portfólio tiver dezenas de projetos:
-       ver [[feedback_permission_ui_scale]]. -->
-  <div class="card" id="project-members-card" style="display:none">
-    <div class="lbl"><i class="ti ti-users"></i>Membros deste projeto</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Administradores sempre veem o portfólio inteiro. Para os outros perfis, escolha aqui quem tem acesso a <strong style="color:var(--t1)" id="project-members-name">este projeto</strong> — a lista fica por projeto, não por pessoa, pra continuar simples mesmo com muitos projetos.</p>
-    <div id="project-members-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
-    <div class="btn-row">
-      <select class="input" id="project-members-add-select" aria-label="Adicionar pessoa ao projeto" style="width:auto;min-width:220px"></select>
-      <button class="btn btn-sm btn-acc" onclick="ProjectMembers.add()"><i class="ti ti-user-plus"></i>Adicionar</button>
-    </div>
   </div>
 
   <!-- Só aparece para Administrador logado — registro append-only de eventos sensíveis (login,
@@ -4894,24 +4884,57 @@ const Users = (() => {
     renderProfiles();
   }
 
+  // Lista de pessoas com perfil e projetos no mesmo lugar (filtra por nome ou por projeto)
+  let people = [], access = [];
+  const projectsAll = () => DB.listProjects().slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'));
+  const projName = id => (projectsAll().find(p => p.id === id) || {}).name || id;
   async function refresh() {
     const root = document.getElementById('users-list-root');
     if(!root) return;
-    root.innerHTML = `<div style="font-size:12px;color:var(--t3)"><i class="ti ti-loader-2"></i> Carregando…</div>`;
-    const profiles = await Cloud.listProfiles();
-    if(!profiles.length) { root.innerHTML = `<div style="font-size:12px;color:var(--t3)">Nenhum perfil encontrado.</div>`; return; }
+    root.innerHTML = '<div style="font-size:12px;color:var(--t3)"><i class="ti ti-loader-2"></i> Carregando…</div>';
+    [people, access] = await Promise.all([Cloud.listProfiles(), Cloud.listAllProjectAccess()]);
+    const sel = document.getElementById('users-proj');
+    if(sel) { const keep = sel.value; sel.innerHTML = '<option value="">Todos os projetos</option>' + projectsAll().map(p => `<option value="${p.id}">${escapeHtml(p.name || p.id)}</option>`).join(''); sel.value = keep || ''; }
+    renderPeople();
+  }
+  function setFilter() { renderPeople(); }
+  function renderPeople() {
+    const root = document.getElementById('users-list-root');
+    if(!root) return;
+    if(!people.length) { root.innerHTML = '<div style="font-size:12px;color:var(--t3)">Nenhuma conta encontrada.</div>'; return; }
+    const q = ((document.getElementById('users-q') || {}).value || '').trim().toLowerCase();
+    const proj = (document.getElementById('users-proj') || {}).value || '';
     const myId = Cloud.getUserId();
-    root.innerHTML = profiles.map(p => {
-      const isMe = p.id === myId;
-      const opts = Object.keys(defs()).map(r => `<option value="${r}"${r===p.role?' selected':''}>${escapeHtml(roleName(r))}</option>`).join('');
-      return `<div class="set-row">
-        <div>
-          <div class="set-lbl">${escapeHtml(p.name || '(sem nome)')}${isMe ? ' <span class="badge b-acc">você</span>' : ''}</div>
-          <div class="set-sub" style="font-family:var(--font-mono);font-size:11px">${escapeHtml(p.id)}</div>
+    const mine = pid => new Set(access.filter(a => a.user_id === pid).map(a => a.project_id));
+    const list = people.filter(p => (!q || (p.name || '').toLowerCase().includes(q)) && (!proj || p.role === 'admin' || mine(p.id).has(proj)));
+    if(!list.length) { root.innerHTML = '<div style="font-size:12px;color:var(--t3)">Ninguém corresponde ao filtro.</div>'; return; }
+    const all = projectsAll();
+    root.innerHTML = list.map(p => {
+      const isMe = p.id === myId, nm = escapeHtml(p.name || '(sem nome)');
+      const opts = Object.keys(defs()).map(r => `<option value="${r}"${r === p.role ? ' selected' : ''}>${escapeHtml(roleName(r))}</option>`).join('');
+      const has = mine(p.id), isAdmin = p.role === 'admin';
+      const chips = isAdmin
+        ? '<span class="chip"><i class="ti ti-infinity"></i> Todos os projetos</span>'
+        : (all.filter(x => has.has(x.id)).map(x => `<span class="chip">${escapeHtml(x.name || x.id)} <button class="link-a" style="padding:0 2px" aria-label="Remover ${nm} do projeto ${escapeHtml(x.name || x.id)}" onclick="Users.removeAccess('${p.id}','${x.id}')"><i class="ti ti-x"></i></button></span>`).join('') || '<span style="font-size:12px;color:var(--t3)">Nenhum projeto ainda</span>');
+      const free = all.filter(x => !has.has(x.id));
+      const add = isAdmin ? '' : `<select class="input" style="width:auto;max-width:240px" aria-label="Incluir ${nm} em um projeto" onchange="Users.addAccess('${p.id}', this)"${free.length ? '' : ' disabled'}><option value="">${free.length ? '+ Incluir em um projeto…' : 'Em todos os projetos'}</option>${free.map(x => `<option value="${x.id}">${escapeHtml(x.name || x.id)}</option>`).join('')}</select>`;
+      return `<div class="set-row" style="align-items:flex-start;flex-wrap:wrap;gap:10px">
+        <div style="min-width:180px;flex:1 1 180px"><div class="set-lbl">${nm}${isMe ? ' <span class="badge b-acc">você</span>' : ''}</div><div class="set-sub" style="font-family:var(--font-mono);font-size:11px" title="Identificador da conta">${escapeHtml(p.id.slice(0, 8))}…</div></div>
+        <div style="flex:2 1 280px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><select class="input" style="width:auto" aria-label="Perfil de acesso de ${nm}" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>${add}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">${chips}</div>
         </div>
-        <select class="input" style="width:auto" aria-label="Perfil de acesso de ${escapeHtml(p.name || '(sem nome)')}" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>
       </div>`;
     }).join('');
+  }
+  async function addAccess(userId, selEl) {
+    const pid = selEl.value; if(!pid) return;
+    if(await Cloud.setProjectAccess(userId, pid, true)) { access.push({ project_id: pid, user_id: userId }); T.show('✅ Incluído em ' + projName(pid) + '.'); }
+    renderPeople();
+  }
+  async function removeAccess(userId, pid) {
+    if(await Cloud.setProjectAccess(userId, pid, false)) { access = access.filter(a => !(a.project_id === pid && a.user_id === userId)); T.show('✅ Acesso a ' + projName(pid) + ' removido.'); }
+    renderPeople();
   }
 
   async function changeRole(userId, role, isMe) {
@@ -4928,70 +4951,13 @@ const Users = (() => {
     }
   }
 
-  return { render, refresh, changeRole, newProfile, editProfile, cancelProfile, saveProfile, removeProfile };
+  return { render, refresh, setFilter, addAccess, removeAccess, changeRole, newProfile, editProfile, cancelProfile, saveProfile, removeProfile };
 })();
 </script>
 
-<!-- ■ MODULE: ui/project-members ─ Quem pode ver ESTE projeto (gestão pelo lado do projeto, não
-     pelo lado da pessoa — evita listar N projetos por usuário quando o portfólio cresce). -->
+<!-- ■ MODULE: ui/project-members ─ (aposentado) o acesso por projeto agora é gerido junto com o perfil, em Configurações → Pessoas & acesso (módulo ui/users) -->
 <script data-module="ui/project-members">
-const ProjectMembers = (() => {
-  const ROLE_LABEL = new Proxy({}, { get: (_, r) => (typeof r === 'string' && Auth.getProfileDefs()[r]) ? Auth.getProfileDefs()[r].name : undefined });
-  function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-  let profiles = [];
-  let access = []; // [{project_id, user_id}]
-
-  function eligible() { return (typeof Cloud !== 'undefined') && Cloud.isSignedIn() && typeof Auth !== 'undefined' && Auth.getRole() === 'admin'; }
-
-  async function render() {
-    const card = document.getElementById('project-members-card');
-    if(!card) return;
-    const ok = eligible();
-    card.style.display = ok ? '' : 'none';
-    if(!ok) return;
-    const pid = DB.getActiveProjectId();
-    const nameEl = document.getElementById('project-members-name');
-    if(nameEl) { const proj = (DB.listProjects().find(p => p.id === pid) || {}); nameEl.textContent = proj.name || pid; }
-    [profiles, access] = await Promise.all([Cloud.listProfiles(), Cloud.listAllProjectAccess()]);
-    renderList();
-  }
-
-  function renderList() {
-    const listEl = document.getElementById('project-members-list');
-    const selectEl = document.getElementById('project-members-add-select');
-    if(!listEl || !selectEl) return;
-    const pid = DB.getActiveProjectId();
-    const memberIds = new Set(access.filter(a => a.project_id === pid).map(a => a.user_id));
-    // Administrador enxerga todo o portfólio por definição — não precisa aparecer como "membro".
-    const members = profiles.filter(p => p.role !== 'admin' && memberIds.has(p.id));
-    const nonMembers = profiles.filter(p => p.role !== 'admin' && !memberIds.has(p.id));
-    listEl.innerHTML = members.length
-      ? members.map(p => `<span class="chip">${escapeHtml(p.name || '(sem nome)')} <span style="color:var(--t3)">· ${ROLE_LABEL[p.role] || p.role}</span> <i class="ti ti-x" style="cursor:pointer;margin-left:2px" title="Remover acesso" onclick="ProjectMembers.remove('${p.id}')"></i></span>`).join('')
-      : `<div style="font-size:12px;color:var(--t3)">Só Administradores têm acesso a este projeto por enquanto.</div>`;
-    selectEl.innerHTML = nonMembers.length
-      ? `<option value="">Adicionar pessoa…</option>` + nonMembers.map(p => `<option value="${p.id}">${escapeHtml(p.name || p.id)} (${ROLE_LABEL[p.role] || p.role})</option>`).join('')
-      : `<option value="">Todo mundo já tem acesso</option>`;
-    selectEl.disabled = !nonMembers.length;
-  }
-
-  async function add() {
-    const selectEl = document.getElementById('project-members-add-select');
-    const userId = selectEl && selectEl.value;
-    if(!userId) return;
-    const pid = DB.getActiveProjectId();
-    const ok = await Cloud.setProjectAccess(userId, pid, true);
-    if(ok) { access.push({ project_id: pid, user_id: userId }); renderList(); T.show('✅ Acesso concedido.'); }
-  }
-
-  async function remove(userId) {
-    const pid = DB.getActiveProjectId();
-    const ok = await Cloud.setProjectAccess(userId, pid, false);
-    if(ok) { access = access.filter(a => !(a.project_id === pid && a.user_id === userId)); renderList(); T.show('✅ Acesso revogado.'); }
-  }
-
-  return { render, add, remove };
-})();
+const ProjectMembers = { render() {} };
 </script>
 
 <!-- ■ MODULE: ui/audit-log ─ Registro append-only de eventos sensíveis (login, promoção de perfil,
@@ -6036,7 +6002,7 @@ const R = (() => {
     if(typeof Agile !== 'undefined') Agile.renderDashboard();
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
     if(id === 'settings' && typeof PmoProfiles !== 'undefined') PmoProfiles.render();
-    if(id === 'settings' && typeof ProjectMembers !== 'undefined') ProjectMembers.render();
+    if(id === 'settings' && typeof Users !== 'undefined') Users.render();
     if(typeof Nav !== 'undefined') { Nav.revealArea(id); Nav.expandGroupFor(id); Nav.renderBreadcrumb(id); Nav.closeDrawer(); }
     if(typeof Methodology !== 'undefined') { Methodology.apply(); Methodology.notice(id); if(id === 'settings') Methodology.render(); }
   }
