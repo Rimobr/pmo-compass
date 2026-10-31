@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.16.0'
+  version: '2.17.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -873,7 +873,6 @@ body.icons-failed i[data-fb]::before{
   <div class="sb-group" id="sbg-indicadores">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-indicadores')"><i class="ti ti-chart-donut-3 sb-gico"></i>Indicadores<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
-      <button class="si on" data-p="dashboard" onclick="R.go('dashboard')"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
       <button class="si" data-p="pfkpi" onclick="R.go('pfkpi')"><i class="ti ti-chart-donut-3"></i>Indicadores</button>
       <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
       <button class="si" data-p="prioritization" onclick="R.go('prioritization')"><i class="ti ti-sort-descending-2"></i>Priorização</button>
@@ -888,11 +887,13 @@ body.icons-failed i[data-fb]::before{
     <div class="sb-group-body" id="sbg-projetos-list">
       <div id="sb-projects-root"></div>
       <div id="sb-method-legend"></div>
+      <button class="si" data-perm="business" onclick="R.go('settings');SettingsTabs.show('pmo')" title="Muda quais telas aparecem para este projeto (Ágil, Cascata ou Híbrido)"><i class="ti ti-route"></i>Mudar metodologia do projeto</button>
       <button class="si" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
     </div>
   </div>
 
-  <div class="sb-sec" title="As ações abaixo valem para o projeto escolhido acima">Ações do projeto escolhido</div>
+  <button class="si on" data-p="dashboard" onclick="R.go('dashboard')" title="Visão geral do projeto escolhido: prazo ou ritmo, custo, equipe, riscos e alertas"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
+  <div class="sb-sec" title="As ações abaixo valem para o projeto escolhido acima">Ações do projeto</div>
 
   <div class="sb-group" id="sbg-agil">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-agil')"><i class="ti ti-layout-kanban sb-gico"></i>Execução ágil<i class="ti ti-chevron-right sb-gchev"></i></button>
@@ -967,7 +968,7 @@ body.icons-failed i[data-fb]::before{
 <!-- ■ MODULE: pages/dashboard -->
 <section class="page on" id="p-dashboard" data-module="pages/dashboard">
   <div class="pg-hdr">
-    <div><div class="pg-title"><span id="dash-project-title">Portal Nexus — Controle de Estoque</span><span class="help-q" data-help="Visão geral do projeto: prazo, orçamento, riscos e decisões pendentes, tudo num só lugar, atualizado com dado real do que já foi cadastrado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Atualizado <span id="dash-updated">—</span> · <span class="pg-sub-link" role="button" tabindex="0" onclick="R.go('repository')" onkeydown="R.goKey(event,'repository')"><span id="dash-doc-count">12</span> documentos indexados</span> · <span class="pg-sub-link" role="button" tabindex="0" onclick="R.go('decisions')" onkeydown="R.goKey(event,'decisions')"><span id="dash-dec-count">4</span> decisões pendentes</span> · <span class="pg-sub-link" role="button" tabindex="0" onclick="R.go('burnout')" onkeydown="R.goKey(event,'burnout')"><span id="dash-alert-count">1</span> membro em alerta</span></div></div>
+    <div><div class="pg-title"><span id="dash-project-title">Portal Nexus — Controle de Estoque</span><span class="help-q" data-help="Visão geral do projeto: prazo, orçamento, riscos e decisões pendentes, tudo num só lugar, atualizado com dado real do que já foi cadastrado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub"><span id="dash-method"></span>Atualizado <span id="dash-updated">—</span> · <span class="pg-sub-link" role="button" tabindex="0" onclick="R.go('repository')" onkeydown="R.goKey(event,'repository')"><span id="dash-doc-count">12</span> documentos indexados</span> · <span class="pg-sub-link" role="button" tabindex="0" onclick="R.go('decisions')" onkeydown="R.goKey(event,'decisions')"><span id="dash-dec-count">4</span> decisões pendentes</span> · <span class="pg-sub-link" role="button" tabindex="0" onclick="R.go('burnout')" onkeydown="R.goKey(event,'burnout')"><span id="dash-alert-count">1</span> membro em alerta</span></div></div>
     <div class="flex-r"><button class="btn btn-sm btn-acc" onclick="R.go('report')"><i class="ti ti-file-report"></i>Status Report</button></div>
   </div>
 
@@ -1036,7 +1037,7 @@ body.icons-failed i[data-fb]::before{
           <div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap" id="hs-badges-root"></div>
         </div>
       </div>
-      <div class="hbar"><span class="hbar-lbl">Cronograma</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-schedule-fill" style="width:0%;background:var(--grn)"></div></div><span class="hbar-pct" id="hs-hbar-schedule-pct">—</span></div>
+      <div class="hbar"><span class="hbar-lbl" id="hs-hbar-schedule-lbl">Cronograma</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-schedule-fill" style="width:0%;background:var(--grn)"></div></div><span class="hbar-pct" id="hs-hbar-schedule-pct">—</span></div>
       <div class="hbar"><span class="hbar-lbl">Orçamento</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-budget-fill" style="width:0%;background:var(--amb)"></div></div><span class="hbar-pct" id="hs-hbar-budget-pct">—</span></div>
       <div class="hbar"><span class="hbar-lbl">Equipe/Burnout</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-team-fill" style="width:0%;background:var(--amb)"></div></div><span class="hbar-pct" id="hs-hbar-team-pct">—</span></div>
       <div class="hbar"><span class="hbar-lbl">Qualidade</span><div class="hbar-track"><div class="hbar-fill" id="hs-hbar-quality-fill" style="width:0%;background:var(--acc)"></div></div><span class="hbar-pct" id="hs-hbar-quality-pct">—</span></div>
@@ -5848,7 +5849,7 @@ const R = (() => {
 const Nav = (() => {
   // Mapa página → grupo, usado para abrir automaticamente o grupo certo ao navegar
   const GROUP_OF = {
-    dashboard:'sbg-indicadores', pfkpi:'sbg-indicadores', portfolio:'sbg-indicadores', prioritization:'sbg-indicadores', report:'sbg-indicadores',
+    pfkpi:'sbg-indicadores', portfolio:'sbg-indicadores', prioritization:'sbg-indicadores', report:'sbg-indicadores',
     settings:'sbg-sistema', help:'sbg-sistema',
     decisions:'sbg-decisao', loop:'sbg-decisao', trail:'sbg-decisao', statusmsg:'sbg-decisao',
     kanban:'sbg-agil', backlog:'sbg-agil', sprints:'sbg-agil', ritos:'sbg-agil', modelos:'sbg-conhecimento',
@@ -5938,7 +5939,7 @@ const Nav = (() => {
     sbg_equipe: 'Equipe', sbg_conhecimento: 'Conhecimento', sbg_projetos: 'Projetos'
   };
   // Os 4 painéis do topo não pertencem a um grupo, mas ganham a trilha "Painéis › Página"
-  const SECTION_OF = { xray:'Painéis', board:'Painéis', execview:'Painéis', pmoview:'Painéis' };
+  const SECTION_OF = { xray:'Painéis', board:'Painéis', execview:'Painéis', pmoview:'Painéis', dashboard:'Projeto' };
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
     wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores', pmoview:'Visão do PMO', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint', modelos:'Modelos',
@@ -5999,7 +6000,7 @@ const CmdK = (() => {
 
   const PAGES = [
     { label:'Raio-X do Projeto', page:'xray', icon:'report-medical', group:'Painéis' },
-    { label:'Dashboard', page:'dashboard', icon:'layout-dashboard', group:'Indicadores' },
+    { label:'Dashboard do projeto', page:'dashboard', icon:'layout-dashboard', group:'Projeto' },
     { label:'Decisões IA', page:'decisions', icon:'brain', group:'Decisões' },
     { label:'Loop de Ação', page:'loop', icon:'refresh-alert', group:'Decisões' },
     { label:'Trilha', page:'trail', icon:'git-branch', group:'Decisões' },
@@ -7010,7 +7011,7 @@ const Repo = (() => {
       else if(!data.length) { updEl.textContent = '—'; if(updSubEl) updSubEl.textContent = 'nenhum documento ainda'; }
       else {
         const lastDate = data.reduce((max, d) => (d.addedAt && d.addedAt > max) ? d.addedAt : max, data[0].addedAt || '');
-        const days = Math.max(0, Math.round((Date.now() - new Date(lastDate + 'T00:00:00').getTime()) / 86400000));
+        const days = Math.max(0, Math.round((Clock.today().getTime() - new Date(lastDate + 'T00:00:00').getTime()) / 86400000));
         updEl.textContent = days === 0 ? 'hoje' : days;
         if(updSubEl) updSubEl.textContent = days === 0 ? '' : (days === 1 ? 'dia atrás' : 'dias atrás');
       }
@@ -8307,7 +8308,7 @@ const Dashboard = (() => {
       if(!trail.length) { updEl.textContent = 'nenhuma atividade registrada ainda'; }
       else {
         const lastDate = trail.reduce((max, t) => (t.date && t.date > max) ? t.date : max, trail[0].date || '');
-        const days = Math.max(0, Math.round((Date.now() - new Date(lastDate + 'T00:00:00').getTime()) / 86400000));
+        const days = Math.max(0, Math.round((Clock.today().getTime() - new Date(lastDate + 'T00:00:00').getTime()) / 86400000));
         updEl.textContent = days === 0 ? 'hoje' : (days === 1 ? 'há 1 dia' : `há ${days} dias`);
       }
     }
@@ -8569,7 +8570,7 @@ const Dashboard = (() => {
     if(badgesRoot) {
       badgesRoot.innerHTML = attentionDims.map(([k,v]) => {
         const cls = v < 50 ? 'b-red' : 'b-amb';
-        return `<span class="badge ${cls}">${HealthScore.DIM_LABEL[k]||k}</span>`;
+        return `<span class="badge ${cls}">${HealthScore.dimLabel(k, DB.getActiveProjectId())}</span>`;
       }).join('');
     }
 
@@ -8581,6 +8582,8 @@ const Dashboard = (() => {
       if(fillEl) { fillEl.style.width = v + '%'; fillEl.style.background = color; }
       if(pctEl) pctEl.textContent = v + '%';
     });
+    const schedLbl = document.getElementById('hs-hbar-schedule-lbl');
+    if(schedLbl) schedLbl.textContent = HealthScore.dimLabel('schedule', DB.getActiveProjectId()); // "Ritmo da sprint" no ágil
   }
 
   function renderBudgetKpis() {
@@ -10913,6 +10916,7 @@ const Methodology = (() => {
       g.classList.toggle('m-hidden', items.length > 0 && items.every(b => b.classList.contains('m-hidden')));
     });
     const tag = document.getElementById('sb-method-tag'); if(tag) tag.textContent = TYPES[type()].short;
+    const dm = document.getElementById('dash-method'); if(dm) dm.innerHTML = tagOf(type()) + '<button type="button" class="link-a" aria-label="Mudar a metodologia do projeto" onclick="R.go(\'settings\');SettingsTabs.show(\'pmo\')">mudar</button> · ';
     // Dashboard: o projeto ágil troca "Prazo e cronograma" (plano e datas) por "Ritmo e entrega" (sprint, velocidade, WIP)
     const ag = document.getElementById('kg-agile'); if(ag) ag.classList.toggle('m-hidden', !visible('kanban'));
     const sch = document.getElementById('kg-sch'); if(sch) sch.classList.toggle('m-hidden', type() === 'agil' && !showAll());
@@ -12948,7 +12952,7 @@ const Report = (() => {
     const hasData = wbs.length || g('budgetLines').length;
     const dims = (typeof HealthScore !== 'undefined' && hasData) ? HealthScore.computeMetrics(pid) : null;
     const score = dims ? HealthScore.calculate(dims) : null;
-    const health = { score, status: score == null ? 'Sem dados' : HealthScore.getStatus(score).label, dims: dims ? Object.fromEntries(Object.entries(dims).map(([k, v]) => [HealthScore.DIM_LABEL[k] || k, v])) : null };
+    const health = { score, status: score == null ? 'Sem dados' : HealthScore.getStatus(score).label, dims: dims ? Object.fromEntries(Object.entries(dims).map(([k, v]) => [HealthScore.dimLabel(k, pid), v])) : null };
     if(health.dims) health.dims = Object.entries(health.dims).map(([label, value]) => ({ label, value }));
     // caminho crítico: só entregas atrasadas que NÃO têm folga (CPM real)
     let delayedCrit = [];
@@ -16553,8 +16557,14 @@ const Wizard = (() => {
     const id = DB.createProject(name, client, area);
     if(id) {
       if(typeof Methodology !== 'undefined') Methodology.set(method, { silent: true }); // o projeto novo já nasce com o menu do seu método
-      T.show('✅ Projeto "' + name + '" criado e ativo! Repositório vazio — adicione documentos para habilitar a IA.', 5000);
-      R.go('dashboard');
+      // Projeto ágil começa pelo Backlog (a primeira coisa a fazer é ter itens); os demais, pelo Dashboard
+      if(method === 'agil') {
+        T.show('✅ Projeto "' + name + '" criado! Comece pelo backlog: importe uma planilha ou crie os itens e depois planeje a primeira sprint.', 7000);
+        R.go('backlog');
+      } else {
+        T.show('✅ Projeto "' + name + '" criado e ativo! Repositório vazio — adicione documentos para habilitar a IA.', 5000);
+        R.go('dashboard');
+      }
     }
   }
   return { open, close, next, back, addMember, create };
@@ -16798,6 +16808,26 @@ const HealthScore = (() => {
   // (neutro/sem problema detectado) em vez de inventar um número.
   const DIM_LABEL = { schedule:'Cronograma', budget:'Orçamento', team:'Equipe', quality:'Qualidade', learning:'Aprendizado', scope:'Scope creep', risks:'Riscos' };
 
+  // Ritmo da sprint como nota 0-100: 100 = no ritmo ou adiantada; cada ponto percentual do compromisso que falta além da linha ideal tira 1 ponto.
+  // Só vale para projeto Ágil com sprint ativa e itens com pontos; senão devolve null (continua valendo a WBS).
+  function sprintSchedule(pid) {
+    try {
+      if(typeof Methodology === 'undefined' || Methodology.typeFor(pid) !== 'agil') return null;
+      const sprints = DB.getForProject(pid, 'sprints') || [], items = DB.getForProject(pid, 'backlog') || [];
+      const a = sprints.find(s => s.state === 'ativa'); if(!a) return null;
+      const st = AgileCalc.sprintStats(a, items, Clock.iso(Clock.today(pid)));
+      if(!st.committed) return null;
+      const pt = st.series.filter(p => p.real != null).pop(); if(!pt) return 100;
+      const gap = (pt.real - pt.ideal) / st.committed * 100;
+      return Math.max(0, Math.min(100, Math.round(100 - Math.max(0, gap))));
+    } catch(e) { return null; }
+  }
+  // "Cronograma" para os métodos com plano; "Ritmo da sprint" para o ágil
+  function dimLabel(k, pid) {
+    if(k === 'schedule' && typeof Methodology !== 'undefined' && pid && Methodology.typeFor(pid) === 'agil') return 'Ritmo da sprint';
+    return DIM_LABEL[k] || k;
+  }
+
   // Sem projectId, calcula pro projeto ativo — com projectId, lê o outro projeto sem trocar o
   // ativo (DB.getForProject), do mesmo jeito que Budget.computeMetrics já fazia. É o que permite
   // o Portfólio usar o índice completo de 6 dimensões em vez de uma fórmula própria mais pobre.
@@ -16810,8 +16840,11 @@ const HealthScore = (() => {
     const lessons = getTable('lessons');
     const meetings = getTable('meetings');
 
-    // Cronograma: aderência média da WBS (mesma base usada no Dashboard e no Relatório)
-    const schedule = wbs.length ? Math.round(wbs.reduce((s,m) => s + (m.pct||0), 0) / wbs.length) : 100;
+    // Cronograma: aderência média da WBS (mesma base usada no Dashboard e no Relatório).
+    // Projeto ÁGIL com sprint ativa: vale o ritmo da sprint (quanto falta contra a linha ideal do burndown) — a WBS não manda no ágil.
+    let schedule = wbs.length ? Math.round(wbs.reduce((s,m) => s + (m.pct||0), 0) / wbs.length) : 100;
+    const agileSched = sprintSchedule(pid);
+    if(agileSched != null) schedule = agileSched;
 
     // Scope creep: penaliza mudanças de escopo ainda abertas (mesma fórmula já usada no Relatório)
     const scopeAbertos = scope.filter(s => s.status === 'pending' || s.status === 'analysis');
@@ -16838,7 +16871,7 @@ const HealthScore = (() => {
     return { schedule, budget:budgetScore, team:teamScore, quality:qualityScore, learning:learningScore, scope:scopeScore, risks:risksScore };
   }
 
-  return { calculate, getStatus, updateRingDisplay, computeMetrics, WEIGHTS, DIM_LABEL };
+  return { calculate, getStatus, updateRingDisplay, computeMetrics, WEIGHTS, DIM_LABEL, dimLabel, sprintSchedule };
 })();
 </script>
 
