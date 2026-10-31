@@ -33,3 +33,11 @@ test('cada metodologia tem texto de apoio e orientação para a IA', () => {
   }
   assert.deepEqual(Methodology.ORDER, [...Methodology.ORDER].sort((a, b) => Methodology.TYPES[a].short.localeCompare(Methodology.TYPES[b].short, 'pt-BR')));
 });
+
+test('Quadro, Backlog e Sprints aparecem só em Ágil e Híbrido', () => {
+  for (const page of ['kanban', 'backlog', 'sprints']) {
+    assert.equal(Methodology.visibleFor(page, 'agil'), true, page);
+    assert.equal(Methodology.visibleFor(page, 'hibrido'), true, page);
+    assert.equal(Methodology.visibleFor(page, 'cascata'), false, page);
+  }
+});
