@@ -10844,12 +10844,12 @@ const ExecReport = (() => {
     const charts = {
       progress: single
         ? (r0.items || []).slice(0, 8).map(i => ({ label: clip(i.label, 34), real: i.pct, expected: i.expected }))
-        : rows.map(r => ({ label: clip(r.name, 26) + ' · ' + Methodology.TYPES[Methodology.typeFor(r.id)].short, real: r.f.schedule.avgPct == null ? 0 : r.f.schedule.avgPct, expected: avg((r.items || []).map(i => i.expected).filter(v => v != null)) })),
+        : rows.map(r => ({ label: clip(r.name, 26) + (r.methodShort ? ' · ' + r.methodShort : ''), real: r.f.schedule.avgPct == null ? 0 : r.f.schedule.avgPct, expected: avg((r.items || []).map(i => i.expected).filter(v => v != null)) })),
       budget: (() => { const bs = rows.filter(r => r.f.budget.hasBudget && r.f.budget.amounts); if(!bs.length || !o.money) return null; return { bac: sum(bs, r => r.f.budget.amounts.bac), ac: sum(bs, r => r.f.budget.amounts.ac), eac: sum(bs, r => r.f.budget.amounts.eac) }; })(),
       budgetPct: (() => { const bs = rows.filter(r => r.f.budget.hasBudget); return bs.length ? { consumo: avg(bs.map(r => r.f.budget.consumoPct)), previsao: avg(bs.map(r => r.f.budget.eacPctOfBac)) } : null; })(),
       risks: { critico: sum(rows, r => r.f.risks.byLevel['crítico']), alto: sum(rows, r => r.f.risks.byLevel.alto), medio: sum(rows, r => r.f.risks.byLevel['médio']), baixo: sum(rows, r => r.f.risks.byLevel.baixo) },
       health: single ? (Array.isArray(r0.health.dims) ? r0.health.dims : Object.entries(r0.health.dims || {}).map(([label, value]) => ({ label, value }))) : null,
-      projects: rows.map(r => ({ name: r.name, farol: r.f.farol.color, health: r.health.score, status: r.health.status, spi: r.f.budget.spi, cpi: r.f.budget.cpi, pct: r.f.schedule.avgPct, delayed: r.f.schedule.delayedCount }))
+      projects: rows.map(r => ({ name: r.name, method: r.methodShort || '', farol: r.f.farol.color, health: r.health.score, status: r.health.status, spi: r.f.budget.spi, cpi: r.f.budget.cpi, pct: r.f.schedule.avgPct, delayed: r.f.schedule.delayedCount }))
     };
 
     const conquests = [];
@@ -11983,7 +11983,7 @@ const Report = (() => {
     }
     const risks = g('risks').filter(RiskMatrix.isOpen).sort((a, b) => RiskMatrix.scoreOf(b) - RiskMatrix.scoreOf(a));
     const stk = g('stakeholders').filter(s => s.engagement === 'critico').sort((a, b) => new Date(a.lastContact || 0) - new Date(b.lastContact || 0))[0];
-    return { id: pid, name: proj.name, client: proj.client || '', area: proj.area || '', f, health,
+    return { id: pid, name: proj.name, methodShort: Methodology.TYPES[Methodology.typeFor(pid)].short, client: proj.client || '', area: proj.area || '', f, health,
       items: wbs.slice(0, 12).map(m => ({ label: m.label, pct: m.pct || 0, expected: ExecReport.expectedPct(m.start, m.end, todayIso) })),
       delayedCrit,
       scopeOpen: g('scopeChanges').filter(s => s.status === 'pending' || s.status === 'analysis').map(s => ({ id: s.id, title: s.title, days: s.impactDays || 0, cost: s.impactCost || 0 })),
@@ -12020,7 +12020,7 @@ const Report = (() => {
       const d = rows[0].health.dims;
       return `<div class="rp-cc"><div class="rp-h2">Saúde por dimensão</div>${d ? d.map(x => hbar(x.label, x.value, 100, x.value >= 70 ? 'var(--rp-grn)' : x.value >= 50 ? 'var(--rp-amb)' : 'var(--rp-red)', x.value)).join('') : '<div class="rp-empty">Sem dados para avaliar.</div>'}</div>`;
     }
-    return `<div class="rp-cc"><div class="rp-h2">Farol por projeto</div><table class="rp-tbl"><thead><tr><th>Projeto</th><th class="n">Saúde</th><th class="n">Prazo</th><th class="n">Custo</th><th class="n">Atrasadas</th></tr></thead><tbody>${c.projects.map(p => { const f = FAROL[p.farol]; return `<tr><td><span class="rp-dot" style="background:${f ? f[0] : 'var(--rp-mut)'}"></span>${esc(p.name)}</td><td class="n">${p.health == null ? '—' : p.health}</td><td class="n">${ratio(p.spi)}</td><td class="n">${ratio(p.cpi)}</td><td class="n">${p.delayed}</td></tr>`; }).join('')}</tbody></table><div class="rp-legend">Ritmo: 1,00 = no combinado · abaixo de 0,90 = fora do plano</div></div>`;
+    return `<div class="rp-cc"><div class="rp-h2">Farol por projeto</div><table class="rp-tbl"><thead><tr><th>Projeto</th><th>Metodologia</th><th class="n">Saúde</th><th class="n">Prazo</th><th class="n">Custo</th><th class="n">Atrasadas</th></tr></thead><tbody>${c.projects.map(p => { const f = FAROL[p.farol]; return `<tr><td><span class="rp-dot" style="background:${f ? f[0] : 'var(--rp-mut)'}"></span>${esc(p.name)}</td><td>${esc(p.method || '—')}</td><td class="n">${p.health == null ? '—' : p.health}</td><td class="n">${ratio(p.spi)}</td><td class="n">${ratio(p.cpi)}</td><td class="n">${p.delayed}</td></tr>`; }).join('')}</tbody></table><div class="rp-legend">Ritmo: 1,00 = no combinado · abaixo de 0,90 = fora do plano</div></div>`;
   }
 
   function render() {
