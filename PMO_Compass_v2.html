@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.18.4'
+  version: '2.18.5'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -249,11 +249,11 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 /* A área de gestão do projeto tem um fundo levemente diferente: o olho separa "diretoria/PMO" de "gerente e equipe" */
 .sb-proj-area{display:flex;flex-direction:column;gap:1px;background:var(--s2);background:color-mix(in srgb, var(--acc) 6%, var(--s1));border:1px solid var(--b1);border-radius:var(--r8);padding:0 4px 6px;margin:8px -2px 4px}
 .sb-proj-area .sb-divl{margin-top:8px}
-.sb-divl-btn{background:none;border:0;width:calc(100% - 8px);cursor:pointer;font-family:inherit;border-radius:var(--r8);padding:4px 0}
+.sb-divl-btn{position:relative;justify-content:center;background:none;border:0;width:calc(100% - 8px);cursor:pointer;font-family:inherit;border-radius:var(--r8);padding:4px 16px;letter-spacing:.02em}
+.sb-divl-btn::before,.sb-divl-btn::after{display:none}
 .sb-divl-btn:hover{color:var(--t1)}
 .sb-divl-btn:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-.sb-divl-chev{font-size:13px;transition:transform .15s;order:3}
-.sb-divl-btn::after{order:2}
+.sb-divl-chev{position:absolute;right:2px;top:50%;margin-top:-7px;font-size:13px;transition:transform .15s}
 .sb-proj-area.area-closed .sb-divl-chev{transform:rotate(-90deg)}
 .sb-proj-area.area-closed > :not(.sb-divl){display:none !important}
 .sb-proj-area.area-closed{padding-bottom:0}
