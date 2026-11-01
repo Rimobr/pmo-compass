@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.25.0'
+  version: '2.26.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -886,7 +886,7 @@ body.icons-failed i[data-fb]::before{
     <button class="ico-btn" onclick="CmdK.open()" title="Busca rápida (Ctrl/Cmd+K)"><i class="ti ti-search"></i></button>
     <button class="ico-btn" onclick="R.go('decisions')" title="Notificações"><i class="ti ti-bell"></i><span class="bdot"></span></button>
     <button class="ico-btn" data-perm="business" onclick="Wizard.open()" title="Novo projeto"><i class="ti ti-plus"></i></button>
-    <button class="ico-btn" onclick="BugReport.open()" title="Reportar um problema" aria-label="Reportar um problema"><i class="ti ti-bug"></i></button>
+    <button class="ico-btn" data-perm="manage_backlog" onclick="BugReport.open()" title="Relatar um bug (vira um item Bug, filho de uma entrega)" aria-label="Relatar um bug"><i class="ti ti-bug"></i></button>
     <button class="ico-btn" onclick="R.go('settings')" title="Configurações"><i class="ti ti-settings"></i></button>
     <span id="tb-cloud-badge" onclick="Auth.openModal()" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:999px;background:var(--s2);color:var(--t3)" title="Carregando…"><i class="ti ti-cloud" style="font-size:12px"></i></span>
     <span class="role-badge" id="tb-role-tag" onclick="Auth.openModal()" title="Clique para ver sua conta" style="cursor:pointer">Administrador</span>
@@ -1603,11 +1603,6 @@ body.icons-failed i[data-fb]::before{
   </div><!-- /settings-panel-comunic -->
 
   <div id="settings-panel-dados" style="display:none">
-  <div class="card" id="bugs-card" data-perm="admin" style="display:none">
-    <div class="lbl"><i class="ti ti-bug"></i>Problemas reportados<span class="help-q" data-help="Relatos enviados por quem usa o sistema, com caminho, passo a passo, contexto técnico e prints. Acompanhe a situação de cada um e deixe uma nota." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
-    <div class="btn-row" style="margin-bottom:8px"><select class="input" id="bugs-filter" aria-label="Filtrar relatos por situação" style="width:auto" onchange="BugReport.renderAdmin()"><option value="">Todas as situações</option><option value="aberto" selected>Abertos</option><option value="em_analise">Em análise</option><option value="resolvido">Resolvidos</option></select><button class="btn btn-sm" onclick="BugReport.renderAdmin(true)"><i class="ti ti-refresh"></i>Atualizar</button></div>
-    <div id="bugs-root"></div>
-  </div>
   <div class="card" data-perm="settings">
     <div class="lbl"><i class="ti ti-cloud"></i>Backend em nuvem (Supabase) — opcional</div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px">Sem configurar nada aqui, o app continua funcionando 100% localmente neste navegador (como hoje). Conectar um projeto Supabase faz WBS, Decisões e Repositório serem salvos de verdade na nuvem, sincronizados entre dispositivos, com os 4 perfis de acesso validados pelo próprio banco de dados.</p>
@@ -2052,7 +2047,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div class="field-group"><div class="field-label"><label for="ai-title">Título</label></div><input class="input" id="ai-title" maxlength="200" placeholder="Ex: Como cliente, quero consultar meu extrato"></div>
     <div class="field-group" id="ai-parent-grp" style="display:none"><div class="field-label"><label for="ai-parent">Item (entrega) em que o bug foi encontrado — obrigatório</label></div><select class="input" id="ai-parent"></select></div>
     <div class="g2" style="gap:10px">
-      <div class="field-group"><div class="field-label"><label for="ai-kind">Tipo</label></div><select class="input" id="ai-kind" onchange="Agile.kindChanged()"><option value="bug">Bug</option><option value="historia" selected>História</option><option value="tarefa">Tarefa</option></select></div>
+      <div class="field-group"><div class="field-label"><label for="ai-kind">Tipo</label></div><select class="input" id="ai-kind" onchange="Agile.kindPicked()"><option value="bug">Bug</option><option value="historia" selected>História</option><option value="tarefa">Tarefa</option></select></div>
       <div class="field-group"><div class="field-label"><label for="ai-points">Pontos</label><span class="help-q" data-help="Estimativa de esforço relativo (1, 2, 3, 5, 8, 13...). Compare com outros itens: um item de 5 dá mais trabalho que um de 2. Deixe vazio se ainda não foi estimado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="ai-points" type="number" min="0" max="100" placeholder="Ex: 5"></div>
     </div>
     <div class="g2" style="gap:10px">
@@ -2062,6 +2057,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div class="field-group" id="ai-status-grp"><div class="field-label"><label for="ai-status">Situação</label></div><select class="input" id="ai-status"><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="review">Em revisão</option><option value="done">Concluído</option></select></div>
     <div class="field-group"><div class="field-label"><label for="ai-desc">Descrição e critérios de aceite</label></div><textarea class="input" id="ai-desc" rows="3" maxlength="2000" style="resize:vertical;font-family:inherit"></textarea></div>
     <div id="ai-children" style="display:none;margin-top:10px"></div>
+    <div id="ai-files" style="display:none;margin-top:10px"></div>
     <div class="btn-row" style="margin-top:14px;justify-content:space-between">
       <button class="btn btn-sm btn-red" id="ai-del" onclick="Agile.deleteItem()"><i class="ti ti-trash"></i>Excluir</button>
       <span style="display:flex;gap:8px"><button class="btn btn-sm" onclick="Agile.closeItem()">Cancelar</button><button class="btn btn-sm btn-acc" onclick="Agile.saveItem()"><i class="ti ti-check"></i>Salvar</button></span>
@@ -3828,8 +3824,8 @@ const Cloud = (() => {
       local: 'baselines'
     },
     backlog_items: {
-      toDb: (x, pid) => ({ project_id:pid, id:x.id, title:x.title, description:x.description||null, kind:x.kind||'historia', status:x.status||'todo', points:(x.points===''||x.points==null)?null:x.points, assignee:x.assignee||null, sprint_id:x.sprintId||null, rank:x.rank||0, created_on:x.createdOn||null, done_on:x.doneOn||null, parent_id:(x.kind==='bug' && x.parentId)?x.parentId:null, updated_at:new Date().toISOString() }),
-      fromDb: r => ({ id:r.id, title:r.title, description:r.description||'', kind:r.kind, status:r.status, points:r.points==null?'':r.points, assignee:r.assignee||'', sprintId:r.sprint_id||'', rank:r.rank||0, createdOn:r.created_on||'', doneOn:r.done_on||'', parentId:r.parent_id||'' }),
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, title:x.title, description:x.description||null, kind:x.kind||'historia', status:x.status||'todo', points:(x.points===''||x.points==null)?null:x.points, assignee:x.assignee||null, sprint_id:x.sprintId||null, rank:x.rank||0, created_on:x.createdOn||null, done_on:x.doneOn||null, parent_id:(x.kind==='bug' && x.parentId)?x.parentId:null, attachments:Array.isArray(x.attachments)?x.attachments:[], updated_at:new Date().toISOString() }),
+      fromDb: r => ({ id:r.id, title:r.title, description:r.description||'', kind:r.kind, status:r.status, points:r.points==null?'':r.points, assignee:r.assignee||'', sprintId:r.sprint_id||'', rank:r.rank||0, createdOn:r.created_on||'', doneOn:r.done_on||'', parentId:r.parent_id||'', attachments:Array.isArray(r.attachments)?r.attachments:[] }),
       local: 'backlog'
     },
     sprints: {
@@ -4206,38 +4202,18 @@ const Cloud = (() => {
     return true;
   }
   // Catálogo comum de conhecimentos e ferramentas (todos veem; o que a pessoa digita de novo é criado para todos)
-  // Relato de problemas: anexos num bucket privado (pasta da própria pessoa) e o relato numa tabela que só o autor e o Administrador leem
-  async function submitBugReport(r, files) {
+  // Anexos dos itens (prints e arquivos de exemplo de um bug): pasta privada, caminho "projeto/item/arquivo"; só quem tem acesso ao projeto lê
+  async function uploadItemFile(projectId, itemId, n, file) {
     if(!client || !session) return null;
-    const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now());
-    const uid = session.user.id, attachments = [];
-    for(let i = 0; i < files.length; i++) {
-      const f = files[i], safe = String(f.name || 'arquivo').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);
-      const path = uid + '/' + id + '/' + (i + 1) + '-' + safe;
-      const { error } = await client.storage.from('bug-reports').upload(path, f, { contentType: f.type || undefined, upsert:false });
-      if(error) { T.show('❌ Não consegui enviar o anexo "' + f.name + '": ' + error.message); return null; }
-      attachments.push({ path, name:f.name, size:f.size, type:f.type });
-    }
-    const { error } = await client.from('bug_reports').insert({ id, reporter_id:uid, reporter_name:Auth.getName() || null, title:r.title, severity:r.severity, path:r.path, steps:r.steps, expected:r.expected || null, actual:r.actual, context:r.context, attachments });
-    if(error) { T.show('❌ ' + error.message); return null; }
-    pushAuditEvent('bug_reported', 'Problema relatado: ' + r.title.slice(0, 80), { id });
-    return id;
+    const safe = String(file.name || 'arquivo').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);
+    const path = projectId + '/' + itemId + '/' + Date.now() + '-' + n + '-' + safe;
+    const { error } = await client.storage.from('item-files').upload(path, file, { contentType: file.type || undefined, upsert:false });
+    if(error) { T.show('❌ Não consegui enviar o anexo "' + file.name + '": ' + error.message); return null; }
+    return { path, name:file.name, size:file.size, type:file.type };
   }
-  async function listBugReports() {
-    if(!client || !session) return [];
-    const { data, error } = await client.from('bug_reports').select('*').order('created_at', { ascending:false }).limit(200);
-    if(error) { console.warn('Supabase: falha ao ler relatos', error); return []; }
-    return data || [];
-  }
-  async function updateBugReport(id, patch) {
-    if(!client || !session) return false;
-    const { error } = await client.from('bug_reports').update(patch).eq('id', id);
-    if(error) { T.show('❌ ' + error.message); return false; }
-    return true;
-  }
-  async function bugFileUrl(path) {
+  async function itemFileUrl(path) {
     if(!client || !session) return null;
-    const { data, error } = await client.storage.from('bug-reports').createSignedUrl(path, 300);
+    const { data, error } = await client.storage.from('item-files').createSignedUrl(path, 300);
     if(error) { T.show('❌ ' + error.message); return null; }
     return data && data.signedUrl;
   }
@@ -4755,7 +4731,7 @@ const Cloud = (() => {
   }
 
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
-    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, submitBugReport, listBugReports, updateBugReport, bugFileUrl, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
+    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, uploadItemFile, itemFileUrl, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument, pushRow, pushMany, deleteRow, msgTable, invokeFn,
@@ -5006,7 +4982,6 @@ const Users = (() => {
     const hint = document.getElementById('users-hint'); if(hint) hint.style.display = showTeam ? 'none' : '';
     if(apCard) { apCard.style.display = show ? '' : 'none'; if(show) renderProfiles(); }
     if(typeof Erase !== 'undefined') Erase.render();
-    if(typeof BugReport !== 'undefined') BugReport.renderAdmin();
   }
 
   // ── Perfis de acesso: lista, edição das permissões, criação e exclusão ──
@@ -5628,49 +5603,64 @@ const Reviews = (() => {
 })();
 </script>
 
-<!-- ■ MODULE: ui/bugreport ─ Relato de problemas: formulário guiado com anexos, contexto técnico automático e lista de acompanhamento do Administrador -->
+<!-- ■ MODULE: ui/bugreport ─ Relatar um bug: formulário guiado que cria o item Bug (filho de uma entrega), com contexto automático e anexos -->
 <script data-module="ui/bugreport">
 const BugReport = (() => {
   const $ = id => document.getElementById(id);
   const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const MAX_FILES = 6, MAX_BYTES = 5 * 1024 * 1024;
+  const MAX_FILES = 6, MAX_BYTES = 5 * 1024 * 1024, MAX_DESC = 2000;
   const OK_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf', 'text/plain', 'text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
-  const SEV = { impede:'Não consigo continuar', atrapalha:'Atrapalha, tem jeito', detalhe:'Detalhe' };
-  const STATUS = { aberto:'Aberto', em_analise:'Em análise', resolvido:'Resolvido' };
+  const SEV = { impede:'Não consigo continuar trabalhando', atrapalha:'Atrapalha, mas dá para contornar', detalhe:'Detalhe visual ou de texto' };
   let files = [];
 
-  // Últimos erros do navegador (sem dados do usuário), para ir junto no relato
-  const errors = [];
-  const keep = m => { errors.push(String(m).slice(0, 200)); if(errors.length > 5) errors.shift(); };
-  window.addEventListener('error', e => keep(e.message));
-  window.addEventListener('unhandledrejection', e => keep('Promessa rejeitada: ' + ((e.reason && e.reason.message) || e.reason)));
-
+  // Contexto técnico curto (cabe na descrição do item): versão, tela, perfil e janela
   function context() {
-    const page = document.querySelector('.page.on');
-    const proj = (typeof DB !== 'undefined') ? DB.getActiveProjectId() : '';
-    return {
-      versao: (typeof BRAND !== 'undefined' && BRAND.version) || '',
-      tela: page ? page.id.replace(/^p-/, '') : '', titulo: page && page.querySelector('.pg-title') ? page.querySelector('.pg-title').childNodes[0].textContent.trim() : '',
-      perfil: (typeof Auth !== 'undefined') ? Auth.getRole() : '', projeto: proj, nuvem: (typeof Cloud !== 'undefined') && Cloud.isSignedIn(),
-      navegador: navigator.userAgent, janela: window.innerWidth + 'x' + window.innerHeight, tema: document.documentElement.getAttribute('data-theme') || 'padrão',
-      online: navigator.onLine, quando: new Date().toISOString(), erros: errors.slice(),
-    };
+    const page = document.querySelector('.page.on'), t = page && page.querySelector('.pg-title');
+    return [(typeof BRAND !== 'undefined' && BRAND.version) ? 'v' + BRAND.version : '', page ? 'tela ' + page.id.replace(/^p-/, '') : '', (t && t.childNodes[0]) ? t.childNodes[0].textContent.trim() : '', (typeof Auth !== 'undefined') ? 'perfil ' + Auth.getRole() : '', window.innerWidth + 'x' + window.innerHeight].filter(Boolean).join(' · ').slice(0, 200);
   }
-  // Caminho sugerido a partir da tela aberta (a pessoa pode ajustar)
   function suggestPath() {
     const page = document.querySelector('.page.on'); if(!page) return '';
     const bc = page.querySelector('.pg-breadcrumb'), t = page.querySelector('.pg-title');
-    const title = t ? t.childNodes[0].textContent.trim() : '';
-    const trail = bc ? bc.innerText.replace(/\s*[›>]\s*/g, ' → ').replace(/\s+/g, ' ').trim() : '';
-    return trail || title;
+    const title = (t && t.childNodes[0]) ? t.childNodes[0].textContent.trim() : '';
+    return (bc ? bc.innerText.replace(/\s*[›>]\s*/g, ' → ').replace(/\s+/g, ' ').trim() : '') || title;
+  }
+  // Texto do item: tudo o que quem for corrigir precisa, na ordem em que se lê um bug
+  function buildDescription(r) {
+    const parts = ['Caminho no sistema: ' + r.path, 'Gravidade: ' + (SEV[r.severity] || r.severity), '', 'O que foi feito (passo a passo):', r.steps, '', 'O que se esperava:', r.expected || '(não informado)', '', 'O que aconteceu:', r.actual, '', 'Contexto: ' + (r.context || '')];
+    return parts.join('\n');
+  }
+  function validate(r) {
+    if(!r.parentId) return 'Escolha a entrega (item) em que o bug foi encontrado — todo bug precisa estar ligado a uma.';
+    if(String(r.title).trim().length < 5) return 'Escreva um resumo do bug (mínimo 5 letras).';
+    if(String(r.path).trim().length < 2) return 'Informe o caminho no sistema (menu → tela → função).';
+    if(String(r.steps).trim().length < 10) return 'Descreva o que você fez, passo a passo (mínimo 10 letras).';
+    if(String(r.actual).trim().length < 3) return 'Conte o que aconteceu de fato.';
+    if(buildDescription(r).length > MAX_DESC) return 'O texto ficou grande demais (' + buildDescription(r).length + ' de ' + MAX_DESC + ' letras): resuma o passo a passo.';
+    return '';
   }
 
-  function open() {
+  function open(parentId) {
+    if(typeof Auth !== 'undefined' && !Auth.guard('manage_backlog')) return;
+    const refs = Agile.itemRefs().filter(i => i.kind !== 'bug');
+    if(!refs.length) { T.show('⚠️ Ainda não há itens (entregas) no projeto. Crie ou importe os itens no Backlog; o bug é sempre filho de um deles.', 6000); return; }
     files = []; renderFiles();
+    const sprints = Agile.sprintRefsAll();
+    const cloud = (typeof Cloud !== 'undefined') && Cloud.isSignedIn();
+    $('bug-f-parent').innerHTML = '<option value="">Escolha o item…</option>' + refs.map(i => '<option value="' + esc(i.id) + '">' + esc(i.id) + ' — ' + esc(i.title) + '</option>').join('');
+    $('bug-f-parent').value = parentId || '';
+    const fill = () => {
+      const p = refs.find(i => i.id === $('bug-f-parent').value), sel = $('bug-f-sprint');
+      const live = sprints.filter(x => x.state !== 'encerrada');
+      sel.innerHTML = '<option value="">Sem sprint (fica no Backlog)</option>' + live.map(x => '<option value="' + esc(x.id) + '">' + esc(x.name) + (x.state === 'ativa' ? ' (ativa)' : '') + '</option>').join('');
+      sel.value = (p && live.some(x => x.id === p.sprintId)) ? p.sprintId : '';
+    };
+    $('bug-f-parent').onchange = fill; fill();
     ['title', 'steps', 'exp', 'act'].forEach(k => { $('bug-f-' + k).value = ''; });
     $('bug-f-sev').value = 'atrapalha'; $('bug-f-path').value = suggestPath();
+    $('bug-files-hint').textContent = cloud ? 'ou cole o print aqui com Ctrl+V · até 6 arquivos de 5 MB (imagem, PDF, planilha ou texto)' : 'Anexos precisam da conexão com a nuvem. Sem ela, descreva bem o bug e guarde o print para enviar à equipe.';
+    document.querySelector('label[for="bug-f-files"]').style.display = cloud ? '' : 'none';
     $('modal-bug').classList.remove('hidden');
-    setTimeout(() => $('bug-f-title').focus(), 50);
+    setTimeout(() => $(parentId ? 'bug-f-title' : 'bug-f-parent').focus(), 50);
   }
   function close() { $('modal-bug').classList.add('hidden'); }
 
@@ -5690,64 +5680,29 @@ const BugReport = (() => {
   }
   // Colar o print direto na janela (Ctrl+V)
   document.addEventListener('paste', e => {
-    const m = $('modal-bug'); if(!m || m.classList.contains('hidden')) return;
+    const m = $('modal-bug'); if(!m || m.classList.contains('hidden') || !(typeof Cloud !== 'undefined' && Cloud.isSignedIn())) return;
     const imgs = Array.from((e.clipboardData && e.clipboardData.files) || []).filter(f => f.type.startsWith('image/'));
     if(imgs.length) { e.preventDefault(); addFiles(imgs.map((f, i) => new File([f], 'print-' + Date.now() + '-' + (i + 1) + '.png', { type:f.type }))); T.show('✅ Print colado.'); }
   });
 
-  function validate(r) {
-    if(r.title.trim().length < 5) return 'Escreva um resumo do problema (mínimo 5 letras).';
-    if(r.path.trim().length < 2) return 'Informe o caminho no sistema (menu → tela → função).';
-    if(r.steps.trim().length < 10) return 'Descreva o que você fez, passo a passo (mínimo 10 letras).';
-    if(r.actual.trim().length < 3) return 'Conte o que aconteceu de fato.';
-    return '';
-  }
-  function reportText(r) {
-    return ['RELATO DE PROBLEMA — ' + r.title, 'Gravidade: ' + (SEV[r.severity] || r.severity), 'Caminho: ' + r.path, '', 'O que fez (passo a passo):', r.steps, '', 'O que esperava:', r.expected || '(não informado)', '', 'O que aconteceu:', r.actual, '', 'Contexto técnico:', JSON.stringify(r.context, null, 2)].join('\n');
-  }
   async function send() {
-    const r = { title:$('bug-f-title').value.trim(), severity:$('bug-f-sev').value, path:$('bug-f-path').value.trim(), steps:$('bug-f-steps').value.trim(), expected:$('bug-f-exp').value.trim(), actual:$('bug-f-act').value.trim(), context:context() };
-    const bad = validate(r); if(bad) { T.show('⚠️ ' + bad); return; }
-    if(!files.length && !confirm('Você não anexou nenhum print. Um print do ocorrido acelera muito a correção. Enviar mesmo assim?')) return;
+    const r = { parentId:$('bug-f-parent').value, sprintId:$('bug-f-sprint').value, title:$('bug-f-title').value.trim(), severity:$('bug-f-sev').value, path:$('bug-f-path').value.trim(), steps:$('bug-f-steps').value.trim(), expected:$('bug-f-exp').value.trim(), actual:$('bug-f-act').value.trim(), context:context() };
+    const bad = validate(r); if(bad) { T.show('⚠️ ' + bad, 5000); return; }
+    if(!files.length && (typeof Cloud !== 'undefined' && Cloud.isSignedIn()) && !confirm('Você não anexou nenhum print. Um print do ocorrido acelera muito a correção. Criar o bug mesmo assim?')) return;
     const btn = $('bug-send'); btn.disabled = true;
-    if(typeof Cloud !== 'undefined' && Cloud.isSignedIn()) {
-      const id = await Cloud.submitBugReport(r, files);
-      btn.disabled = false;
-      if(!id) return;
-      close(); T.show('✅ Relato enviado. Obrigado — ele já está com o administrador.');
-    } else {
-      // Sem nuvem não há para onde enviar: baixa o relato para ser mandado junto com os prints
-      const blob = new Blob([reportText(r)], { type:'text/plain;charset=utf-8' }), a = document.createElement('a');
-      a.href = URL.createObjectURL(blob); a.download = 'relato-problema-' + new Date().toISOString().slice(0, 10) + '.txt'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-      btn.disabled = false; close(); T.show('📄 Sem conexão com a nuvem: baixei o relato. Envie este arquivo junto com os prints ao administrador.', 7000);
+    const id = Agile.nextBugId(), attachments = [];
+    for(let i = 0; i < files.length; i++) {
+      const a = await Cloud.uploadItemFile(DB.getActiveProjectId(), id, i + 1, files[i]);
+      if(!a) { btn.disabled = false; return; }
+      attachments.push(a);
     }
+    const it = Agile.createBug({ id, title:r.title, parentId:r.parentId, sprintId:r.sprintId, description:buildDescription(r), attachments });
+    btn.disabled = false;
+    if(!it) return;
+    close(); T.show('✅ Bug ' + it.id + ' criado como filho de ' + it.parentId + (attachments.length ? ' (' + attachments.length + ' anexo(s))' : '') + '.', 5000);
+    if(document.getElementById('p-kanban') && document.getElementById('p-kanban').classList.contains('on')) Agile.render();
   }
-
-  // ── Administrador: acompanhar os relatos ──
-  async function renderAdmin(force) {
-    const card = $('bugs-card'), root = $('bugs-root'); if(!card || !root) return;
-    const show = (typeof Cloud !== 'undefined') && Cloud.isSignedIn() && Auth.getRole() === 'admin';
-    card.style.display = show ? '' : 'none'; if(!show) return;
-    root.innerHTML = '<div style="font-size:12px;color:var(--t3)"><i class="ti ti-loader-2"></i> Carregando…</div>';
-    const f = $('bugs-filter').value;
-    const all = await Cloud.listBugReports();
-    const rows = all.filter(b => !f || b.status === f);
-    if(!rows.length) { root.innerHTML = '<div style="font-size:12px;color:var(--t3)">Nenhum relato' + (f ? ' nesta situação' : '') + '.</div>'; return; }
-    const when = v => new Date(v).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' });
-    root.innerHTML = rows.map(b => '<details class="set-row" style="display:block;padding:8px 0"><summary style="cursor:pointer;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="set-lbl">' + esc(b.title) + '</span><span class="badge' + (b.severity === 'impede' ? ' b-red' : '') + '">' + esc(SEV[b.severity] || b.severity) + '</span><span class="badge b-acc">' + esc(STATUS[b.status] || b.status) + '</span><span style="font-size:11.5px;color:var(--t3)">' + esc(b.reporter_name || '') + ' · ' + when(b.created_at) + '</span></summary>'
-      + '<div style="font-size:12.5px;line-height:1.65;margin-top:8px;overflow-wrap:anywhere"><b>Caminho:</b> ' + esc(b.path) + '<br><b>O que fez:</b> <span style="white-space:pre-wrap">' + esc(b.steps) + '</span><br><b>Esperava:</b> ' + esc(b.expected || '—') + '<br><b>Aconteceu:</b> ' + esc(b.actual)
-      + '<details style="margin:6px 0"><summary style="cursor:pointer;color:var(--t2)">Contexto técnico</summary><pre style="white-space:pre-wrap;font-size:11px;margin:4px 0">' + esc(JSON.stringify(b.context, null, 2)) + '</pre></details>'
-      + ((b.attachments || []).length ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0">' + b.attachments.map(a => '<button class="btn btn-sm" onclick="BugReport.openFile(\'' + esc(a.path) + '\')"><i class="ti ti-' + (String(a.type).startsWith('image/') ? 'photo' : 'file') + '"></i>' + esc(a.name) + '</button>').join('') + '</div>' : '<div style="color:var(--t3)">Sem anexos.</div>')
-      + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:6px"><div class="field"><label for="bg-st-' + b.id + '">Situação</label><select class="input" id="bg-st-' + b.id + '">' + Object.keys(STATUS).map(k => '<option value="' + k + '"' + (k === b.status ? ' selected' : '') + '>' + STATUS[k] + '</option>').join('') + '</select></div>'
-      + '<div class="field" style="flex:1 1 220px"><label for="bg-nt-' + b.id + '">Nota</label><input class="input" id="bg-nt-' + b.id + '" maxlength="2000" value="' + esc(b.admin_note || '') + '"></div><button class="btn btn-sm btn-pri" onclick="BugReport.saveStatus(\'' + b.id + '\')"><i class="ti ti-check"></i>Salvar</button></div></div></details>').join('');
-  }
-  async function saveStatus(id) {
-    const ok = await Cloud.updateBugReport(id, { status:$('bg-st-' + id).value, admin_note:$('bg-nt-' + id).value.trim() || null });
-    if(ok) { T.show('✅ Relato atualizado.'); renderAdmin(); }
-  }
-  async function openFile(path) { const u = await Cloud.bugFileUrl(path); if(u) window.open(u, '_blank', 'noopener'); }
-
-  return { open, close, addFiles, removeFile, send, renderAdmin, saveStatus, openFile, validate, context };
+  return { open, close, addFiles, removeFile, send, validate, buildDescription, context, MAX_DESC };
 })();
 </script>
 
@@ -11405,7 +11360,8 @@ const Agile = (() => {
     const top = [f.id && `<span class="chip">${esc(i.id)}</span>`, f.kind && `<span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>`, f.points && i.points !== '' && i.points != null && `<span class="badge b-acc">${esc(i.points)} pts</span>`].filter(Boolean).join('');
     const kidsAll = AgileCalc.bugsOf(items, i.id), kidsOpen = kidsAll.filter(k => k.status !== 'done');
     const rel = i.kind === 'bug' ? (i.parentId ? `<span class="chip" title="Este bug é filho do item ${esc(i.parentId)}"><i class="ti ti-corner-down-right"></i>de ${esc(i.parentId)}</span>` : '<span class="badge b-amb" title="Bug antigo, sem item pai: abra o cartão e escolha o item">sem item pai</span>') : (kidsAll.length ? `<span class="chip" title="Bugs ligados a este item"><i class="ti ti-bug"></i>${kidsOpen.length}/${kidsAll.length} bug(s)</span>` : '');
-    const bottom = [rel, f.assignee && (i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'), f.sprint && sp && `<span class="chip">${esc(sp.name)}</span>`].filter(Boolean).join('');
+    const att = (Array.isArray(i.attachments) && i.attachments.length) ? `<span class="chip" title="Anexos do bug"><i class="ti ti-paperclip"></i>${i.attachments.length}</span>` : '';
+    const bottom = [rel, att, f.assignee && (i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'), f.sprint && sp && `<span class="chip">${esc(sp.name)}</span>`].filter(Boolean).join('');
     // O cartão é um grupo; só o título é o botão de abrir (botão dentro de botão não é acessível por leitor de tela)
     return `<div class="kb-card" draggable="true" role="group" data-id="${esc(i.id)}" ondragstart="Agile.dragStart(event,'${esc(i.id)}')" ondragend="this.classList.remove('dragging')" onclick="Agile.openItem('${esc(i.id)}')" aria-label="${esc(i.id)}: ${esc(i.title)}">
       ${top ? `<div class="kb-meta">${top}</div>` : ''}
@@ -11641,7 +11597,7 @@ const Agile = (() => {
     fillSprintSelect(it ? it.sprintId : (active() ? '' : ''));
     fillParent(it ? it.parentId : '', it ? it.id : '');
     kindChanged();
-    renderChildren(it);
+    renderChildren(it); renderFiles(it);
     document.getElementById('modal-agile-item').classList.remove('hidden');
     document.getElementById('ai-title').focus();
   }
@@ -11665,15 +11621,30 @@ const Agile = (() => {
       + (kids.length ? '<div style="display:flex;flex-direction:column;gap:4px;margin:4px 0">' + kids.map(k => '<button type="button" class="link-a" style="text-align:left" onclick="Agile.openItem(\'' + esc(k.id) + '\')">' + esc(k.id) + ' — ' + esc(k.title) + ' · ' + esc(AgileCalc.colLabel(cfg, k.status)) + '</button>').join('') + '</div>' : '<div style="font-size:12px;color:var(--t3);margin:4px 0">Nenhum bug aberto para este item.</div>')
       + '<button type="button" class="btn btn-sm" onclick="Agile.openBugFor(\'' + esc(it.id) + '\')"><i class="ti ti-bug"></i>Abrir um bug neste item</button>';
   }
-  function openBugFor(parentId) {
-    load(); const p = items.find(x => x.id === parentId); if(!p) return;
-    openItem();
-    document.getElementById('ai-kind').value = 'bug'; kindChanged();
-    document.getElementById('ai-parent').value = parentId;
-    document.getElementById('ai-title-h').textContent = 'Novo bug — filho de ' + parentId;
-    document.getElementById('ai-title').placeholder = 'Ex: Ao salvar com campo vazio, aparece erro 500';
-    if(p.sprintId) document.getElementById('ai-sprint').value = p.sprintId;
-    document.getElementById('ai-title').focus();
+  // "Abrir um bug neste item" e o tipo Bug de um item novo levam ao formulário guiado de bug (com anexos)
+  function openBugFor(parentId) { closeItem(); BugReport.open(parentId); }
+  function kindPicked() {
+    const isBug = document.getElementById('ai-kind').value === 'bug';
+    if(isBug && !itemCtx) { closeItem(); BugReport.open(); return; }
+    kindChanged();
+  }
+  function nextBugId() { load(); return AgileCalc.nextId('US', items); }
+  const sprintRefsAll = () => { load(); return sprints.map(s => ({ id: s.id, name: s.name, state: s.state })); };
+  function createBug(d) {
+    load();
+    const bug = { id: items.some(x => x.id === d.id) ? AgileCalc.nextId('US', items) : d.id, title: d.title, description: d.description || '', kind: 'bug', status: 'todo', points: '', assignee: '', sprintId: d.sprintId || '', parentId: d.parentId || '', attachments: d.attachments || [], rank: Math.max(0, ...items.map(x => x.rank || 0)) + 1, createdOn: todayIso(), doneOn: '' };
+    const bad = AgileCalc.bugParentError(bug, items);
+    if(bad) { T.show('⚠️ ' + bad); return null; }
+    items.push(bug); saveItems(); pushItem(bug); renderAll();
+    Trail.log('Bug relatado: ' + bug.id + ' — ' + bug.title, Auth.getName(), 'Filho de ' + bug.parentId, 'b-amb');
+    return bug;
+  }
+  async function openFile(path) { const u = await Cloud.itemFileUrl(path); if(u) window.open(u, '_blank', 'noopener'); }
+  function renderFiles(it) {
+    const el = document.getElementById('ai-files'); if(!el) return;
+    const list = (it && it.kind === 'bug' && Array.isArray(it.attachments)) ? it.attachments : [];
+    el.style.display = list.length ? '' : 'none';
+    el.innerHTML = list.length ? '<div class="field-label"><i class="ti ti-paperclip"></i> Anexos do bug</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">' + list.map(a => '<button type="button" class="btn btn-sm" onclick="Agile.openFile(\'' + esc(a.path) + '\')"><i class="ti ti-' + (String(a.type).startsWith('image/') ? 'photo' : 'file') + '"></i>' + esc(a.name) + '</button>').join('') + '</div>' : '';
   }
   // Mudança de escopo no meio da sprint: só na sprint ativa, com o motivo registrado na descrição e na trilha
   let urgent = null;
@@ -11780,7 +11751,7 @@ const Agile = (() => {
   // ───────── Importação de planilha (usa o importador comum) ─────────
   const titles = () => { load(); return items.map(i => i.title); };
   const sprintRefs = () => { load(); return sprints.map(s => ({ id: s.id, name: s.name })); };
-  const itemRefs = () => { load(); return items.map(i => ({ id: i.id, title: i.title, kind: i.kind })); };
+  const itemRefs = () => { load(); return items.map(i => ({ id: i.id, title: i.title, kind: i.kind, sprintId: i.sprintId || '' })); };
   function addMany(rows) {
     load();
     let rank = Math.max(0, ...items.map(x => x.rank || 0));
@@ -11943,7 +11914,7 @@ const Agile = (() => {
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
     aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, moveCol, setColLabel, setColWip, setCardField,
-    cfgNow: () => { load(); return cfg; }, kindChanged, openBugFor, itemRefs, openUrgent };
+    cfgNow: () => { load(); return cfg; }, kindChanged, kindPicked, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
 })();
 </script>
 
@@ -17820,28 +17791,32 @@ const Messaging = (() => {
   </div>
 </div>
 
-<!-- Relato de problema: guia a pessoa a descrever bem (caminho, passo a passo, o que esperava, o que ocorreu) e a anexar o print -->
+<!-- Relatar um bug: vira um item Bug, filho de uma entrega, com a orientação de preenchimento e os anexos -->
 <div class="modal-ov hidden" id="modal-bug" role="dialog" aria-modal="true" aria-labelledby="bug-title">
-  <div class="modal-box" style="width:600px;max-height:92vh;overflow:auto">
+  <div class="modal-box" style="width:620px;max-height:92vh;overflow:auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <div class="modal-title" id="bug-title">Reportar um problema</div>
+      <div class="modal-title" id="bug-title">Relatar um bug</div>
       <button class="btn btn-sm" aria-label="Fechar" onclick="BugReport.close()"><i class="ti ti-x"></i></button>
     </div>
-    <div class="modal-sub" style="line-height:1.6">Quanto mais você <strong>descrever e exemplificar</strong> o problema, mais rápido conseguimos corrigir. Conte: o <strong>caminho no sistema</strong>; o que você <strong>fez</strong> (cliques, mudança de tela, função usada); o que esperava e o que aconteceu — e feche com um <strong>print</strong> do ocorrido.</div>
+    <div class="modal-sub" style="line-height:1.6">O bug vira um item do projeto, <strong>filho da entrega</strong> em que foi encontrado. Quanto mais você <strong>descrever e exemplificar</strong>, mais ágil a correção: conte o <strong>caminho no sistema</strong>; o que você <strong>fez</strong> (cliques, mudança de tela, função usada); o que esperava e o que aconteceu — e feche com um <strong>print</strong> do ocorrido.</div>
     <div style="display:flex;flex-direction:column;gap:12px;margin-top:10px">
-      <div><label class="field-label" for="bug-f-title">Resumo do problema (obrigatório)</label><input class="input" id="bug-f-title" maxlength="160" placeholder="Ex.: O botão Importar planilha não abre a janela"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px">
+        <div><label class="field-label" for="bug-f-parent">Entrega (item) em que o bug foi encontrado (obrigatório)</label><select class="input" id="bug-f-parent"></select></div>
+        <div><label class="field-label" for="bug-f-sprint">Sprint</label><select class="input" id="bug-f-sprint"></select></div>
+      </div>
+      <div><label class="field-label" for="bug-f-title">Resumo do bug (obrigatório)</label><input class="input" id="bug-f-title" maxlength="160" placeholder="Ex.: O botão Importar planilha não abre a janela"></div>
       <div><label class="field-label" for="bug-f-sev">Quanto isso atrapalha?</label><select class="input" id="bug-f-sev" style="max-width:340px"><option value="atrapalha">Atrapalha, mas dá para contornar</option><option value="impede">Não consigo continuar trabalhando</option><option value="detalhe">Detalhe visual ou de texto</option></select></div>
-      <div><label class="field-label" for="bug-f-path">Caminho no sistema (obrigatório)</label><input class="input" id="bug-f-path" maxlength="300" placeholder="Ex.: Execução ágil → Quadro Kanban → Importar planilha"></div>
-      <div><label class="field-label" for="bug-f-steps">O que você fez, passo a passo (obrigatório)</label><textarea class="input" id="bug-f-steps" rows="4" maxlength="4000" style="resize:vertical;font-family:inherit" placeholder="Ex.: 1) Abri o Quadro Kanban. 2) Cliquei em Importar planilha. 3) Escolhi o arquivo itens.xlsx. 4) Cliquei em Importar."></textarea></div>
+      <div><label class="field-label" for="bug-f-path">Caminho no sistema (obrigatório)</label><input class="input" id="bug-f-path" maxlength="150" placeholder="Ex.: Execução ágil → Quadro Kanban → Importar planilha"></div>
+      <div><label class="field-label" for="bug-f-steps">O que você fez, passo a passo (obrigatório)</label><textarea class="input" id="bug-f-steps" rows="4" maxlength="800" style="resize:vertical;font-family:inherit" placeholder="Ex.: 1) Abri o Quadro Kanban. 2) Cliquei em Importar planilha. 3) Escolhi o arquivo itens.xlsx. 4) Cliquei em Importar."></textarea></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px">
-        <div><label class="field-label" for="bug-f-exp">O que você esperava que acontecesse</label><textarea class="input" id="bug-f-exp" rows="2" maxlength="2000" style="resize:vertical;font-family:inherit" placeholder="Ex.: Os 12 itens aparecerem em A fazer"></textarea></div>
-        <div><label class="field-label" for="bug-f-act">O que aconteceu de fato (obrigatório)</label><textarea class="input" id="bug-f-act" rows="2" maxlength="2000" style="resize:vertical;font-family:inherit" placeholder="Ex.: Apareceu a mensagem “erro” e nenhum item entrou"></textarea></div>
+        <div><label class="field-label" for="bug-f-exp">O que você esperava</label><textarea class="input" id="bug-f-exp" rows="2" maxlength="300" style="resize:vertical;font-family:inherit" placeholder="Ex.: Os 12 itens aparecerem em A fazer"></textarea></div>
+        <div><label class="field-label" for="bug-f-act">O que aconteceu de fato (obrigatório)</label><textarea class="input" id="bug-f-act" rows="2" maxlength="400" style="resize:vertical;font-family:inherit" placeholder="Ex.: Apareceu a mensagem “erro” e nenhum item entrou"></textarea></div>
       </div>
       <div><div class="field-label">Prints e arquivos de exemplo</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label class="btn btn-sm" for="bug-f-files" style="cursor:pointer"><i class="ti ti-paperclip"></i>Anexar arquivo</label><input type="file" id="bug-f-files" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.txt,.csv,.xlsx" style="position:absolute;width:1px;height:1px;opacity:0" onchange="BugReport.addFiles(this.files);this.value=''"><span style="font-size:11.5px;color:var(--t3)">ou cole o print aqui com Ctrl+V · até 6 arquivos de 5 MB (imagem, PDF, planilha ou texto)</span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label class="btn btn-sm" for="bug-f-files" style="cursor:pointer"><i class="ti ti-paperclip"></i>Anexar arquivo</label><input type="file" id="bug-f-files" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.txt,.csv,.xlsx" style="position:absolute;width:1px;height:1px;opacity:0" onchange="BugReport.addFiles(this.files);this.value=''"><span style="font-size:11.5px;color:var(--t3)" id="bug-files-hint">ou cole o print aqui com Ctrl+V · até 6 arquivos de 5 MB (imagem, PDF, planilha ou texto)</span></div>
         <div id="bug-files" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div></div>
-      <p style="font-size:11.5px;color:var(--t3);line-height:1.5;margin:0"><i class="ti ti-info-circle"></i> Vão junto, automaticamente: a versão do sistema, a tela em que você está, o seu perfil, o navegador, o tamanho da tela e os últimos erros. Nenhuma senha ou chave é enviada.</p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-pri" id="bug-send" onclick="BugReport.send()"><i class="ti ti-send"></i>Enviar relato</button><button class="btn" onclick="BugReport.close()">Cancelar</button></div>
+      <p style="font-size:11.5px;color:var(--t3);line-height:1.5;margin:0"><i class="ti ti-info-circle"></i> Vão junto, automaticamente, a versão do sistema, a tela em que você está, o seu perfil e o tamanho da janela. Nenhuma senha ou chave é enviada.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-pri" id="bug-send" onclick="BugReport.send()"><i class="ti ti-send"></i>Criar o bug</button><button class="btn" onclick="BugReport.close()">Cancelar</button></div>
     </div>
   </div>
 </div>

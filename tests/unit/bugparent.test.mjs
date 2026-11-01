@@ -57,3 +57,22 @@ test('como os itens entram no quadro: Scrum por padrão, Kanban contínuo só qu
   assert.equal(AgileCalc.cfgOf({ entry: 'qualquer' }).entry, 'scrum');
   for (const k of ['ab-entry', 'Item urgente na sprint', 'mudança de escopo', 'Ir ao Backlog', 'si-signout', 'Sair / trocar de usuário']) assert.ok(html.includes(k), k);
 });
+
+test('relatar um bug: exige a entrega pai, monta a descrição estruturada e respeita o limite do banco', () => {
+  const m = html.match(/<script data-module="ui\/bugreport">([\s\S]*?)<\/script>/);
+  const BugReport = new Function('document', 'window', 'Agile', 'Cloud', 'T', 'DB', 'Auth', 'BRAND', m[1] + '\nreturn BugReport;')({ getElementById: () => null, querySelector: () => null, addEventListener: () => {} }, { addEventListener: () => {}, innerWidth: 1280, innerHeight: 900 }, {}, {}, {}, {}, {}, { version: '9.9.9' });
+  const ok = { parentId: 'US-1', title: 'Importar não abre', severity: 'atrapalha', path: 'Kanban → Importar', steps: '1) Abri 2) Cliquei', expected: 'Abrir a janela', actual: 'Nada abriu', context: 'v9.9.9' };
+  assert.equal(BugReport.validate(ok), '');
+  assert.match(BugReport.validate({ ...ok, parentId: '' }), /entrega/);
+  assert.match(BugReport.validate({ ...ok, title: 'ab' }), /resumo/i);
+  assert.match(BugReport.validate({ ...ok, steps: 'curto' }), /passo a passo/);
+  assert.match(BugReport.validate({ ...ok, actual: '' }), /aconteceu/);
+  const d = BugReport.buildDescription(ok);
+  for (const k of ['Caminho no sistema: Kanban → Importar', 'O que foi feito (passo a passo):', '1) Abri 2) Cliquei', 'O que se esperava:', 'O que aconteceu:', 'Contexto: v9.9.9']) assert.ok(d.includes(k), k);
+  assert.ok(d.length <= BugReport.MAX_DESC);
+  assert.match(BugReport.validate({ ...ok, steps: 'x'.repeat(2100) }), /grande demais/);
+  assert.match(BugReport.buildDescription({ ...ok, expected: '' }), /\(não informado\)/);
+  const sql = readFileSync(join(root, 'supabase', 'migrations', '20261101190000_item_attachments.sql'), 'utf8');
+  for (const k of ['attachments jsonb', "'item-files'", 'has_project_access', 'drop table if exists public.bug_reports']) assert.ok(sql.includes(k), k);
+  for (const k of ['Agile.createBug', 'Cloud.uploadItemFile', 'Relatar um bug']) assert.ok(html.includes(k), k);
+});
