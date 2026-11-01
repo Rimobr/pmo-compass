@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.38.1'
+  version: '2.38.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -288,6 +288,8 @@ body.no-login #login-gate{display:flex}
 .proj-pick-list{position:absolute;z-index:20;margin-top:4px;min-width:260px;max-width:min(360px,86vw);max-height:280px;overflow:auto;background:var(--s1);border:1px solid var(--b2);border-radius:var(--r8);padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 .proj-pick-list label{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--t1);cursor:pointer}
 .proj-pick-list label:hover{background:var(--s2)}
+.proj-pick-foot{position:sticky;bottom:-6px;display:flex;align-items:center;gap:6px;margin:6px -6px -6px;padding:8px;background:var(--s2);border-top:1px solid var(--b1);font-size:12px;color:var(--t2)}
+.proj-pick-foot .pp-n{flex:1}
 .proj-pick-all{border-bottom:1px solid var(--b1);margin-bottom:4px;border-radius:6px 6px 0 0}
 .proj-pick-list input{width:16px;height:16px;accent-color:var(--acc)}
 .sb-divl-btn{position:relative;justify-content:center;background:none;border:0;width:calc(100% - 8px);cursor:pointer;font-family:inherit;border-radius:var(--r8);padding:4px 16px;letter-spacing:.02em}
@@ -5520,9 +5522,10 @@ const Users = (() => {
         ? '<span class="chip"><i class="ti ti-infinity"></i> Todos os projetos</span>'
         : (all.filter(x => has.has(x.id)).map(x => `<span class="chip">${escapeHtml(x.name || x.id)} <button class="link-a" style="padding:0 2px" aria-label="Remover ${nm} do projeto ${escapeHtml(x.name || x.id)}" onclick="Users.removeAccess('${p.id}','${x.id}')"><i class="ti ti-x"></i></button></span>`).join('') || '<span style="font-size:12px;color:var(--t3)">Nenhum projeto ainda</span>');
       const nIn = all.filter(x => has.has(x.id)).length, allIn = all.length > 0 && nIn === all.length;
-      const add = isAdmin ? '' : `<details class="proj-pick"${openFor === p.id ? ' open' : ''} ontoggle="Users.pickToggle('${p.id}', this.open)"><summary class="input" aria-label="Escolher os projetos de ${nm}">Projetos (${nIn} de ${all.length})</summary><div class="proj-pick-list" role="group" aria-label="Projetos de ${nm}">
-          <label class="proj-pick-all"><input type="checkbox"${allIn ? ' checked' : ''}${all.length ? '' : ' disabled'} onchange="Users.setAll('${p.id}', this.checked)"> <b>Todos os projetos</b></label>
-          ${all.map(x => `<label><input type="checkbox"${has.has(x.id) ? ' checked' : ''} onchange="Users.setAccess('${p.id}','${x.id}', this.checked)"> ${escapeHtml(x.name || x.id)}</label>`).join('')}
+      const add = isAdmin ? '' : `<details class="proj-pick" data-uid="${p.id}"${openFor === p.id ? ' open' : ''} ontoggle="Users.pickToggle('${p.id}', this.open)"><summary class="input" aria-label="Escolher os projetos de ${nm}">Projetos (${nIn} de ${all.length})</summary><div class="proj-pick-list" role="group" aria-label="Projetos de ${nm}">
+          <label class="proj-pick-all"><input type="checkbox"${allIn ? ' checked' : ''}${all.length ? '' : ' disabled'} onchange="Users.pickAll('${p.id}', this.checked, this)"> <b>Todos os projetos</b></label>
+          ${all.map(x => `<label><input type="checkbox" data-pid="${escapeHtml(x.id)}"${has.has(x.id) ? ' checked' : ''} onchange="Users.pickChange('${p.id}','${x.id}', this.checked, this)"> ${escapeHtml(x.name || x.id)}</label>`).join('')}
+          <div class="proj-pick-foot"><span class="pp-n" aria-live="polite">Marque e salve de uma vez</span><button class="btn btn-sm" onclick="Users.pickCancel('${p.id}', this)">Cancelar</button><button class="btn btn-sm btn-acc pp-save" disabled onclick="Users.pickSave('${p.id}', this)"><i class="ti ti-device-floppy"></i>Salvar</button></div>
         </div></details>`;
       return `<div class="set-row" style="align-items:flex-start;flex-wrap:wrap;gap:10px">
         ${admin && !isMe ? `<input type="checkbox" aria-label="Marcar ${nm}" ${sel.has(p.id) ? 'checked' : ''} onchange="Users.toggleSel('${p.id}', this.checked)" style="margin-top:3px">` : (admin ? '<span style="width:13px"></span>' : '')}<div style="min-width:180px;flex:1 1 180px"><div class="set-lbl">${nm}${isMe ? ' <span class="badge b-acc">você</span>' : ''}${p.active === false ? ' <span class="badge b-red">Inativo</span>' : ''}</div><div class="set-sub" style="font-family:var(--font-mono);font-size:11px" title="Identificador da conta">${escapeHtml(p.id.slice(0, 8))}…</div></div>
@@ -5556,21 +5559,49 @@ const Users = (() => {
   }
   // Caixas de seleção: marcar/desmarcar um projeto, ou todos de uma vez (só os do alcance de quem está logado)
   let openFor = '';
-  function pickToggle(userId, isOpen) { if(isOpen) openFor = userId; else if(openFor === userId) openFor = ''; }
+  // Rascunho por pessoa: marcar não grava nada; "Salvar" grava as diferenças de uma vez (1 mensagem, 1 atualização)
+  const drafts = {};
+  const savedSet = userId => new Set(access.filter(a => a.user_id === userId).map(a => a.project_id));
+  const draftOf = userId => drafts[userId] || (drafts[userId] = savedSet(userId));
+  const diffOf = userId => { const had = savedSet(userId), now = draftOf(userId), all = scopeProjects().map(p => p.id); return { add: all.filter(id => now.has(id) && !had.has(id)), del: all.filter(id => !now.has(id) && had.has(id)) }; };
+  // Põe a caixa de seleção, a contagem e o rodapé de acordo com o rascunho (sem redesenhar a lista, para o foco e a rolagem ficarem onde estão)
+  function pickSync(det, userId) {
+    if(!det) return;
+    const now = drafts[userId] || savedSet(userId), all = scopeProjects(), d = drafts[userId] ? diffOf(userId) : { add: [], del: [] }, n = d.add.length + d.del.length;
+    det.querySelectorAll('input[data-pid]').forEach(i => { i.checked = now.has(i.dataset.pid); });
+    const allBox = det.querySelector('.proj-pick-all input'); if(allBox) allBox.checked = all.length > 0 && all.every(p => now.has(p.id));
+    const sm = det.querySelector('summary'); if(sm) sm.textContent = 'Projetos (' + all.filter(p => now.has(p.id)).length + ' de ' + all.length + ')' + (n ? ' •' : '');
+    const lab = det.querySelector('.pp-n'); if(lab) lab.textContent = n ? n + ' alteração(ões) por salvar' : 'Marque e salve de uma vez';
+    const sv = det.querySelector('.pp-save'); if(sv) sv.disabled = !n;
+  }
+  function pickChange(userId, pid, on, el) { const d = draftOf(userId); if(on) d.add(pid); else d.delete(pid); pickSync(el.closest('.proj-pick'), userId); }
+  function pickAll(userId, on, el) { const d = draftOf(userId); scopeProjects().forEach(p => { if(on) d.add(p.id); else d.delete(p.id); }); pickSync(el.closest('.proj-pick'), userId); }
+  function pickCancel(userId, el) { const det = el.closest('.proj-pick'); delete drafts[userId]; pickSync(det, userId); if(det) det.open = false; }
+  async function pickSave(userId, el) {
+    const det = el.closest('.proj-pick'), d = diffOf(userId);
+    if(!d.add.length && !d.del.length) return;
+    if(det) det.querySelectorAll('input,button').forEach(x => { x.disabled = true; });
+    const okAdd = [], okDel = [];
+    for(const pid of d.add) if(await Cloud.setProjectAccess(userId, pid, true)) okAdd.push(pid);
+    for(const pid of d.del) if(await Cloud.setProjectAccess(userId, pid, false)) okDel.push(pid);
+    access = access.filter(a => !(a.user_id === userId && okDel.includes(a.project_id))).concat(okAdd.map(pid => ({ project_id: pid, user_id: userId })));
+    delete drafts[userId]; openFor = '';
+    const fail = d.add.length + d.del.length - okAdd.length - okDel.length;
+    T.show(fail ? '⚠️ ' + (okAdd.length + okDel.length) + ' alteração(ões) salva(s); ' + fail + ' não foi(ram) gravada(s).' : '✅ Projetos de ' + ((people.find(p => p.id === userId) || {}).name || 'a pessoa') + ' salvos' + (okAdd.length ? ' · incluído em ' + okAdd.length : '') + (okDel.length ? ' · removido de ' + okDel.length : '') + '.');
+    renderPeople(); // fecha a lista e mostra os projetos salvos
+  }
+  function pickToggle(userId, isOpen) { if(isOpen) openFor = userId; else { if(openFor === userId) openFor = ''; if(drafts[userId]) { delete drafts[userId]; pickSync(document.querySelector('.proj-pick[data-uid="' + userId + '"]'), userId); } } }
+  // Clicar fora da lista fecha e descarta o que não foi salvo
+  document.addEventListener('click', e => {
+    const open = document.querySelector('.proj-pick[open]');
+    if(open && !open.contains(e.target)) open.open = false;
+  });
   async function setAccess(userId, pid, on) {
     if(await Cloud.setProjectAccess(userId, pid, on)) {
       access = on ? access.concat([{ project_id: pid, user_id: userId }]) : access.filter(a => !(a.project_id === pid && a.user_id === userId));
       T.show(on ? '✅ Incluído em ' + projName(pid) + '.' : '✅ Acesso a ' + projName(pid) + ' removido.');
     }
-    openFor = userId; renderPeople();
-  }
-  async function setAll(userId, on) {
-    const ids = scopeProjects().map(p => p.id).filter(id => access.some(a => a.user_id === userId && a.project_id === id) !== on);
-    const done = [];
-    for(const pid of ids) { if(await Cloud.setProjectAccess(userId, pid, on)) done.push(pid); }
-    access = on ? access.concat(done.map(pid => ({ project_id: pid, user_id: userId }))) : access.filter(a => !(a.user_id === userId && done.includes(a.project_id)));
-    if(done.length) T.show(on ? '✅ Incluído em ' + done.length + ' projeto(s).' : '✅ Acesso removido de ' + done.length + ' projeto(s).');
-    openFor = userId; renderPeople();
+    openFor = ''; renderPeople();
   }
   async function removeAccess(userId, pid) { return setAccess(userId, pid, false); }
   async function changeRole(userId, role, isMe) {
@@ -5588,7 +5619,7 @@ const Users = (() => {
     }
   }
 
-  return { render, refresh, setFilter, setManager, pickToggle, setAccess, setAll, removeAccess, changeRole, newProfile, editProfile, cancelProfile, saveProfile, removeProfile , newAccount, cancelNew, createAccount, copyNew, resetPw, genPassword , toggleSel, selAll, startLife, cancelLife, runLife, inactivateBlocked, rwProject, rwPreview, rwRun , showPerson, closePerson };
+  return { render, refresh, setFilter, setManager, pickToggle, pickChange, pickAll, pickCancel, pickSave, setAccess, removeAccess, changeRole, newProfile, editProfile, cancelProfile, saveProfile, removeProfile , newAccount, cancelNew, createAccount, copyNew, resetPw, genPassword , toggleSel, selAll, startLife, cancelLife, runLife, inactivateBlocked, rwProject, rwPreview, rwRun , showPerson, closePerson };
 })();
 </script>
 
