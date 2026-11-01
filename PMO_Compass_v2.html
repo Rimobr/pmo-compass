@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.28.0'
+  version: '2.29.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -183,6 +183,8 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .toast-wrap{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .toast{background:var(--s2);border:1px solid var(--b2);border-radius:var(--r8);padding:10px 16px;font-size:12.5px;color:var(--t1);display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-md);animation:toastIn .2s ease;pointer-events:auto}
 @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+#login-gate{display:none;position:fixed;inset:0;z-index:900;background:var(--bg);align-items:center;justify-content:center;padding:16px}
+body.no-login #login-gate{display:flex}
 .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:999;backdrop-filter:blur(4px)}
 .modal-ov.hidden{display:none}
 .modal-box{background:var(--s1);border:1px solid var(--b2);border-radius:var(--r12);padding:24px;width:480px;max-width:95vw;box-shadow:var(--shadow-md)}
@@ -3657,9 +3659,13 @@ const Auth = (() => {
 
   function apply() {
     document.body.setAttribute('data-role', state.role);
+    document.body.classList.toggle('no-login', noLogin);
+    if(noLogin) { const ob = document.getElementById('modal-onboarding'); if(ob) ob.classList.add('hidden'); }
+    // Sem login o conteúdo fica inerte (nem o teclado alcança o que está atrás da tela de entrada)
+    Array.from(document.body.children).filter(el => el.id !== 'login-gate' && !el.classList.contains('modal-ov') && !['SCRIPT','STYLE','LINK'].includes(el.tagName)).forEach(el => { el.inert = noLogin; });
     document.body.setAttribute('data-can', grantedScopes().join(' '));
     const ava = document.getElementById('tb-avatar');
-    if(ava) { ava.textContent = initialsFor(state.name, state.role); ava.title = `${state.name} — ${label()} · clique para ver sua conta`; }
+    if(ava) { ava.textContent = noLogin ? '?' : initialsFor(state.name, state.role); ava.title = `${state.name} — ${label()} · clique para ver sua conta`; }
     const tag = document.getElementById('tb-role-tag');
     if(tag) tag.textContent = label();
     updateCloudBadge();
@@ -7182,7 +7188,8 @@ const Onboarding = (() => {
     const m = document.getElementById('modal-onboarding'); if(m) m.classList.add('hidden');
     try { localStorage.setItem(KEY, '1'); } catch(e){}
   }
-  function maybeShow() { if(shouldShow()) setTimeout(show, 600); }
+  // Sem login não aparece o "Comece aqui" por cima da tela de entrada
+  function maybeShow() { if(shouldShow()) setTimeout(() => { if(!document.body.classList.contains('no-login')) show(); }, 600); }
   return { maybeShow, show, dismiss, willShow: shouldShow, refresh: () => { try { render(); } catch(e) {} } };
 })();
 </script>
@@ -17034,6 +17041,16 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
 </div>
 
 <!-- ■ MODULE: ui/auth-modal -->
+<!-- Sem login (com a nuvem configurada): nada do projeto aparece até entrar ou escolher o modo local de propósito -->
+<div id="login-gate" role="region" aria-labelledby="login-gate-title">
+  <div style="max-width:440px;text-align:center">
+    <div style="font-size:34px;color:var(--acc);margin-bottom:6px"><i class="ti ti-lock"></i></div>
+    <h1 id="login-gate-title" style="font-size:20px;margin:0 0 8px;color:var(--t1)">Você não está logado</h1>
+    <p style="font-size:13.5px;color:var(--t2);line-height:1.65;margin:0 0 16px">Entre com a sua conta para ver e sincronizar os dados dos seus projetos. A conta é criada pelo administrador, que passa a você o e-mail e uma senha temporária.</p>
+    <div class="btn-row" style="justify-content:center"><button class="btn btn-acc" onclick="Auth.openModal()"><i class="ti ti-login"></i>Entrar</button><button class="btn" onclick="Auth.openModal();Auth.toggleLocalBox()" title="Usa o aplicativo só neste navegador, sem nuvem e sem sincronizar"><i class="ti ti-device-desktop"></i>Continuar sem conta (modo local)</button></div>
+  </div>
+</div>
+
 <div class="modal-ov hidden" id="modal-auth" onclick="if(event.target===this)Auth.closeModal()">
   <div class="modal-box" style="width:460px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
