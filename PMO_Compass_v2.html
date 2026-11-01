@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.35.0'
+  version: '2.36.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -183,6 +183,27 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .toast-wrap{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .toast{background:var(--s2);border:1px solid var(--b2);border-radius:var(--r8);padding:10px 16px;font-size:12.5px;color:var(--t1);display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-md);animation:toastIn .2s ease;pointer-events:auto}
 @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+/* Seções recolhíveis: cada função tem um tom de fundo leve; o título abre e fecha; a escolha fica salva */
+.card[data-sec]{border-left:3px solid var(--sec-c,var(--b2))}
+.card[data-tint="1"]{--sec-c:var(--acc);background:color-mix(in srgb,var(--acc) 5%,var(--s1))}
+.card[data-tint="2"]{--sec-c:var(--grn);background:color-mix(in srgb,var(--grn) 5%,var(--s1))}
+.card[data-tint="3"]{--sec-c:var(--pur);background:color-mix(in srgb,var(--pur) 5%,var(--s1))}
+.card[data-tint="4"]{--sec-c:var(--amb);background:color-mix(in srgb,var(--amb) 5%,var(--s1))}
+.card[data-tint="5"]{--sec-c:var(--t3);background:color-mix(in srgb,var(--t3) 6%,var(--s1))}
+.card[data-sec]>.lbl{cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none}
+.card[data-sec]>.lbl::after{content:'\203A';margin-left:auto;font-size:18px;line-height:1;color:var(--t3);transition:transform .15s}
+.card[data-sec]:not(.collapsed)>.lbl::after{transform:rotate(90deg)}
+.card[data-sec].collapsed>:not(.lbl){display:none!important}
+.card[data-sec].collapsed>.lbl{margin-bottom:0}
+.card[data-sec]>.lbl:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:6px}
+.card[data-sec]:empty{display:none}
+.wc-sum{font-size:12.5px;color:var(--t2);margin-bottom:8px}.wc-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.wc-months{display:flex;gap:4px;flex-wrap:wrap}
+.wc-m{position:relative;border:1px solid var(--b1);background:var(--s1);color:var(--t2);border-radius:8px;padding:5px 9px;font-size:12px;cursor:pointer;font-family:inherit}.wc-m.on{background:var(--ad);border-color:var(--ab);color:var(--t1);font-weight:600}
+.wc-n{margin-left:4px;font-size:10.5px;color:var(--t3)}.wc-n.lost{color:var(--amb);font-weight:700}
+.wc-list{border-top:1px solid var(--b1)}.wc-row{display:flex;gap:8px;align-items:center;padding:6px 2px;border-bottom:1px solid var(--b1);font-size:12.5px;flex-wrap:wrap}.wc-day{font-weight:700;color:var(--t1);min-width:58px;font-variant-numeric:tabular-nums}.wc-day span{font-weight:400;color:var(--t3);font-size:11px}
+.wc-name{flex:1 1 160px;color:var(--t1)}.wc-tag{font-size:11px;color:var(--t3)}.wc-eff{font-size:11px;color:var(--amb)}.wc-eff.off{color:var(--t3)}.wc-empty{font-size:12px;color:var(--t3);padding:8px 2px}
+.wc-add{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:8px 0}.wc-add .field{display:flex;flex-direction:column;gap:3px}.wc-add .field label{font-size:11.5px;color:var(--t2)}.wc-yr{font-size:12px;color:var(--t2);display:flex;gap:5px;align-items:center;padding-bottom:7px}
+.wc-exc{margin-top:8px;border:1px solid var(--b1);border-radius:8px;padding:6px 10px;background:var(--s2)}.wc-exc summary{cursor:pointer;font-size:12.5px;color:var(--t1)}.wc-fac{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--t2);margin-top:8px;cursor:pointer}
 .no-view{display:none!important}
 body.no-project .sb-proj-area{display:none}
 .preview-bar{display:flex;background:var(--amd);color:var(--t1);border-bottom:1px solid var(--ambb);padding:6px 14px;font-size:12.5px;align-items:center;gap:10px;flex-wrap:wrap}.preview-bar[hidden]{display:none}
@@ -1495,16 +1516,16 @@ body.icons-failed i[data-fb]::before{
   </div>
 
   <div id="settings-panel-pmo">
-  <div class="card" id="wc-card">
+  <div class="card" id="wc-card" data-sec="calendario" data-tint="2" data-collapsed="1">
     <div class="lbl"><i class="ti ti-calendar-event"></i>Calendário de trabalho<span class="help-q" data-help="Início e fim de sprint e as datas planejadas das entregas não podem cair em sábado, domingo ou feriado. Os feriados nacionais já estão aqui; acrescente os do estado, da cidade ou da empresa. Quando for preciso trabalhar num dia assim, o gerente do projeto autoriza uma exceção e escreve a justificativa. As datas REAIS (o que de fato aconteceu) não são travadas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div id="wc-root"></div>
   </div>
-  <div class="card">
+  <div class="card" data-sec="metodologia" data-tint="1">
     <div class="lbl"><i class="ti ti-route"></i>Metodologia deste projeto<span class="help-q" data-help="Define quais telas aparecem no menu deste projeto. Esconder uma tela não apaga nenhum dado: se você mudar de ideia, tudo volta. Projetos antigos ficam como Híbrido (todas as telas). Você pode abrir uma tela escondida pela busca (Ctrl+K) ou ligando 'Mostrar todas as telas'." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Escolha como este projeto é conduzido. O menu mostra só o que faz sentido para o método — menos telas, menos ruído.</p>
     <div id="method-root" role="radiogroup" aria-label="Metodologia do projeto"></div>
   </div>
-  <div class="card">
+  <div class="card" data-sec="perfil-pmo" data-tint="4" data-collapsed="1">
     <div class="lbl"><i class="ti ti-sitemap"></i>Perfil de PMO da organização<span class="help-q" data-help="O tipo de PMO descreve a sua organização, então vale para TODOS os projetos de uma vez (a metodologia é que muda por projeto). Só o administrador altera. Projetos antigos que tinham um perfil próprio continuam usando-o até a organização escolher o seu." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px">Vale para <strong style="color:var(--t1)">todos os projetos</strong>. Muda o <strong style="color:var(--t1)">tom</strong> das recomendações da IA (Chat, Decisões, Relatório) — mais consultivo, mais rigoroso ou mais prescritivo, conforme o papel real do seu PMO. A IA também ajusta o tom sozinha com base na taxa de aceitação das próprias recomendações neste projeto.</p>
     <div id="pmo-profile-root"></div>
@@ -1512,14 +1533,14 @@ body.icons-failed i[data-fb]::before{
   </div><!-- /settings-panel-pmo -->
 
   <div id="settings-panel-acesso" style="display:none">
-  <div class="card">
+  <div class="card" data-sec="como-acesso" data-tint="5" data-collapsed="1">
     <div class="lbl"><i class="ti ti-lock-access"></i>Como o acesso funciona</div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin:0">Três camadas, nesta ordem: <strong style="color:var(--t1)">1. a conta</strong> (quem entra) tem um <strong style="color:var(--t1)">2. perfil de acesso</strong> (o que pode fazer, em todos os projetos) e é <strong style="color:var(--t1)">3. membro de cada projeto</strong> que pode ver. O perfil só o Administrador altera. Quem entra em cada projeto o Administrador e o <strong style="color:var(--t1)">gerente responsável</strong> por aquele projeto decidem; os demais perfis veem apenas o que o perfil libera.</p>
   </div>
 
   <div class="card" id="users-hint" style="display:none"><div class="lbl"><i class="ti ti-users"></i>Usuários e acesso</div><p style="font-size:12.5px;color:var(--t2);line-height:1.6">Para <strong style="color:var(--t1)">criar, inativar ou trocar usuários</strong>, entre com a conta de <strong style="color:var(--t1)">Administrador</strong> (botão de perfil no canto superior direito → <em>Entrar</em>). Sem conexão com a nuvem, esta área não aparece.</p></div>
 
-  <div class="card" id="users-card" style="display:none">
+  <div class="card" id="users-card" style="display:none" data-sec="usuarios" data-tint="1">
     <div class="lbl"><i class="ti ti-users"></i>Pessoas e acesso<span class="help-q" data-help="Cada pessoa tem um perfil (o que ela pode fazer) e os projetos que ela pode abrir. Administradores veem todos os projetos. Aqui você muda as duas coisas no mesmo lugar, sem trocar de tela." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Para cada pessoa: escolha o <strong style="color:var(--t1)">perfil</strong> e inclua nos <strong style="color:var(--t1)">projetos</strong> que ela pode ver. Não existe cadastro aberto: <strong style="color:var(--t1)">o administrador cria o usuário</strong> em "Novo usuário" (nome, e-mail, perfil e projetos); a senha temporária segue por e-mail. Marque as caixas para <strong style="color:var(--t1)">inativar, reativar ou excluir</strong> vários de uma vez.</p>
     <div class="btn-row" style="margin-bottom:10px">
@@ -1532,11 +1553,11 @@ body.icons-failed i[data-fb]::before{
     <div id="users-life-root"></div>
     <div id="users-person-root"></div>
     <div id="users-list-root"></div>
-    <div id="users-reassign"></div>
-    <div id="users-managers"></div>
   </div>
+  <div class="card" id="users-reassign" data-sec="trocar-responsavel" data-tint="2" data-collapsed="1"></div>
+  <div class="card" id="users-managers" data-sec="gerente-projeto" data-tint="3" data-collapsed="1"></div>
 
-  <div class="card" id="access-profiles-card" style="display:none">
+  <div class="card" id="access-profiles-card" style="display:none" data-sec="perfis" data-tint="4" data-collapsed="1">
     <div class="lbl"><i class="ti ti-id-badge-2"></i>Perfis de acesso</div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Cada perfil é um conjunto de permissões. Os perfis prontos cobrem o PMI (gerente, patrocinador), o ágil (dono do produto, Scrum Master, time) e o básico (consulta, suporte); crie outros combinando as permissões. O banco aplica as regras — esconder o botão na tela não é a única barreira.</p>
     <div id="access-profiles-root"></div>
@@ -1546,7 +1567,7 @@ body.icons-failed i[data-fb]::before{
   <!-- Só aparece para Administrador logado — registro append-only de eventos sensíveis (login,
        promoção de perfil, backup, reset de dados, tentativa bloqueada por permissão). Ver
        schema.sql seção 9: nem um Administrador consegue editar/apagar uma linha via API. -->
-  <div class="card" id="audit-log-card" style="display:none">
+  <div class="card" id="audit-log-card" style="display:none" data-sec="auditoria" data-tint="5" data-collapsed="1">
     <div class="lbl"><i class="ti ti-shield-check"></i>Log de auditoria</div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Registro append-only de eventos sensíveis de governança — ninguém, nem Administrador, consegue editar ou apagar uma linha depois de gravada (nem pela tela, nem pela API). Só os últimos 500 eventos são exibidos aqui; exporte em CSV para um histórico maior.</p>
     <div class="btn-row" style="margin-bottom:10px">
@@ -5163,6 +5184,7 @@ const Users = (() => {
     const show = cloud && Auth.getRole() === 'admin';
     const showTeam = cloud && (show || (Auth.can('business') && managed().length > 0));
     if(card) { card.style.display = showTeam ? '' : 'none'; if(showTeam) refresh(); }
+    ['users-reassign', 'users-managers'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = showTeam ? '' : 'none'; });
     const hint = document.getElementById('users-hint'); if(hint) hint.style.display = showTeam ? 'none' : '';
     if(apCard) { apCard.style.display = show ? '' : 'none'; if(show) renderProfiles(); }
     if(typeof Erase !== 'undefined') Erase.render();
@@ -5186,6 +5208,7 @@ const Users = (() => {
       </div>`;
     }).join('');
     root.innerHTML = rows + (editing ? editorHtml() : '');
+    if(typeof Sec !== 'undefined') Sec.restore();
   }
   function editorHtml() {
     const groups = {};
@@ -5415,7 +5438,7 @@ const Users = (() => {
     if(!projs.some(p => p.id === rwProj)) rwProj = projs[0].id;
     rwNames = await Cloud.listTeamNames(rwProj);
     const opt = (v, t) => `<option value="${escapeHtml(v)}">${escapeHtml(t)}</option>`;
-    root.innerHTML = `<div class="lbl" style="margin-top:16px"><i class="ti ti-arrows-exchange"></i>Trocar o responsável das atividades<span class="help-q" data-help="Passa as atividades que ainda NÃO foram concluídas (itens do backlog e tarefas do cronograma) de uma pessoa para outra, ou para sem responsável. As já concluídas não mudam. Use quando alguém sai, entra em férias ou muda de função durante o projeto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    root.innerHTML = `<div class="lbl"><i class="ti ti-arrows-exchange"></i>Trocar o responsável das atividades<span class="help-q" data-help="Passa as atividades que ainda NÃO foram concluídas (itens do backlog e tarefas do cronograma) de uma pessoa para outra, ou para sem responsável. As já concluídas não mudam. Use quando alguém sai, entra em férias ou muda de função durante o projeto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;align-items:end">
         <div class="field"><label for="rw-proj">Projeto</label><select class="input" id="rw-proj" onchange="Users.rwProject(this.value)">${projs.map(p => `<option value="${p.id}"${p.id === rwProj ? ' selected' : ''}>${escapeHtml(p.name || p.id)}</option>`).join('')}</select></div>
         <div class="field"><label for="rw-from">De</label><select class="input" id="rw-from" onchange="Users.rwPreview()"><option value="">Escolha…</option>${rwNames.map(n => opt(n, n)).join('')}</select></div>
@@ -5423,6 +5446,7 @@ const Users = (() => {
         <div class="field"><button class="btn btn-sm btn-pri" id="rw-go" onclick="Users.rwRun()"><i class="ti ti-arrows-exchange"></i>Trocar</button></div>
       </div>
       <div id="rw-info" role="status" aria-live="polite" style="font-size:12px;color:var(--t2);margin-top:4px"></div>`;
+    if(typeof Sec !== 'undefined') Sec.restore();
   }
   function rwProject(id) { rwProj = id; renderReassign(); }
   async function rwPreview() {
@@ -5469,6 +5493,7 @@ const Users = (() => {
     const sel = document.getElementById('users-proj');
     if(sel) { const keep = sel.value; sel.innerHTML = '<option value="">' + (isAdminUser() ? 'Todos os projetos' : 'Todos os meus projetos') + '</option>' + scopeProjects().map(p => `<option value="${p.id}">${escapeHtml(p.name || p.id)}</option>`).join(''); sel.value = keep || ''; }
     renderPeople(); renderManagers(); renderReassign();
+    if(typeof Sec !== 'undefined') Sec.restore();
   }
   function setFilter() { renderPeople(); }
   function renderPeople() {
@@ -5515,7 +5540,8 @@ const Users = (() => {
       const opts = ['<option value="">Sem gerente responsável (só o Administrador)</option>'].concat(cands.map(c => `<option value="${c.id}"${c.id === pr.managerId ? ' selected' : ''}>${escapeHtml(c.name || c.id)}</option>`)).join('');
       return `<div class="set-row"><div class="set-lbl">${escapeHtml(pr.name || pr.id)}</div><select class="input" style="width:auto;max-width:320px" aria-label="Gerente responsável pelo projeto ${escapeHtml(pr.name || pr.id)}" onchange="Users.setManager('${pr.id}', this.value)">${opts}</select></div>`;
     }).join('');
-    root.innerHTML = `<div class="lbl" style="margin-top:16px"><i class="ti ti-user-star"></i>Gerente responsável por projeto<span class="help-q" data-help="Além do Administrador, só o gerente responsável pelo projeto inclui ou tira pessoas dele. Quem cria um projeto sendo gerente já fica como responsável." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:6px">Fora o Administrador, <strong style="color:var(--t1)">só o gerente responsável</strong> inclui ou tira pessoas do projeto dele.</p>${rows}`;
+    root.innerHTML = `<div class="lbl"><i class="ti ti-user-star"></i>Gerente responsável por projeto<span class="help-q" data-help="Além do Administrador, só o gerente responsável pelo projeto inclui ou tira pessoas dele. Quem cria um projeto sendo gerente já fica como responsável." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:6px">Fora o Administrador, <strong style="color:var(--t1)">só o gerente responsável</strong> inclui ou tira pessoas do projeto dele.</p>${rows}`;
+    if(typeof Sec !== 'undefined') Sec.restore();
   }
   async function setManager(projectId, userId) {
     if(await Cloud.setProjectManager(projectId, userId)) {
@@ -5935,7 +5961,7 @@ const WorkCal = (() => {
     const c = norm(cfg), d = String(date).slice(0, 10);
     if(c.exceptions.some(e => e.date === d)) return '';
     const w = weekday(d); if(w === 0 || w === 6) return WEEKDAY[w];
-    const custom = c.holidays.find(h => h.date === d); if(custom) return 'feriado (' + custom.name + ')';
+    const custom = c.holidays.find(h => h.annual ? h.md === d.slice(5) : h.date === d); if(custom) return 'feriado (' + custom.name + ')';
     const nat = national(+d.slice(0, 4)).find(h => h.date === d);
     if(nat && (nat.kind === 'feriado' || c.facultativos)) return (nat.kind === 'feriado' ? 'feriado' : 'ponto facultativo') + ' (' + nat.name + ')';
     return '';
@@ -5945,8 +5971,28 @@ const WorkCal = (() => {
   const prevWorking = (date, cfg) => { let d = String(date).slice(0, 10), n = 0; while(isOff(d, cfg) && n++ < 40) d = addDays(d, -1); return d; };
   const workingDays = (a, b, cfg) => { let n = 0; for(let d = String(a).slice(0, 10), k = 0; d <= String(b).slice(0, 10) && k < 4000; d = addDays(d, 1), k++) if(!isOff(d, cfg)) n++; return n; };
   function addException(cfg, e) { const c = norm(cfg); return { ...c, exceptions: c.exceptions.filter(x => x.date !== e.date).concat([{ date: e.date, reason: e.reason, by: e.by || '', at: e.at || '' }]).sort((a, b) => a.date.localeCompare(b.date)) }; }
-  function addHoliday(cfg, h) { const c = norm(cfg); return { ...c, holidays: c.holidays.filter(x => x.date !== h.date).concat([{ date: h.date, name: h.name }]).sort((a, b) => a.date.localeCompare(b.date)) }; }
-  const removeHoliday = (cfg, date) => { const c = norm(cfg); return { ...c, holidays: c.holidays.filter(x => x.date !== date) }; };
+  // Feriado do projeto: { md:'12-08', name, annual:true } (todo ano) ou { date:'2026-12-08', name, annual:false } (só naquele ano). A chave identifica o registro.
+  const holidayKey = h => h.annual ? 'a:' + h.md : 'd:' + h.date;
+  const sortKey = h => h.annual ? h.md : h.date.slice(5);
+  function addHoliday(cfg, h) {
+    const c = norm(cfg), item = h.annual ? { md: h.md, name: h.name, annual: true } : { date: h.date, name: h.name, annual: false };
+    return { ...c, holidays: c.holidays.filter(x => holidayKey(x) !== holidayKey(item)).concat([item]).sort((a, b) => sortKey(a).localeCompare(sortKey(b))) };
+  }
+  const removeHoliday = (cfg, key) => { const c = norm(cfg); return { ...c, holidays: c.holidays.filter(x => holidayKey(x) !== key && x.date !== key) }; };
+  // Visão de um mês de um ano: feriados nacionais (móveis calculados para o ano) e do projeto, cada um dizendo se cai em dia útil
+  function monthView(year, month, cfg) {
+    const c = norm(cfg), mm = pad(month), out = [];
+    national(year).filter(h => h.date.slice(5, 7) === mm && (c.facultativos || h.kind === 'feriado')).forEach(h => out.push({ date: h.date, name: h.name, origin: h.kind === 'feriado' ? 'nacional' : 'facultativo', key: null }));
+    c.holidays.forEach(h => { const date = h.annual ? year + '-' + h.md : h.date; if(date.slice(0, 4) === String(year) && date.slice(5, 7) === mm) out.push({ date, name: h.name, origin: 'projeto', annual: !!h.annual, key: holidayKey(h) }); });
+    return out.map(x => ({ ...x, day: +x.date.slice(8, 10), weekday: weekday(x.date), onWeekday: weekday(x.date) !== 0 && weekday(x.date) !== 6 })).sort((a, b) => a.date.localeCompare(b.date));
+  }
+  // Resumo do ano: quantos feriados existem e quantos caem em dia útil (só esses tiram dias de trabalho)
+  function yearSummary(year, cfg) {
+    const seen = new Map();
+    for(let m = 1; m <= 12; m++) monthView(year, m, cfg).forEach(h => { if(!seen.has(h.date)) seen.set(h.date, h); });
+    const all = [...seen.values()];
+    return { total: all.length, onWeekdays: all.filter(h => h.onWeekday).length, onWeekend: all.filter(h => !h.onWeekday).length };
+  }
   const removeException = (cfg, date) => { const c = norm(cfg); return { ...c, exceptions: c.exceptions.filter(x => x.date !== date) }; };
 
   // ── do projeto ativo (guarda nos Ajustes do projeto: "workCalendar") ──
@@ -5975,38 +6021,98 @@ const WorkCal = (() => {
   // Várias datas de uma vez (início e fim): só segue se todas passarem
   const ensureAll = (dates, what) => dates.every(d => !d || ensure(d, what));
   if(typeof AgileCalc !== 'undefined' && AgileCalc.setOffDay) AgileCalc.setOffDay(d => isOff(d, cfgNow()));
-  return { national, reason, isOff, nextWorking, prevWorking, workingDays, easter, norm, addException, addHoliday, removeHoliday, removeException, cfgNow, save, ensure, ensureAll, fmt, WEEKDAY };
+  return { monthView, yearSummary, holidayKey, national, reason, isOff, nextWorking, prevWorking, workingDays, easter, norm, addException, addHoliday, removeHoliday, removeException, cfgNow, save, ensure, ensureAll, fmt, WEEKDAY };
 })();
 </script>
 
-<!-- ■ MODULE: ui/work-calendar-ui ─ Calendário de trabalho nas Configurações: feriados nacionais, feriados do projeto e exceções autorizadas -->
+<!-- ■ MODULE: ui/sections ─ Seções recolhíveis (padrão de tela): título abre/fecha, estado salvo por seção, tom de fundo por função -->
+<script data-module="ui/sections">
+const Sec = (() => {
+  const PREFIX = 'pmo_sec_';
+  const read = id => { try { return localStorage.getItem(PREFIX + id); } catch(e) { return null; } };
+  const write = (id, open) => { try { localStorage.setItem(PREFIX + id, open ? '1' : '0'); } catch(e) {} };
+  // Nas abas de configuração que não foram marcadas à mão, o primeiro bloco fica aberto e os demais recolhidos
+  function auto() {
+    document.querySelectorAll('[id^="settings-panel-"]').forEach(panel => {
+      Array.from(panel.children).filter(c => c.classList.contains('card') && !c.hasAttribute('data-sec') && c.firstElementChild && c.firstElementChild.classList.contains('lbl')).forEach((card, i) => {
+        card.setAttribute('data-sec', panel.id.replace('settings-panel-', '') + '-' + (i + 1));
+        card.setAttribute('data-tint', String((i % 4) + 1));
+        if(i > 0) card.setAttribute('data-collapsed', '1');
+      });
+    });
+  }
+  function restore(root) {
+    auto();
+    (root || document).querySelectorAll('.card[data-sec]').forEach(card => {
+      const saved = read(card.dataset.sec);
+      card.classList.toggle('collapsed', saved == null ? card.dataset.collapsed === '1' : saved !== '1');
+      const lbl = card.firstElementChild;
+      if(lbl && lbl.classList.contains('lbl')) { lbl.setAttribute('role', 'button'); lbl.setAttribute('tabindex', '0'); lbl.setAttribute('aria-expanded', String(!card.classList.contains('collapsed'))); }
+    });
+  }
+  function toggle(card) {
+    const c = card.classList.toggle('collapsed'); write(card.dataset.sec, !c);
+    const lbl = card.firstElementChild; if(lbl) lbl.setAttribute('aria-expanded', String(!c));
+  }
+  const hit = e => { const lbl = e.target.closest && e.target.closest('.card[data-sec] > .lbl'); return lbl && !e.target.closest('.help-q, button, a, input, select') ? lbl.parentElement : null; };
+  document.addEventListener('click', e => { const c = hit(e); if(c) toggle(c); });
+  document.addEventListener('keydown', e => { if(e.key !== 'Enter' && e.key !== ' ') return; const c = hit(e); if(c) { e.preventDefault(); toggle(c); } });
+  return { restore, toggle, auto };
+})();
+</script>
+
+<!-- ■ MODULE: ui/work-calendar-ui ─ Calendário de trabalho nas Configurações: resumo do ano, meses em abas e cadastro dia a dia -->
 <script data-module="ui/work-calendar-ui">
 const WorkCalUi = (() => {
   const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt = d => WorkCal.fmt(d), when = v => v ? new Date(v).toLocaleDateString('pt-BR') : '';
+  const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  const SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  const WD = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  let year = null, month = null;
+  const today = () => Clock.today();
+  function ensureState() { if(year == null) { year = today().getFullYear(); month = today().getMonth() + 1; } }
+  const canEdit = () => Auth.can('edit_plan') && !Auth.isPreview();
+
   function render() {
     const root = document.getElementById('wc-root'); if(!root) return;
-    const cfg = WorkCal.cfgNow(), y = Clock.today().getFullYear(), canEdit = Auth.can('edit_plan') && !Auth.isPreview();
-    const nat = [y, y + 1].flatMap(yy => WorkCal.national(yy)).filter(h => cfg.facultativos || h.kind === 'feriado');
-    const chip = h => '<span class="chip" title="' + esc(h.kind === 'feriado' ? 'Feriado nacional' : 'Ponto facultativo') + '">' + fmt(h.date).slice(0, 5) + '/' + h.date.slice(2, 4) + ' · ' + esc(h.name) + '</span>';
-    root.innerHTML = '<p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin:0 0 8px">Fim de semana e feriados <b>não recebem datas do plano</b>. O gerente pode autorizar uma exceção com justificativa.</p>'
-      + '<label style="display:flex;gap:8px;align-items:center;font-size:12.5px;margin-bottom:10px;cursor:pointer"><input type="checkbox" id="wc-fac"' + (cfg.facultativos ? ' checked' : '') + (canEdit ? '' : ' disabled') + ' onchange="WorkCalUi.setFacultativos(this.checked)"> Tratar Carnaval e Corpus Christi (pontos facultativos) como dia não útil</label>'
-      + '<div class="field-label" style="margin-bottom:4px">Feriados nacionais (' + y + ' e ' + (y + 1) + ')</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">' + nat.map(chip).join('') + '</div>'
-      + '<div class="field-label" style="margin-bottom:4px">Feriados do estado, da cidade ou da empresa</div>'
-      + (cfg.holidays.length ? cfg.holidays.map(h => '<div class="set-row"><div class="set-lbl">' + fmt(h.date) + ' · ' + esc(h.name) + '</div>' + (canEdit ? '<button class="btn btn-sm" aria-label="Remover o feriado ' + esc(h.name) + '" onclick="WorkCalUi.removeHoliday(\'' + h.date + '\')"><i class="ti ti-trash"></i></button>' : '') + '</div>').join('') : '<div style="font-size:12px;color:var(--t3);margin-bottom:6px">Nenhum cadastrado.</div>')
-      + (canEdit ? '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:8px 0 14px"><div class="field"><label for="wc-h-date">Data</label><input class="input" id="wc-h-date" type="date"></div><div class="field" style="flex:1 1 200px"><label for="wc-h-name">Nome</label><input class="input" id="wc-h-name" maxlength="60" placeholder="Ex.: Aniversário da cidade"></div><button class="btn btn-sm" onclick="WorkCalUi.addHoliday()"><i class="ti ti-plus"></i>Cadastrar feriado</button></div>' : '')
-      + '<div class="field-label" style="margin-bottom:4px">Exceções autorizadas pelo gerente (dias não úteis liberados para o plano)</div>'
-      + (cfg.exceptions.length ? cfg.exceptions.map(e => '<div class="set-row" style="align-items:flex-start"><div><div class="set-lbl">' + fmt(e.date) + ' · ' + esc(WorkCal.WEEKDAY[new Date(e.date + 'T00:00:00Z').getUTCDay()]) + '</div><div class="set-sub">' + esc(e.reason) + (e.by ? ' — ' + esc(e.by) : '') + (e.at ? ' · ' + when(e.at) : '') + '</div></div>' + (canEdit ? '<button class="btn btn-sm" aria-label="Remover a exceção de ' + fmt(e.date) + '" onclick="WorkCalUi.removeException(\'' + e.date + '\')"><i class="ti ti-trash"></i></button>' : '') + '</div>').join('') : '<div style="font-size:12px;color:var(--t3);margin-bottom:6px">Nenhuma exceção autorizada.</div>')
-      + (canEdit ? '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px"><div class="field"><label for="wc-e-date">Data</label><input class="input" id="wc-e-date" type="date"></div><div class="field" style="flex:1 1 260px"><label for="wc-e-why">Justificativa (obrigatória)</label><input class="input" id="wc-e-why" maxlength="300" placeholder="Ex.: Virada de sistema: o cutover só pode ocorrer no sábado"></div><button class="btn btn-sm btn-acc" onclick="WorkCalUi.addException()"><i class="ti ti-check"></i>Autorizar exceção</button></div>' : '<div style="font-size:11.5px;color:var(--t3);margin-top:6px"><i class="ti ti-lock"></i> Só o gerente do projeto cadastra feriados e autoriza exceções.</div>');
+    ensureState();
+    const cfg = WorkCal.cfgNow(), sum = WorkCal.yearSummary(year, cfg), mine = cfg.holidays.length, ed = canEdit();
+    const yearOpts = [0, 1, 2].map(k => today().getFullYear() + k).map(y => '<option value="' + y + '"' + (y === year ? ' selected' : '') + '>' + y + '</option>').join('');
+    const chips = MONTHS.map((n, i) => { const m = i + 1, v = WorkCal.monthView(year, m, cfg), lost = v.filter(h => h.onWeekday).length;
+      return '<button class="wc-m' + (m === month ? ' on' : '') + '" aria-pressed="' + (m === month) + '" onclick="WorkCalUi.setMonth(' + m + ')" title="' + esc(n) + (v.length ? ': ' + v.length + ' feriado(s), ' + lost + ' em dia útil' : ': sem feriados') + '">' + SHORT[i] + (v.length ? '<span class="wc-n' + (lost ? ' lost' : '') + '">' + v.length + '</span>' : '') + '</button>'; }).join('');
+    const view = WorkCal.monthView(year, month, cfg);
+    const rows = view.length ? view.map(h => '<div class="wc-row"><span class="wc-day">' + String(h.day).padStart(2, '0') + ' <span>' + WD[h.weekday] + '</span></span><span class="wc-name">' + esc(h.name) + '</span>'
+        + '<span class="wc-tag">' + (h.origin === 'nacional' ? 'nacional' : h.origin === 'facultativo' ? 'facultativo' : (h.annual ? 'do projeto · todo ano' : 'do projeto · só ' + year)) + '</span>'
+        + (h.onWeekday ? '<span class="wc-eff">tira 1 dia útil</span>' : '<span class="wc-eff off">cai no ' + (h.weekday === 0 ? 'domingo' : 'sábado') + ': não muda nada</span>')
+        + (h.key && ed ? '<button class="btn btn-sm" aria-label="Remover o feriado ' + esc(h.name) + '" onclick="WorkCalUi.removeHoliday(\'' + esc(h.key) + '\')"><i class="ti ti-trash"></i></button>' : '') + '</div>').join('') : '<div class="wc-empty">Nenhum feriado em ' + MONTHS[month - 1].toLowerCase() + '.</div>';
+    const dayOpts = Array.from({ length: 31 }, (_, i) => '<option value="' + (i + 1) + '">' + (i + 1) + '</option>').join('');
+    const add = ed ? '<div class="wc-add"><div class="field"><label for="wc-h-day">Dia</label><select class="input" id="wc-h-day" style="width:auto">' + dayOpts + '</select></div><div class="field" style="flex:1 1 180px"><label for="wc-h-name">Feriado de ' + MONTHS[month - 1].toLowerCase() + '</label><input class="input" id="wc-h-name" maxlength="60" placeholder="Ex.: Aniversário da cidade"></div><label class="wc-yr"><input type="checkbox" id="wc-h-annual" checked> repete todo ano</label><button class="btn btn-sm" onclick="WorkCalUi.addHoliday()"><i class="ti ti-plus"></i>Cadastrar</button></div>' : '';
+    const exc = cfg.exceptions.length ? cfg.exceptions.map(x => '<div class="wc-row"><span class="wc-day">' + fmt(x.date).slice(0, 5) + '</span><span class="wc-name">' + esc(x.reason) + '</span><span class="wc-tag">' + esc(x.by || '') + (x.at ? ' · ' + when(x.at) : '') + '</span>' + (ed ? '<button class="btn btn-sm" aria-label="Remover a exceção de ' + fmt(x.date) + '" onclick="WorkCalUi.removeException(\'' + x.date + '\')"><i class="ti ti-trash"></i></button>' : '') + '</div>').join('') : '<div class="wc-empty">Nenhuma exceção autorizada.</div>';
+    root.innerHTML = '<div class="wc-sum"><b>' + year + '</b>: ' + sum.total + ' feriados, <b>' + sum.onWeekdays + ' em dia útil</b>' + (sum.onWeekend ? ' (' + sum.onWeekend + ' caem no fim de semana)' : '') + ' · ' + mine + ' do projeto · ' + cfg.exceptions.length + ' exceção(ões)</div>'
+      + '<div class="wc-bar"><select class="input" id="wc-year" aria-label="Ano" style="width:auto" onchange="WorkCalUi.setYear(this.value)">' + yearOpts + '</select><div class="wc-months" role="group" aria-label="Meses">' + chips + '</div></div>'
+      + '<div class="wc-list" aria-live="polite">' + rows + '</div>' + add
+      + '<details class="wc-exc"><summary>Exceções autorizadas pelo gerente (' + cfg.exceptions.length + ')</summary>' + exc
+      + (ed ? '<div class="wc-add"><div class="field"><label for="wc-e-date">Data</label><input class="input" id="wc-e-date" type="date"></div><div class="field" style="flex:1 1 220px"><label for="wc-e-why">Justificativa (obrigatória)</label><input class="input" id="wc-e-why" maxlength="300" placeholder="Ex.: Virada de sistema aos sábados"></div><button class="btn btn-sm btn-acc" onclick="WorkCalUi.addException()"><i class="ti ti-check"></i>Autorizar exceção</button></div>' : '<div class="wc-empty"><i class="ti ti-lock"></i> Só o gerente do projeto autoriza exceções.</div>') + '</details>'
+      + '<label class="wc-fac"><input type="checkbox" id="wc-fac"' + (cfg.facultativos ? ' checked' : '') + (ed ? '' : ' disabled') + ' onchange="WorkCalUi.setFacultativos(this.checked)"> Carnaval e Corpus Christi (pontos facultativos) contam como dia não útil</label>';
+    const dd = document.getElementById('wc-h-day'); if(dd) dd.value = String(Math.min(today().getDate(), 28));
+    const exOpen = document.getElementById('wc-exc-open'); void exOpen;
   }
   const guard = () => Auth.guard('edit_plan');
+  const setMonth = m => { month = m; render(); };
+  const setYear = y => { year = +y; render(); };
   function setFacultativos(on) { if(!guard()) { render(); return; } WorkCal.save({ ...WorkCal.cfgNow(), facultativos: !!on }); render(); }
   function addHoliday() {
-    if(!guard()) return; const d = document.getElementById('wc-h-date').value, n = document.getElementById('wc-h-name').value.trim().slice(0, 60);
-    if(!d || n.length < 2) { T.show('⚠️ Informe a data e o nome do feriado.'); return; }
-    WorkCal.save(WorkCal.addHoliday(WorkCal.cfgNow(), { date: d, name: n })); T.show('✅ Feriado cadastrado.'); render();
+    if(!guard()) return;
+    const day = +document.getElementById('wc-h-day').value, name = document.getElementById('wc-h-name').value.trim().slice(0, 60), annual = document.getElementById('wc-h-annual').checked;
+    const probe = new Date(Date.UTC(2024, month - 1, day)); // 2024 é bissexto: 29/02 vale; dia que não existe no mês (31/04) volta outro mês
+    if(probe.getUTCMonth() !== month - 1) { T.show('⚠️ ' + MONTHS[month - 1] + ' não tem dia ' + day + '.'); return; }
+    if(name.length < 2) { T.show('⚠️ Dê um nome ao feriado.'); return; }
+    const mm = String(month).padStart(2, '0'), dd = String(day).padStart(2, '0');
+    WorkCal.save(WorkCal.addHoliday(WorkCal.cfgNow(), annual ? { md: mm + '-' + dd, name, annual: true } : { date: year + '-' + mm + '-' + dd, name, annual: false }));
+    T.show('✅ Feriado cadastrado' + (annual ? ' (repete todo ano).' : '.')); render();
   }
-  function removeHoliday(d) { if(!guard()) return; WorkCal.save(WorkCal.removeHoliday(WorkCal.cfgNow(), d)); render(); }
+  function removeHoliday(key) { if(!guard()) return; WorkCal.save(WorkCal.removeHoliday(WorkCal.cfgNow(), key)); render(); }
   function addException() {
     if(!guard()) return; const d = document.getElementById('wc-e-date').value, j = document.getElementById('wc-e-why').value.trim();
     if(!d) { T.show('⚠️ Escolha a data.'); return; }
@@ -6014,9 +6120,10 @@ const WorkCalUi = (() => {
     WorkCal.save(WorkCal.addException(WorkCal.cfgNow(), { date: d, reason: j.slice(0, 300), by: Auth.getName(), at: new Date().toISOString() }));
     if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('calendar_exception', 'Exceção de calendário em ' + fmt(d) + ': ' + j.slice(0, 120), { date: d });
     T.show('✅ Exceção autorizada.'); render();
+    const ex = document.querySelector('#wc-root .wc-exc'); if(ex) ex.open = true;
   }
-  function removeException(d) { if(!guard()) return; WorkCal.save(WorkCal.removeException(WorkCal.cfgNow(), d)); render(); }
-  return { render, setFacultativos, addHoliday, removeHoliday, addException, removeException };
+  function removeException(d) { if(!guard()) return; WorkCal.save(WorkCal.removeException(WorkCal.cfgNow(), d)); render(); const ex = document.querySelector('#wc-root .wc-exc'); if(ex) ex.open = true; }
+  return { render, setMonth, setYear, setFacultativos, addHoliday, removeHoliday, addException, removeException };
 })();
 </script>
 
@@ -7269,6 +7376,7 @@ const R = (() => {
     if(id === 'sprintnow' && typeof SprintNow !== 'undefined') SprintNow.render();
     if(id === 'noproject' && typeof NoProject !== 'undefined') NoProject.render();
     if(id === 'settings' && typeof WorkCalUi !== 'undefined') WorkCalUi.render();
+    if(id === 'settings' && typeof Sec !== 'undefined') Sec.restore();
     if(id === 'settings' && typeof SettingsTabs !== 'undefined') SettingsTabs.show();
     if(typeof Agile !== 'undefined') Agile.renderDashboard();
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();

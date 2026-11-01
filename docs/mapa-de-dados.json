@@ -459,6 +459,12 @@
       "kind": "sessão",
       "logout": "apaga",
       "deleteProject": "nao"
+    },
+    "pmo_sec_": {
+      "desc": "Quais seções recolhíveis estão abertas ou fechadas (`pmo_sec_<seção>`).",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
     }
   },
   "buckets": {

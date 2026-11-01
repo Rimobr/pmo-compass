@@ -143,6 +143,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 | `pmo_theme_v1` | Tema de cores. | preferência | preserva | nao |
 | `pmo_cloud_v1` | Endereço e chave pública do Supabase (necessários para entrar de novo). | conexão | preserva | nao |
 | `pmo_after_wipe` | Aviso mostrado uma vez depois de sair (fica na sessão da aba). | sessão | apaga | nao |
+| `pmo_sec_` | Quais seções recolhíveis estão abertas ou fechadas (`pmo_sec_<seção>`). | preferência | apaga | nao |
 
 ## Pastas de arquivos (Storage)
 

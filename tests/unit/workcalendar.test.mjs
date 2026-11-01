@@ -64,3 +64,31 @@ test('travas aplicadas onde as datas são atribuídas, e só o gerente autoriza 
   assert.ok(m[1].includes("Auth.can('edit_plan')") && m[1].includes('Justificativa curta demais'), 'exceção: só edit_plan e com justificativa de 10 letras');
   assert.ok(m[1].includes("calendar_exception"), 'a exceção vai para a auditoria');
 });
+
+test('feriado do projeto "todo ano" vale em qualquer ano; o de um ano só vale naquele ano', () => {
+  const anual = WorkCal.addHoliday({}, { md: '12-08', name: 'Padroeira da cidade', annual: true });
+  assert.match(WorkCal.reason('2026-12-08', anual), /feriado \(Padroeira da cidade\)/);
+  assert.match(WorkCal.reason('2027-12-08', anual), /feriado \(Padroeira da cidade\)/);
+  const unico = WorkCal.addHoliday({}, { date: '2026-12-08', name: 'Emenda', annual: false });
+  assert.match(WorkCal.reason('2026-12-08', unico), /Emenda/);
+  assert.equal(WorkCal.reason('2027-12-08', unico), '');
+  assert.equal(WorkCal.reason('2027-12-08', WorkCal.removeHoliday(anual, WorkCal.holidayKey(anual.holidays[0]))), '');
+});
+
+test('visão por mês e resumo do ano dizem quais feriados tiram dia útil e quais caem no fim de semana', () => {
+  const nov = WorkCal.monthView(2026, 11, {});
+  assert.deepEqual(nov.map(h => h.day + ':' + h.onWeekday), ['2:true', '15:false', '20:true']);
+  assert.equal(nov[1].name, 'Proclamação da República'); // 15/11/2026 é domingo: não muda nada
+  const y = WorkCal.yearSummary(2026, {});
+  assert.deepEqual(y, { total: 13, onWeekdays: 12, onWeekend: 1 });
+  assert.equal(WorkCal.yearSummary(2026, { facultativos: false }).total, 10); // sem Carnaval (2) e Corpus Christi
+  const comProjeto = WorkCal.addHoliday({}, { md: '01-25', name: 'Aniversário de São Paulo', annual: true }); // 25/01/2026 é domingo
+  assert.equal(WorkCal.yearSummary(2026, comProjeto).onWeekend, 2);
+  assert.equal(WorkCal.monthView(2027, 1, comProjeto).find(h => h.name === 'Aniversário de São Paulo').onWeekday, true); // em 2027 cai numa segunda
+});
+
+test('seções recolhíveis: padrão de tela com tom por função, estado salvo e teclado', () => {
+  for (const k of ['const Sec = (() =>', "const PREFIX = 'pmo_sec_'", '.card[data-sec].collapsed>:not(.lbl){display:none!important}', 'aria-expanded', 'data-tint="5"', 'data-sec="trocar-responsavel"', 'data-sec="calendario"', 'WorkCalUi.setMonth']) assert.ok(html.includes(k), k);
+  const tints = new Set([1, 2, 3, 4, 5].filter(n => html.includes('data-tint="' + n + '"')));
+  assert.ok(tints.size >= 5, 'cinco tons de função');
+});
