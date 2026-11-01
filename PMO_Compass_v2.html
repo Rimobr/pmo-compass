@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.19.2'
+  version: '2.19.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -5939,6 +5939,7 @@ const Store = (() => {
   // conta" (nunca volta pro navegador depois de salva — só um status configurada/não).
   function reflectCloudMode() {
     const signedIn = (typeof Cloud !== 'undefined') && Cloud.isSignedIn();
+    if(!signedIn) cloudKeys = null;
     const noteEl = document.getElementById('prov-mode-note');
     if(noteEl) {
       noteEl.innerHTML = signedIn
@@ -5960,6 +5961,8 @@ const Store = (() => {
     if(typeof Cloud === 'undefined') return;
     const has = await Cloud.getAiKeyStatus();
     if(!has) return;
+    cloudKeys = has;
+    if(typeof Onboarding !== 'undefined' && Onboarding.refresh) Onboarding.refresh();
     PROVIDERS.forEach(p => {
       const statusEl = document.getElementById('prov-status-'+p);
       const removeBtn = document.getElementById('prov-remove-'+p);
@@ -6039,9 +6042,18 @@ const Store = (() => {
   // via Supabase, a chave vive no servidor (Store.getKey sempre vazio aqui, de propósito), então
   // não dá pra checar de verdade sem chamar o servidor; a chamada real (AI.send) já trata o caso
   // de não haver chave configurada lá, então aqui só evita o falso negativo "não configurada".
+  let cloudKeys = null; // { anthropic:bool, openai:bool, google:bool } vindo do servidor quando logado
   function hasKeyOrCloud(provider) {
-    if(typeof Cloud !== 'undefined' && Cloud.isSignedIn()) return true;
+    if(typeof Cloud !== 'undefined' && Cloud.isSignedIn()) {
+      if(cloudKeys) return provider ? !!cloudKeys[provider] : Object.values(cloudKeys).some(Boolean); // já consultei o servidor: vale o que ele disse
+      return true; // ainda não sei: deixa a chamada real decidir (evita falso negativo)
+    }
     return !!getKey(provider);
+  }
+  // Pergunta "a IA está pronta?" para mostrar na tela: só diz que sim com certeza (chave local, ou servidor confirmou)
+  function aiReady() {
+    if(typeof Cloud !== 'undefined' && Cloud.isSignedIn()) return !!(cloudKeys && Object.values(cloudKeys).some(Boolean));
+    return !!getKey();
   }
 
   function clear() {
@@ -6050,7 +6062,7 @@ const Store = (() => {
     state = { apiKey:'', aiProvider:'anthropic', apiKeys:{ anthropic:'', openai:'', google:'' } };
     T.show('Dados locais removidos.');
   }
-  return { load, saveKey, removeKey, getKey, hasKeyOrCloud, getProvider, setProvider, providerLabel, clear, reflectCloudMode, get: () => state };
+  return { load, saveKey, removeKey, getKey, hasKeyOrCloud, aiReady, getProvider, setProvider, providerLabel, clear, reflectCloudMode, get: () => state };
 })();
 </script>
 
@@ -6392,7 +6404,7 @@ const Onboarding = (() => {
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function steps() {
     const has = (k) => { try { return (DB.get(k) || []).length > 0; } catch(e) { return false; } };
-    let ai = false; try { ai = Store.hasKeyOrCloud(); } catch(e) {}
+    let ai = false; try { ai = Store.aiReady(); } catch(e) {}
     return [
       { done: ai, title: 'Conecte um provedor de IA', why: 'Sem isso, os recursos de IA ficam desligados.', go: 'settings', label: 'Configurar' },
       { done: has('wbs'), title: 'Monte as entregas (WBS) do projeto', why: 'Tudo — prazo, custo, riscos e relatórios — parte das entregas.', go: 'wbs', label: 'Abrir a WBS' },
@@ -6413,7 +6425,7 @@ const Onboarding = (() => {
     try { localStorage.setItem(KEY, '1'); } catch(e){}
   }
   function maybeShow() { if(shouldShow()) setTimeout(show, 600); }
-  return { maybeShow, show, dismiss, willShow: shouldShow };
+  return { maybeShow, show, dismiss, willShow: shouldShow, refresh: () => { try { render(); } catch(e) {} } };
 })();
 </script>
 
