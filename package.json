@@ -1,9 +1,11 @@
 {
   "name": "pmo-compass",
-  "version": "2.29.0",
+  "version": "2.30.0",
   "private": true,
   "scripts": {
     "test:unit": "node tests/run.js && node --test tests/unit/*.test.mjs",
+    "test:smoke": "node tests/smoke/empty-project.mjs",
+    "data-map": "node scripts/build-data-map.mjs",
     "test:e2e": "playwright test",
     "check:sql": "node scripts/check-sql.mjs",
     "check:schema": "node scripts/build-schema.mjs --check",

@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.29.0'
+  version: '2.30.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -4402,7 +4402,7 @@ const Cloud = (() => {
   async function syncProjects() {
     if(!client || !session || typeof DB === 'undefined') return;
     try {
-      const local = DB.listProjects();
+      const local = DB.listProjects().filter(p => !DEMO_PROJECT_IDS.includes(p.id)); // os projetos de demonstração nunca sobem para a nuvem
       await Promise.all(local.map(p => client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', created_by:session.user.id, area:p.area||null, ...(p.refDate ? { reference_date:p.refDate } : {}), ...(p.methodology ? { methodology:p.methodology } : {}) }).then(()=>{}).catch(()=>{})));
       const { data, error } = await client.from('projects').select('*').order('created_at', { ascending:true });
       if(error || !data) return;
@@ -4421,6 +4421,7 @@ const Cloud = (() => {
     track(client.from('project_access').upsert({ project_id:projectId, user_id:session.user.id, granted_by:session.user.id }).then(()=>{}).catch(cloudSyncFailed));
   }
 
+  const DEMO_PROJECT_IDS = ['nexus', 'valdori', 'beltrano'];
   async function pullAll() {
     if(!client || !session) return;
     // Espera qualquer push/delete ainda em voo terminar de gravar no servidor ANTES de ler —
@@ -4473,7 +4474,7 @@ const Cloud = (() => {
         if(!res || res.error || !res.data) return;
         const m = ROW[table];
         if(res.data.length) DB.set(m.local, res.data.map(m.fromDb));
-        else { const local = DB.get(m.local) || []; if(local.length) pushMany(table, local); }
+        else if(!DEMO_PROJECT_IDS.includes(pid)) { const local = DB.get(m.local) || []; if(local.length) pushMany(table, local); } // projetos de demonstração nunca sobem para a nuvem
         reset(); draw();
       });
       if(mods.data) {
@@ -4735,6 +4736,8 @@ const Cloud = (() => {
   // Além das tabelas de dados, leva junto a equipe, as configurações (metodologia, quadro…), as decisões da diretoria e o histórico de saúde.
   // O histórico só o administrador consegue apagar: para os outros perfis esse passo é ignorado, sem derrubar o resto.
   const PROJECT_EXTRA_TABLES = ['team_members', 'board_decisions', 'project_settings', 'project_snapshots'];
+  // Mensagens: filhas antes das mães. Vê docs/MAPA_DE_DADOS.md (o teste compara esta lista com o mapa)
+  const RESET_MESSAGE_TABLES = ['message_log', 'notification_outbox', 'message_recipient_projects', 'message_recipients'];
   async function clearProjectData(projectId, strict) {
     if(!client || !session || !projectId) return;
     try {
@@ -4773,12 +4776,17 @@ const Cloud = (() => {
     try {
       // Ordem da lista central: filhas antes das mães (chaves estrangeiras)
       for(const t of PROJECT_DATA_TABLES) {
-        const { error } = await client.from(t).delete().not('id', 'is', null);
+        const { error } = await client.from(t).delete().not('project_id', 'is', null);
         if(error) throw new Error(t + ': ' + error.message);
       }
       // Equipe, configurações, decisões da diretoria e histórico de saúde (tudo que tem project_id)
       for(const t of PROJECT_EXTRA_TABLES) {
         const { error } = await client.from(t).delete().not('project_id', 'is', null);
+        if(error) throw new Error(t + ': ' + error.message);
+      }
+      // Destinatários e histórico de mensagens (dado pessoal de terceiros e fila de envio): uma base nova não herda nada disso
+      for(const t of RESET_MESSAGE_TABLES) {
+        const { error } = await client.from(t).delete().not(t === 'message_recipient_projects' ? 'recipient_id' : 'id', 'is', null);
         if(error) throw new Error(t + ': ' + error.message);
       }
       // Os projetos em si (o acesso das pessoas a eles sai junto). Sem isto, os projetos de demonstração voltavam na próxima abertura.
@@ -5776,7 +5784,7 @@ const Erase = (() => {
   const OPTS = () => [
     { id: 'data', label: 'Só os dados deste projeto', sub: 'O projeto continua existindo (nome, cliente e quem tem acesso); WBS, riscos, backlog, orçamento, equipe e demais registros são apagados.', ok: true },
     { id: 'project', label: 'O projeto inteiro', sub: 'Apaga os dados e também o projeto e o acesso das pessoas a ele. Só o Administrador.', ok: isAdmin() },
-    { id: 'all', label: 'Toda a base (para começar com usuários novos)', sub: 'Apaga TODOS os projetos e os dados deles na nuvem (cronogramas, equipe, custos, decisões, histórico) e os projetos de demonstração deste navegador; contas e chaves de IA ficam e você recomeça com um projeto em branco. Só o Administrador conectado à nuvem.', ok: isAdmin() && cloud() },
+    { id: 'all', label: 'Toda a base (para começar com usuários novos)', sub: 'Apaga TODOS os projetos e os dados deles na nuvem (cronogramas, equipe, custos, decisões, histórico) e os projetos de demonstração deste navegador; os destinatários e o histórico de mensagens também saem; contas, perfis de acesso, chaves de IA, configurações e o log de auditoria ficam, e você recomeça com um projeto em branco. Só o Administrador conectado à nuvem.', ok: isAdmin() && cloud() },
   ].filter(o => o.ok);
   function counts() {
     const n = k => { const v = DB.get(k); return Array.isArray(v) ? v.length : 0; };
@@ -5892,8 +5900,15 @@ const DB = (() => {
   const PROJECTS_KEY = 'pmo_projects_v1';
   const ACTIVE_KEY = 'pmo_active_project_v1';
   let cache = null;
+  let cacheOwner = null; // a quem pertence o que está em memória: nunca mostrar (nem gravar) os dados de um projeto sob o nome de outro
   let projects = null;
   let activeProjectId = null;
+  // Cada módulo de página guarda os dados numa variável própria — precisa ser avisado quando o projeto muda
+  function resetModuleCaches() {
+    [WBS, Repo, Decisions, Trail, Stakeholders, Lessons, Scope, Burnout, Meetings, Estimates, WI, Budget, Risks, Hours, StatusMsg, Baselines, Raci, Agile, Rites, Models].forEach(mod => {
+      try { if(typeof mod !== 'undefined' && mod && typeof mod.resetCache === 'function') mod.resetCache(); } catch(e) {}
+    });
+  }
 
   function defaultProjects() {
     return [
@@ -5933,6 +5948,8 @@ const DB = (() => {
       activeProjectId = projects[0].id;
       try { localStorage.setItem(ACTIVE_KEY, activeProjectId); } catch(e){}
     }
+    // O projeto ativo pode ter mudado (do Portal Nexus de demonstração para o da nuvem): o que estava em memória era do outro
+    if(cacheOwner !== activeProjectId) { cache = null; resetModuleCaches(); if(typeof renderAllModules === 'function') { try { renderAllModules(); } catch(e) {} } }
   }
 
   function getActiveProjectId() {
@@ -6290,13 +6307,14 @@ const DB = (() => {
   }
 
   function load() {
-    if(cache) return cache;
-    cache = loadCacheFor(getActiveProjectId());
+    const pid = getActiveProjectId();
+    if(cache && cacheOwner === pid) return cache;
+    cache = loadCacheFor(pid); cacheOwner = pid;
     return cache;
   }
   function raw_ok(d) { return d && Array.isArray(d.wbs) && Array.isArray(d.decisions) && Array.isArray(d.repository); }
 
-  function persist() { try { localStorage.setItem(storageKeyFor(getActiveProjectId()), JSON.stringify(cache)); } catch(e){ T.show('⚠️ Não foi possível salvar — armazenamento local cheio ou indisponível.'); } }
+  function persist() { if(cacheOwner && cacheOwner !== getActiveProjectId()) return; /* nunca grava os dados de um projeto na chave de outro */ try { localStorage.setItem(storageKeyFor(getActiveProjectId()), JSON.stringify(cache)); } catch(e){ T.show('⚠️ Não foi possível salvar — armazenamento local cheio ou indisponível.'); } }
 
   function get(table) { load(); return cache[table]; }
   function set(table, value) { load(); cache[table] = value; persist(); }
@@ -6321,10 +6339,7 @@ const DB = (() => {
     try { localStorage.setItem(ACTIVE_KEY, projectId); } catch(e){}
     cache = null;
     load();
-    // Cada módulo de página guarda os dados numa variável própria — precisa ser avisado da troca
-    [WBS, Repo, Decisions, Trail, Stakeholders, Lessons, Scope, Burnout, Meetings, Estimates, WI, Budget, Risks, Hours, StatusMsg, Baselines, Raci, Agile, Rites, Models].forEach(mod => {
-      if(typeof mod !== 'undefined' && mod && typeof mod.resetCache === 'function') mod.resetCache();
-    });
+    resetModuleCaches();
     if(typeof renderAllModules === 'function') renderAllModules();
     if(typeof Nav !== 'undefined') { Nav.collapseAll(); Nav.renderProjects(); }
     const p = loadProjects().find(x => x.id === projectId);
@@ -14667,9 +14682,9 @@ const Portfolio = (() => {
       const isActive = p.id === activeId;
       const hasBudget = s.budget.hasLines;
       const badges = [
-        s.scopeAbertos > 0 ? '<span class="badge b-red">Scope creep</span>' : '<span class="badge b-grn">Escopo ok</span>',
+        !s.hasData ? '<span class="badge b-neu">Escopo: sem dados</span>' : (s.scopeAbertos > 0 ? '<span class="badge b-red">Scope creep</span>' : '<span class="badge b-grn">Escopo ok</span>'),
         !hasBudget ? '<span class="badge b-neu">Orçamento: sem dados</span>' : (s.budget.consumoPct > 100 ? '<span class="badge b-red">Orçamento estourado</span>' : (s.budget.consumoPct > 85 ? '<span class="badge b-amb">Orçamento: atenção</span>' : '<span class="badge b-grn">Orçamento ok</span>')),
-        s.aderencia >= 70 ? '<span class="badge b-grn">Prazo ok</span>' : '<span class="badge b-amb">Prazo: atenção</span>'
+        !s.hasData ? '<span class="badge b-neu">Prazo: sem dados</span>' : (s.aderencia >= 70 ? '<span class="badge b-grn">Prazo ok</span>' : '<span class="badge b-amb">Prazo: atenção</span>')
       ].join('');
       const emptyNote = !s.hasData ? `<div style="font-size:11px;color:var(--t3);margin-top:6px">Projeto ainda sem dados — troque para ele e comece a preencher a WBS.</div>` : (!hasBudget ? `<div style="font-size:11px;color:var(--t3);margin-top:6px">Sem linhas de orçamento cadastradas — cadastre em Orçamento e Custos.</div>` : '');
       const budgetPct = hasBudget ? s.budget.consumoPct : 0;
@@ -15263,7 +15278,8 @@ const Board = (() => {
     const vr = (typeof Prioritization !== 'undefined') ? Prioritization.getValueRealization(p.id) : {};
     const hist = (typeof BoardHistory !== 'undefined') ? BoardHistory.list(p.id) : [];
     const lastSuggestion = hist.find(r => r.aiSuggestion && !r.boardDecision) || null;
-    return { project:p, dims, health, status, statusCode, bm, criticas, vr, lastSuggestion };
+    const hasRiskData = decisions.length > 0 || (DB.getForProject(p.id, 'risks') || []).length > 0;
+    return { project:p, dims, health, status, statusCode, bm, criticas, vr, lastSuggestion, hasRiskData };
   }
 
   function currentFilters() {
@@ -15329,7 +15345,7 @@ const Board = (() => {
     const bodyHtml = sorted.map(r => {
       const cells = HEAT_COLS.map(c => {
         let val, code, display;
-        if(c === RISK_COL) { val = r.criticas.length; code = heatRiskCode(val); display = String(val); }
+        if(c === RISK_COL) { val = r.criticas.length; code = r.hasRiskData ? heatRiskCode(val) : null; display = String(val); }
         else if(c === 'overall') { val = r.health; code = r.statusCode; display = val == null ? '—' : val; }
         else if(RATIO_COLS.includes(c)) { val = r.bm ? r.bm[c === 'schedule' ? 'SPI' : 'CPI'] : null; code = ratioCode(val); display = val == null ? '—' : val.toFixed(2); }
         else { val = r.dims[c]; code = heatDimCode(val); display = val == null ? '—' : val; }
