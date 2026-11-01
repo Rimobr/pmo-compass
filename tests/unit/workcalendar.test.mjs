@@ -92,3 +92,16 @@ test('seções recolhíveis: padrão de tela com tom por função, estado salvo 
   const tints = new Set([1, 2, 3, 4, 5].filter(n => html.includes('data-tint="' + n + '"')));
   assert.ok(tints.size >= 5, 'cinco tons de função');
 });
+
+test('o calendário vale para qualquer ano (nacionais móveis calculados, "todo ano" sempre) e o seletor cobre 12 anos com setas além', () => {
+  for (const [y, carnaval, corpus] of [[2030, '2030-03-05', '2030-06-20'], [2040, '2040-02-14', '2040-05-31'], [2008, '2008-02-05', '2008-05-22']]) {
+    const n = Object.fromEntries(WorkCal.national(y).map(h => [h.name, h.date]));
+    assert.equal(n['Carnaval (terça-feira)'], carnaval, 'Carnaval ' + y);
+    assert.equal(n['Corpus Christi'], corpus, 'Corpus Christi ' + y);
+  }
+  const anual = WorkCal.addHoliday({}, { md: '07-09', name: 'Data do estado', annual: true });
+  // 09/07 em 2030 é terça, 2035 segunda e 2045 domingo: nos três anos o dia não é útil (feriado, ou fim de semana que vem antes)
+  for (const y of [2030, 2035, 2045]) assert.notEqual(WorkCal.reason(y + '-07-09', anual), '', 'todo ano em ' + y);
+  assert.match(WorkCal.reason('2030-07-09', anual), /feriado \(Data do estado\)/);
+  for (const k of ['Ano anterior', 'Próximo ano', 'y0 - 1 + k', 'Vale para qualquer ano', 'WorkCalUi.setYear(']) assert.ok(html.includes(k), k);
+});
