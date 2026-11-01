@@ -85,7 +85,7 @@ test('migração do cadastro complementar: telefone só com consentimento, leitu
 });
 
 test('teste de conexão da IA: botão por provedor, explica chave recusada e falta de saldo', () => {
-  for (const p of ['anthropic', 'openai', 'google']) assert.match(html, new RegExp(`onclick="AI\.test\('${p}'\)"`));
+  for (const p of ['anthropic', 'openai', 'google']) assert.ok(html.includes(`onclick="AI.test('${p}')"`), p);
   const a = html.match(/<script data-module="services\/ai">([\s\S]*?)<\/script>/);
   assert.ok(a && /async function test\(provider\)/.test(a[1]) && /function explain\(err\)/.test(a[1]));
   const explain = new Function(a[1].match(/function explain\(err\) \{[\s\S]*?\n  \}/)[0] + '\nreturn explain;')();
