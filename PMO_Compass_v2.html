@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.19.0'
+  version: '2.19.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1630,9 +1630,6 @@ body.icons-failed i[data-fb]::before{
       <input type="file" id="db-import-inp" aria-label="Arquivo de backup para restaurar" accept="application/json,.json" style="display:none" onchange="DB.importBackup(this.files[0])">
       <button class="btn btn-sm" onclick="ExportSvc.copyLink()"><i class="ti ti-share"></i>Copiar link</button>
       <button class="btn btn-sm" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo projeto</button>
-      <button class="btn btn-sm" data-perm="settings" title="Volta os 3 projetos de exemplo (Cascata, Ágil e Híbrido) neste navegador; não mexe na nuvem" onclick="DB.reloadDemo()"><i class="ti ti-database-import"></i>Recarregar dados de demonstração</button>
-      <button class="btn btn-sm btn-red" data-perm="settings" onclick="DB.clearAll()" title="Apaga os dados do projeto ativo, mas mantém o projeto"><i class="ti ti-eraser"></i>Limpar dados</button>
-      <button class="btn btn-sm btn-red" id="delete-project-btn" data-perm="admin" onclick="DB.deleteProject()" title="Exclui o projeto ativo e tudo o que há nele (só Administrador)"><i class="ti ti-trash"></i>Excluir projeto</button>
     </div>
     <div style="margin-top:10px;padding:10px 12px;background:var(--s2);border-radius:var(--r8);font-size:11.5px;color:var(--t3)">
       <i class="ti ti-info-circle" style="font-size:13px"></i> <strong style="color:var(--t2)">Backup:</strong> o arquivo baixado contém WBS, decisões, repositório, equipe e stakeholders — inclusive nomes e indicadores de burnout. Recomendamos proteger com senha ao exportar. Por segurança, chaves de IA não são incluídas — configure-as de novo após restaurar em outro navegador.
@@ -1643,13 +1640,15 @@ body.icons-failed i[data-fb]::before{
     </div>
   </div>
 
-  <!-- Só aparece para Administrador logado — apaga os dados COMPARTILHADOS na nuvem (visíveis pra
-       qualquer pessoa que logar) e os dados de demonstração deste navegador, pra preparar o app
-       antes de convidar usuários reais. -->
-  <div class="card" id="reset-shared-card" style="display:none">
-    <div class="lbl"><i class="ti ti-alert-triangle" style="color:var(--red)"></i>Zona de risco — resetar para novos usuários</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Apaga <strong style="color:var(--t1)">todos</strong> os dados compartilhados na nuvem (WBS, decisões, documentos, orçamento e custos — visíveis pra qualquer pessoa que fizer login, não só você) e os dados de demonstração salvos neste navegador. Contas de usuário e chaves de IA de cada pessoa não são afetadas. Use antes de convidar novos usuários reais, pra que ninguém veja dado de teste.</p>
-    <button class="btn btn-sm btn-red" onclick="Cloud.resetForNewUsers()"><i class="ti ti-eraser"></i>Resetar dados para novos usuários</button>
+  <div class="card" id="erase-card" data-perm="settings">
+    <div class="lbl"><i class="ti ti-eraser"></i>Apagar dados</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Escolha o tamanho do que será apagado. Antes de qualquer exclusão o sistema oferece um backup e pede uma confirmação digitada. Nada é apagado sem você ver o resumo.</p>
+    <div id="erase-root" role="radiogroup" aria-label="O que apagar"></div>
+    <div id="erase-sum" class="set-sub" style="margin:10px 0" aria-live="polite"></div>
+    <div class="btn-row">
+      <button class="btn btn-sm btn-red" id="erase-go" onclick="Erase.run()"><i class="ti ti-trash"></i><span id="erase-go-txt">Apagar</span></button>
+      <button class="btn btn-sm" onclick="DB.reloadDemo()" title="Volta os 3 projetos de exemplo (Cascata, Ágil e Híbrido) neste navegador; não mexe na nuvem"><i class="ti ti-database-import"></i>Recarregar dados de demonstração</button>
+    </div>
   </div>
   </div><!-- /settings-panel-dados -->
 </section>
@@ -4837,13 +4836,12 @@ const Users = (() => {
   function render() {
     const card = document.getElementById('users-card');
     const apCard = document.getElementById('access-profiles-card');
-    const resetCard = document.getElementById('reset-shared-card');
     const cloud = (typeof Cloud !== 'undefined') && Cloud.isSignedIn();
     const show = cloud && Auth.getRole() === 'admin';
     const showTeam = cloud && (show || (Auth.can('business') && managed().length > 0));
     if(card) { card.style.display = showTeam ? '' : 'none'; if(showTeam) refresh(); }
     if(apCard) { apCard.style.display = show ? '' : 'none'; if(show) renderProfiles(); }
-    if(resetCard) resetCard.style.display = show ? '' : 'none';
+    if(typeof Erase !== 'undefined') Erase.render();
   }
 
   // ── Perfis de acesso: lista, edição das permissões, criação e exclusão ──
@@ -5011,6 +5009,41 @@ const Users = (() => {
   }
 
   return { render, refresh, setFilter, setManager, pickToggle, setAccess, setAll, removeAccess, changeRole, newProfile, editProfile, cancelProfile, saveProfile, removeProfile };
+})();
+</script>
+
+<!-- ■ MODULE: ui/erase ─ Um só lugar para apagar: dados do projeto, projeto inteiro ou toda a base (resumo do que será apagado + confirmação) -->
+<script data-module="ui/erase">
+const Erase = (() => {
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let mode = 'data';
+  const cloud = () => typeof Cloud !== 'undefined' && Cloud.isSignedIn();
+  const isAdmin = () => Auth.getRole() === 'admin';
+  const OPTS = () => [
+    { id: 'data', label: 'Só os dados deste projeto', sub: 'O projeto continua existindo (nome, cliente e quem tem acesso); WBS, riscos, backlog, orçamento, equipe e demais registros são apagados.', ok: true },
+    { id: 'project', label: 'O projeto inteiro', sub: 'Apaga os dados e também o projeto e o acesso das pessoas a ele. Só o Administrador.', ok: isAdmin() },
+    { id: 'all', label: 'Toda a base (para começar com usuários novos)', sub: 'Apaga os dados compartilhados de TODOS os projetos na nuvem e os projetos de demonstração deste navegador; contas e chaves de IA ficam. Só o Administrador conectado à nuvem.', ok: isAdmin() && cloud() },
+  ].filter(o => o.ok);
+  function counts() {
+    const n = k => { const v = DB.get(k); return Array.isArray(v) ? v.length : 0; };
+    const wbs = (DB.get('wbs') || []).reduce((s, m) => s + 1 + (m.children || []).length, 0);
+    return [[wbs, 'entregas/tarefas do cronograma'], [n('risks'), 'riscos'], [n('backlog'), 'itens do backlog'], [n('decisions'), 'decisões'], [n('team'), 'colaboradores'], [n('budgetLines') + n('costActuals'), 'lançamentos de orçamento e custo'], [n('timeEntries'), 'apontamentos de horas'], [n('repository'), 'documentos']].filter(x => x[0] > 0);
+  }
+  function render() {
+    const root = document.getElementById('erase-root'); if(!root) return;
+    const opts = OPTS(); if(!opts.some(o => o.id === mode)) mode = 'data';
+    root.innerHTML = opts.map(o => `<label style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;cursor:pointer"><input type="radio" name="erase-mode" value="${o.id}"${o.id === mode ? ' checked' : ''} onchange="Erase.pick('${o.id}')" style="margin-top:3px"><span><b style="font-size:13px">${o.label}</b><br><span class="set-sub">${o.sub}</span></span></label>`).join('');
+    const pid = DB.getActiveProjectId(), name = (DB.listProjects().find(p => p.id === pid) || {}).name || pid;
+    const cs = counts().map(c => c[0] + ' ' + c[1]).join(', ') || 'nenhum registro ainda';
+    const sum = document.getElementById('erase-sum'), txt = document.getElementById('erase-go-txt');
+    if(sum) sum.innerHTML = mode === 'all'
+      ? '<i class="ti ti-alert-triangle" style="color:var(--red)"></i> Vale para <b>todas as pessoas</b> e todos os projetos da nuvem. Não dá para desfazer.'
+      : `<i class="ti ti-info-circle"></i> Projeto ativo: <b>${esc(name)}</b> — hoje tem ${esc(cs)}${cloud() ? ' (a nuvem também será limpa)' : ''}.`;
+    if(txt) txt.textContent = mode === 'data' ? 'Apagar os dados do projeto' : mode === 'project' ? 'Excluir o projeto' : 'Apagar toda a base';
+  }
+  function pick(m) { mode = m; render(); }
+  function run() { if(mode === 'data') return DB.clearAll(); if(mode === 'project') return DB.deleteProject(); if(mode === 'all') return Cloud.resetForNewUsers(); }
+  return { render, pick, run };
 })();
 </script>
 
@@ -5672,8 +5705,8 @@ const DB = (() => {
     // trazia tudo de volta via pullAll(), porque a cópia na nuvem nunca era tocada. Agora que
     // cada linha carrega project_id, dá pra apagar exatamente a fatia deste projeto lá também.
     const cloudNote = signedIn ? ' e também os dados deste projeto salvos na nuvem' : '';
-    const sure = confirm(`Tem certeza que deseja apagar TODOS os dados locais do projeto "${activeName}"${cloudNote} (WBS, decisões, documentos e orçamento)?\n\nEssa ação não pode ser desfeita. Outros projetos não são afetados.`);
-    if(!sure) { T.show('Limpeza cancelada — nenhum dado foi apagado.'); return; }
+    const typed = prompt(`APAGAR OS DADOS DO PROJETO "${activeName}"${cloudNote}\n\nO projeto continua existindo, mas WBS, decisões, documentos, orçamento, equipe e demais registros são apagados. Outros projetos não são afetados. Não dá para desfazer.\n\nPara confirmar, digite o nome do projeto exatamente:`);
+    if(typed === null || typed.trim() !== activeName) { T.show('Limpeza cancelada — nenhum dado foi apagado.'); return; }
     if(signedIn) {
       T.show('🗑️ Apagando dados deste projeto na nuvem…');
       await Cloud.clearProjectData(pid);
@@ -6062,6 +6095,7 @@ const R = (() => {
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
     if(id === 'settings' && typeof PmoProfiles !== 'undefined') PmoProfiles.render();
     if(id === 'settings' && typeof Users !== 'undefined') Users.render();
+    if(id === 'settings' && typeof Erase !== 'undefined') Erase.render();
     if(typeof Nav !== 'undefined') { Nav.revealArea(id); Nav.expandGroupFor(id); Nav.renderBreadcrumb(id); Nav.closeDrawer(); }
     if(typeof Methodology !== 'undefined') { Methodology.apply(); Methodology.notice(id); if(id === 'settings') Methodology.render(); }
   }
