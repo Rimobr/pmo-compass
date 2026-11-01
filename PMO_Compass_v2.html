@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.24.0'
+  version: '2.25.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -994,6 +994,7 @@ body.icons-failed i[data-fb]::before{
       <button class="si" data-p="settings" onclick="R.go('settings')"><i class="ti ti-settings"></i>Configurações</button>
       <button class="si" data-p="help" onclick="R.go('help')"><i class="ti ti-help-circle"></i>Ajuda</button>
       <button class="si" onclick="Privacy.open()"><i class="ti ti-shield-lock"></i>Privacidade &amp; dados</button>
+      <button class="si" id="si-signout" style="display:none" onclick="Auth.doSignOut()" title="Sai da conta; depois dá para entrar com outro usuário"><i class="ti ti-logout"></i>Sair / trocar de usuário</button>
     </div>
   </div>
   </div>
@@ -1973,7 +1974,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
 <section class="page" id="p-kanban" data-module="pages/kanban">
   <div class="pg-hdr">
     <div><div class="pg-title">Quadro Kanban<span class="help-q" data-help="O trabalho em colunas: A fazer, Em andamento, Em revisão e Concluído. Arraste o cartão ou use as setas ◀ ▶. Cada coluna de trabalho tem um limite (WIP): passar dele avisa que a equipe começou coisa demais antes de terminar o que já está aberto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Veja o que está em andamento, o que trava e o que já foi entregue.</div></div>
-    <div class="btn-row"><button class="btn btn-sm" data-perm="manage_backlog" onclick="ImportUi.open('backlog')"><i class="ti ti-table-import"></i>Importar planilha</button><button class="btn btn-sm btn-acc" data-perm="manage_backlog" onclick="Agile.openItem()"><i class="ti ti-plus"></i>Novo item</button></div>
+    <div class="btn-row" id="kb-actions"></div>
   </div>
   <div class="kb-bar">
     <select class="input" id="kb-sprint" aria-label="Sprint exibida no quadro" onchange="Agile.setBoardSprint(this.value)"></select>
@@ -2104,6 +2105,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div class="lbl">Colunas e limite de itens em andamento<span class="help-q" data-help="O limite (WIP) é quantos itens podem estar ao mesmo tempo naquela coluna; deixe 0 para não ter limite. O quadro avisa quando passa, mas não impede de mover." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div id="ab-cols"></div>
     <div class="btn-row" style="margin:6px 0 12px"><button class="btn btn-sm" id="ab-add" onclick="Agile.addCol()"><i class="ti ti-plus"></i>Nova coluna</button></div>
+    <div class="lbl">Como os itens entram no quadro<span class="help-q" data-help="Scrum (padrão): todo item nasce no Backlog, é estimado e priorizado, e só entra no quadro quando entra numa sprint (Planejar sprint). O quadro mostra apenas a sprint ativa. Kanban contínuo: sem sprints; os itens são criados e importados direto no quadro, e o limite de itens em andamento controla o fluxo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <select class="input" id="ab-entry" aria-label="Como os itens entram no quadro" style="margin-bottom:12px"><option value="scrum">Scrum — pelo Backlog e pela sprint (recomendado)</option><option value="kanban">Kanban contínuo — direto no quadro, sem sprints</option></select>
     <div class="lbl">Informações que aparecem no cartão<span class="help-q" data-help="Cartões mais enxutos deixam o quadro mais limpo; o título sempre aparece. Os dados continuam salvos no item mesmo escondidos." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div id="ab-card" style="display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--t1)"></div>
     <div class="btn-row" style="margin-top:14px;justify-content:space-between">
@@ -3912,6 +3915,7 @@ const Cloud = (() => {
     if(loginBox) loginBox.style.display = (isConfigured() && !isSignedIn()) ? '' : 'none';
     if(signedInBox) signedInBox.style.display = isSignedIn() ? '' : 'none';
     if(typeof Auth !== 'undefined' && Auth.updateCloudBadge) Auth.updateCloudBadge();
+    const so = document.getElementById('si-signout'); if(so) so.style.display = isSignedIn() ? '' : 'none';
     if(typeof Users !== 'undefined') Users.render();
     if(typeof ProjectMembers !== 'undefined') ProjectMembers.render();
     if(typeof ExecView !== 'undefined' && document.getElementById('p-execview')?.classList.contains('on')) ExecView.render();
@@ -10847,7 +10851,9 @@ const AgileCalc = (() => {
     return [todo, ...ok.filter(c => c.key !== 'todo' && c.key !== 'done').slice(0, 5), done];
   }
   const colLabel = (cfg, key) => { const c = cols(cfg).find(x => x.key === key); return c ? c.label : (key === 'done' ? 'Concluído' : 'A fazer'); };
-  const cfgOf = cfg => ({ columns: cols(cfg), card: { ...DEFAULT_CARD, ...((cfg && cfg.card) || {}) }, wip: { doing: DEFAULT_CFG.wip.doing, review: DEFAULT_CFG.wip.review, ...((cfg && cfg.wip) || {}) }, reservePct: cfg && cfg.reservePct != null ? Math.max(0, Math.min(50, Number(cfg.reservePct) || 0)) : DEFAULT_CFG.reservePct });
+  const cfgOf = cfg => ({ columns: cols(cfg), card: { ...DEFAULT_CARD, ...((cfg && cfg.card) || {}) }, wip: { doing: DEFAULT_CFG.wip.doing, review: DEFAULT_CFG.wip.review, ...((cfg && cfg.wip) || {}) }, reservePct: cfg && cfg.reservePct != null ? Math.max(0, Math.min(50, Number(cfg.reservePct) || 0)) : DEFAULT_CFG.reservePct,
+    // 'scrum' (padrão): o item nasce no Backlog, é priorizado e planejado numa sprint; o quadro só mostra a sprint. 'kanban': fluxo contínuo, itens entram direto no quadro.
+    entry: cfg && cfg.entry === 'kanban' ? 'kanban' : 'scrum' });
 
   // Por coluna: quantos itens, limite (0 = sem limite) e se passou do limite
   function wip(items, cfg) {
@@ -11344,7 +11350,9 @@ const Agile = (() => {
   // ───────── Quadro Kanban ─────────
   function boardItems() {
     const a = active();
-    const f = boardSprint === '__auto' ? (a ? a.id : '__all') : boardSprint;
+    // Scrum: sem sprint ativa o quadro fica vazio (não despeja o backlog inteiro); Kanban contínuo mostra tudo
+    const f = boardSprint === '__auto' ? (a ? a.id : (cfg && cfg.entry === 'kanban' ? '__all' : '__none')) : boardSprint;
+    if(f === '__none') return [];
     return f === '__all' ? items.slice() : items.filter(i => i.sprintId === f);
   }
   function renderKanban() {
@@ -11358,8 +11366,9 @@ const Agile = (() => {
       const shown = boardSprint === '__auto' ? act : sprints.find(x => x.id === boardSprint);
       const fmtD = d => d ? d.split('-').reverse().slice(0, 2).join('/') : '';
       const planned = sprints.filter(x => x.state === 'planejada').length;
+      const modeBadge = cfg.entry === 'kanban' ? ' <span class="badge">Kanban contínuo</span>' : '';
       if(act) { const st = AgileCalc.sprintStats(act, items, todayIso()); bar.innerHTML = '<span class="badge b-grn">Sprint ativa</span> <b>' + esc(act.name) + '</b> <span style="color:var(--t2)">' + fmtD(act.startOn) + ' a ' + fmtD(act.endOn) + ' · ' + st.daysLeft + ' dia(s) restantes · ' + st.pct + '% concluído</span>' + (shown && shown.id !== act.id ? ' <span class="badge b-amb">Você está vendo: ' + esc(shown.name) + ' (' + stateLbl[shown.state] + ')</span>' : '') + (boardSprint === '__all' ? ' <span class="badge b-amb">Você está vendo: todos os itens</span>' : ''); }
-      else bar.innerHTML = '<span class="badge b-amb">Nenhuma sprint ativa</span> <span style="color:var(--t2)">' + (planned ? planned + ' planejada(s) aguardando início' : 'ainda não há sprint planejada') + '.</span> <button class="btn btn-sm" onclick="R.go(\'sprints\')"><i class="ti ti-player-play"></i>' + (planned ? 'Iniciar uma sprint' : 'Criar sprint') + '</button>' + (boardSprint === '__all' ? ' <span class="badge b-amb">Você está vendo: todos os itens</span>' : '');
+      else bar.innerHTML = modeBadge + '<span class="badge b-amb">Nenhuma sprint ativa</span> <span style="color:var(--t2)">' + (planned ? planned + ' planejada(s) aguardando início' : 'ainda não há sprint planejada') + '.</span> <button class="btn btn-sm" onclick="R.go(\'sprints\')"><i class="ti ti-player-play"></i>' + (planned ? 'Iniciar uma sprint' : 'Criar sprint') + '</button>' + (boardSprint === '__all' ? ' <span class="badge b-amb">Você está vendo: todos os itens</span>' : '');
     }
     if(sel) {
       const opts = [['__auto', act ? 'Sprint ativa — ' + act.name : 'Sprint ativa (nenhuma)'], ['__all', 'Todos os itens'], ...sprints.slice().sort((a, b) => (ord[a.state] - ord[b.state]) || (b.startOn || '').localeCompare(a.startOn || '')).map(s => [s.id, s.name + ' (' + stateLbl[s.state] + ')'])];
@@ -11373,7 +11382,14 @@ const Agile = (() => {
     const imp = document.getElementById('kb-imp');
     if(imp) imp.innerHTML = open ? `<button class="btn btn-sm" onclick="R.go('ritos')"><i class="ti ti-alert-octagon"></i>${open} impedimento(s) aberto(s)</button>` : '';
     // Sem nenhum item o quadro continua com todas as colunas (para dar para ver o desenho e arrastar depois), com um aviso do que fazer
-    const emptyHint = items.length ? '' : '<div class="rk-empty" style="margin-bottom:10px">Nenhum item ainda. Use <b>Novo item</b> para cadastrar a primeira história ou <b>Importar planilha</b> para trazer vários de uma vez — eles aparecem em “A fazer”.</div>';
+    const scrum = cfg.entry !== 'kanban', actions = document.getElementById('kb-actions');
+    if(actions) actions.innerHTML = scrum
+      ? '<button class="btn btn-sm" onclick="R.go(\'backlog\')"><i class="ti ti-list-details"></i>Ir ao Backlog</button>' + (act ? '<button class="btn btn-sm" data-perm="manage_backlog" onclick="Agile.openUrgent()" title="Inclui um item direto na sprint ativa, registrando o motivo (mudança de escopo)"><i class="ti ti-alert-triangle"></i>Item urgente na sprint</button>' : '')
+      : '<button class="btn btn-sm" data-perm="manage_backlog" onclick="ImportUi.open(\'backlog\')"><i class="ti ti-table-import"></i>Importar planilha</button><button class="btn btn-sm btn-acc" data-perm="manage_backlog" onclick="Agile.openItem()"><i class="ti ti-plus"></i>Novo item</button>';
+    let emptyHint = '';
+    if(scrum && boardSprint === '__auto' && !act) emptyHint = '<div class="rk-empty" style="margin-bottom:10px">Este quadro mostra o que está <b>na sprint</b>. Crie e importe os itens no <b>Backlog</b>, use <b>Planejar sprint</b> para escolher o que cabe e depois inicie a sprint em <b>Sprints</b>. <button class="btn btn-sm" onclick="R.go(\'backlog\')">Ir ao Backlog</button></div>';
+    else if(scrum && !list.length) emptyHint = '<div class="rk-empty" style="margin-bottom:10px">Nenhum item nesta sprint ainda. No <b>Backlog</b>, use <b>Planejar sprint</b> (ou escolha a sprint no próprio item) para trazer o que cabe. <button class="btn btn-sm" onclick="R.go(\'backlog\')">Ir ao Backlog</button></div>';
+    else if(!scrum && !items.length) emptyHint = '<div class="rk-empty" style="margin-bottom:10px">Nenhum item ainda. Use <b>Novo item</b> para cadastrar a primeira história ou <b>Importar planilha</b> para trazer vários de uma vez — eles aparecem em “A fazer”.</div>';
     root.innerHTML = emptyHint + `<div class="kb-board" style="grid-template-columns:repeat(${columns.length},minmax(${columns.length > 4 ? 210 : 0}px,1fr))">` + columns.map(col => {
       const st = stats.find(s => s.key === col.key);
       const cards = list.filter(i => i.status === col.key).map(i => card(i)).join('') || '<div style="font-size:11.5px;color:var(--t3);padding:6px 2px">Nenhum item</div>';
@@ -11435,8 +11451,9 @@ const Agile = (() => {
   function openBoardCfg() {
     if(!Auth.guard('manage_backlog')) return;
     load();
-    boardDraft = { columns: AgileCalc.cols(cfg).map(c => ({ key: c.key, label: c.label, wip: Number(cfg.wip[c.key]) || 0 })), card: { ...cfg.card } };
+    boardDraft = { columns: AgileCalc.cols(cfg).map(c => ({ key: c.key, label: c.label, wip: Number(cfg.wip[c.key]) || 0 })), card: { ...cfg.card }, entry: cfg.entry };
     renderBoardCfg();
+    document.getElementById('ab-entry').value = cfg.entry;
     document.getElementById('modal-agile-board').classList.remove('hidden');
   }
   function renderBoardCfg() {
@@ -11474,7 +11491,7 @@ const Agile = (() => {
     before.forEach((c, i) => { if(!after.some(a => a.key === c.key)) items.filter(it => it.status === c.key).forEach(it => { it.status = before[Math.max(0, i - 1)].key; pushItem(it); }); });
     // 0 é gravado de propósito ("sem limite"), para não voltar ao limite padrão das colunas Em andamento/Em revisão
     const wip = {}; d.columns.forEach(c => { if(c.key !== 'todo' && c.key !== 'done') wip[c.key] = c.wip; });
-    cfg = AgileCalc.cfgOf({ columns: after, wip, card: d.card, reservePct: cfg.reservePct });
+    cfg = AgileCalc.cfgOf({ columns: after, wip, card: d.card, reservePct: cfg.reservePct, entry: document.getElementById('ab-entry').value });
     saveItems(); DB.set('agileConfig', cfg);
     if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'agileConfig', cfg);
     closeBoardCfg(); renderAll(); T.show('✅ Quadro personalizado.');
@@ -11658,7 +11675,19 @@ const Agile = (() => {
     if(p.sprintId) document.getElementById('ai-sprint').value = p.sprintId;
     document.getElementById('ai-title').focus();
   }
-  function closeItem() { document.getElementById('modal-agile-item').classList.add('hidden'); }
+  // Mudança de escopo no meio da sprint: só na sprint ativa, com o motivo registrado na descrição e na trilha
+  let urgent = null;
+  function openUrgent() {
+    if(!Auth.guard('manage_backlog')) return;
+    load(); const a = active(); if(!a) { T.show('⚠️ Não há sprint ativa.'); return; }
+    const reason = (prompt('Item urgente na sprint "' + a.name + '": isso é uma mudança de escopo.\nQual o motivo da inclusão?') || '').trim();
+    if(reason.length < 5) { if(reason) T.show('⚠️ Descreva o motivo (mínimo 5 letras).'); return; }
+    openItem(); urgent = { reason, sprintId: a.id };
+    document.getElementById('ai-title-h').textContent = 'Item urgente — ' + a.name;
+    document.getElementById('ai-sprint').value = a.id;
+    document.getElementById('ai-title').focus();
+  }
+  function closeItem() { urgent = null; document.getElementById('modal-agile-item').classList.add('hidden'); }
   function saveItem() {
     if(!Auth.guard('manage_backlog')) return;
     load();
@@ -11668,11 +11697,15 @@ const Agile = (() => {
     let it = itemCtx ? items.find(x => x.id === itemCtx) : null;
     const f = { title, kind: val('ai-kind'), points, assignee: val('ai-assignee').trim(), description: val('ai-desc').trim(), sprintId: val('ai-sprint') };
     f.parentId = f.kind === 'bug' ? val('ai-parent') : '';
+    const urg = (!itemCtx && urgent) ? urgent : null;
+    if(urg) { f.sprintId = urg.sprintId; f.description = (f.description ? f.description + '\n\n' : '') + 'Incluído durante a sprint (mudança de escopo) — motivo: ' + urg.reason; }
     const bad = AgileCalc.bugParentError({ ...f, id: itemCtx || '' }, items);
     if(bad) { T.show('⚠️ ' + bad); document.getElementById('ai-parent').focus(); return; }
     if(it) { Object.assign(it, f); AgileCalc.moveTo(it, val('ai-status'), todayIso()); }
     else { it = { id: AgileCalc.nextId('US', items), status: 'todo', rank: (Math.max(0, ...items.map(x => x.rank || 0)) + 1), createdOn: todayIso(), doneOn: '', ...f }; items.push(it); }
-    saveItems(); pushItem(it); closeItem(); renderAll();
+    saveItems(); pushItem(it);
+    if(urg) { Trail.log('Item urgente incluído na sprint: ' + it.id + ' — ' + it.title, Auth.getName(), urg.reason, 'b-amb'); T.show('⚠️ ' + it.id + ' entrou na sprint como mudança de escopo (motivo registrado).', 5000); }
+    closeItem(); renderAll();
     T.show(`✅ ${it.id} salvo.`);
   }
   function deleteItem() {
@@ -11910,7 +11943,7 @@ const Agile = (() => {
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
     aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, moveCol, setColLabel, setColWip, setCardField,
-    cfgNow: () => { load(); return cfg; }, kindChanged, openBugFor, itemRefs };
+    cfgNow: () => { load(); return cfg; }, kindChanged, openBugFor, itemRefs, openUrgent };
 })();
 </script>
 

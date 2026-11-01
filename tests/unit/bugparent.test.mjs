@@ -49,3 +49,11 @@ test('sprints: história do que foi entregue e devolvido, e troca de sprint sem 
   assert.match(sql, /carried jsonb/);
   for (const k of ['kb-sprint-bar', 'Nenhuma sprint ativa', 'O que esta sprint entregou', 'devolvido ao backlog', 'encerra a sprint ativa']) assert.ok(html.includes(k), k);
 });
+
+test('como os itens entram no quadro: Scrum por padrão, Kanban contínuo só quando escolhido', () => {
+  assert.equal(AgileCalc.cfgOf(null).entry, 'scrum');
+  assert.equal(AgileCalc.cfgOf({}).entry, 'scrum');
+  assert.equal(AgileCalc.cfgOf({ entry: 'kanban' }).entry, 'kanban');
+  assert.equal(AgileCalc.cfgOf({ entry: 'qualquer' }).entry, 'scrum');
+  for (const k of ['ab-entry', 'Item urgente na sprint', 'mudança de escopo', 'Ir ao Backlog', 'si-signout', 'Sair / trocar de usuário']) assert.ok(html.includes(k), k);
+});
