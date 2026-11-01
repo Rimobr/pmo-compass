@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.26.0'
+  version: '2.27.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -78,8 +78,14 @@ html[data-theme="gray"] {
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--t1);font-family:var(--font-sans);font-size:13px;line-height:1.5}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-thumb{background:var(--s3);border-radius:4px}
+/* Barra de rolagem larga e colorida: fácil de ver e de arrastar (a fina e cinza passava despercebida). Trilha com fundo e borda; cursor em destaque. */
+::-webkit-scrollbar{width:16px;height:16px}
+::-webkit-scrollbar-track{background:var(--s2);border-left:1px solid var(--b2)}
+::-webkit-scrollbar-thumb{background:var(--acc);border:3px solid var(--s2);border-radius:999px;min-height:56px;min-width:56px}
+::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--acc) 78%,#000)}
+::-webkit-scrollbar-thumb:active{background:color-mix(in srgb,var(--acc) 62%,#000)}
+::-webkit-scrollbar-corner{background:var(--s2)}
+@supports not selector(::-webkit-scrollbar){*{scrollbar-width:auto;scrollbar-color:var(--acc) var(--s2)}}
 button,input,select,textarea{font-family:inherit;font-size:inherit}
 </style>
 
