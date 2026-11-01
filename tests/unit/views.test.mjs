@@ -75,3 +75,29 @@ test('o banco nega a leitura de gestão e de dados das pessoas a quem não tem a
   assert.match(sql, /function public\.project_team/);
   assert.doesNotMatch(sql.match(/function public\.project_team[\s\S]*?\$\$ language/)[0], /workload|signals|recommendation/);
 });
+
+test('incluir uma pessoa de execução no projeto cria o colaborador ligado à conta; quem só acompanha não entra', () => {
+  const sql = ['20261102110000_team_link.sql', '20261102110100_team_link_fix.sql'].map(f => readFileSync(join(root, 'supabase', 'migrations', f), 'utf8')).join(' ');
+  assert.match(sql, /function public\.ensure_team_member/);
+  assert.match(sql, /insert into public\.team_members\(id, project_id, name, role, allocation_pct, workload_pct, signals, user_id\)/);
+  assert.match(sql, /update_own' = 'true' or ap\.perms ->> 'log_hours' = 'true'/);
+  assert.match(sql, /guard_member_link[\s\S]*is_project_manager/);
+  assert.match(sql, /revoke all on function public\._link_team_member/);
+  for (const k of ['Cloud.ensureTeamMember', "rpc('ensure_team_member'"]) assert.ok(html.includes(k), k);
+  assert.ok(readFileSync(join(root, 'supabase', 'functions', 'users-admin', 'index.ts'), 'utf8').includes('ensure_team_member'));
+});
+
+test('"Meu projeto" vazio é só um espaço local: marcado como placeholder, nunca sobe para a nuvem e some com o primeiro projeto de verdade', () => {
+  assert.equal([...html.matchAll(/name:'Meu projeto'[^}]*placeholder:true/g)].length, 2, 'os dois lugares que o criam marcam placeholder');
+  assert.match(html, /!DEMO_PROJECT_IDS\.includes\(p\.id\) && !p\.placeholder/);
+  assert.match(html, /projects = loadProjects\(\)\.filter\(x => !x\.placeholder\);\s*projects\.push\(p\)/);
+});
+
+test('"Ver como": só o Administrador, só na memória, sem gravar e sem permitir alterações', () => {
+  for (const k of ['id="tb-viewas"', 'function setPreview', 'if(previewRole) return; /* a visualização nunca é gravada */', 'Você está só visualizando', 'Voltar ao meu perfil', 'actor_role: (typeof Auth !== \'undefined\') ? Auth.realRole()']) assert.ok(html.includes(k), k);
+  assert.match(html, /function setPreview\(roleId\) \{\s*if\(realRole\(\) !== 'admin'\) return;/);
+});
+
+test('a Minha conta espera o login terminar e acompanha a mudança de estado', () => {
+  for (const k of ['Confirmando a sua conta', 'isPending: () => pendingCloudConfirm', "if(typeof Account !== 'undefined') Account.render();\n  WBS.render();".replace(/\n/g, '\r\n')]) assert.ok(html.includes(k) || html.includes(k.replace(/\r\n/g, '\n')), k);
+});

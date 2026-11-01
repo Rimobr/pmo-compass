@@ -54,6 +54,8 @@ Deno.serve(async (req) => {
     if (projectIds.length) {
       const { error: ae } = await asAdmin.from("project_access").upsert(projectIds.map((pid: string) => ({ project_id: pid, user_id: newId, granted_by: u.user.id })));
       if (ae) accessErr = ae.message;
+      // quem executa entra na equipe de cada projeto e a conta fica ligada ao colaborador
+      else for (const pid of projectIds) await asAdmin.rpc("ensure_team_member", { pid, uid: newId });
     }
     if (re || accessErr) {
       const mail0 = await notify(env, { name, email, password, reset: false });

@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.31.0'
+  version: '2.33.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -184,6 +184,7 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .toast{background:var(--s2);border:1px solid var(--b2);border-radius:var(--r8);padding:10px 16px;font-size:12.5px;color:var(--t1);display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-md);animation:toastIn .2s ease;pointer-events:auto}
 @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .no-view{display:none!important}
+.preview-bar{display:flex;background:var(--amd);color:var(--t1);border-bottom:1px solid var(--ambb);padding:6px 14px;font-size:12.5px;align-items:center;gap:10px;flex-wrap:wrap}.preview-bar[hidden]{display:none}
 #login-gate{display:none;position:fixed;inset:0;z-index:900;background:var(--bg);align-items:center;justify-content:center;padding:16px}
 body.no-login #login-gate{display:flex}
 .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:999;backdrop-filter:blur(4px)}
@@ -897,11 +898,16 @@ body.icons-failed i[data-fb]::before{
     <button class="ico-btn" data-perm="business" onclick="Wizard.open()" title="Novo projeto"><i class="ti ti-plus"></i></button>
     <button class="ico-btn" data-perm="manage_backlog" onclick="BugReport.open()" title="Relatar um bug (vira um item Bug, filho de uma entrega)" aria-label="Relatar um bug"><i class="ti ti-bug"></i></button>
     <button class="ico-btn" onclick="R.go('settings')" title="Configurações"><i class="ti ti-settings"></i></button>
+    <select id="tb-viewas" class="input" aria-label="Ver o sistema como outro perfil (só visualização)" title="Ver o sistema como outro perfil — só visualização, nada é alterado" onchange="Auth.setPreview(this.value)" style="display:none;width:auto;max-width:210px;font-size:11.5px;padding:4px 6px"></select>
     <span id="tb-cloud-badge" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:999px;background:var(--s2);color:var(--t3)" title="Carregando…"><i class="ti ti-cloud" style="font-size:12px"></i></span>
     <span class="role-badge" id="tb-role-tag" title="O seu perfil de acesso">Administrador</span>
     <button type="button" class="ava" id="tb-avatar" title="Minha conta" aria-label="Minha conta" onclick="Auth.openAccount()" style="cursor:pointer">MR</button>
   </div>
 </header>
+<div id="preview-bar" class="preview-bar" role="status" hidden>
+  <i class="ti ti-eye"></i><span id="preview-bar-txt"></span>
+  <button class="btn btn-sm" onclick="Auth.exitPreview()"><i class="ti ti-arrow-back-up"></i>Voltar ao meu perfil</button>
+</div>
 
 <div class="app-body">
 
@@ -3617,7 +3623,7 @@ const Auth = (() => {
     if(!state.role || typeof state.role !== 'string') state.role = 'admin';
     apply();
   }
-  function persist() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
+  function persist() { if(previewRole) return; /* a visualização nunca é gravada */ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
 
   function getRole() { return state.role; }
   function getName() { return state.name; }
@@ -3666,6 +3672,25 @@ const Auth = (() => {
   // Chamado pelo Cloud quando initClient() resolve e NÃO há sessão ativa (usuário nunca
   // logou, ou sessão expirou) — libera o papel local, já que não existe confirmação de
   // servidor pra esperar nesse caso.
+  // "Ver como": o Administrador vê a tela como outro perfil. Só na memória deste navegador: o perfil real (e o que o servidor deixa fazer) não muda,
+  // nada é gravado e as ações de alteração ficam bloqueadas. Serve para conferir menu, telas e botões de cada perfil.
+  let previewRole = null, savedRole = null;
+  const realRole = () => previewRole ? savedRole : state.role;
+  const isPreview = () => !!previewRole;
+  function setPreview(roleId) {
+    if(realRole() !== 'admin') return;
+    if(!roleId || roleId === 'admin' || !defsOf()[roleId]) { exitPreview(); return; }
+    if(!previewRole) savedRole = state.role;
+    previewRole = roleId; state = { ...state, role: roleId };
+    apply();
+    if(typeof R !== 'undefined') R.go(homePage()); // mostra a tela inicial daquele perfil
+  }
+  function exitPreview() {
+    if(!previewRole) return;
+    state = { ...state, role: savedRole }; previewRole = null; savedRole = null;
+    apply();
+    if(typeof R !== 'undefined') R.go('dashboard');
+  }
   let noLogin = false;
   function confirmNoCloudSession() {
     const configured = (typeof Cloud !== 'undefined') && Cloud.isConfigured && Cloud.isConfigured();
@@ -3700,7 +3725,22 @@ const Auth = (() => {
     const ava = document.getElementById('tb-avatar');
     if(ava) { ava.textContent = noLogin ? '?' : initialsFor(state.name, state.role); ava.title = `Minha conta — ${state.name} (${label()})`; ava.setAttribute('aria-label', 'Minha conta: ' + state.name); }
     const tag = document.getElementById('tb-role-tag');
-    if(tag) tag.textContent = label();
+    if(tag) tag.textContent = previewRole ? 'Vendo como: ' + label() : label();
+    // Seletor "Ver como": só o Administrador de verdade, com todos os perfis da ferramenta
+    const sel = document.getElementById('tb-viewas');
+    if(sel) {
+      const show = realRole() === 'admin' && !noLogin && !pendingCloudConfirm;
+      sel.style.display = show ? '' : 'none';
+      if(show) {
+        const d = defsOf();
+        sel.innerHTML = '<option value="">Ver como… (meu perfil: ' + escapeHtml((d.admin && d.admin.name) || 'Administrador') + ')</option>' + Object.keys(d).filter(k => k !== 'admin').map(k => '<option value="' + k + '">' + escapeHtml(d[k].name) + '</option>').join('');
+        sel.value = previewRole || '';
+      }
+    }
+    // A Minha conta acompanha o estado: ao terminar o login (ou sair), é desenhada de novo
+    if(typeof Account !== 'undefined' && document.getElementById('p-account') && document.getElementById('p-account').classList.contains('on')) Account.render();
+    const bar = document.getElementById('preview-bar');
+    if(bar) { bar.hidden = !previewRole; const t = document.getElementById('preview-bar-txt'); if(t && previewRole) t.innerHTML = 'Você está <b>visualizando</b> o sistema como <b>' + escapeHtml(label()) + '</b>. Nada é alterado e o seu perfil de Administrador continua o mesmo.'; }
     updateCloudBadge();
   }
 
@@ -3730,7 +3770,7 @@ const Auth = (() => {
   // Chamado pelo módulo Cloud após um login real no Supabase — o perfil passa a vir do banco
   function setFromCloud(name, role) {
     cloudManaged = true;
-    pendingCloudConfirm = false; noLogin = false;
+    pendingCloudConfirm = false; noLogin = false; previewRole = null; savedRole = null;
     state = { name: name || state.name, role: (typeof role === 'string' && role) ? role : 'consulta' };
     persist();
     apply();
@@ -3846,13 +3886,14 @@ const Auth = (() => {
 
   // Bloqueio client-side (reforço de UX — não substitui autenticação real de servidor)
   function guard(scope) {
+    if(previewRole) { T.show('👁️ Você está só visualizando como "' + label() + '". Volte ao seu perfil para alterar algo.'); return false; }
     if(can(scope)) return true;
     T.show(`🔒 O perfil "${label()}" não tem permissão para esta ação.`);
     if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('permission_denied', `Ação bloqueada — perfil "${label()}" tentou algo que exige escopo "${scope}"`, { scope });
     return false;
   }
 
-  return { openAccount, canOpen, homePage, applyViews, setProfileDefs, getProfileDefs, grantedScopes, load, getRole, getName, label, can, guard, openModal, closeModal, toggleLocalBox, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, confirmNoCloudSession, doSignIn, doSignInSSO, doSignOut, saveCloudName, changeOwnPassword, updateCloudBadge };
+  return { isPending: () => pendingCloudConfirm, setPreview, exitPreview, realRole, isPreview, openAccount, canOpen, homePage, applyViews, setProfileDefs, getProfileDefs, grantedScopes, load, getRole, getName, label, can, guard, openModal, closeModal, toggleLocalBox, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, confirmNoCloudSession, doSignIn, doSignInSSO, doSignOut, saveCloudName, changeOwnPassword, updateCloudBadge };
 })();
 </script>
 
@@ -4154,11 +4195,19 @@ const Cloud = (() => {
     if(error) { console.warn('Supabase: falha ao listar acessos', error); return []; }
     return data || [];
   }
+  // Cria (ou reaproveita pelo nome) o colaborador da pessoa no projeto e liga a conta a ele; quem só acompanha não entra na equipe
+  async function ensureTeamMember(projectId, userId) {
+    if(!client || !session) return null;
+    const { data, error } = await client.rpc('ensure_team_member', { pid: projectId, uid: userId });
+    if(error) { console.warn('Supabase: não consegui ligar a conta à equipe', error.message); return null; }
+    return data;
+  }
   async function setProjectAccess(userId, projectId, granted) {
     if(!client || !session) return false;
     if(granted) {
       const { error } = await client.from('project_access').upsert({ project_id:projectId, user_id:userId, granted_by:session.user.id });
       if(error) { T.show('❌ ' + error.message); return false; }
+      await ensureTeamMember(projectId, userId); // quem executa entra na equipe e a conta fica ligada ao colaborador
     } else {
       const { error } = await client.from('project_access').delete().eq('project_id', projectId).eq('user_id', userId);
       if(error) { T.show('❌ ' + error.message); return false; }
@@ -4450,7 +4499,7 @@ const Cloud = (() => {
   async function syncProjects() {
     if(!client || !session || typeof DB === 'undefined') return;
     try {
-      const local = DB.listProjects().filter(p => !DEMO_PROJECT_IDS.includes(p.id)); // os projetos de demonstração nunca sobem para a nuvem
+      const local = DB.listProjects().filter(p => !DEMO_PROJECT_IDS.includes(p.id) && !p.placeholder); // os projetos de demonstração nunca sobem para a nuvem
       await Promise.all(local.map(p => client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', created_by:session.user.id, area:p.area||null, ...(p.refDate ? { reference_date:p.refDate } : {}), ...(p.methodology ? { methodology:p.methodology } : {}) }).then(()=>{}).catch(()=>{})));
       const { data, error } = await client.from('projects').select('*').order('created_at', { ascending:true });
       if(error || !data) return;
@@ -4736,7 +4785,7 @@ const Cloud = (() => {
       project_id: DB.getActiveProjectId(),
       actor_id: session.user.id,
       actor_email: session.user.email,
-      actor_role: (typeof Auth !== 'undefined') ? Auth.getRole() : null,
+      actor_role: (typeof Auth !== 'undefined') ? Auth.realRole() : null,
       action, description, metadata: metadata || {}
     }).then(()=>{}).catch(cloudSyncFailed));
   }
@@ -4847,7 +4896,7 @@ const Cloud = (() => {
   }
 
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
-    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, withdrawWhatsapp, projectTeam, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
+    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument, pushRow, pushMany, deleteRow, msgTable, invokeFn,
@@ -5482,6 +5531,7 @@ const Users = (() => {
     }
     const ok = await Cloud.updateUserRole(userId, role);
     if(ok) {
+      for(const a of access.filter(x => x.user_id === userId)) await Cloud.ensureTeamMember(a.project_id, userId);
       T.show('✅ Perfil atualizado.');
       if((userId === Cloud.getUserId())) { Auth.setFromCloud(Auth.getName(), role); } // se mudou o próprio, reflete na hora
       refresh();
@@ -5833,9 +5883,15 @@ const Account = (() => {
   const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const LV = { junior: 'Júnior', pleno: 'Pleno', senior: 'Sênior' };
   const row = (l, v) => '<div class="set-row"><div class="set-lbl">' + l + '</div><div class="set-sub" style="white-space:pre-wrap;overflow-wrap:anywhere;max-width:64%;text-align:right">' + (v || '<span style="color:var(--t3)">não informado</span>') + '</div></div>';
-  async function render() {
+  let lastSig = '';
+  async function render(force) {
     const root = document.getElementById('ac-root'); if(!root) return;
+    // Enquanto o login está sendo confirmado não há o que mostrar (e mostrar "modo local" seria errado)
+    if(Auth.isPending()) { root.innerHTML = '<div class="card"><div style="font-size:12.5px;color:var(--t3)"><i class="ti ti-loader-2"></i> Confirmando a sua conta…</div></div>'; lastSig = ''; return; }
     const cloud = (typeof Cloud !== 'undefined') && Cloud.isSignedIn();
+    const sig = [cloud, cloud ? Cloud.getEmail() : '', Auth.getRole(), Auth.getName(), DB.listProjects().length, DB.getActiveProjectId()].join('|');
+    if(!force && sig === lastSig) return;
+    lastSig = sig;
     const defs = Auth.getProfileDefs(), role = Auth.getRole(), prof = defs[role] || {};
     const projects = DB.listProjects().map(p => esc(p.name || p.id)).join(', ');
     let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;align-items:start">';
@@ -5874,7 +5930,7 @@ const Account = (() => {
     const v = (document.getElementById('ac-name').value || '').trim();
     if(v.length < 2) { T.show('⚠️ Digite um nome.'); return; }
     if(typeof Cloud !== 'undefined' && Cloud.isSignedIn()) { if(!(await Cloud.updateOwnName(v))) return; Auth.setFromCloud(v, Auth.getRole()); } else { return; }
-    T.show('✅ Nome atualizado.'); render();
+    T.show('✅ Nome atualizado.'); render(true);
   }
   async function changePassword() { const i = document.getElementById('ac-pass'); if(await Cloud.changeOwnPassword(i.value)) i.value = ''; }
   async function withdraw() {
@@ -6486,7 +6542,11 @@ const DB = (() => {
     if(!Auth.guard('business')) return null;
     const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
     const p = { id, name: name || 'Novo projeto', client: client || '', area: (area || '').trim().slice(0, 80), icon:'compass' };
-    loadProjects().push(p);
+    // O primeiro projeto de verdade substitui o espaço de trabalho vazio "Meu projeto" (placeholder)
+    const ph = loadProjects().filter(x => x.placeholder);
+    ph.forEach(x => { try { localStorage.removeItem(storageKeyFor(x.id)); } catch(e) {} });
+    projects = loadProjects().filter(x => !x.placeholder);
+    projects.push(p);
     persistProjects();
     switchProject(id);
     if(typeof Cloud !== 'undefined') { Cloud.pushProject(p); Cloud.grantSelfProjectAccess(id); }
@@ -6617,7 +6677,7 @@ const DB = (() => {
     projects = loadProjects().filter(p => p.id !== pid);
     if(!projects.length) {
       const blankId = 'p' + Date.now().toString(36);
-      projects = [{ id:blankId, name:'Meu projeto', client:'', icon:'compass' }];
+      projects = [{ id:blankId, name:'Meu projeto', client:'', icon:'compass', placeholder:true }];
       try { localStorage.setItem(storageKeyFor(blankId), JSON.stringify(seedEmpty())); } catch(e){}
     }
     persistProjects();
@@ -6647,7 +6707,7 @@ const DB = (() => {
     } catch(e){}
     const blankId = 'p' + Date.now().toString(36);
     try {
-      localStorage.setItem(PROJECTS_KEY, JSON.stringify([{ id:blankId, name:'Meu projeto', client:'', icon:'compass' }]));
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify([{ id:blankId, name:'Meu projeto', client:'', icon:'compass', placeholder:true }]));
       localStorage.setItem(ACTIVE_KEY, blankId);
       localStorage.setItem(storageKeyFor(blankId), JSON.stringify(seedEmpty()));
     } catch(e){}
@@ -9106,6 +9166,7 @@ const Chat = (() => {
 <!-- ■ MODULE: core/init ─ Bootstrap da aplicação -->
 <script data-module="core/init">
 function renderAllModules() {
+  if(typeof Account !== 'undefined') Account.render();
   WBS.render();
   Repo.render();
   Decisions.render();
