@@ -1,6 +1,6 @@
 -- =========================================================================
 -- PMO Compass — esquema completo (GERADO por scripts/build-schema.mjs — não edite à mão)
--- Fonte: supabase/migrations/ (33 arquivos). Para instalação do zero, rode este arquivo inteiro
+-- Fonte: supabase/migrations/ (34 arquivos). Para instalação do zero, rode este arquivo inteiro
 -- no SQL Editor; para um banco que já existe, use `node scripts/db-apply.mjs` (aplica só o que falta).
 -- =========================================================================
 
@@ -2220,3 +2220,8 @@ begin
     perform public._link_team_member(r.project_id, r.user_id);
   end loop;
 end $$;
+
+-- ▼▼▼ 20261102120000_sprint_extensions.sql ▼▼▼
+-- Extensão da sprint: cada vez que o fim é estendido (de/para, quem, quando, motivo) fica registrado na própria sprint
+alter table public.sprints add column if not exists extensions jsonb not null default '[]'::jsonb
+  check (jsonb_typeof(extensions) = 'array' and jsonb_array_length(extensions) <= 50);
