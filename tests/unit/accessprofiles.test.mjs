@@ -40,3 +40,10 @@ test('toda marca data-perm / guard do app usa uma permissão que existe', () => 
   const used = new Set([...html.matchAll(/data-perm="([a-z_]+)"/g)].map(x => x[1]).concat([...html.matchAll(/Auth\.guard\('([a-z_]+)'\)/g)].map(x => x[1])));
   used.forEach(k => assert.ok(ok.has(k), `permissão desconhecida: ${k}`));
 });
+
+test('acesso ao projeto: só o gerente responsável (e o administrador) inclui ou tira pessoas', () => {
+  const mig = readFileSync(join(root, 'supabase', 'migrations', '20261023101600_project_manager.sql'), 'utf8');
+  ['is_project_manager', 'project_access_manager_insert', 'project_access_manager_delete', 'guard_project_manager'].forEach(k => assert.ok(mig.includes(k), k));
+  assert.match(mig, /user_id <> auth\.uid\(\)/); // o responsável não remove a si mesmo
+  assert.ok(html.includes('setProjectManager') && html.includes('Users.setAll'));
+});

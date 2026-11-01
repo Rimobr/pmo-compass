@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.18.6'
+  version: '2.19.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -249,6 +249,15 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 /* A área de gestão do projeto tem um fundo levemente diferente: o olho separa "diretoria/PMO" de "gerente e equipe" */
 .sb-proj-area{display:flex;flex-direction:column;gap:1px;background:var(--s2);background:color-mix(in srgb, var(--acc) 6%, var(--s1));border:1px solid var(--b1);border-radius:var(--r8);padding:0 4px 6px;margin:8px -2px 4px}
 .sb-proj-area .sb-divl{margin-top:8px}
+.proj-pick{position:relative}
+.proj-pick summary{cursor:pointer;list-style:none;width:auto;display:inline-flex;align-items:center;gap:6px;user-select:none}
+.proj-pick summary::-webkit-details-marker{display:none}
+.proj-pick summary::after{content:'▾';font-size:11px;color:var(--t3)}
+.proj-pick-list{position:absolute;z-index:20;margin-top:4px;min-width:260px;max-width:min(360px,86vw);max-height:280px;overflow:auto;background:var(--s1);border:1px solid var(--b2);border-radius:var(--r8);padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.proj-pick-list label{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--t1);cursor:pointer}
+.proj-pick-list label:hover{background:var(--s2)}
+.proj-pick-all{border-bottom:1px solid var(--b1);margin-bottom:4px;border-radius:6px 6px 0 0}
+.proj-pick-list input{width:16px;height:16px;accent-color:var(--acc)}
 .sb-divl-btn{position:relative;justify-content:center;background:none;border:0;width:calc(100% - 8px);cursor:pointer;font-family:inherit;border-radius:var(--r8);padding:4px 16px;letter-spacing:.02em}
 .sb-divl-btn::before,.sb-divl-btn::after{display:none}
 .sb-divl-btn:hover{color:var(--t1)}
@@ -1480,7 +1489,7 @@ body.icons-failed i[data-fb]::before{
   <div id="settings-panel-acesso" style="display:none">
   <div class="card">
     <div class="lbl"><i class="ti ti-lock-access"></i>Como o acesso funciona</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin:0">Três camadas, nesta ordem: <strong style="color:var(--t1)">1. a conta</strong> (quem entra) tem um <strong style="color:var(--t1)">2. perfil de acesso</strong> (o que pode fazer, em todos os projetos) e é <strong style="color:var(--t1)">3. membro de cada projeto</strong> que pode ver. Só o Administrador altera essas três camadas; os demais perfis veem apenas o que o perfil libera.</p>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin:0">Três camadas, nesta ordem: <strong style="color:var(--t1)">1. a conta</strong> (quem entra) tem um <strong style="color:var(--t1)">2. perfil de acesso</strong> (o que pode fazer, em todos os projetos) e é <strong style="color:var(--t1)">3. membro de cada projeto</strong> que pode ver. O perfil só o Administrador altera. Quem entra em cada projeto o Administrador e o <strong style="color:var(--t1)">gerente responsável</strong> por aquele projeto decidem; os demais perfis veem apenas o que o perfil libera.</p>
   </div>
 
   <div class="card" id="users-card" style="display:none">
@@ -1492,6 +1501,7 @@ body.icons-failed i[data-fb]::before{
       <button class="btn btn-sm" onclick="Users.refresh()"><i class="ti ti-refresh"></i>Atualizar</button>
     </div>
     <div id="users-list-root"></div>
+    <div id="users-managers"></div>
   </div>
 
   <div class="card" id="access-profiles-card" style="display:none">
@@ -4030,6 +4040,14 @@ const Cloud = (() => {
     if(error) { console.warn('Supabase: falha ao listar projetos', error); return []; }
     return data || [];
   }
+  // Só o Administrador define (ou troca) o gerente responsável; o banco recusa qualquer outra pessoa
+  async function setProjectManager(projectId, userId) {
+    if(!client || !session) return false;
+    const { error } = await client.from('projects').update({ manager_id: userId || null }).eq('id', projectId);
+    if(error) { T.show('❌ ' + error.message); return false; }
+    pushAuditEvent('role_change', `Gerente responsável do projeto "${projectId}" definido: ${userId || '(nenhum)'}`, { projectId, managerId: userId || null });
+    return true;
+  }
   async function listAllProjectAccess() {
     if(!client || !session) return [];
     const { data, error } = await client.from('project_access').select('project_id,user_id');
@@ -4199,7 +4217,7 @@ const Cloud = (() => {
       await Promise.all(local.map(p => client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', created_by:session.user.id, area:p.area||null, ...(p.refDate ? { reference_date:p.refDate } : {}), ...(p.methodology ? { methodology:p.methodology } : {}) }).then(()=>{}).catch(()=>{})));
       const { data, error } = await client.from('projects').select('*').order('created_at', { ascending:true });
       if(error || !data) return;
-      DB.setProjectsFromCloud(data.map(p => ({ id:p.id, name:p.name, client:p.client||'', icon:p.icon||'compass', area:p.area||'', refDate:p.reference_date||'', methodology:p.methodology||'' })));
+      DB.setProjectsFromCloud(data.map(p => ({ id:p.id, name:p.name, client:p.client||'', icon:p.icon||'compass', area:p.area||'', refDate:p.reference_date||'', methodology:p.methodology||'', managerId:p.manager_id||'' })));
     } catch(e) { console.warn('Supabase: falha ao sincronizar projetos', e); }
   }
 
@@ -4575,7 +4593,7 @@ const Cloud = (() => {
     setTimeout(() => location.reload(), 900);
   }
 
-  return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
+  return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
     saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, doSignUp, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
@@ -4820,8 +4838,10 @@ const Users = (() => {
     const card = document.getElementById('users-card');
     const apCard = document.getElementById('access-profiles-card');
     const resetCard = document.getElementById('reset-shared-card');
-    const show = (typeof Cloud !== 'undefined') && Cloud.isSignedIn() && Auth.getRole() === 'admin';
-    if(card) { card.style.display = show ? '' : 'none'; if(show) refresh(); }
+    const cloud = (typeof Cloud !== 'undefined') && Cloud.isSignedIn();
+    const show = cloud && Auth.getRole() === 'admin';
+    const showTeam = cloud && (show || (Auth.can('business') && managed().length > 0));
+    if(card) { card.style.display = showTeam ? '' : 'none'; if(showTeam) refresh(); }
     if(apCard) { apCard.style.display = show ? '' : 'none'; if(show) renderProfiles(); }
     if(resetCard) resetCard.style.display = show ? '' : 'none';
   }
@@ -4887,15 +4907,21 @@ const Users = (() => {
   // Lista de pessoas com perfil e projetos no mesmo lugar (filtra por nome ou por projeto)
   let people = [], access = [];
   const projectsAll = () => DB.listProjects().slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'));
+  const isAdminUser = () => Auth.getRole() === 'admin';
+  // Projetos pelos quais a pessoa logada é o gerente responsável
+  const managed = () => { const me = Cloud.getUserId(); return me ? DB.listProjects().filter(p => p.managerId === me) : []; };
+  // O que a pessoa logada pode administrar: tudo (admin) ou só os próprios projetos (gerente responsável)
+  const scopeProjects = () => isAdminUser() ? projectsAll() : projectsAll().filter(p => managed().some(m => m.id === p.id));
   const projName = id => (projectsAll().find(p => p.id === id) || {}).name || id;
   async function refresh() {
     const root = document.getElementById('users-list-root');
     if(!root) return;
     root.innerHTML = '<div style="font-size:12px;color:var(--t3)"><i class="ti ti-loader-2"></i> Carregando…</div>';
     [people, access] = await Promise.all([Cloud.listProfiles(), Cloud.listAllProjectAccess()]);
+    openFor = '';
     const sel = document.getElementById('users-proj');
-    if(sel) { const keep = sel.value; sel.innerHTML = '<option value="">Todos os projetos</option>' + projectsAll().map(p => `<option value="${p.id}">${escapeHtml(p.name || p.id)}</option>`).join(''); sel.value = keep || ''; }
-    renderPeople();
+    if(sel) { const keep = sel.value; sel.innerHTML = '<option value="">' + (isAdminUser() ? 'Todos os projetos' : 'Todos os meus projetos') + '</option>' + scopeProjects().map(p => `<option value="${p.id}">${escapeHtml(p.name || p.id)}</option>`).join(''); sel.value = keep || ''; }
+    renderPeople(); renderManagers();
   }
   function setFilter() { renderPeople(); }
   function renderPeople() {
@@ -4906,9 +4932,10 @@ const Users = (() => {
     const proj = (document.getElementById('users-proj') || {}).value || '';
     const myId = Cloud.getUserId();
     const mine = pid => new Set(access.filter(a => a.user_id === pid).map(a => a.project_id));
-    const list = people.filter(p => (!q || (p.name || '').toLowerCase().includes(q)) && (!proj || p.role === 'admin' || mine(p.id).has(proj)));
+    const admin = isAdminUser(), myScope = scopeProjects();
+    const list = people.filter(p => (admin || (p.role !== 'admin' && p.id !== myId)) && (!q || (p.name || '').toLowerCase().includes(q)) && (!proj || p.role === 'admin' || mine(p.id).has(proj)));
     if(!list.length) { root.innerHTML = '<div style="font-size:12px;color:var(--t3)">Ninguém corresponde ao filtro.</div>'; return; }
-    const all = projectsAll();
+    const all = myScope;
     root.innerHTML = list.map(p => {
       const isMe = p.id === myId, nm = escapeHtml(p.name || '(sem nome)');
       const opts = Object.keys(defs()).map(r => `<option value="${r}"${r === p.role ? ' selected' : ''}>${escapeHtml(roleName(r))}</option>`).join('');
@@ -4916,27 +4943,59 @@ const Users = (() => {
       const chips = isAdmin
         ? '<span class="chip"><i class="ti ti-infinity"></i> Todos os projetos</span>'
         : (all.filter(x => has.has(x.id)).map(x => `<span class="chip">${escapeHtml(x.name || x.id)} <button class="link-a" style="padding:0 2px" aria-label="Remover ${nm} do projeto ${escapeHtml(x.name || x.id)}" onclick="Users.removeAccess('${p.id}','${x.id}')"><i class="ti ti-x"></i></button></span>`).join('') || '<span style="font-size:12px;color:var(--t3)">Nenhum projeto ainda</span>');
-      const free = all.filter(x => !has.has(x.id));
-      const add = isAdmin ? '' : `<select class="input" style="width:auto;max-width:240px" aria-label="Incluir ${nm} em um projeto" onchange="Users.addAccess('${p.id}', this)"${free.length ? '' : ' disabled'}><option value="">${free.length ? '+ Incluir em um projeto…' : 'Em todos os projetos'}</option>${free.map(x => `<option value="${x.id}">${escapeHtml(x.name || x.id)}</option>`).join('')}</select>`;
+      const nIn = all.filter(x => has.has(x.id)).length, allIn = all.length > 0 && nIn === all.length;
+      const add = isAdmin ? '' : `<details class="proj-pick"${openFor === p.id ? ' open' : ''} ontoggle="Users.pickToggle('${p.id}', this.open)"><summary class="input" aria-label="Escolher os projetos de ${nm}">Projetos (${nIn} de ${all.length})</summary><div class="proj-pick-list" role="group" aria-label="Projetos de ${nm}">
+          <label class="proj-pick-all"><input type="checkbox"${allIn ? ' checked' : ''}${all.length ? '' : ' disabled'} onchange="Users.setAll('${p.id}', this.checked)"> <b>Todos os projetos</b></label>
+          ${all.map(x => `<label><input type="checkbox"${has.has(x.id) ? ' checked' : ''} onchange="Users.setAccess('${p.id}','${x.id}', this.checked)"> ${escapeHtml(x.name || x.id)}</label>`).join('')}
+        </div></details>`;
       return `<div class="set-row" style="align-items:flex-start;flex-wrap:wrap;gap:10px">
         <div style="min-width:180px;flex:1 1 180px"><div class="set-lbl">${nm}${isMe ? ' <span class="badge b-acc">você</span>' : ''}</div><div class="set-sub" style="font-family:var(--font-mono);font-size:11px" title="Identificador da conta">${escapeHtml(p.id.slice(0, 8))}…</div></div>
         <div style="flex:2 1 280px;display:flex;flex-direction:column;gap:8px">
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><select class="input" style="width:auto" aria-label="Perfil de acesso de ${nm}" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>${add}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${admin ? `<select class="input" style="width:auto" aria-label="Perfil de acesso de ${nm}" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>` : `<span class="badge">${escapeHtml(roleName(p.role))}</span>`}${add}</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">${chips}</div>
         </div>
       </div>`;
     }).join('');
   }
-  async function addAccess(userId, selEl) {
-    const pid = selEl.value; if(!pid) return;
-    if(await Cloud.setProjectAccess(userId, pid, true)) { access.push({ project_id: pid, user_id: userId }); T.show('✅ Incluído em ' + projName(pid) + '.'); }
-    renderPeople();
+  // Administrador: define o gerente responsável de cada projeto (só ele inclui/tira pessoas além do administrador)
+  function renderManagers() {
+    const root = document.getElementById('users-managers');
+    if(!root) return;
+    if(!isAdminUser()) { root.innerHTML = ''; return; }
+    const cands = people.filter(p => p.role === 'admin' || (defs()[p.role] && defs()[p.role].perms.edit_plan));
+    const rows = projectsAll().map(pr => {
+      const opts = ['<option value="">Sem gerente responsável (só o Administrador)</option>'].concat(cands.map(c => `<option value="${c.id}"${c.id === pr.managerId ? ' selected' : ''}>${escapeHtml(c.name || c.id)}</option>`)).join('');
+      return `<div class="set-row"><div class="set-lbl">${escapeHtml(pr.name || pr.id)}</div><select class="input" style="width:auto;max-width:320px" aria-label="Gerente responsável pelo projeto ${escapeHtml(pr.name || pr.id)}" onchange="Users.setManager('${pr.id}', this.value)">${opts}</select></div>`;
+    }).join('');
+    root.innerHTML = `<div class="lbl" style="margin-top:16px"><i class="ti ti-user-star"></i>Gerente responsável por projeto<span class="help-q" data-help="Além do Administrador, só o gerente responsável pelo projeto inclui ou tira pessoas dele. Quem cria um projeto sendo gerente já fica como responsável." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:6px">Fora o Administrador, <strong style="color:var(--t1)">só o gerente responsável</strong> inclui ou tira pessoas do projeto dele.</p>${rows}`;
   }
-  async function removeAccess(userId, pid) {
-    if(await Cloud.setProjectAccess(userId, pid, false)) { access = access.filter(a => !(a.project_id === pid && a.user_id === userId)); T.show('✅ Acesso a ' + projName(pid) + ' removido.'); }
-    renderPeople();
+  async function setManager(projectId, userId) {
+    if(await Cloud.setProjectManager(projectId, userId)) {
+      const p = DB.listProjects().find(x => x.id === projectId); if(p) p.managerId = userId || '';
+      DB.setProjectsFromCloud(DB.listProjects());
+      T.show('✅ Gerente responsável atualizado.');
+    }
+    renderManagers();
   }
-
+  // Caixas de seleção: marcar/desmarcar um projeto, ou todos de uma vez (só os do alcance de quem está logado)
+  let openFor = '';
+  function pickToggle(userId, isOpen) { if(isOpen) openFor = userId; else if(openFor === userId) openFor = ''; }
+  async function setAccess(userId, pid, on) {
+    if(await Cloud.setProjectAccess(userId, pid, on)) {
+      access = on ? access.concat([{ project_id: pid, user_id: userId }]) : access.filter(a => !(a.project_id === pid && a.user_id === userId));
+      T.show(on ? '✅ Incluído em ' + projName(pid) + '.' : '✅ Acesso a ' + projName(pid) + ' removido.');
+    }
+    openFor = userId; renderPeople();
+  }
+  async function setAll(userId, on) {
+    const ids = scopeProjects().map(p => p.id).filter(id => access.some(a => a.user_id === userId && a.project_id === id) !== on);
+    const done = [];
+    for(const pid of ids) { if(await Cloud.setProjectAccess(userId, pid, on)) done.push(pid); }
+    access = on ? access.concat(done.map(pid => ({ project_id: pid, user_id: userId }))) : access.filter(a => !(a.user_id === userId && done.includes(a.project_id)));
+    if(done.length) T.show(on ? '✅ Incluído em ' + done.length + ' projeto(s).' : '✅ Acesso removido de ' + done.length + ' projeto(s).');
+    openFor = userId; renderPeople();
+  }
+  async function removeAccess(userId, pid) { return setAccess(userId, pid, false); }
   async function changeRole(userId, role, isMe) {
     if(isMe === 'true' || isMe === true) {
       if(!confirm('Isso é o seu próprio perfil. Tem certeza que quer mudar?')) { refresh(); return; }
@@ -4951,7 +5010,7 @@ const Users = (() => {
     }
   }
 
-  return { render, refresh, setFilter, addAccess, removeAccess, changeRole, newProfile, editProfile, cancelProfile, saveProfile, removeProfile };
+  return { render, refresh, setFilter, setManager, pickToggle, setAccess, setAll, removeAccess, changeRole, newProfile, editProfile, cancelProfile, saveProfile, removeProfile };
 })();
 </script>
 
