@@ -79,7 +79,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 
 | Tabela | Para que serve | Escopo | Dado pessoal | Apagar dados do projeto | Apagar toda a base | Campos |
 |---|---|---|---|---|---|---|
-| `team_members` | Colaboradores do projeto, carga e vínculo com a conta. | projeto | sim | apaga | apaga | `id`, `project_id`, `name`, `role`, `allocation_pct`, `workload_pct`, `signals`, `recommendation`, `action_page`, `created_at`, `user_id` |
+| `team_members` | Colaboradores do projeto, carga, sinais de burnout e vínculo com a conta (a tabela inteira só é lida por quem tem "ver a carga e os sinais"; cada pessoa lê a própria linha; o time sem carga vem da função `project_team`). | projeto | sim | apaga | apaga | `id`, `project_id`, `name`, `role`, `allocation_pct`, `workload_pct`, `signals`, `recommendation`, `action_page`, `created_at`, `user_id` |
 | `time_entries` | Horas apontadas por pessoa e atividade. | projeto | sim | apaga | apaga | `project_id`, `id`, `person_name`, `member_id`, `work_date`, `hours`, `wbs_ref`, `note`, `created_by`, `updated_at` |
 | `person_reviews` | Autoavaliação e avaliação do gerente por pessoa e projeto. | projeto | sim | apaga | apaga | `project_id`, `person_id`, `kind`, `reviewer_id`, `scores`, `would_work_again`, `comment`, `created_at`, `updated_at` |
 
@@ -180,6 +180,59 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 | Segredos das funções | WA_*, RESEND_API_KEY, EMAIL_FROM, CRON_SECRET, APP_URL. | `.env.deploy` + `node scripts/deploy-functions.mjs --secrets` |
 | Conta inativa | A conta é bloqueada no Auth (ban) e perde o perfil no banco. | Pessoas & acesso → Inativar / Reativar |
 
+## Quem vê o quê
+
+O menu esconde, a abertura direta pelo endereço é barrada e o banco nega a leitura dos dados correspondentes.
+
+| Permissão de visão | O que libera |
+|---|---|
+| `view_portfolio` | Painéis de portfólio e diretoria |
+| `view_management` | Gestão do projeto (saúde, decisões, riscos, escopo, linha de base, atas, repositório, chat) |
+| `view_team_load` | Carga de trabalho e sinais de burnout dos colegas |
+| `view_costs` | Custos e orçamento |
+
+| Tela | Exige |
+|---|---|
+| Painel da Diretoria | `view_portfolio` |
+| Visão Executiva | `view_portfolio` |
+| Visão do PMO | `view_portfolio` |
+| Indicadores | `view_portfolio` |
+| Portfólio | `view_portfolio` |
+| Priorização | `view_portfolio` |
+| Raio-X do Projeto | `view_management` |
+| Dashboard | `view_management` |
+| Relatório | `view_management` |
+| Linha de base | `view_management` |
+| Estimativas IA | `view_management` |
+| What-If | `view_management` |
+| Decisões IA | `view_management` |
+| Loop de Ação | `view_management` |
+| Trilha | `view_management` |
+| Mensagem de status | `view_management` |
+| Scope Changes | `view_management` |
+| Stakeholders | `view_management` |
+| Atas e Ações | `view_management` |
+| Repositório | `view_management` |
+| Chat contextual | `view_management` |
+| Modelos | `view_management` |
+| Riscos | `view_management` |
+| Burnout Radar | `view_team_load` |
+| Colaboradores | `view_team_load` |
+| Orçamento e Custos | `view_costs` |
+
+Telas abertas a quem tem acesso ao projeto: `mywork`, `kanban`, `backlog`, `sprints`, `ritos`, `wbs`, `hours`, `raci`, `lessons`, `help`, `settings`, `account`.
+
+| Perfil pronto | Vê |
+|---|---|
+| `admin` | tudo |
+| `gerente` | portfólio, gestão e carga do time |
+| `patrocinador` | portfólio e gestão (com custos) |
+| `po` | gestão do produto (sem portfólio nem carga do time) |
+| `sm` | gestão e carga do time (sem portfólio) |
+| `time` | só o próprio trabalho: Meu trabalho, quadro, backlog, sprints, ritos, WBS, horas |
+| `consulta` | painéis de portfólio em leitura (sem gestão, custos nem pessoas) |
+| `manutencao` | só configurações do sistema |
+
 ## Regras de uma base nova
 
 1. Uma base nova nasce VAZIA: nenhum dado de demonstração entra em projeto real, nem na tela nem na nuvem. Os 3 projetos de demonstração (Portal Nexus, Valdori, Beltrano) só existem no navegador sem conta e nunca sobem para a nuvem.
@@ -188,3 +241,4 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 4. Sair da conta apaga os dados do navegador; outra pessoa que entra apaga os da anterior antes de sincronizar.
 5. Indicador sem dado mostra "sem dados" — nunca verde, nunca vermelho. A varredura `npm run test:smoke` percorre todas as telas de um projeto vazio.
 6. Toda entrega que cria tabela, campo, chave do navegador, pasta de arquivos, função ou registro novo atualiza `docs/mapa-de-dados.json`, gera `docs/MAPA_DE_DADOS.md` e roda `npm run test:unit` e `npm run test:smoke` ANTES de ser entregue.
+7. Cada tela exige uma permissão de visão (mapa em `visoes`): o menu esconde e a tela barra a abertura direta; o banco também nega a leitura das tabelas de gestão e dos dados das pessoas a quem não tem a permissão.

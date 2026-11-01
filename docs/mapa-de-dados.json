@@ -1,99 +1,546 @@
 {
   "versao": 1,
   "limpezas": {
-    "apagarProjeto": { "nome": "Apagar dados do projeto", "onde": "Configurações → Nuvem & dados → Apagar dados → Dados do projeto", "efeito": "apaga tudo que tem `project_id` do projeto ativo (lista central `PROJECT_DATA_TABLES` + `PROJECT_EXTRA_TABLES`) e deixa o projeto em branco; o projeto, as pessoas e as configurações continuam" },
-    "excluirProjeto": { "nome": "Excluir o projeto", "onde": "Configurações → Nuvem & dados → Apagar dados → Projeto inteiro", "efeito": "apaga os dados do projeto, o próprio projeto e o acesso das pessoas a ele (cascata)" },
-    "apagarBase": { "nome": "Apagar toda a base", "onde": "Configurações → Nuvem & dados → Apagar dados → Toda a base (digitar APAGAR)", "efeito": "apaga todos os projetos e seus dados, os destinatários e o histórico de mensagens e deixa um projeto em branco no navegador; **preserva** contas, perfis de acesso, configurações e o log de auditoria" },
-    "sair": { "nome": "Sair da conta", "onde": "menu lateral → Sistema → Sair / trocar de usuário", "efeito": "envia o que estava pendente, encerra a sessão e apaga do navegador tudo que começa com `pmo_` e a sessão `sb-…` (ficam só a conexão e o tema); recarrega" },
-    "outraPessoa": { "nome": "Entrar outra pessoa", "onde": "automático no login", "efeito": "se o navegador guarda dados de outra pessoa (`pmo_cache_owner_v1`), apaga-os antes de sincronizar" }
+    "apagarProjeto": {
+      "nome": "Apagar dados do projeto",
+      "onde": "Configurações → Nuvem & dados → Apagar dados → Dados do projeto",
+      "efeito": "apaga tudo que tem `project_id` do projeto ativo (lista central `PROJECT_DATA_TABLES` + `PROJECT_EXTRA_TABLES`) e deixa o projeto em branco; o projeto, as pessoas e as configurações continuam"
+    },
+    "excluirProjeto": {
+      "nome": "Excluir o projeto",
+      "onde": "Configurações → Nuvem & dados → Apagar dados → Projeto inteiro",
+      "efeito": "apaga os dados do projeto, o próprio projeto e o acesso das pessoas a ele (cascata)"
+    },
+    "apagarBase": {
+      "nome": "Apagar toda a base",
+      "onde": "Configurações → Nuvem & dados → Apagar dados → Toda a base (digitar APAGAR)",
+      "efeito": "apaga todos os projetos e seus dados, os destinatários e o histórico de mensagens e deixa um projeto em branco no navegador; **preserva** contas, perfis de acesso, configurações e o log de auditoria"
+    },
+    "sair": {
+      "nome": "Sair da conta",
+      "onde": "menu lateral → Sistema → Sair / trocar de usuário",
+      "efeito": "envia o que estava pendente, encerra a sessão e apaga do navegador tudo que começa com `pmo_` e a sessão `sb-…` (ficam só a conexão e o tema); recarrega"
+    },
+    "outraPessoa": {
+      "nome": "Entrar outra pessoa",
+      "onde": "automático no login",
+      "efeito": "se o navegador guarda dados de outra pessoa (`pmo_cache_owner_v1`), apaga-os antes de sincronizar"
+    }
   },
   "tables": {
-    "projects": { "domain": "Projetos", "desc": "Cadastro do projeto (nome, cliente, método, gerente responsável).", "scope": "projeto", "personal": false, "clearProject": "preserva", "resetAll": "apaga" },
-    "project_access": { "domain": "Projetos", "desc": "Quem pode abrir cada projeto.", "scope": "projeto", "personal": false, "clearProject": "preserva", "resetAll": "apaga (cascata)" },
-    "project_settings": { "domain": "Projetos", "desc": "Configurações por projeto (método, quadro, priorização, perfil de PMO).", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "project_snapshots": { "domain": "Projetos", "desc": "Fotografias diárias da saúde do projeto (tendência).", "scope": "projeto", "personal": false, "clearProject": "apaga (só Administrador)", "resetAll": "apaga" },
-    "team_members": { "domain": "Equipe", "desc": "Colaboradores do projeto, carga e vínculo com a conta.", "scope": "projeto", "personal": true, "clearProject": "apaga", "resetAll": "apaga" },
-    "time_entries": { "domain": "Equipe", "desc": "Horas apontadas por pessoa e atividade.", "scope": "projeto", "personal": true, "clearProject": "apaga", "resetAll": "apaga" },
-    "person_reviews": { "domain": "Equipe", "desc": "Autoavaliação e avaliação do gerente por pessoa e projeto.", "scope": "projeto", "personal": true, "clearProject": "apaga", "resetAll": "apaga" },
-    "wbs_modules": { "domain": "Plano", "desc": "Entregas do cronograma (WBS).", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "wbs_tasks": { "domain": "Plano", "desc": "Subtarefas do cronograma.", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "baselines": { "domain": "Plano", "desc": "Linhas de base (fotografia do plano).", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "raci_entries": { "domain": "Plano", "desc": "Matriz RACI.", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "scope_changes": { "domain": "Plano", "desc": "Mudanças de escopo e seu impacto.", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "risks": { "domain": "Plano", "desc": "Registro de riscos e matriz.", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "decisions": { "domain": "Decisões", "desc": "Decisões e alertas gerados pela IA.", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "board_decisions": { "domain": "Decisões", "desc": "Decisões da diretoria sobre o projeto e o resultado depois.", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "documents": { "domain": "Conhecimento", "desc": "Documentos do repositório (texto lido).", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "project_docs": { "domain": "Conhecimento", "desc": "Modelos de documento (5W2H, SWOT, cutover, handover, comunicação).", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "budget_lines": { "domain": "Orçamento", "desc": "Linhas do orçamento planejado.", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "cost_actuals": { "domain": "Orçamento", "desc": "Custos lançados (real e comprometido).", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "backlog_items": { "domain": "Execução ágil", "desc": "Itens do backlog e do quadro (história, tarefa, bug filho com anexos).", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "sprints": { "domain": "Execução ágil", "desc": "Sprints, capacidade e o que voltou ao backlog.", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "sprint_rites": { "domain": "Execução ágil", "desc": "Ritos da sprint (planejamento, revisão, retrospectiva).", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "impediments": { "domain": "Execução ágil", "desc": "Impedimentos da sprint.", "scope": "projeto", "personal": false, "clearProject": "apaga", "resetAll": "apaga" },
-    "profiles": { "domain": "Pessoas e acesso", "desc": "Uma linha por conta: nome, perfil de acesso, ativo/inativo.", "scope": "pessoa", "personal": true, "clearProject": "não se aplica", "resetAll": "preserva (as contas continuam)" },
-    "profile_details": { "domain": "Pessoas e acesso", "desc": "Cadastro complementar: departamento, conhecimentos e ferramentas com nível, WhatsApp com consentimento (LGPD).", "scope": "pessoa", "personal": true, "clearProject": "não se aplica", "resetAll": "preserva (acompanha a conta)" },
-    "access_profiles": { "domain": "Pessoas e acesso", "desc": "Perfis de acesso (8 prontos + personalizados) e suas permissões.", "scope": "sistema", "personal": false, "clearProject": "não se aplica", "resetAll": "preserva" },
-    "skill_catalog": { "domain": "Catálogos", "desc": "Lista comum de conhecimentos e ferramentas (padroniza a escrita).", "scope": "sistema", "personal": false, "clearProject": "não se aplica", "resetAll": "preserva" },
-    "user_ai_keys": { "domain": "Segredos", "desc": "Chave de IA de cada pessoa (nunca volta ao navegador).", "scope": "pessoa", "personal": true, "clearProject": "não se aplica", "resetAll": "preserva" },
-    "org_settings": { "domain": "Configurações", "desc": "Configurações da organização (perfil de PMO).", "scope": "sistema", "personal": false, "clearProject": "não se aplica", "resetAll": "preserva" },
-    "messaging_settings": { "domain": "Mensagens", "desc": "Liga/desliga WhatsApp e e-mail, limites, horários, IA que responde.", "scope": "sistema", "personal": false, "clearProject": "não se aplica", "resetAll": "preserva" },
-    "message_recipients": { "domain": "Mensagens", "desc": "Quem recebe e pergunta (telefone, e-mail, consentimento).", "scope": "pessoa", "personal": true, "clearProject": "não se aplica", "resetAll": "apaga" },
-    "message_recipient_projects": { "domain": "Mensagens", "desc": "Em quais projetos cada destinatário tem acesso.", "scope": "pessoa", "personal": false, "clearProject": "não se aplica", "resetAll": "apaga" },
-    "notification_outbox": { "domain": "Mensagens", "desc": "Fila de avisos a enviar.", "scope": "sistema", "personal": false, "clearProject": "não se aplica", "resetAll": "apaga" },
-    "message_log": { "domain": "Mensagens", "desc": "Histórico do que foi enviado e perguntado (texto sem dados pessoais).", "scope": "sistema", "personal": true, "clearProject": "não se aplica", "resetAll": "apaga" },
-    "audit_log": { "domain": "Registros", "desc": "Trilha de auditoria: só inclusão, ninguém edita nem apaga pela tela.", "scope": "sistema", "personal": true, "clearProject": "não se aplica", "resetAll": "preserva (permanente)" }
+    "projects": {
+      "domain": "Projetos",
+      "desc": "Cadastro do projeto (nome, cliente, método, gerente responsável).",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "preserva",
+      "resetAll": "apaga"
+    },
+    "project_access": {
+      "domain": "Projetos",
+      "desc": "Quem pode abrir cada projeto.",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "preserva",
+      "resetAll": "apaga (cascata)"
+    },
+    "project_settings": {
+      "domain": "Projetos",
+      "desc": "Configurações por projeto (método, quadro, priorização, perfil de PMO).",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "project_snapshots": {
+      "domain": "Projetos",
+      "desc": "Fotografias diárias da saúde do projeto (tendência).",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga (só Administrador)",
+      "resetAll": "apaga"
+    },
+    "team_members": {
+      "domain": "Equipe",
+      "desc": "Colaboradores do projeto, carga, sinais de burnout e vínculo com a conta (a tabela inteira só é lida por quem tem \"ver a carga e os sinais\"; cada pessoa lê a própria linha; o time sem carga vem da função `project_team`).",
+      "scope": "projeto",
+      "personal": true,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "time_entries": {
+      "domain": "Equipe",
+      "desc": "Horas apontadas por pessoa e atividade.",
+      "scope": "projeto",
+      "personal": true,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "person_reviews": {
+      "domain": "Equipe",
+      "desc": "Autoavaliação e avaliação do gerente por pessoa e projeto.",
+      "scope": "projeto",
+      "personal": true,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "wbs_modules": {
+      "domain": "Plano",
+      "desc": "Entregas do cronograma (WBS).",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "wbs_tasks": {
+      "domain": "Plano",
+      "desc": "Subtarefas do cronograma.",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "baselines": {
+      "domain": "Plano",
+      "desc": "Linhas de base (fotografia do plano).",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "raci_entries": {
+      "domain": "Plano",
+      "desc": "Matriz RACI.",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "scope_changes": {
+      "domain": "Plano",
+      "desc": "Mudanças de escopo e seu impacto.",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "risks": {
+      "domain": "Plano",
+      "desc": "Registro de riscos e matriz.",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "decisions": {
+      "domain": "Decisões",
+      "desc": "Decisões e alertas gerados pela IA.",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "board_decisions": {
+      "domain": "Decisões",
+      "desc": "Decisões da diretoria sobre o projeto e o resultado depois.",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "documents": {
+      "domain": "Conhecimento",
+      "desc": "Documentos do repositório (texto lido).",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "project_docs": {
+      "domain": "Conhecimento",
+      "desc": "Modelos de documento (5W2H, SWOT, cutover, handover, comunicação).",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "budget_lines": {
+      "domain": "Orçamento",
+      "desc": "Linhas do orçamento planejado.",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "cost_actuals": {
+      "domain": "Orçamento",
+      "desc": "Custos lançados (real e comprometido).",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "backlog_items": {
+      "domain": "Execução ágil",
+      "desc": "Itens do backlog e do quadro (história, tarefa, bug filho com anexos).",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "sprints": {
+      "domain": "Execução ágil",
+      "desc": "Sprints, capacidade e o que voltou ao backlog.",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "sprint_rites": {
+      "domain": "Execução ágil",
+      "desc": "Ritos da sprint (planejamento, revisão, retrospectiva).",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "impediments": {
+      "domain": "Execução ágil",
+      "desc": "Impedimentos da sprint.",
+      "scope": "projeto",
+      "personal": false,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
+    },
+    "profiles": {
+      "domain": "Pessoas e acesso",
+      "desc": "Uma linha por conta: nome, perfil de acesso, ativo/inativo.",
+      "scope": "pessoa",
+      "personal": true,
+      "clearProject": "não se aplica",
+      "resetAll": "preserva (as contas continuam)"
+    },
+    "profile_details": {
+      "domain": "Pessoas e acesso",
+      "desc": "Cadastro complementar: departamento, conhecimentos e ferramentas com nível, WhatsApp com consentimento (LGPD).",
+      "scope": "pessoa",
+      "personal": true,
+      "clearProject": "não se aplica",
+      "resetAll": "preserva (acompanha a conta)"
+    },
+    "access_profiles": {
+      "domain": "Pessoas e acesso",
+      "desc": "Perfis de acesso (8 prontos + personalizados) e suas permissões.",
+      "scope": "sistema",
+      "personal": false,
+      "clearProject": "não se aplica",
+      "resetAll": "preserva"
+    },
+    "skill_catalog": {
+      "domain": "Catálogos",
+      "desc": "Lista comum de conhecimentos e ferramentas (padroniza a escrita).",
+      "scope": "sistema",
+      "personal": false,
+      "clearProject": "não se aplica",
+      "resetAll": "preserva"
+    },
+    "user_ai_keys": {
+      "domain": "Segredos",
+      "desc": "Chave de IA de cada pessoa (nunca volta ao navegador).",
+      "scope": "pessoa",
+      "personal": true,
+      "clearProject": "não se aplica",
+      "resetAll": "preserva"
+    },
+    "org_settings": {
+      "domain": "Configurações",
+      "desc": "Configurações da organização (perfil de PMO).",
+      "scope": "sistema",
+      "personal": false,
+      "clearProject": "não se aplica",
+      "resetAll": "preserva"
+    },
+    "messaging_settings": {
+      "domain": "Mensagens",
+      "desc": "Liga/desliga WhatsApp e e-mail, limites, horários, IA que responde.",
+      "scope": "sistema",
+      "personal": false,
+      "clearProject": "não se aplica",
+      "resetAll": "preserva"
+    },
+    "message_recipients": {
+      "domain": "Mensagens",
+      "desc": "Quem recebe e pergunta (telefone, e-mail, consentimento).",
+      "scope": "pessoa",
+      "personal": true,
+      "clearProject": "não se aplica",
+      "resetAll": "apaga"
+    },
+    "message_recipient_projects": {
+      "domain": "Mensagens",
+      "desc": "Em quais projetos cada destinatário tem acesso.",
+      "scope": "pessoa",
+      "personal": false,
+      "clearProject": "não se aplica",
+      "resetAll": "apaga"
+    },
+    "notification_outbox": {
+      "domain": "Mensagens",
+      "desc": "Fila de avisos a enviar.",
+      "scope": "sistema",
+      "personal": false,
+      "clearProject": "não se aplica",
+      "resetAll": "apaga"
+    },
+    "message_log": {
+      "domain": "Mensagens",
+      "desc": "Histórico do que foi enviado e perguntado (texto sem dados pessoais).",
+      "scope": "sistema",
+      "personal": true,
+      "clearProject": "não se aplica",
+      "resetAll": "apaga"
+    },
+    "audit_log": {
+      "domain": "Registros",
+      "desc": "Trilha de auditoria: só inclusão, ninguém edita nem apaga pela tela.",
+      "scope": "sistema",
+      "personal": true,
+      "clearProject": "não se aplica",
+      "resetAll": "preserva (permanente)"
+    }
   },
   "localKeys": {
-    "pmo_db_v1": { "desc": "Dados do projeto Portal Nexus (demonstração) neste navegador.", "kind": "projeto", "logout": "apaga", "deleteProject": "apaga" },
-    "pmo_db_v1__": { "desc": "Dados de cada outro projeto (a chave leva o id: `pmo_db_v1__<id>`).", "kind": "projeto", "logout": "apaga", "deleteProject": "apaga" },
-    "pmo_projects_v1": { "desc": "Lista de projetos conhecida pelo navegador.", "kind": "projeto", "logout": "apaga", "deleteProject": "ajusta" },
-    "pmo_active_project_v1": { "desc": "Projeto aberto agora.", "kind": "projeto", "logout": "apaga", "deleteProject": "ajusta" },
-    "pmo_board_decisions_v1": { "desc": "Decisões da diretoria (cópia local).", "kind": "projeto", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_priority_config_v1": { "desc": "Pesos da priorização do portfólio.", "kind": "projeto", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_snapshot_throttle_v1": { "desc": "Controle para não gravar a foto de saúde mais de uma vez por dia.", "kind": "projeto", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_auth_v1": { "desc": "Perfil local escolhido neste navegador (modo sem conta).", "kind": "sessão", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_cache_owner_v1": { "desc": "Quem é o dono dos dados guardados aqui (para limpar quando outra pessoa entra).", "kind": "sessão", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_v1": { "desc": "Provedor de IA e chaves de IA do modo local.", "kind": "segredo", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_prefs_v1": { "desc": "Preferências de uso.", "kind": "preferência", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_org_v1": { "desc": "Configurações da organização (cópia local).", "kind": "preferência", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_onboarded_v1": { "desc": "Se o \"Comece aqui\" já foi dispensado.", "kind": "preferência", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_columns_v1": { "desc": "Ordem e largura das colunas das tabelas.", "kind": "preferência", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_gantt_lbl_v1": { "desc": "Largura da coluna de nomes do Gantt.", "kind": "preferência", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_report_scope_v1": { "desc": "Escopo escolhido no relatório.", "kind": "preferência", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_sb_area_v1": { "desc": "Se a área de projeto do menu está recolhida.", "kind": "preferência", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_show_all_screens": { "desc": "Mostrar todas as telas, mesmo as que o método esconde.", "kind": "preferência", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_sidebar_collapsed_v1": { "desc": "Menu lateral recolhido.", "kind": "preferência", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_sidebar_w_v1": { "desc": "Largura do menu lateral.", "kind": "preferência", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_split_": { "desc": "Posição das divisões de tela (`pmo_split_<tela>`).", "kind": "preferência", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_view_type_v1": { "desc": "Visão escolhida (lista/quadro).", "kind": "preferência", "logout": "apaga", "deleteProject": "nao" },
-    "pmo_theme_v1": { "desc": "Tema de cores.", "kind": "preferência", "logout": "preserva", "deleteProject": "nao" },
-    "pmo_cloud_v1": { "desc": "Endereço e chave pública do Supabase (necessários para entrar de novo).", "kind": "conexão", "logout": "preserva", "deleteProject": "nao" },
-    "pmo_after_wipe": { "desc": "Aviso mostrado uma vez depois de sair (fica na sessão da aba).", "kind": "sessão", "logout": "apaga", "deleteProject": "nao" }
+    "pmo_db_v1": {
+      "desc": "Dados do projeto Portal Nexus (demonstração) neste navegador.",
+      "kind": "projeto",
+      "logout": "apaga",
+      "deleteProject": "apaga"
+    },
+    "pmo_db_v1__": {
+      "desc": "Dados de cada outro projeto (a chave leva o id: `pmo_db_v1__<id>`).",
+      "kind": "projeto",
+      "logout": "apaga",
+      "deleteProject": "apaga"
+    },
+    "pmo_projects_v1": {
+      "desc": "Lista de projetos conhecida pelo navegador.",
+      "kind": "projeto",
+      "logout": "apaga",
+      "deleteProject": "ajusta"
+    },
+    "pmo_active_project_v1": {
+      "desc": "Projeto aberto agora.",
+      "kind": "projeto",
+      "logout": "apaga",
+      "deleteProject": "ajusta"
+    },
+    "pmo_board_decisions_v1": {
+      "desc": "Decisões da diretoria (cópia local).",
+      "kind": "projeto",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_priority_config_v1": {
+      "desc": "Pesos da priorização do portfólio.",
+      "kind": "projeto",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_snapshot_throttle_v1": {
+      "desc": "Controle para não gravar a foto de saúde mais de uma vez por dia.",
+      "kind": "projeto",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_auth_v1": {
+      "desc": "Perfil local escolhido neste navegador (modo sem conta).",
+      "kind": "sessão",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_cache_owner_v1": {
+      "desc": "Quem é o dono dos dados guardados aqui (para limpar quando outra pessoa entra).",
+      "kind": "sessão",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_v1": {
+      "desc": "Provedor de IA e chaves de IA do modo local.",
+      "kind": "segredo",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_prefs_v1": {
+      "desc": "Preferências de uso.",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_org_v1": {
+      "desc": "Configurações da organização (cópia local).",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_onboarded_v1": {
+      "desc": "Se o \"Comece aqui\" já foi dispensado.",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_columns_v1": {
+      "desc": "Ordem e largura das colunas das tabelas.",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_gantt_lbl_v1": {
+      "desc": "Largura da coluna de nomes do Gantt.",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_report_scope_v1": {
+      "desc": "Escopo escolhido no relatório.",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_sb_area_v1": {
+      "desc": "Se a área de projeto do menu está recolhida.",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_show_all_screens": {
+      "desc": "Mostrar todas as telas, mesmo as que o método esconde.",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_sidebar_collapsed_v1": {
+      "desc": "Menu lateral recolhido.",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_sidebar_w_v1": {
+      "desc": "Largura do menu lateral.",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_split_": {
+      "desc": "Posição das divisões de tela (`pmo_split_<tela>`).",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_view_type_v1": {
+      "desc": "Visão escolhida (lista/quadro).",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_theme_v1": {
+      "desc": "Tema de cores.",
+      "kind": "preferência",
+      "logout": "preserva",
+      "deleteProject": "nao"
+    },
+    "pmo_cloud_v1": {
+      "desc": "Endereço e chave pública do Supabase (necessários para entrar de novo).",
+      "kind": "conexão",
+      "logout": "preserva",
+      "deleteProject": "nao"
+    },
+    "pmo_after_wipe": {
+      "desc": "Aviso mostrado uma vez depois de sair (fica na sessão da aba).",
+      "kind": "sessão",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    }
   },
   "buckets": {
-    "item-files": { "desc": "Prints e arquivos de exemplo anexados a um bug (caminho `projeto/item/arquivo`).", "quemLe": "quem tem acesso ao projeto", "situacao": "ativa" },
-    "bug-reports": { "desc": "Canal antigo de relatos de problema (nunca recebeu arquivo).", "quemLe": "ninguém (sem regras de acesso)", "situacao": "retirada — o Supabase não deixa apagar pasta por SQL" }
+    "item-files": {
+      "desc": "Prints e arquivos de exemplo anexados a um bug (caminho `projeto/item/arquivo`).",
+      "quemLe": "quem tem acesso ao projeto",
+      "situacao": "ativa"
+    },
+    "bug-reports": {
+      "desc": "Canal antigo de relatos de problema (nunca recebeu arquivo).",
+      "quemLe": "ninguém (sem regras de acesso)",
+      "situacao": "retirada — o Supabase não deixa apagar pasta por SQL"
+    }
   },
   "functions": {
-    "ai-proxy": { "desc": "Chama o provedor de IA com a chave guardada da pessoa.", "segredos": "chaves de IA por pessoa (tabela `user_ai_keys`)", "quemChama": "o app, logado" },
-    "messaging-admin": { "desc": "Ações do Administrador em Mensagens (status, confirmação de WhatsApp, teste de pergunta).", "segredos": "WA_*, RESEND_API_KEY", "quemChama": "o app, Administrador" },
-    "notify-dispatch": { "desc": "Envia os avisos da fila.", "segredos": "WA_*, RESEND_API_KEY, CRON_SECRET", "quemChama": "agendador" },
-    "notify-digest": { "desc": "Monta o resumo semanal.", "segredos": "CRON_SECRET", "quemChama": "agendador" },
-    "notify-unsub": { "desc": "Descadastro com um clique.", "segredos": "chave de assinatura do link", "quemChama": "quem clica no e-mail" },
-    "wa-webhook": { "desc": "Recebe as respostas do WhatsApp.", "segredos": "WA_APP_SECRET, WA_VERIFY_TOKEN", "quemChama": "Meta (WhatsApp)" },
-    "users-admin": { "desc": "Criar usuário, nova senha, inativar, reativar e excluir contas.", "segredos": "chave de serviço do Supabase, RESEND_API_KEY, EMAIL_FROM", "quemChama": "o app, Administrador" }
+    "ai-proxy": {
+      "desc": "Chama o provedor de IA com a chave guardada da pessoa.",
+      "segredos": "chaves de IA por pessoa (tabela `user_ai_keys`)",
+      "quemChama": "o app, logado"
+    },
+    "messaging-admin": {
+      "desc": "Ações do Administrador em Mensagens (status, confirmação de WhatsApp, teste de pergunta).",
+      "segredos": "WA_*, RESEND_API_KEY",
+      "quemChama": "o app, Administrador"
+    },
+    "notify-dispatch": {
+      "desc": "Envia os avisos da fila.",
+      "segredos": "WA_*, RESEND_API_KEY, CRON_SECRET",
+      "quemChama": "agendador"
+    },
+    "notify-digest": {
+      "desc": "Monta o resumo semanal.",
+      "segredos": "CRON_SECRET",
+      "quemChama": "agendador"
+    },
+    "notify-unsub": {
+      "desc": "Descadastro com um clique.",
+      "segredos": "chave de assinatura do link",
+      "quemChama": "quem clica no e-mail"
+    },
+    "wa-webhook": {
+      "desc": "Recebe as respostas do WhatsApp.",
+      "segredos": "WA_APP_SECRET, WA_VERIFY_TOKEN",
+      "quemChama": "Meta (WhatsApp)"
+    },
+    "users-admin": {
+      "desc": "Criar usuário, nova senha, inativar, reativar e excluir contas.",
+      "segredos": "chave de serviço do Supabase, RESEND_API_KEY, EMAIL_FROM",
+      "quemChama": "o app, Administrador"
+    }
   },
   "logs": {
-    "`audit_log` (nuvem)": { "desc": "Logins, mudanças de perfil, contas criadas/inativadas, trocas de responsável, consentimentos, reset de dados.", "apagavel": "não pela tela; em base de TESTE pode ser limpo por script de administração (nunca em produção)" },
-    "`message_log` e `notification_outbox` (nuvem)": { "desc": "O que foi enviado e perguntado por WhatsApp/e-mail.", "apagavel": "sim, no \"Apagar toda a base\"" },
-    "Trilha do projeto (`trail`, navegador)": { "desc": "Linha do tempo de ações do projeto (só no navegador, dentro de `pmo_db_v1…`).", "apagavel": "sim, junto com os dados do projeto" },
-    "Logs do Supabase (painel)": { "desc": "Auth, banco e funções de borda.", "apagavel": "gerenciado pelo Supabase" }
+    "`audit_log` (nuvem)": {
+      "desc": "Logins, mudanças de perfil, contas criadas/inativadas, trocas de responsável, consentimentos, reset de dados.",
+      "apagavel": "não pela tela; em base de TESTE pode ser limpo por script de administração (nunca em produção)"
+    },
+    "`message_log` e `notification_outbox` (nuvem)": {
+      "desc": "O que foi enviado e perguntado por WhatsApp/e-mail.",
+      "apagavel": "sim, no \"Apagar toda a base\""
+    },
+    "Trilha do projeto (`trail`, navegador)": {
+      "desc": "Linha do tempo de ações do projeto (só no navegador, dentro de `pmo_db_v1…`).",
+      "apagavel": "sim, junto com os dados do projeto"
+    },
+    "Logs do Supabase (painel)": {
+      "desc": "Auth, banco e funções de borda.",
+      "apagavel": "gerenciado pelo Supabase"
+    }
   },
   "config": {
-    "Cadastro público do Auth": { "desc": "Desligado: só o Administrador cria contas.", "comoMudar": "`node scripts/auth-lock.mjs` (ou `--open`)" },
-    "Segredos das funções": { "desc": "WA_*, RESEND_API_KEY, EMAIL_FROM, CRON_SECRET, APP_URL.", "comoMudar": "`.env.deploy` + `node scripts/deploy-functions.mjs --secrets`" },
-    "Conta inativa": { "desc": "A conta é bloqueada no Auth (ban) e perde o perfil no banco.", "comoMudar": "Pessoas & acesso → Inativar / Reativar" }
+    "Cadastro público do Auth": {
+      "desc": "Desligado: só o Administrador cria contas.",
+      "comoMudar": "`node scripts/auth-lock.mjs` (ou `--open`)"
+    },
+    "Segredos das funções": {
+      "desc": "WA_*, RESEND_API_KEY, EMAIL_FROM, CRON_SECRET, APP_URL.",
+      "comoMudar": "`.env.deploy` + `node scripts/deploy-functions.mjs --secrets`"
+    },
+    "Conta inativa": {
+      "desc": "A conta é bloqueada no Auth (ban) e perde o perfil no banco.",
+      "comoMudar": "Pessoas & acesso → Inativar / Reativar"
+    }
   },
   "regras": [
     "Uma base nova nasce VAZIA: nenhum dado de demonstração entra em projeto real, nem na tela nem na nuvem. Os 3 projetos de demonstração (Portal Nexus, Valdori, Beltrano) só existem no navegador sem conta e nunca sobem para a nuvem.",
@@ -101,6 +548,145 @@
     "O que está em memória pertence ao projeto ativo: trocar de projeto (inclusive o que o login faz) descarta o anterior, e nada é gravado na chave de outro projeto.",
     "Sair da conta apaga os dados do navegador; outra pessoa que entra apaga os da anterior antes de sincronizar.",
     "Indicador sem dado mostra \"sem dados\" — nunca verde, nunca vermelho. A varredura `npm run test:smoke` percorre todas as telas de um projeto vazio.",
-    "Toda entrega que cria tabela, campo, chave do navegador, pasta de arquivos, função ou registro novo atualiza `docs/mapa-de-dados.json`, gera `docs/MAPA_DE_DADOS.md` e roda `npm run test:unit` e `npm run test:smoke` ANTES de ser entregue."
-  ]
+    "Toda entrega que cria tabela, campo, chave do navegador, pasta de arquivos, função ou registro novo atualiza `docs/mapa-de-dados.json`, gera `docs/MAPA_DE_DADOS.md` e roda `npm run test:unit` e `npm run test:smoke` ANTES de ser entregue.",
+    "Cada tela exige uma permissão de visão (mapa em `visoes`): o menu esconde e a tela barra a abertura direta; o banco também nega a leitura das tabelas de gestão e dos dados das pessoas a quem não tem a permissão."
+  ],
+  "visoes": {
+    "permissoes": {
+      "view_portfolio": "Painéis de portfólio e diretoria",
+      "view_management": "Gestão do projeto (saúde, decisões, riscos, escopo, linha de base, atas, repositório, chat)",
+      "view_team_load": "Carga de trabalho e sinais de burnout dos colegas",
+      "view_costs": "Custos e orçamento"
+    },
+    "telas": {
+      "board": [
+        "Painel da Diretoria",
+        "view_portfolio"
+      ],
+      "execview": [
+        "Visão Executiva",
+        "view_portfolio"
+      ],
+      "pmoview": [
+        "Visão do PMO",
+        "view_portfolio"
+      ],
+      "pfkpi": [
+        "Indicadores",
+        "view_portfolio"
+      ],
+      "portfolio": [
+        "Portfólio",
+        "view_portfolio"
+      ],
+      "prioritization": [
+        "Priorização",
+        "view_portfolio"
+      ],
+      "xray": [
+        "Raio-X do Projeto",
+        "view_management"
+      ],
+      "dashboard": [
+        "Dashboard",
+        "view_management"
+      ],
+      "report": [
+        "Relatório",
+        "view_management"
+      ],
+      "baseline": [
+        "Linha de base",
+        "view_management"
+      ],
+      "estimates": [
+        "Estimativas IA",
+        "view_management"
+      ],
+      "whatif": [
+        "What-If",
+        "view_management"
+      ],
+      "decisions": [
+        "Decisões IA",
+        "view_management"
+      ],
+      "loop": [
+        "Loop de Ação",
+        "view_management"
+      ],
+      "trail": [
+        "Trilha",
+        "view_management"
+      ],
+      "statusmsg": [
+        "Mensagem de status",
+        "view_management"
+      ],
+      "scope": [
+        "Scope Changes",
+        "view_management"
+      ],
+      "stakeholders": [
+        "Stakeholders",
+        "view_management"
+      ],
+      "meetings": [
+        "Atas e Ações",
+        "view_management"
+      ],
+      "repository": [
+        "Repositório",
+        "view_management"
+      ],
+      "chat": [
+        "Chat contextual",
+        "view_management"
+      ],
+      "modelos": [
+        "Modelos",
+        "view_management"
+      ],
+      "risks": [
+        "Riscos",
+        "view_management"
+      ],
+      "burnout": [
+        "Burnout Radar",
+        "view_team_load"
+      ],
+      "resources": [
+        "Colaboradores",
+        "view_team_load"
+      ],
+      "budget": [
+        "Orçamento e Custos",
+        "view_costs"
+      ]
+    },
+    "abertas": [
+      "mywork",
+      "kanban",
+      "backlog",
+      "sprints",
+      "ritos",
+      "wbs",
+      "hours",
+      "raci",
+      "lessons",
+      "help",
+      "settings",
+      "account"
+    ],
+    "perfis": {
+      "admin": "tudo",
+      "gerente": "portfólio, gestão e carga do time",
+      "patrocinador": "portfólio e gestão (com custos)",
+      "po": "gestão do produto (sem portfólio nem carga do time)",
+      "sm": "gestão e carga do time (sem portfólio)",
+      "time": "só o próprio trabalho: Meu trabalho, quadro, backlog, sprints, ritos, WBS, horas",
+      "consulta": "painéis de portfólio em leitura (sem gestão, custos nem pessoas)",
+      "manutencao": "só configurações do sistema"
+    }
+  }
 }

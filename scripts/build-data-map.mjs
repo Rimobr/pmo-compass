@@ -63,6 +63,12 @@ export function render(schema) {
   for (const [k, v] of Object.entries(MAP.logs)) L.push(`| ${k} | ${v.desc} | ${v.apagavel} |`);
   L.push('', '## Configurações fora do banco', '', '| Onde | O que é | Como mudar |', '|---|---|---|');
   for (const [k, v] of Object.entries(MAP.config)) L.push(`| ${k} | ${v.desc} | ${v.comoMudar} |`);
+  L.push('', '## Quem vê o quê', '', 'O menu esconde, a abertura direta pelo endereço é barrada e o banco nega a leitura dos dados correspondentes.', '', '| Permissão de visão | O que libera |', '|---|---|');
+  for (const [k, v] of Object.entries(MAP.visoes.permissoes)) L.push('| `' + k + '` | ' + v + ' |');
+  L.push('', '| Tela | Exige |', '|---|---|');
+  for (const v of Object.values(MAP.visoes.telas)) L.push('| ' + v[0] + ' | `' + v[1] + '` |');
+  L.push('', 'Telas abertas a quem tem acesso ao projeto: ' + MAP.visoes.abertas.map(x => '`' + x + '`').join(', ') + '.', '', '| Perfil pronto | Vê |', '|---|---|');
+  for (const [k, v] of Object.entries(MAP.visoes.perfis)) L.push('| `' + k + '` | ' + v + ' |');
   L.push('', '## Regras de uma base nova', '');
   MAP.regras.forEach((r, i) => L.push(`${i + 1}. ${r}`));
   L.push('');

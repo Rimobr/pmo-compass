@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.30.0'
+  version: '2.31.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -183,6 +183,7 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .toast-wrap{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .toast{background:var(--s2);border:1px solid var(--b2);border-radius:var(--r8);padding:10px 16px;font-size:12.5px;color:var(--t1);display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-md);animation:toastIn .2s ease;pointer-events:auto}
 @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.no-view{display:none!important}
 #login-gate{display:none;position:fixed;inset:0;z-index:900;background:var(--bg);align-items:center;justify-content:center;padding:16px}
 body.no-login #login-gate{display:flex}
 .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:999;backdrop-filter:blur(4px)}
@@ -896,9 +897,9 @@ body.icons-failed i[data-fb]::before{
     <button class="ico-btn" data-perm="business" onclick="Wizard.open()" title="Novo projeto"><i class="ti ti-plus"></i></button>
     <button class="ico-btn" data-perm="manage_backlog" onclick="BugReport.open()" title="Relatar um bug (vira um item Bug, filho de uma entrega)" aria-label="Relatar um bug"><i class="ti ti-bug"></i></button>
     <button class="ico-btn" onclick="R.go('settings')" title="Configurações"><i class="ti ti-settings"></i></button>
-    <span id="tb-cloud-badge" onclick="Auth.openModal()" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:999px;background:var(--s2);color:var(--t3)" title="Carregando…"><i class="ti ti-cloud" style="font-size:12px"></i></span>
-    <span class="role-badge" id="tb-role-tag" onclick="Auth.openModal()" title="Clique para ver sua conta" style="cursor:pointer">Administrador</span>
-    <div class="ava" id="tb-avatar" title="Marcos R." onclick="Auth.openModal()" style="cursor:pointer">MR</div>
+    <span id="tb-cloud-badge" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:999px;background:var(--s2);color:var(--t3)" title="Carregando…"><i class="ti ti-cloud" style="font-size:12px"></i></span>
+    <span class="role-badge" id="tb-role-tag" title="O seu perfil de acesso">Administrador</span>
+    <button type="button" class="ava" id="tb-avatar" title="Minha conta" aria-label="Minha conta" onclick="Auth.openAccount()" style="cursor:pointer">MR</button>
   </div>
 </header>
 
@@ -999,6 +1000,7 @@ body.icons-failed i[data-fb]::before{
   <div class="sb-group" id="sbg-sistema">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-sistema')"><i class="ti ti-settings sb-gico"></i>Sistema<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
+      <button class="si" data-p="account" onclick="R.go('account')"><i class="ti ti-user-circle"></i>Minha conta</button>
       <button class="si" data-p="settings" onclick="R.go('settings')"><i class="ti ti-settings"></i>Configurações</button>
       <button class="si" data-p="help" onclick="R.go('help')"><i class="ti ti-help-circle"></i>Ajuda</button>
       <button class="si" onclick="Privacy.open()"><i class="ti ti-shield-lock"></i>Privacidade &amp; dados</button>
@@ -2022,9 +2024,17 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
   <div class="card"><div class="lbl"><i class="ti ti-list-details"></i>Todas as sprints</div><div id="sp-list"></div></div>
 </section>
 
+<section class="page" id="p-account" data-module="pages/account">
+  <div class="pg-hdr">
+    <div><h1 class="pg-title">Minha conta<span class="help-q" data-help="Os seus dados neste sistema: nome, e-mail, perfil de acesso, projetos, o seu cadastro (departamento, conhecimentos, ferramentas, WhatsApp), a senha e a saída. Você vê e altera só o que é seu." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></h1><div class="pg-sub">Os seus dados, o seu cadastro e a sua senha.</div></div>
+    <div class="btn-row"><button class="btn btn-sm btn-red" onclick="Auth.doSignOut()"><i class="ti ti-logout"></i>Sair da conta</button></div>
+  </div>
+  <div id="ac-root"></div>
+</section>
+
 <section class="page" id="p-mywork" data-module="pages/mywork">
   <div class="pg-hdr">
-    <div><h1 class="pg-title">Meu trabalho<span class="help-q" data-help="Reúne, num só lugar, o que está com você neste projeto: itens do backlog, tarefas do cronograma e as horas lançadas esta semana. O administrador liga a sua conta ao seu nome na equipe (Colaboradores → Editar → Conta vinculada)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></h1><div class="pg-sub">O que está com você neste projeto, sem precisar procurar.</div></div>
+    <div><h1 class="pg-title">Meu trabalho<span class="help-q" data-help="Tudo o que é seu neste projeto: onde você está, as suas entregas com prazo e chance de estourar, o seu time e o que o projeto deve entregar. Não mostra custos nem dados dos colegas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></h1><div class="pg-sub">O que está com você neste projeto, sem precisar procurar.</div></div>
     <div class="btn-row"><button class="btn btn-sm" onclick="R.go('hours')"><i class="ti ti-clock-plus"></i>Apontar horas</button></div>
   </div>
   <div id="mw-root"></div>
@@ -3631,6 +3641,28 @@ const Auth = (() => {
     apply();
   }
   const getProfileDefs = () => defsOf();
+  // Telas do perfil: o menu esconde o que não é do trabalho da pessoa (o banco também nega a leitura dos dados correspondentes)
+  function canOpen(page) {
+    if(pendingCloudConfirm || noLogin) return true; // enquanto o perfil não é confirmado nada é decidido aqui
+    const need = AccessProfiles.PAGE_NEEDS[page];
+    return !need || can(need);
+  }
+  const homePage = () => AccessProfiles.homeFor(can);
+  // O avatar é a ÚNICA entrada da conta: com sessão (ou no modo local) abre a Minha conta; sem login, a janela de entrada
+  function openAccount() {
+    const configured = (typeof Cloud !== 'undefined') && Cloud.isConfigured();
+    if(configured && !(Cloud.isSignedIn())) { openModal(); return; }
+    R.go('account');
+  }
+  function applyViews() {
+    if(pendingCloudConfirm) return;
+    document.querySelectorAll('[data-p]').forEach(el => el.classList.toggle('no-view', !canOpen(el.dataset.p)));
+    // grupo do menu sem nenhuma tela visível some inteiro
+    document.querySelectorAll('.sb-group').forEach(g => {
+      const items = g.querySelectorAll('.si[data-p]');
+      g.classList.toggle('no-view', items.length > 0 && Array.from(items).every(i => i.classList.contains('no-view')));
+    });
+  }
   // Chamado pelo Cloud quando initClient() resolve e NÃO há sessão ativa (usuário nunca
   // logou, ou sessão expirou) — libera o papel local, já que não existe confirmação de
   // servidor pra esperar nesse caso.
@@ -3660,12 +3692,13 @@ const Auth = (() => {
   function apply() {
     document.body.setAttribute('data-role', state.role);
     document.body.classList.toggle('no-login', noLogin);
+    applyViews();
     if(noLogin) { const ob = document.getElementById('modal-onboarding'); if(ob) ob.classList.add('hidden'); }
     // Sem login o conteúdo fica inerte (nem o teclado alcança o que está atrás da tela de entrada)
     Array.from(document.body.children).filter(el => el.id !== 'login-gate' && !el.classList.contains('modal-ov') && !['SCRIPT','STYLE','LINK'].includes(el.tagName)).forEach(el => { el.inert = noLogin; });
     document.body.setAttribute('data-can', grantedScopes().join(' '));
     const ava = document.getElementById('tb-avatar');
-    if(ava) { ava.textContent = noLogin ? '?' : initialsFor(state.name, state.role); ava.title = `${state.name} — ${label()} · clique para ver sua conta`; }
+    if(ava) { ava.textContent = noLogin ? '?' : initialsFor(state.name, state.role); ava.title = `Minha conta — ${state.name} (${label()})`; ava.setAttribute('aria-label', 'Minha conta: ' + state.name); }
     const tag = document.getElementById('tb-role-tag');
     if(tag) tag.textContent = label();
     updateCloudBadge();
@@ -3819,7 +3852,7 @@ const Auth = (() => {
     return false;
   }
 
-  return { setProfileDefs, getProfileDefs, grantedScopes, load, getRole, getName, label, can, guard, openModal, closeModal, toggleLocalBox, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, confirmNoCloudSession, doSignIn, doSignInSSO, doSignOut, saveCloudName, changeOwnPassword, updateCloudBadge };
+  return { openAccount, canOpen, homePage, applyViews, setProfileDefs, getProfileDefs, grantedScopes, load, getRole, getName, label, can, guard, openModal, closeModal, toggleLocalBox, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, confirmNoCloudSession, doSignIn, doSignInSSO, doSignOut, saveCloudName, changeOwnPassword, updateCloudBadge };
 })();
 </script>
 
@@ -4272,6 +4305,21 @@ const Cloud = (() => {
     const { data, error } = await client.storage.from('item-files').createSignedUrl(path, 300);
     if(error) { T.show('❌ ' + error.message); return null; }
     return data && data.signedUrl;
+  }
+  // Meu time: nome, função e alocação de quem está no projeto — sem carga de trabalho nem sinais de burnout (função do banco)
+  // LGPD: a pessoa retira a autorização do WhatsApp quando quiser; o banco apaga o número junto
+  async function withdrawWhatsapp() {
+    if(!client || !session) return false;
+    const { error } = await client.from('profile_details').update({ whatsapp_consent:false }).eq('user_id', session.user.id);
+    if(error) { T.show('❌ ' + error.message); return false; }
+    pushAuditEvent('whatsapp_consent_withdrawn', 'Retirou a autorização do uso do WhatsApp para mensagens do sistema', {});
+    return true;
+  }
+  async function projectTeam(pid) {
+    if(!client || !session) return [];
+    const { data, error } = await client.rpc('project_team', { pid });
+    if(error) { console.warn('Supabase: falha ao ler o time', error); return []; }
+    return data || [];
   }
   async function listSkillCatalog() {
     if(!client || !session) return [];
@@ -4799,7 +4847,7 @@ const Cloud = (() => {
   }
 
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
-    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
+    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, withdrawWhatsapp, projectTeam, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument, pushRow, pushMany, deleteRow, msgTable, invokeFn,
@@ -5539,9 +5587,12 @@ const FirstAccess = (() => {
   }
 
   // ── 2) Cadastro complementar ──
-  function showProfile(d) {
+  let editing = false;
+  function showProfile(d, edit) {
     const m = $('modal-firstprofile'); if(!m) return;
-    d = d || {};
+    editing = !!edit; d = d || {};
+    $('fp-title').textContent = editing ? 'Meu cadastro' : 'Complete o seu cadastro';
+    $('fp-later').textContent = editing ? 'Cancelar' : 'Agora não';
     $('fp-dept').value = d.department || '';
     KINDS.forEach(k => { $(rowsId(k)).innerHTML = ''; });
     const have = Array.isArray(d.skills) ? d.skills : [];
@@ -5571,11 +5622,13 @@ const FirstAccess = (() => {
     btn.disabled = false;
     if(!ok) return;
     $('modal-firstprofile').classList.add('hidden');
+    if(editing) { editing = false; if(typeof Account !== 'undefined') Account.render(); }
     T.show(r.value.consent ? '✅ Cadastro completo. Você autorizou mensagens no WhatsApp; pode retirar a autorização quando quiser.' : '✅ Cadastro completo.');
   }
-  function later() { postponed = true; $('modal-firstprofile').classList.add('hidden'); T.show('Tudo bem — pedimos de novo no próximo acesso.'); }
+  function later() { $('modal-firstprofile').classList.add('hidden'); if(editing) { editing = false; return; } postponed = true; T.show('Tudo bem — pedimos de novo no próximo acesso.'); }
+  async function openEdit() { const d = await Cloud.getMyDetails(); if(d === undefined) { T.show('⚠️ Não consegui ler o seu cadastro agora.'); return; } showProfile(d || {}, true); }
 
-  return { check, validate, savePassword, saveProfile, toggleConsent, later, showProfile, addSkill, isRequired, EXEMPT };
+  return { check, validate, savePassword, saveProfile, toggleConsent, later, showProfile, openEdit, addSkill, isRequired, EXEMPT };
 })();
 </script>
 
@@ -5771,6 +5824,64 @@ const BugReport = (() => {
     if(document.getElementById('p-kanban') && document.getElementById('p-kanban').classList.contains('on')) Agile.render();
   }
   return { open, close, addFiles, removeFile, send, validate, buildDescription, context, MAX_DESC };
+})();
+</script>
+
+<!-- ■ MODULE: pages/account ─ Minha conta: a pessoa vê e altera o que é dela (nome, cadastro, WhatsApp, senha) e sai -->
+<script data-module="pages/account">
+const Account = (() => {
+  const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const LV = { junior: 'Júnior', pleno: 'Pleno', senior: 'Sênior' };
+  const row = (l, v) => '<div class="set-row"><div class="set-lbl">' + l + '</div><div class="set-sub" style="white-space:pre-wrap;overflow-wrap:anywhere;max-width:64%;text-align:right">' + (v || '<span style="color:var(--t3)">não informado</span>') + '</div></div>';
+  async function render() {
+    const root = document.getElementById('ac-root'); if(!root) return;
+    const cloud = (typeof Cloud !== 'undefined') && Cloud.isSignedIn();
+    const defs = Auth.getProfileDefs(), role = Auth.getRole(), prof = defs[role] || {};
+    const projects = DB.listProjects().map(p => esc(p.name || p.id)).join(', ');
+    let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;align-items:start">';
+    html += '<div class="card"><div class="lbl"><i class="ti ti-user-circle"></i>Dados da conta</div>'
+      + '<div class="field"><label for="ac-name">Como quer ser chamado</label><div class="prov-inp-row"><input class="input" id="ac-name" maxlength="80" value="' + esc(Auth.getName()) + '"><button class="btn btn-sm btn-acc" onclick="Account.saveName()"><i class="ti ti-device-floppy"></i>Salvar</button></div></div>'
+      + row('E-mail', cloud ? esc(Cloud.getEmail()) : '(modo local, sem conta)')
+      + row('Perfil de acesso', esc(Auth.label()) + (prof.description ? '<div style="color:var(--t3);font-size:11px">' + esc(prof.description) + '</div>' : ''))
+      + row('Projetos que você acessa', projects)
+      + (cloud ? '' : '<div style="margin-top:8px"><button class="btn btn-sm" onclick="Auth.openModal()">Entrar com uma conta</button></div>') + '</div>';
+    if(cloud) {
+      html += '<div class="card"><div class="lbl"><i class="ti ti-key"></i>Segurança</div><p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin:0 0 8px">Troque a sua senha quando quiser (mínimo 8 caracteres).</p>'
+        + '<div class="field"><label for="ac-pass">Nova senha</label><div class="prov-inp-row"><input class="input" id="ac-pass" type="password" autocomplete="new-password"><button class="btn btn-sm" onclick="Account.changePassword()"><i class="ti ti-key"></i>Trocar</button></div></div></div>';
+      html += '<div class="card" id="ac-registry" style="grid-column:1/-1"><div class="lbl"><i class="ti ti-id"></i>Meu cadastro</div><div style="font-size:12px;color:var(--t3)"><i class="ti ti-loader-2"></i> Carregando…</div></div>';
+    }
+    html += '</div>';
+    root.innerHTML = html;
+    if(cloud) renderRegistry();
+  }
+  async function renderRegistry() {
+    const el = document.getElementById('ac-registry'); if(!el) return;
+    const d = await Cloud.getMyDetails();
+    const req = FirstAccess.isRequired(Auth.getRole());
+    let h = '<div class="lbl"><i class="ti ti-id"></i>Meu cadastro</div>';
+    if(d === undefined) h += '<div class="rk-empty">Não consegui ler o seu cadastro agora.</div>';
+    else {
+      const chips = k => ((d && d.skills) || []).filter(x => x.kind === k).map(x => '<span class="chip">' + esc(x.name) + ' · ' + (LV[x.level] || '') + '</span>').join(' ');
+      if(!d || !d.completed_at) h += '<p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin:0 0 8px"><i class="ti ti-info-circle"></i> ' + (req ? 'O seu cadastro está <b>incompleto</b> e é obrigatório para o seu perfil.' : 'O cadastro é <b>opcional</b> para o seu perfil, mas ajuda a equipe a saber quem faz o quê.') + '</p>';
+      h += row('Departamento', esc(d && d.department)) + row('Conhecimentos', chips('conhecimento')) + row('Ferramentas que domino', chips('ferramenta'))
+        + row('WhatsApp para mensagens do sistema', d && d.whatsapp_consent ? '+' + esc(d.phone || '') + ' <span class="badge b-grn">autorizado</span>' + (d.whatsapp_consent_at ? ' desde ' + new Date(d.whatsapp_consent_at).toLocaleDateString('pt-BR') : '') : '<span class="badge">sem autorização</span> <span style="color:var(--t3)">nenhum número guardado</span>');
+    }
+    h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn btn-sm btn-acc" onclick="FirstAccess.openEdit()"><i class="ti ti-edit"></i>Alterar o meu cadastro</button>'
+      + (d && d.whatsapp_consent ? '<button class="btn btn-sm" onclick="Account.withdraw()" title="Apaga o seu número e para de receber mensagens"><i class="ti ti-phone-off"></i>Retirar a autorização do WhatsApp</button>' : '') + '</div>';
+    el.innerHTML = h;
+  }
+  async function saveName() {
+    const v = (document.getElementById('ac-name').value || '').trim();
+    if(v.length < 2) { T.show('⚠️ Digite um nome.'); return; }
+    if(typeof Cloud !== 'undefined' && Cloud.isSignedIn()) { if(!(await Cloud.updateOwnName(v))) return; Auth.setFromCloud(v, Auth.getRole()); } else { return; }
+    T.show('✅ Nome atualizado.'); render();
+  }
+  async function changePassword() { const i = document.getElementById('ac-pass'); if(await Cloud.changeOwnPassword(i.value)) i.value = ''; }
+  async function withdraw() {
+    if(!confirm('Retirar a autorização? O seu número de WhatsApp será apagado e você deixa de receber mensagens do sistema. Você pode autorizar de novo quando quiser.')) return;
+    if(await Cloud.withdrawWhatsapp()) { T.show('✅ Autorização retirada e número apagado.'); renderRegistry(); }
+  }
+  return { render, saveName, changePassword, withdraw };
 })();
 </script>
 
@@ -6850,8 +6961,9 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','raci','kanban','backlog','sprints','ritos','modelos','mywork','help','xray'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','raci','kanban','backlog','sprints','ritos','modelos','mywork','help','xray','account'];
   function go(id) {
+    if(typeof Auth !== 'undefined' && !Auth.canOpen(id)) { T.show('🔒 Essa tela não faz parte do seu perfil.'); id = Auth.homePage(); }
     pages.forEach(p => {
       const el = document.getElementById('p-'+p);
       if(el) el.classList.toggle('on', p===id);
@@ -6882,6 +6994,8 @@ const R = (() => {
     if(id === 'ritos' && typeof Rites !== 'undefined') Rites.render();
     if(id === 'modelos' && typeof Models !== 'undefined') Models.render();
     if(id === 'mywork' && typeof MyWork !== 'undefined') MyWork.render();
+    if(id === 'account' && typeof Account !== 'undefined') Account.render();
+    if(id === 'settings' && typeof SettingsTabs !== 'undefined') SettingsTabs.show();
     if(typeof Agile !== 'undefined') Agile.renderDashboard();
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
     if(id === 'settings' && typeof PmoProfiles !== 'undefined') PmoProfiles.render();
@@ -6893,6 +7007,7 @@ const R = (() => {
   function init() {
     const h = location.hash.replace('#','');
     if(h && pages.includes(h)) go(h);
+    else if(typeof Auth !== 'undefined' && Auth.homePage() !== 'dashboard') go(Auth.homePage()); // quem não vê gestão começa no próprio trabalho
     else if(typeof Nav !== 'undefined') Nav.expandGroupFor('dashboard'); // página inicial: Dashboard abre o grupo Indicadores
     window.addEventListener('hashchange', () => { const h2 = location.hash.replace('#',''); if(pages.includes(h2)) go(h2); });
   }
@@ -6909,7 +7024,7 @@ const Nav = (() => {
   // Mapa página → grupo, usado para abrir automaticamente o grupo certo ao navegar
   const GROUP_OF = {
     pfkpi:'sbg-indicadores', portfolio:'sbg-indicadores', prioritization:'sbg-indicadores', report:'sbg-indicadores',
-    settings:'sbg-sistema', help:'sbg-sistema',
+    settings:'sbg-sistema', help:'sbg-sistema', account:'sbg-sistema',
     decisions:'sbg-decisao', loop:'sbg-decisao', trail:'sbg-decisao', statusmsg:'sbg-decisao',
     kanban:'sbg-agil', backlog:'sbg-agil', sprints:'sbg-agil', ritos:'sbg-agil', modelos:'sbg-conhecimento',
     wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento', risks:'sbg-planejamento', baseline:'sbg-planejamento',
@@ -7017,7 +7132,7 @@ const Nav = (() => {
     wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores', pmoview:'Visão do PMO', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint', modelos:'Modelos', mywork:'Meu trabalho',
     burnout:'Burnout Radar', resources:'Colaboradores', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
-    portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', help:'Ajuda', xray:'Raio-X do Projeto'
+    portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', account:'Minha conta', help:'Ajuda', xray:'Raio-X do Projeto'
   };
 
   function renderBreadcrumb(pageId) {
@@ -7054,12 +7169,20 @@ const Nav = (() => {
 
 const SettingsTabs = (() => {
   const TABS = ['pmo','acesso','ia','comunic','dados'];
+  // Cada aba exige ao menos uma destas permissões
+  const NEED = { pmo:['view_management'], acesso:['edit_plan','manage_settings'], ia:['view_management','manage_settings'], comunic:['manage_settings'], dados:['view_management','manage_settings'] };
+  const allowed = t => typeof Auth === 'undefined' || Auth.canOpen('settings') && (NEED[t] || []).some(p => Auth.can(p));
+  let current = 'pmo';
   function show(tab) {
+    const ok = TABS.filter(allowed);
+    tab = tab || current; if(!ok.includes(tab)) tab = ok[0] || null; current = tab || current;
+    const bar = document.querySelector('.settings-tabs'); if(bar) bar.style.display = ok.length ? '' : 'none';
+    TABS.forEach(t => { const b = document.getElementById('stab-' + t); if(b) b.style.display = allowed(t) ? '' : 'none'; });
     if(tab === 'comunic' && typeof Messaging !== 'undefined') Messaging.render();
     TABS.forEach(t => {
       const panel = document.getElementById('settings-panel-' + t);
       const btn = document.getElementById('stab-' + t);
-      if(panel) panel.style.display = (t === tab) ? '' : 'none';
+      if(panel) panel.style.display = (t === tab && allowed(t)) ? '' : 'none';
       if(btn) btn.classList.toggle('on', t === tab);
     });
   }
@@ -7114,7 +7237,7 @@ const CmdK = (() => {
     const projectEntries = (typeof DB !== 'undefined' ? DB.listProjects() : []).map(p => ({
       label: p.name, icon: (typeof Methodology !== 'undefined' ? Methodology.TYPES[Methodology.typeFor(p.id)].icon : (p.icon || 'compass')), group: 'Trocar projeto', isProject: true, projectId: p.id
     }));
-    return PAGES.map(p => ({ ...p, isProject:false, offMethod: typeof Methodology !== 'undefined' && !Methodology.visible(p.page) })).concat(projectEntries);
+    return PAGES.filter(p => typeof Auth === 'undefined' || Auth.canOpen(p.page)).map(p => ({ ...p, isProject:false, offMethod: typeof Methodology !== 'undefined' && !Methodology.visible(p.page) })).concat(projectEntries);
   }
 
   function open() {
@@ -11048,6 +11171,9 @@ const AccessProfiles = (() => {
     ['update_own', 'Atualizar as próprias atividades', 'Move e edita só os itens e tarefas em que é o responsável; registra impedimentos.', 'Time'],
     ['log_hours', 'Apontar as próprias horas', 'Lança, corrige e apaga apenas as horas que ele mesmo lançou.', 'Time'],
     ['view_all_hours', 'Ver as horas de todos', 'Enxerga as horas lançadas por toda a equipe.', 'Time'],
+    ['view_portfolio', 'Ver painéis de portfólio e diretoria', 'Painel da Diretoria, Visão Executiva, Visão do PMO, Indicadores, Portfólio e Priorização.', 'Visões'],
+    ['view_management', 'Ver a gestão do projeto', 'Saúde do projeto, decisões da IA e da diretoria, riscos, escopo, linha de base, atas, repositório e chat com o contexto completo.', 'Visões'],
+    ['view_team_load', 'Ver a carga e os sinais de burnout dos colegas', 'Dado sensível das pessoas: carga de trabalho, sinais de alerta e recomendações.', 'Visões'],
     ['create_projects', 'Criar projetos', 'Cria projetos novos (e ganha acesso a eles).', 'Sistema'],
     ['manage_settings', 'Configurações do sistema', 'Chaves de IA, integrações e backup deste navegador.', 'Sistema']
   ];
@@ -11056,12 +11182,12 @@ const AccessProfiles = (() => {
   // Mesmos perfis prontos do banco: usados no modo local (sem nuvem) e enquanto a nuvem não responde
   const LOCAL = {
     admin: { name: 'Administrador', perms: ALL },
-    gerente: { name: 'Gerente de Projeto', perms: { view_costs: true, edit_costs: true, edit_plan: true, approve_decisions: true, manage_backlog: true, run_rites: true, update_own: true, log_hours: true, view_all_hours: true, create_projects: true } },
-    patrocinador: { name: 'Patrocinador / Diretoria', perms: { view_costs: true, view_all_hours: true, approve_decisions: true } },
-    po: { name: 'Product Owner', perms: { manage_backlog: true, run_rites: true, update_own: true } },
-    sm: { name: 'Scrum Master', perms: { manage_backlog: true, run_rites: true, update_own: true, log_hours: true, view_all_hours: true } },
+    gerente: { name: 'Gerente de Projeto', perms: { view_costs: true, edit_costs: true, edit_plan: true, approve_decisions: true, manage_backlog: true, run_rites: true, update_own: true, log_hours: true, view_all_hours: true, create_projects: true, view_portfolio: true, view_management: true, view_team_load: true } },
+    patrocinador: { name: 'Patrocinador / Diretoria', perms: { view_costs: true, view_all_hours: true, approve_decisions: true, view_portfolio: true, view_management: true } },
+    po: { name: 'Product Owner', perms: { manage_backlog: true, run_rites: true, update_own: true, view_management: true } },
+    sm: { name: 'Scrum Master', perms: { manage_backlog: true, run_rites: true, update_own: true, log_hours: true, view_all_hours: true, view_management: true, view_team_load: true } },
     time: { name: 'Membro do time (Dev, QA, analista)', perms: { update_own: true, log_hours: true } },
-    consulta: { name: 'Consulta (stakeholder)', perms: {} },
+    consulta: { name: 'Consulta (stakeholder)', perms: { view_portfolio: true } },
     manutencao: { name: 'TI / Suporte', perms: { manage_settings: true } }
   };
   // Só chaves conhecidas, só "true" — qualquer outra coisa é descartada
@@ -11076,15 +11202,70 @@ const AccessProfiles = (() => {
     return id;
   }
   const count = perms => KEYS.filter(k => perms && perms[k]).length;
-  return { PERMS, KEYS, ALL, LOCAL, sanitize, idFromName, count };
+  // Cada tela exige uma permissão; tela que não está aqui é de todos que têm acesso ao projeto (Meu trabalho, Kanban, Backlog, Sprints, Ritos, WBS, Horas, Matriz RACI, Lições, Ajuda).
+  const PAGE_NEEDS = {
+    board: 'view_portfolio', execview: 'view_portfolio', pmoview: 'view_portfolio', pfkpi: 'view_portfolio', portfolio: 'view_portfolio', prioritization: 'view_portfolio',
+    xray: 'view_management', dashboard: 'view_management', report: 'view_management', baseline: 'view_management', estimates: 'view_management', whatif: 'view_management',
+    decisions: 'view_management', loop: 'view_management', trail: 'view_management', statusmsg: 'view_management', scope: 'view_management', stakeholders: 'view_management',
+    meetings: 'view_management', repository: 'view_management', chat: 'view_management', modelos: 'view_management', risks: 'view_management',
+    burnout: 'view_team_load', resources: 'view_team_load', budget: 'view_costs'
+  };
+  // A tela de entrada de quem não vê gestão: o seu trabalho (ou o painel executivo, se só vê o portfólio)
+  function homeFor(has) { return has('view_management') ? 'dashboard' : (has('view_portfolio') ? 'execview' : 'mywork'); }
+  return { PERMS, KEYS, ALL, LOCAL, sanitize, idFromName, count, PAGE_NEEDS, homeFor };
 })();
 </script>
 
-<!-- ■ MODULE: pages/mywork ─ "Meu trabalho": itens, tarefas e horas da pessoa logada no projeto ativo -->
+<!-- ■ MODULE: services/delivery-risk ─ Situação de uma entrega e chance de estourar o prazo (regra simples e explicada na tela) -->
+<script data-module="services/delivery-risk">
+const DeliveryRisk = (() => {
+  const DAY = 86400000;
+  const days = (a, b) => Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / DAY);
+  const clamp = n => Math.max(0, Math.min(100, n));
+  // Avanço de um item do quadro (não tem %): A fazer 0 · Em andamento 50 · Em revisão 80 · Concluído 100
+  const ITEM_PCT = { todo: 0, doing: 50, review: 80, done: 100 };
+  const LABEL = {
+    entregue:   { text: 'Entregue',            badge: 'b-grn', prob: null },
+    atrasada:   { text: 'Atrasada',            badge: 'b-red', prob: 'já estourou' },
+    estourando: { text: 'Pode estourar',       badge: 'b-red', prob: 'alta' },
+    atencao:    { text: 'Atenção',             badge: 'b-amb', prob: 'média' },
+    quase:      { text: 'Quase lá',            badge: 'b-grn', prob: 'baixa' },
+    ritmo:      { text: 'No ritmo',            badge: 'b-grn', prob: 'baixa' },
+    sem_prazo:  { text: 'Sem prazo definido',  badge: 'b-neu', prob: null }
+  };
+  const ORDER = ['atrasada', 'estourando', 'atencao', 'quase', 'ritmo', 'sem_prazo', 'entregue']; // o que pede ação primeiro
+  // t: { start, end, pct (0-100), done }. Regra: avanço esperado hoje = % do tempo já passado entre o início e o fim; quanto mais o avanço real fica atrás, maior a chance de estourar.
+  function assess(t, today) {
+    const pct = clamp(Number(t.pct) || 0);
+    const make = (code, extra) => ({ code, ...LABEL[code], pct, daysLeft: null, expected: null, ...extra });
+    if(t.done || pct >= 100) return make('entregue', { pct: 100, why: 'Concluída.' });
+    if(!t.end) return make('sem_prazo', { why: 'Sem data de término, não dá para medir o risco.' });
+    const left = days(today, t.end);
+    if(left < 0) return make('atrasada', { daysLeft: left, why: 'O prazo terminou há ' + (-left) + ' dia(s) e ainda não foi concluída.' });
+    const total = t.start && t.end > t.start ? days(t.start, t.end) : null;
+    const expected = total ? clamp(Math.round(days(t.start, today) / total * 100)) : null;
+    if(left <= 3 && pct >= 80) return make('quase', { daysLeft: left, expected, why: 'Faltam ' + left + ' dia(s) e já está em ' + pct + '%.' });
+    if(expected == null) {
+      // sem data de início: só o tempo que resta e o avanço
+      const code = left <= 2 && pct < 50 ? 'estourando' : (left <= 5 && pct < 30 ? 'atencao' : 'ritmo');
+      return make(code, { daysLeft: left, why: 'Sem data de início: considera ' + left + ' dia(s) restantes e ' + pct + '% feito.' });
+    }
+    const gap = expected - pct;
+    const code = gap > 25 ? 'estourando' : gap > 10 ? 'atencao' : 'ritmo';
+    return make(code, { daysLeft: left, expected, why: 'Hoje o esperado é ' + expected + '% e está em ' + pct + '% (' + (gap > 0 ? gap + ' ponto(s) atrás' : 'no ritmo ou à frente') + ').' });
+  }
+  const itemPct = status => ITEM_PCT[status] != null ? ITEM_PCT[status] : 0;
+  const rank = a => ORDER.indexOf(a.code);
+  return { assess, itemPct, rank, LABEL, ORDER, ITEM_PCT };
+})();
+</script>
+
+<!-- ■ MODULE: pages/mywork ─ "Meu trabalho": onde estou, as minhas entregas (prazo e risco), o meu time e o que o projeto deve entregar -->
 <script data-module="pages/mywork">
 const MyWork = (() => {
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const key = s => String(s || '').trim().toLowerCase();
+  const fmtD = d => d ? String(d).slice(0, 10).split('-').reverse().join('/') : '—';
 
   // Nomes que identificam a pessoa: o colaborador ligado à conta; sem ligação, o colaborador com o mesmo nome da conta
   function myNames() {
@@ -11092,47 +11273,78 @@ const MyWork = (() => {
     const uid = (typeof Cloud !== 'undefined' && Cloud.isSignedIn()) ? Cloud.getUserId() : null;
     const linked = uid ? team.filter(m => m.userId === uid) : [];
     const byName = linked.length ? linked : team.filter(m => key(m.name) === key(Auth.getName()));
-    return { names: byName.map(m => m.name), linked: linked.length > 0 };
+    return { names: byName.map(m => m.name), roles: byName.map(m => m.role).filter(Boolean), linked: linked.length > 0 };
   }
   function weekRange() {
     const t = Clock.today(); const mon = new Date(t); mon.setDate(t.getDate() - ((t.getDay() + 6) % 7));
     const end = new Date(mon); end.setDate(mon.getDate() + 6);
     return [Clock.iso(mon), Clock.iso(end)];
   }
-  function tasksOf(names) {
+  // As minhas entregas: tarefas do cronograma e itens do quadro, cada uma com a situação e a chance de estourar
+  function deliveries(names, today) {
     const set = new Set(names.map(key)), out = [];
     (DB.get('wbs') || []).forEach(m => {
-      if(set.has(key(m.responsavel)) && m.status !== 'grn') out.push({ label: m.label, parent: '', end: m.end, status: m.status });
-      (m.children || []).forEach(t => { if(set.has(key(t.responsavel)) && t.status !== 'grn') out.push({ label: t.label, parent: m.label, end: t.end, status: t.status }); });
+      if(set.has(key(m.responsavel))) out.push({ kind: 'Entrega', label: m.label, parent: '', a: DeliveryRisk.assess({ start: m.start, end: m.end, pct: m.status === 'grn' ? 100 : m.pct, done: m.status === 'grn' }, today), end: m.end });
+      (m.children || []).forEach(t => { if(set.has(key(t.responsavel))) out.push({ kind: 'Tarefa', label: t.label, parent: m.label, a: DeliveryRisk.assess({ start: t.start, end: t.end, pct: t.status === 'grn' ? 100 : (t.pct || 0), done: t.status === 'grn' }, today), end: t.end }); });
     });
-    return out;
+    const sprints = DB.get('sprints') || [];
+    (DB.get('backlog') || []).filter(i => set.has(key(i.assignee))).forEach(i => {
+      const sp = sprints.find(x => x.id === i.sprintId);
+      out.push({ kind: 'Item', label: i.id + ' · ' + i.title, parent: sp ? sp.name : 'sem sprint', a: DeliveryRisk.assess({ start: sp && sp.startOn, end: sp && sp.endOn, pct: DeliveryRisk.itemPct(i.status), done: i.status === 'done' }, today), end: sp && sp.endOn });
+    });
+    return out.sort((x, y) => DeliveryRisk.rank(x.a) - DeliveryRisk.rank(y.a) || String(x.end || '9').localeCompare(String(y.end || '9')));
   }
-  function render() {
+  const kpi = (l, v, sub, dot) => '<div class="kpi"><div class="kpi-lbl">' + (dot ? '<span class="sdot ' + dot + '"></span>' : '') + l + '</div><div class="kpi-val">' + v + '</div><div class="kpi-delta">' + sub + '</div></div>';
+
+  async function teamHtml() {
+    let list = [];
+    if(typeof Cloud !== 'undefined' && Cloud.isSignedIn()) list = await Cloud.projectTeam(DB.getActiveProjectId());
+    else list = (DB.get('team') || []).map(m => ({ name: m.name, role: m.role }));
+    return list.length ? list.map(m => '<div class="set-row"><div class="set-lbl">' + esc(m.name) + '</div><div class="set-sub">' + esc(m.role || '—') + '</div></div>').join('') : '<div class="rk-empty">Nenhuma pessoa cadastrada na equipe deste projeto ainda.</div>';
+  }
+  function mustDeliverHtml(proj) {
+    const wbs = DB.get('wbs') || [], sprints = DB.get('sprints') || [], items = DB.get('backlog') || [];
+    const a = sprints.find(s => s.state === 'ativa');
+    let h = '';
+    if(wbs.length) h += wbs.map(m => '<div class="set-row" style="flex-wrap:wrap;gap:8px"><div><div class="set-lbl">' + esc(m.label) + '</div><div class="set-sub">prazo ' + fmtD(m.end) + '</div></div><div style="min-width:130px;flex:0 1 180px"><div style="height:6px;background:var(--s3);border-radius:3px;overflow:hidden"><div style="width:' + (m.status === 'grn' ? 100 : Math.max(0, Math.min(100, m.pct || 0))) + '%;height:100%;background:var(--acc)"></div></div><div class="set-sub" style="text-align:right">' + (m.status === 'grn' ? 100 : (m.pct || 0)) + '%</div></div></div>').join('');
+    if(a) h += '<div class="set-row"><div><div class="set-lbl">Sprint ativa: ' + esc(a.name) + '</div><div class="set-sub">' + fmtD(a.startOn) + ' a ' + fmtD(a.endOn) + (a.goal ? ' · meta: ' + esc(a.goal) : '') + '</div></div></div>';
+    if(items.length) { const c = k => items.filter(i => i.status === k).length; h += '<div class="set-row"><div class="set-lbl">Itens do projeto</div><div class="set-sub">' + c('todo') + ' a fazer · ' + c('doing') + ' em andamento · ' + c('review') + ' em revisão · ' + c('done') + ' concluídos</div></div>'; }
+    return h || '<div class="rk-empty">O plano do projeto ainda não tem entregas nem itens cadastrados.</div>';
+  }
+
+  async function render() {
     const root = document.getElementById('mw-root'); if(!root) return;
     if(typeof Reviews !== 'undefined') Reviews.renderSelf(document.getElementById('mw-review'));
-    const me = myNames();
+    const me = myNames(), today = Clock.iso(Clock.today());
+    const proj = DB.listProjects().find(p => p.id === DB.getActiveProjectId()) || {};
+    const act = (DB.get('sprints') || []).find(s => s.state === 'ativa');
+    const where = '<div class="card"><div class="lbl"><i class="ti ti-map-pin"></i>Onde estou</div>'
+      + '<div class="set-row"><div class="set-lbl">Projeto</div><div class="set-sub">' + esc(proj.name || '—') + (proj.client ? ' · ' + esc(proj.client) : '') + '</div></div>'
+      + '<div class="set-row"><div class="set-lbl">Minha função</div><div class="set-sub">' + esc(me.roles[0] || Auth.label()) + '</div></div>'
+      + '<div class="set-row"><div class="set-lbl">Sprint</div><div class="set-sub">' + (act ? esc(act.name) + ' · ' + fmtD(act.startOn) + ' a ' + fmtD(act.endOn) : 'nenhuma sprint ativa') + '</div></div></div>';
+    let mine = '';
     if(!me.names.length) {
-      root.innerHTML = `<div class="card"><div class="rk-empty">Não encontrei você na equipe deste projeto. Peça ao administrador para ligar a sua conta ao seu nome em <b>Colaboradores → Editar → Conta vinculada</b>.</div></div>`;
-      return;
+      mine = '<div class="card"><div class="rk-empty">Não encontrei você na equipe deste projeto. Peça ao administrador ou ao gerente para ligar a sua conta ao seu nome em <b>Colaboradores → Editar → Conta de login vinculada</b>.</div></div>';
+    } else {
+      const list = deliveries(me.names, today), open = list.filter(d => d.a.code !== 'entregue');
+      const late = open.filter(d => d.a.code === 'atrasada').length, risk = open.filter(d => d.a.code === 'estourando').length, soon = open.filter(d => d.a.code === 'quase').length;
+      const [from, to] = weekRange(), set = new Set(me.names.map(key));
+      const hours = (DB.get('timeEntries') || []).filter(e => set.has(key(e.person)) && e.date >= from && e.date <= to).reduce((s2, e) => s2 + (Number(e.hours) || 0), 0);
+      const rows = list.length ? '<div style="overflow-x:auto" tabindex="0" role="region" aria-label="Minhas entregas (role para os lados se precisar)"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:560px"><thead><tr style="text-align:left;color:var(--t3);font-size:11px"><th scope="col" style="padding:6px 8px">Entrega</th><th scope="col" style="padding:6px 8px">Prazo</th><th scope="col" style="padding:6px 8px">Falta</th><th scope="col" style="padding:6px 8px">Avanço</th><th scope="col" style="padding:6px 8px">Situação</th><th scope="col" style="padding:6px 8px">Chance de estourar</th></tr></thead><tbody>'
+        + list.map(d => '<tr style="border-top:1px solid var(--b1)"><td style="padding:6px 8px"><div style="color:var(--t1);font-weight:600">' + esc(d.label) + '</div><div style="color:var(--t3);font-size:11px">' + esc(d.kind) + (d.parent ? ' · ' + esc(d.parent) : '') + '</div></td><td style="padding:6px 8px;white-space:nowrap">' + fmtD(d.end) + '</td><td style="padding:6px 8px;white-space:nowrap">' + (d.a.daysLeft == null ? '—' : d.a.daysLeft < 0 ? (-d.a.daysLeft) + ' dia(s) de atraso' : d.a.daysLeft + ' dia(s)') + '</td><td style="padding:6px 8px;white-space:nowrap">' + d.a.pct + '%' + (d.a.expected != null ? ' <span style="color:var(--t3)">(esperado ' + d.a.expected + '%)</span>' : '') + '</td><td style="padding:6px 8px"><span class="badge ' + d.a.badge + '" title="' + esc(d.a.why) + '">' + d.a.text + '</span></td><td style="padding:6px 8px">' + (d.a.prob ? esc(d.a.prob) : '—') + '</td></tr>').join('')
+        + '</tbody></table></div><div style="font-size:11px;color:var(--t3);margin-top:8px;line-height:1.55"><i class="ti ti-info-circle"></i> <b>Como calculamos:</b> comparamos o avanço de hoje com o esperado para a data (o tempo já passado entre o início e o fim). Mais de 10 pontos atrás = <b>atenção</b> (chance média); mais de 25 = <b>pode estourar</b> (chance alta); passou do prazo = <b>atrasada</b>. Itens do quadro valem 0% (a fazer), 50% (em andamento), 80% (em revisão) e 100% (concluído) dentro do prazo da sprint. Passe o mouse na situação para ver a conta de cada entrega.</div>'
+        : '<div class="rk-empty">Você ainda não tem entregas atribuídas neste projeto.</div>';
+      mine = '<div class="kpi-row" style="margin-bottom:12px">' + kpi('Entregas abertas', open.length, list.length - open.length + ' concluída(s)') + kpi('Atrasadas', late, late ? 'passaram do prazo' : 'nenhuma', late ? 'sdot-red' : '') + kpi('Podem estourar', risk, risk ? 'avanço bem atrás do esperado' : 'nenhuma', risk ? 'sdot-amb' : '') + kpi('Horas na semana', Math.round(hours * 10) / 10 + ' h', soon ? soon + ' perto de terminar' : 'apontadas por você') + '</div>'
+        + '<div class="card"><div class="lbl"><i class="ti ti-target-arrow"></i>Minhas entregas</div>' + rows + '</div>'
+        + (me.linked ? '' : '<div style="font-size:11.5px;color:var(--t3);margin-top:10px"><i class="ti ti-info-circle"></i> Encontrei você pelo nome. Peça para vincular a sua conta ao colaborador, para não depender do nome.</div>');
     }
-    const set = new Set(me.names.map(key));
-    const items = (DB.get('backlog') || []).filter(i => set.has(key(i.assignee)));
-    const open = items.filter(i => i.status !== 'done'), done = items.filter(i => i.status === 'done');
-    const tasks = tasksOf(me.names);
-    const [from, to] = weekRange();
-    const hours = (DB.get('timeEntries') || []).filter(e => set.has(key(e.person)) && e.date >= from && e.date <= to).reduce((s, e) => s + (Number(e.hours) || 0), 0);
-    const kpi = (l, v, sub) => `<div class="kpi"><div class="kpi-lbl">${l}</div><div class="kpi-val">${v}</div><div class="kpi-delta">${sub}</div></div>`;
-    const itemRows = open.length ? open.map(i => `<div class="set-row"><div><div class="set-lbl">${esc(i.id)} · ${esc(i.title)}</div><div class="set-sub">${esc(i.status === 'todo' ? 'A fazer' : i.status === 'doing' ? 'Em andamento' : i.status === 'review' ? 'Em revisão' : i.status)}${i.points !== '' && i.points != null ? ' · ' + esc(i.points) + ' pontos' : ''}</div></div></div>`).join('') : '<div class="rk-empty">Nenhum item aberto com você.</div>';
-    const taskRows = tasks.length ? tasks.map(t => `<div class="set-row"><div><div class="set-lbl">${esc(t.label)}</div><div class="set-sub">${t.parent ? esc(t.parent) + ' · ' : ''}${t.end ? 'prazo ' + esc(String(t.end).split('-').reverse().join('/')) : 'sem prazo'}</div></div></div>`).join('') : '<div class="rk-empty">Nenhuma tarefa do cronograma aberta com você.</div>';
-    root.innerHTML = `<div class="kpi-row" style="margin-bottom:12px">${kpi('Itens abertos', open.length, done.length + ' concluído(s)')}${kpi('Tarefas do cronograma', tasks.length, 'em aberto')}${kpi('Horas na semana', (Math.round(hours * 100) / 100).toLocaleString('pt-BR') + ' h', 'lançadas por você')}</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">
-        <div class="card"><div class="lbl"><i class="ti ti-list-details"></i>Itens do backlog <button class="link-a" onclick="R.go('kanban')">Abrir o quadro</button></div>${itemRows}</div>
-        <div class="card"><div class="lbl"><i class="ti ti-sitemap"></i>Tarefas do cronograma</div>${taskRows}</div>
-      </div>
-      ${me.linked ? '' : '<div style="font-size:11.5px;color:var(--t3);margin-top:10px"><i class="ti ti-info-circle"></i> Encontrei você pelo nome. Peça ao administrador para vincular a sua conta ao colaborador, assim as permissões do seu perfil valem só para os seus itens.</div>'}`;
+    root.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:12px">' + where
+      + '<div class="card"><div class="lbl"><i class="ti ti-users"></i>Meu time</div><div id="mw-team"><div style="font-size:12px;color:var(--t3)"><i class="ti ti-loader-2"></i> Carregando…</div></div></div>'
+      + '<div class="card"><div class="lbl"><i class="ti ti-flag-3"></i>O que o projeto deve entregar</div>' + mustDeliverHtml(proj) + '</div></div>' + mine;
+    const t = await teamHtml(); const el = document.getElementById('mw-team'); if(el) el.innerHTML = t;
   }
   const isMine = name => !!name && myNames().names.some(n => key(n) === key(name));
-  return { render, isMine };
+  return { render, isMine, deliveries };
 })();
 </script>
 
@@ -17881,7 +18093,7 @@ const Messaging = (() => {
         </div>
         <div id="fp-phone-wrap" style="display:none"><label class="field-label" for="fp-phone">Telefone com WhatsApp (DDD + número)</label><input class="input" id="fp-phone" type="tel" inputmode="tel" maxlength="20" autocomplete="tel" placeholder="(11) 91234-5678"></div>
       </fieldset>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-pri" id="fp-save" onclick="FirstAccess.saveProfile()"><i class="ti ti-check"></i>Salvar cadastro</button><button class="btn" onclick="FirstAccess.later()">Agora não</button></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-pri" id="fp-save" onclick="FirstAccess.saveProfile()"><i class="ti ti-check"></i>Salvar cadastro</button><button class="btn" id="fp-later" onclick="FirstAccess.later()">Agora não</button></div>
     </div>
   </div>
 </div>
