@@ -180,6 +180,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 | Cadastro público do Auth | Desligado: só o Administrador cria contas. | `node scripts/auth-lock.mjs` (ou `--open`) |
 | Segredos das funções | WA_*, RESEND_API_KEY, EMAIL_FROM, CRON_SECRET, APP_URL. | `.env.deploy` + `node scripts/deploy-functions.mjs --secrets` |
 | Conta inativa | A conta é bloqueada no Auth (ban) e perde o perfil no banco. | Pessoas & acesso → Inativar / Reativar |
+| Exportação de bugs para quem corrige | Pasta local `bugs-export/<projeto>/` (bugs.md + anexos), gerada só para leitura; não é publicada nem versionada. | `node scripts/read-bugs.mjs "<nome do projeto>"` (`--all` inclui os concluídos) |
 
 ## Quem vê o quê
 

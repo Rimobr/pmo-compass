@@ -17,3 +17,4 @@ package.json
 package-lock.json
 playwright.config.js
 .env*
+bugs-export

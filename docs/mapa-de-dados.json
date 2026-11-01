@@ -546,6 +546,10 @@
     "Conta inativa": {
       "desc": "A conta é bloqueada no Auth (ban) e perde o perfil no banco.",
       "comoMudar": "Pessoas & acesso → Inativar / Reativar"
+    },
+    "Exportação de bugs para quem corrige": {
+      "desc": "Pasta local `bugs-export/<projeto>/` (bugs.md + anexos), gerada só para leitura; não é publicada nem versionada.",
+      "comoMudar": "`node scripts/read-bugs.mjs \"<nome do projeto>\"` (`--all` inclui os concluídos)"
     }
   },
   "regras": [
