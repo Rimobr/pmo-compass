@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.38.2'
+  version: '2.38.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1421,7 +1421,7 @@ body.icons-failed i[data-fb]::before{
     <div style="font-size:12px;color:#444;margin-top:2px" id="board-print-meta"></div>
   </div>
 
-  <div class="g4" id="board-kpis-root" style="margin-bottom:16px"></div>
+  <div class="g4 rc-k" id="board-kpis-root" style="margin-bottom:16px"></div>
 
   <div class="card" style="margin-bottom:16px">
     <div class="lbl"><i class="ti ti-grid-dots"></i>Farol do portfólio<span class="help-q" data-help="Formato de semáforo/mapa de calor — o jeito mais usado em reporte de PMO pra diretoria, porque mostra prazo, custo, equipe, qualidade e risco de todos os projetos lado a lado, num único olhar. Verde = saudável, amarelo = atenção, vermelho = crítico. Clique num projeto pra abrir o Dashboard dele." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
@@ -1937,7 +1937,7 @@ body.icons-failed i[data-fb]::before{
       <button class="btn btn-sm" onclick="XlsxExport.risks()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button>
     </div>
   </div>
-  <div class="g4" id="rk-kpis"></div>
+  <div class="g4 rc-k" id="rk-kpis"></div>
   <div class="rk-grid">
     <div class="card">
       <div class="lbl"><i class="ti ti-grid-dots"></i>Matriz probabilidade × impacto<span class="help-q" data-help="Cada célula mostra quantos riscos em aberto têm aquela combinação de probabilidade (linhas) e impacto (colunas). Cores: verde baixo, azul médio, laranja alto, vermelho crítico. Clique numa célula para filtrar a lista; clique de novo para limpar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
@@ -2266,7 +2266,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     </select>
     <select class="input" id="hr-f-person" aria-label="Pessoa" onchange="Hours.setFilter('person', this.value)"><option value="">Todas as pessoas</option></select>
   </div>
-  <div class="g4" id="hr-kpis"></div>
+  <div class="g4 rc-k" id="hr-kpis"></div>
   <div class="hr-grid">
     <div class="card">
       <div class="lbl"><i class="ti ti-scale"></i>Carga medida × declarada (últimos 7 dias)<span class="help-q" data-help="Carga medida = horas apontadas nos últimos 7 dias ÷ (40 h × % de alocação da pessoa). Carga declarada = o que está no Burnout Radar. Diferença grande indica que um dos dois números está desatualizado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
@@ -2816,7 +2816,7 @@ const StatusMsg = (() => {
       <button class="btn btn-sm btn-red" id="bl-del" style="display:none" onclick="Baselines.remove()"><i class="ti ti-trash"></i>Excluir</button>
     </div>
     <div id="bl-note" style="font-size:11.5px;color:var(--t3);margin-bottom:10px"></div>
-    <div class="g4" id="bl-kpis"></div>
+    <div class="g4 rc-k" id="bl-kpis"></div>
     <div class="card" style="margin-top:12px">
       <div class="lbl"><i class="ti ti-timeline"></i>Entregas: plano original × plano atual<span class="help-q" data-help="Desvio = término atual − término da linha de base, em dias. Positivo (vermelho) atrasou; negativo (verde) adiantou. O término atual é o real quando a entrega já terminou, senão o planejado vigente. &quot;Nova&quot; e &quot;removida&quot; são entregas que entraram ou saíram do plano depois da linha de base." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
       <div style="overflow-x:auto" id="bl-table-root"></div>
@@ -2993,7 +2993,7 @@ const PortfolioKpi = (() => {
     <span class="help-q" data-help="Filtra os indicadores e a tabela por área/departamento. Defina a área de cada projeto em &quot;Editar&quot; (na tabela abaixo) ou ao criar o projeto. Útil para o PMO Departamental ver só a sua área." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>
     <select class="input" id="pk-area" onchange="PfKpi.setArea(this.value)"><option value="">Todas as áreas</option></select>
   </div>
-  <div class="g4" id="pk-kpis"></div>
+  <div class="g4 rc-k" id="pk-kpis"></div>
   <div class="card" style="margin-top:12px">
     <div class="lbl"><i class="ti ti-traffic-lights"></i>Situação geral (farol)<span class="help-q" data-help="Quantos projetos estão em cada cor do farol. Verde: saudável; amarelo: atenção; vermelho: em risco; cinza: sem dados para avaliar (projeto sem entregas nem orçamento)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div id="pk-farol"></div>
