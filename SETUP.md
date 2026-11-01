@@ -92,21 +92,25 @@ Duas opções, dependendo de quanto de identidade própria o cliente precisa ter
 1. Abra o deploy do cliente → **Configurações → Backend em nuvem (Supabase)**.
 2. Cole a **Project URL** e a chave **anon public** (Project Settings → API no Supabase — nunca a
    `service_role`, essa não sai do servidor) → **Conectar**.
-3. Clique em **Criar conta**, informe e-mail e senha da primeira pessoa (normalmente você mesmo,
-   pra validar, ou o responsável do lado do cliente).
+3. O app **não tem cadastro aberto**: contas só o administrador cria. Para a primeira, use o Supabase
+   → **Authentication → Users → Add user** (marque *Auto Confirm User*) com o e-mail e a senha do
+   responsável, e siga o Passo 7. As demais contas saem de **Configurações → Pessoas & acesso → Nova conta**.
 
 ## 7. Promover o primeiro administrador
 
-Toda conta nova nasce como **Consulta** (mais seguro por padrão — ninguém se autopromove, isso é
+Toda conta criada direto no Supabase nasce como **Consulta** (mais seguro por padrão — ninguém se autopromove, isso é
 bloqueado pelo próprio Postgres, não só pela tela).
 
 1. No Supabase → **Authentication → Users**, copie o **UID** da conta criada no Passo 6.
+   Depois de ter o administrador, feche o cadastro aberto: `node scripts/auth-lock.mjs` (ou, no painel,
+   **Authentication → Sign In / Providers → Allow new users to sign up** desligado).
+   Também em **Authentication → Sign In / Providers**, desligue **Allow new users to sign up** (o script  faz isso).
 2. **SQL Editor**, rode (trocando o UID):
    ```sql
    update public.profiles set role = 'admin' where id = 'COLE_O_UID_AQUI';
    ```
 3. No app, **Sair da conta** → login de novo. Agora como Administrador, dá pra promover as
-   próximas pessoas direto pela tela (**Configurações → Usuários**), sem precisar mais de SQL.
+   próximas pessoas direto pela tela (**Configurações → Pessoas & acesso**), sem precisar mais de SQL.
 
 ## 8. Se estiver reaproveitando uma instância (não aplicável a projeto Supabase 100% novo)
 

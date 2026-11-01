@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.19.3'
+  version: '2.20.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1494,12 +1494,14 @@ body.icons-failed i[data-fb]::before{
 
   <div class="card" id="users-card" style="display:none">
     <div class="lbl"><i class="ti ti-users"></i>Pessoas e acesso<span class="help-q" data-help="Cada pessoa tem um perfil (o que ela pode fazer) e os projetos que ela pode abrir. Administradores veem todos os projetos. Aqui você muda as duas coisas no mesmo lugar, sem trocar de tela." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Para cada pessoa: escolha o <strong style="color:var(--t1)">perfil</strong> e inclua nos <strong style="color:var(--t1)">projetos</strong> que ela pode ver. Quem acabou de criar a conta aparece sem projetos até você incluí-la.</p>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Para cada pessoa: escolha o <strong style="color:var(--t1)">perfil</strong> e inclua nos <strong style="color:var(--t1)">projetos</strong> que ela pode ver. Não existe cadastro aberto: <strong style="color:var(--t1)">o administrador cria a conta</strong> em "Nova conta" (e-mail, perfil, projetos e senha temporária) e passa os dados à pessoa.</p>
     <div class="btn-row" style="margin-bottom:10px">
       <input class="input" id="users-q" type="search" placeholder="Buscar pessoa…" aria-label="Buscar pessoa" style="max-width:240px" oninput="Users.setFilter()">
       <select class="input" id="users-proj" aria-label="Filtrar por projeto" style="width:auto;max-width:300px" onchange="Users.setFilter()"></select>
       <button class="btn btn-sm" onclick="Users.refresh()"><i class="ti ti-refresh"></i>Atualizar</button>
+      <button class="btn btn-sm btn-pri" data-perm="admin" onclick="Users.newAccount()"><i class="ti ti-user-plus"></i>Nova conta</button>
     </div>
+    <div id="users-new-root"></div>
     <div id="users-list-root"></div>
     <div id="users-managers"></div>
   </div>
@@ -3697,7 +3699,6 @@ const Auth = (() => {
     }
     const emailInp = document.getElementById('auth-f-email'); if(emailInp) emailInp.value = '';
     const passInp = document.getElementById('auth-f-password'); if(passInp) passInp.value = '';
-    const signupNameInp = document.getElementById('auth-f-signup-name'); if(signupNameInp) signupNameInp.value = '';
 
     document.getElementById('modal-auth').classList.remove('hidden');
   }
@@ -3730,15 +3731,15 @@ const Auth = (() => {
     // não há "depois" nesta função pra fechar nada (a volta recarrega o app já autenticado).
     await Cloud.doSignInSSO(domain);
   }
-  async function doSignUp() {
-    const email = document.getElementById('auth-f-email').value.trim();
-    const password = document.getElementById('auth-f-password').value;
-    const name = document.getElementById('auth-f-signup-name').value.trim();
-    await Cloud.doSignUp(email, password, name); // não fecha — cadastro pode exigir confirmação por e-mail antes de logar
-  }
   async function doSignOut() {
     await Cloud.signOut();
     closeModal();
+  }
+  async function changeOwnPassword() {
+    const inp = document.getElementById('auth-f-newpass');
+    const pw = inp ? inp.value : '';
+    const ok = await Cloud.changeOwnPassword(pw);
+    if(ok && inp) inp.value = '';
   }
   async function saveCloudName() {
     const inp = document.getElementById('auth-f-cloud-name');
@@ -3775,7 +3776,7 @@ const Auth = (() => {
     return false;
   }
 
-  return { setProfileDefs, getProfileDefs, grantedScopes, load, getRole, getName, label, can, guard, openModal, closeModal, toggleLocalBox, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, confirmNoCloudSession, doSignIn, doSignInSSO, doSignUp, doSignOut, saveCloudName, updateCloudBadge };
+  return { setProfileDefs, getProfileDefs, grantedScopes, load, getRole, getName, label, can, guard, openModal, closeModal, toggleLocalBox, pickRole, save, setFromCloud, clearCloudManaged, isCloudManaged, confirmNoCloudSession, doSignIn, doSignInSSO, doSignOut, saveCloudName, changeOwnPassword, updateCloudBadge };
 })();
 </script>
 
@@ -4142,16 +4143,51 @@ const Cloud = (() => {
     return false;
   }
 
-  async function doSignUp(email, password, name) {
-    if(!client) { T.show('⚠️ Configure a URL e a chave do Supabase primeiro.'); return false; }
-    if(!email || !password) { T.show('⚠️ Preencha e-mail e senha.'); return false; }
-    if(password.length < 6) { T.show('⚠️ A senha precisa ter pelo menos 6 caracteres.'); return false; }
-    // O nome vai em raw_user_meta_data — o gatilho handle_new_user() usa ele pra preencher
-    // profiles.name; sem isso, cai no prefixo do e-mail (ex: "ricardo_moreto" em vez do nome real).
-    const options = name ? { data: { name } } : undefined;
-    const { error } = await client.auth.signUp({ email, password, options });
+  // O cadastro é fechado: só o administrador cria contas (função de servidor users-admin).
+  async function createAccount(a) {
+    const res = await invokeFn('users-admin', { action:'create', email:a.email, name:a.name, role:a.role, password:a.password, project_ids:a.projectIds });
+    if(res.error) { T.show('❌ ' + res.error); return null; }
+    pushAuditEvent('account_created', 'Conta criada pelo administrador: ' + a.email + ' (perfil "' + a.role + '")', { email:a.email, role:a.role, projects:a.projectIds.length });
+    if(res.data && res.data.partial) T.show('⚠️ ' + res.data.error);
+    return res.data || { ok:true };
+  }
+  async function resetPassword(userId, password) {
+    const res = await invokeFn('users-admin', { action:'reset_password', user_id:userId, password });
+    if(res.error) { T.show('❌ ' + res.error); return false; }
+    pushAuditEvent('password_reset', 'Senha temporária redefinida pelo administrador', { targetUserId:userId });
+    return res.data || { ok:true };
+  }
+  // Primeiro acesso: a senha temporária obriga a troca (marca em user_metadata, que só o servidor liga e a própria pessoa desliga)
+  const mustChangePassword = () => !!(session && session.user && session.user.user_metadata && session.user.user_metadata.must_change_password);
+  async function finishFirstPassword(password) {
+    if(!client || !session) return false;
+    if(!password || password.length < 8) { T.show('⚠️ A nova senha precisa ter pelo menos 8 caracteres.'); return false; }
+    const { data, error } = await client.auth.updateUser({ password, data:{ must_change_password:false } });
     if(error) { T.show('❌ ' + error.message); return false; }
-    T.show('✅ Conta criada! Se a confirmação por e-mail estiver ativa no seu projeto, confirme antes de entrar. Novo usuário nasce como "Consulta" — peça a um admin para promovê-lo.');
+    if(data && data.user) session = { ...session, user:data.user };
+    pushAuditEvent('password_changed', 'Senha temporária trocada no primeiro acesso', {});
+    return true;
+  }
+  async function getMyDetails() {
+    if(!client || !session) return null;
+    const { data, error } = await client.from('profile_details').select('*').eq('user_id', session.user.id).maybeSingle();
+    if(error) { console.warn('Supabase: falha ao ler o cadastro complementar', error); return undefined; }
+    return data || null;
+  }
+  async function saveMyDetails(v) {
+    if(!client || !session) return false;
+    const row = { user_id:session.user.id, department:v.department, knowledge:v.knowledge, tools:v.tools, phone:v.phone, whatsapp_consent:v.consent };
+    const { error } = await client.from('profile_details').upsert(row);
+    if(error) { T.show('❌ ' + error.message); return false; }
+    pushAuditEvent(v.consent ? 'whatsapp_consent_given' : 'profile_completed', v.consent ? 'Autorizou o uso do WhatsApp para mensagens do sistema' : 'Cadastro complementar preenchido (sem telefone)', {});
+    return true;
+  }
+  async function changeOwnPassword(password) {
+    if(!client || !session) { T.show('⚠️ Entre na conta primeiro.'); return false; }
+    if(!password || password.length < 8) { T.show('⚠️ A nova senha precisa ter pelo menos 8 caracteres.'); return false; }
+    const { error } = await client.auth.updateUser({ password });
+    if(error) { T.show('❌ ' + error.message); return false; }
+    T.show('✅ Senha alterada.');
     return true;
   }
 
@@ -4190,6 +4226,7 @@ const Cloud = (() => {
       await syncProjects();
       await syncAllTeamMembers();
       await pullAll();
+      if(typeof FirstAccess !== 'undefined') FirstAccess.check();
     } catch(e) {
       console.warn('Supabase: falha ao ler perfil — caindo para o perfil mais restrito', e);
       Auth.setFromCloud(session.user.email, 'consulta');
@@ -4593,7 +4630,7 @@ const Cloud = (() => {
   }
 
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
-    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, doSignUp, signOut, pullAll, flush,
+    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument, pushRow, pushMany, deleteRow, msgTable, invokeFn,
@@ -4902,6 +4939,79 @@ const Users = (() => {
     renderProfiles();
   }
 
+  // ── Nova conta: só o administrador cria (o cadastro público está fechado) ──
+  let creating = null; // { done: { email, password } } depois de criada
+  function genPassword() {
+    const letters = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ', digits = '23456789', sym = '#@%*', pool = letters + digits;
+    const r = crypto.getRandomValues(new Uint32Array(12));
+    let o = ''; for(let i = 0; i < 9; i++) o += pool[r[i] % pool.length];
+    return o + digits[r[9] % digits.length] + sym[r[10] % sym.length] + letters[r[11] % letters.length];
+  }
+  function newAccount() {
+    if(!isAdminUser()) return;
+    creating = {}; renderNew();
+    const el = document.getElementById('nc-name'); if(el) el.focus();
+  }
+  function cancelNew() { creating = null; renderNew(); }
+  function renderNew() {
+    const root = document.getElementById('users-new-root');
+    if(!root) return;
+    if(!creating) { root.innerHTML = ''; return; }
+    if(creating.done) {
+      root.innerHTML = `<div class="card" style="margin-bottom:10px;background:var(--bg2)" role="status">
+        <div class="lbl"><i class="ti ti-circle-check"></i>${creating.done.reset ? 'Nova senha definida' : 'Conta criada'}</div>
+        ${creating.done.sent
+          ? `<p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:8px">Enviamos um e-mail para <strong>${escapeHtml(creating.done.email)}</strong> com a senha temporária. No primeiro acesso a pessoa será obrigada a criar uma nova senha e a completar o cadastro.</p>
+            <div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-sm" onclick="Users.cancelNew()">Fechar</button></div>`
+          : `<p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:8px"><i class="ti ti-alert-triangle"></i> O e-mail <strong>não foi enviado</strong>${creating.done.why ? ' (' + escapeHtml(creating.done.why) + ')' : ''}. Passe estes dados à pessoa por um canal seguro. A senha <strong>não será mostrada de novo</strong>; no primeiro acesso ela será obrigada a trocá-la e a completar o cadastro.</p>
+            <div class="set-row"><div class="set-lbl">${escapeHtml(creating.done.name)}</div><div class="set-sub" style="font-family:var(--font-mono)">${escapeHtml(creating.done.email)} · ${escapeHtml(creating.done.password)}</div></div>
+            <div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-sm" onclick="Users.copyNew()"><i class="ti ti-copy"></i>Copiar e-mail e senha</button><button class="btn btn-sm" onclick="Users.cancelNew()">Fechar</button></div>`}
+      </div>`;
+      return;
+    }
+    const roleOpts = Object.keys(defs()).filter(r => r !== 'admin').map(r => `<option value="${r}"${r === 'consulta' ? ' selected' : ''}>${escapeHtml(roleName(r))}</option>`).join('');
+    const projs = projectsAll().map(p => `<label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" class="nc-proj" value="${p.id}"> ${escapeHtml(p.name || p.id)}</label>`).join('') || '<span style="font-size:12px;color:var(--t3)">Nenhum projeto ainda.</span>';
+    root.innerHTML = `<div class="card" style="margin-bottom:10px;background:var(--bg2)">
+      <div class="lbl"><i class="ti ti-user-plus"></i>Nova conta</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">
+        <div class="field"><label for="nc-name">Nome (obrigatório)</label><input class="input" id="nc-name" maxlength="80" autocomplete="off"></div>
+        <div class="field"><label for="nc-email">E-mail (obrigatório — recebe a senha temporária)</label><input class="input" id="nc-email" type="email" maxlength="160" autocomplete="off"></div>
+        <div class="field"><label for="nc-role">Perfil de acesso</label><select class="input" id="nc-role">${roleOpts}</select></div>
+        <div class="field"><label for="nc-pass">Senha temporária</label><div class="prov-inp-row"><input class="input" id="nc-pass" value="${genPassword()}" autocomplete="off" style="font-family:var(--font-mono)"><button class="btn btn-sm" type="button" aria-label="Gerar outra senha" onclick="document.getElementById('nc-pass').value=Users.genPassword()"><i class="ti ti-refresh"></i></button></div></div>
+      </div>
+      <fieldset style="border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:8px 0"><legend style="font-size:11px;color:var(--t3);padding:0 4px">Projetos que ela poderá abrir (opcional — dá para incluir depois)</legend><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 12px">${projs}</div></fieldset>
+      <div style="display:flex;gap:8px"><button class="btn btn-sm btn-pri" id="nc-save" onclick="Users.createAccount()"><i class="ti ti-check"></i>Criar conta</button><button class="btn btn-sm" onclick="Users.cancelNew()">Cancelar</button></div>
+    </div>`;
+  }
+  async function createAccount() {
+    const v = id => (document.getElementById(id) || {}).value || '';
+    const a = { name: v('nc-name').trim(), email: v('nc-email').trim().toLowerCase(), role: v('nc-role'), password: v('nc-pass'), projectIds: Array.from(document.querySelectorAll('.nc-proj:checked')).map(c => c.value) };
+    if(a.name.length < 2) { T.show('⚠️ Informe o nome da pessoa.'); return; }
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(a.email)) { T.show('⚠️ Informe um e-mail válido.'); return; }
+    if(a.password.length < 8) { T.show('⚠️ A senha temporária precisa ter pelo menos 8 caracteres.'); return; }
+    const btn = document.getElementById('nc-save'); if(btn) btn.disabled = true;
+    const res = await Cloud.createAccount(a);
+    if(btn) btn.disabled = false;
+    if(!res) return;
+    creating = { done: { name: a.name, email: a.email, password: a.password, sent: res.email_sent === true, why: res.email_error || '' } };
+    renderNew(); refresh();
+  }
+  function copyNew() {
+    if(!creating || !creating.done) return;
+    const t = 'PMO Compass — acesso\nE-mail: ' + creating.done.email + '\nSenha temporária: ' + creating.done.password + '\nVocê deverá trocar a senha no primeiro acesso.';
+    if(navigator.clipboard) navigator.clipboard.writeText(t).then(() => T.show('✅ Copiado.'), () => T.show('⚠️ Não consegui copiar; selecione o texto.'));
+  }
+  async function resetPw(userId) {
+    const pw = genPassword();
+    if(!confirm('Definir uma nova senha temporária para esta conta? A senha atual deixa de valer.')) return;
+    const res = await Cloud.resetPassword(userId, pw);
+    if(!res) return;
+    const p = people.find(x => x.id === userId);
+    creating = { done: { name: (p && p.name) || 'Conta', email: res.email || '(e-mail da conta)', password: pw, sent: res.email_sent === true, why: res.email_error || '', reset: true } };
+    renderNew();
+    const el = document.getElementById('users-new-root'); if(el && el.scrollIntoView) el.scrollIntoView({ block:'nearest' });
+  }
+
   // Lista de pessoas com perfil e projetos no mesmo lugar (filtra por nome ou por projeto)
   let people = [], access = [];
   const projectsAll = () => DB.listProjects().slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'));
@@ -4949,7 +5059,7 @@ const Users = (() => {
       return `<div class="set-row" style="align-items:flex-start;flex-wrap:wrap;gap:10px">
         <div style="min-width:180px;flex:1 1 180px"><div class="set-lbl">${nm}${isMe ? ' <span class="badge b-acc">você</span>' : ''}</div><div class="set-sub" style="font-family:var(--font-mono);font-size:11px" title="Identificador da conta">${escapeHtml(p.id.slice(0, 8))}…</div></div>
         <div style="flex:2 1 280px;display:flex;flex-direction:column;gap:8px">
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${admin ? `<select class="input" style="width:auto" aria-label="Perfil de acesso de ${nm}" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>` : `<span class="badge">${escapeHtml(roleName(p.role))}</span>`}${add}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${admin ? `<select class="input" style="width:auto" aria-label="Perfil de acesso de ${nm}" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>` : `<span class="badge">${escapeHtml(roleName(p.role))}</span>`}${add}${admin && !isMe ? `<button class="btn btn-sm" aria-label="Definir nova senha temporária para ${nm}" onclick="Users.resetPw('${p.id}')"><i class="ti ti-key"></i>Nova senha</button>` : ''}</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">${chips}</div>
         </div>
       </div>`;
@@ -5008,7 +5118,96 @@ const Users = (() => {
     }
   }
 
-  return { render, refresh, setFilter, setManager, pickToggle, setAccess, setAll, removeAccess, changeRole, newProfile, editProfile, cancelProfile, saveProfile, removeProfile };
+  return { render, refresh, setFilter, setManager, pickToggle, setAccess, setAll, removeAccess, changeRole, newProfile, editProfile, cancelProfile, saveProfile, removeProfile , newAccount, cancelNew, createAccount, copyNew, resetPw, genPassword };
+})();
+</script>
+
+<!-- ■ MODULE: ui/first-access ─ Primeiro acesso: troca obrigatória da senha temporária + cadastro complementar (departamento, conhecimentos, ferramentas, WhatsApp com consentimento LGPD) -->
+<script data-module="ui/first-access">
+const FirstAccess = (() => {
+  const $ = id => document.getElementById(id);
+  let postponed = false; // "Agora não": só volta a perguntar no próximo acesso
+
+  // Mesmas regras do servidor (supabase/functions/_shared/useradmin.mjs, validateDetails): o telefone só existe com o "sim"
+  function validate(d) {
+    const clean = (v, max) => String(v == null ? '' : v).trim().replace(/\s+/g, ' ').slice(0, max);
+    const department = clean(d && d.department, 80), knowledge = clean(d && d.knowledge, 600), tools = clean(d && d.tools, 400);
+    if(!department) return { ok:false, error:'Informe o departamento.' };
+    if(!knowledge) return { ok:false, error:'Descreva brevemente os seus conhecimentos.' };
+    if(!tools) return { ok:false, error:'Informe as ferramentas que você domina.' };
+    const consent = !!d && d.consent === true;
+    let phone = null;
+    const digits = String(d && d.phone || '').replace(/\D/g, '');
+    if(digits) {
+      if(!consent) return { ok:false, error:'Para guardar o telefone é preciso autorizar o uso para mensagens (escolha "Sim") — ou deixe o telefone em branco.' };
+      const full = digits.length <= 11 ? '55' + digits : digits;
+      if(full.length < 12 || full.length > 15) return { ok:false, error:'Telefone inválido — informe DDD + número.' };
+      phone = full;
+    } else if(consent) {
+      return { ok:false, error:'Você autorizou as mensagens: informe o telefone com WhatsApp (ou escolha "Não").' };
+    }
+    return { ok:true, value:{ department, knowledge, tools, phone, consent:!!phone } };
+  }
+
+  async function check() {
+    if(typeof Cloud === 'undefined' || !Cloud.isSignedIn()) return;
+    if(Cloud.mustChangePassword()) { showPassword(); return; }
+    if(postponed) return;
+    const d = await Cloud.getMyDetails();
+    if(d === undefined) return; // tabela ainda não existe ou falha de leitura: não incomoda
+    if(!d || !d.completed_at) showProfile(d);
+  }
+
+  // ── 1) Troca obrigatória da senha (não fecha sem trocar) ──
+  function showPassword() {
+    const m = $('modal-firstpw'); if(!m) return;
+    $('firstpw-1').value = ''; $('firstpw-2').value = '';
+    m.classList.remove('hidden');
+    setTimeout(() => $('firstpw-1').focus(), 50);
+  }
+  async function savePassword() {
+    const a = $('firstpw-1').value, b = $('firstpw-2').value;
+    if(a.length < 8) { T.show('⚠️ A nova senha precisa ter pelo menos 8 caracteres.'); return; }
+    if(a !== b) { T.show('⚠️ As duas senhas precisam ser iguais.'); return; }
+    const btn = $('firstpw-save'); btn.disabled = true;
+    const ok = await Cloud.finishFirstPassword(a);
+    btn.disabled = false;
+    if(!ok) return;
+    $('modal-firstpw').classList.add('hidden');
+    T.show('✅ Senha criada. Falta só completar o seu cadastro.');
+    check();
+  }
+
+  // ── 2) Cadastro complementar ──
+  function showProfile(d) {
+    const m = $('modal-firstprofile'); if(!m) return;
+    d = d || {};
+    $('fp-dept').value = d.department || ''; $('fp-know').value = d.knowledge || ''; $('fp-tools').value = d.tools || '';
+    $('fp-phone').value = d.phone || '';
+    const yes = $('fp-consent-yes'), no = $('fp-consent-no');
+    yes.checked = !!d.whatsapp_consent; no.checked = !d.whatsapp_consent;
+    toggleConsent();
+    m.classList.remove('hidden');
+    setTimeout(() => $('fp-dept').focus(), 50);
+  }
+  function toggleConsent() {
+    const on = $('fp-consent-yes').checked;
+    $('fp-phone-wrap').style.display = on ? '' : 'none';
+    if(!on) $('fp-phone').value = '';
+  }
+  async function saveProfile() {
+    const r = validate({ department:$('fp-dept').value, knowledge:$('fp-know').value, tools:$('fp-tools').value, phone:$('fp-phone').value, consent:$('fp-consent-yes').checked });
+    if(!r.ok) { T.show('⚠️ ' + r.error); return; }
+    const btn = $('fp-save'); btn.disabled = true;
+    const ok = await Cloud.saveMyDetails(r.value);
+    btn.disabled = false;
+    if(!ok) return;
+    $('modal-firstprofile').classList.add('hidden');
+    T.show(r.value.consent ? '✅ Cadastro completo. Você autorizou mensagens no WhatsApp; pode retirar a autorização quando quiser.' : '✅ Cadastro completo.');
+  }
+  function later() { postponed = true; $('modal-firstprofile').classList.add('hidden'); T.show('Tudo bem — pedimos de novo no próximo acesso.'); }
+
+  return { check, validate, savePassword, saveProfile, toggleConsent, later, showProfile };
 })();
 </script>
 
@@ -15987,20 +16186,22 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
         <div class="field-label" style="margin-bottom:6px">Como quer ser chamado</div>
         <div class="prov-inp-row"><input class="input" id="auth-f-cloud-name" placeholder="Seu nome"><button class="btn btn-sm btn-acc" id="auth-cloud-name-save-btn" onclick="Auth.saveCloudName()"><i class="ti ti-device-floppy"></i>Salvar</button></div>
       </div>
+      <div style="margin-top:10px">
+        <div class="field-label" style="margin-bottom:6px">Trocar minha senha</div>
+        <div class="prov-inp-row"><input class="input" id="auth-f-newpass" type="password" autocomplete="new-password" placeholder="Nova senha (mínimo 8)" aria-label="Nova senha"><button class="btn btn-sm" onclick="Auth.changeOwnPassword()"><i class="ti ti-key"></i>Trocar</button></div>
+      </div>
       <button class="btn btn-sm btn-red" style="width:100%;justify-content:center;margin-top:10px" onclick="Auth.doSignOut()"><i class="ti ti-logout"></i>Sair da conta</button>
     </div>
 
     <!-- Supabase conectado, mas ninguém logado: login/cadastro direto aqui, sem precisar ir em Configurações -->
     <div id="auth-cloud-login-box" style="display:none;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--b1)">
       <div class="field-label" style="margin-bottom:6px"><i class="ti ti-cloud"></i> Entrar com sua conta Supabase</div>
-      <input class="input" id="auth-f-signup-name" placeholder="Seu nome (só pra criar conta nova)" style="margin-bottom:8px">
       <input class="input" id="auth-f-email" type="email" placeholder="seu@email.com" style="margin-bottom:8px">
       <input class="input" id="auth-f-password" type="password" placeholder="Senha" style="margin-bottom:8px">
       <div class="btn-row">
         <button class="btn btn-sm btn-acc" onclick="Auth.doSignIn()"><i class="ti ti-login"></i>Entrar</button>
-        <button class="btn btn-sm" onclick="Auth.doSignUp()"><i class="ti ti-plus"></i>Criar conta</button>
       </div>
-      <div style="font-size:11px;color:var(--t3);margin-top:6px">Toda conta nova nasce com perfil "Consulta" — peça a um administrador para promovê-la.</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:6px">Não há cadastro aberto: a conta é criada pelo administrador, que passa a você o e-mail e uma senha temporária. Depois de entrar, troque a senha.</div>
 
       <!-- SSO/SAML — requer plano Supabase pago + IdP corporativo configurado (ver SETUP.md);
            sem isso, o botão simplesmente mostra o erro do Supabase, sem quebrar nada. -->
@@ -16746,6 +16947,42 @@ const Messaging = (() => {
 </div>
 
 <!-- ■ MODULE: ui/burnout-modal -->
+<!-- Primeiro acesso: troca obrigatória da senha temporária (sem botão de fechar) -->
+<div class="modal-ov hidden" id="modal-firstpw" role="dialog" aria-modal="true" aria-labelledby="firstpw-title">
+  <div class="modal-box" style="width:420px">
+    <div class="modal-title" id="firstpw-title">Crie a sua senha</div>
+    <div class="modal-sub">Você entrou com uma senha temporária. Por segurança, defina agora uma senha só sua para continuar.</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label class="field-label" for="firstpw-1">Nova senha (mínimo 8 caracteres)</label><input class="input" id="firstpw-1" type="password" autocomplete="new-password"></div>
+      <div><label class="field-label" for="firstpw-2">Repita a nova senha</label><input class="input" id="firstpw-2" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')FirstAccess.savePassword()"></div>
+      <button class="btn btn-pri" id="firstpw-save" onclick="FirstAccess.savePassword()"><i class="ti ti-key"></i>Salvar e continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Primeiro acesso: cadastro complementar. O telefone só é guardado com o "sim" (LGPD). -->
+<div class="modal-ov hidden" id="modal-firstprofile" role="dialog" aria-modal="true" aria-labelledby="fp-title">
+  <div class="modal-box" style="width:520px;max-height:92vh;overflow:auto">
+    <div class="modal-title" id="fp-title">Complete o seu cadastro</div>
+    <div class="modal-sub">Leva um minuto e ajuda a equipe a saber quem faz o quê.</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label class="field-label" for="fp-dept">Departamento (obrigatório)</label><input class="input" id="fp-dept" maxlength="80" placeholder="Ex.: Tecnologia, Financeiro, Operações"></div>
+      <div><label class="field-label" for="fp-know">Conhecimentos, em poucas palavras (obrigatório)</label><textarea class="input" id="fp-know" rows="2" maxlength="600" style="resize:vertical;font-family:inherit" placeholder="Ex.: gestão de projetos, SAP FI, integrações"></textarea></div>
+      <div><label class="field-label" for="fp-tools">Ferramentas que você domina (obrigatório)</label><input class="input" id="fp-tools" maxlength="400" placeholder="Ex.: Excel, Power BI, Jira, SQL"></div>
+      <fieldset style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:0">
+        <legend style="font-size:12px;font-weight:600;padding:0 4px">Mensagens do sistema no seu WhatsApp</legend>
+        <p style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:8px">Podemos usar o seu número de WhatsApp para enviar mensagens do PMO Compass (alertas e avisos dos projetos em que você atua)? Usamos o número <strong>somente para isso</strong>, ele fica visível só para você e para o administrador, e você pode <strong>retirar a autorização a qualquer momento</strong> (LGPD, art. 8º). Se escolher "Não", nada é guardado.</p>
+        <div style="display:flex;gap:18px;margin-bottom:8px">
+          <label style="display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer"><input type="radio" name="fp-consent" id="fp-consent-yes" onchange="FirstAccess.toggleConsent()"> Sim, autorizo</label>
+          <label style="display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer"><input type="radio" name="fp-consent" id="fp-consent-no" checked onchange="FirstAccess.toggleConsent()"> Não</label>
+        </div>
+        <div id="fp-phone-wrap" style="display:none"><label class="field-label" for="fp-phone">Telefone com WhatsApp (DDD + número)</label><input class="input" id="fp-phone" type="tel" inputmode="tel" maxlength="20" autocomplete="tel" placeholder="(11) 91234-5678"></div>
+      </fieldset>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-pri" id="fp-save" onclick="FirstAccess.saveProfile()"><i class="ti ti-check"></i>Salvar cadastro</button><button class="btn" onclick="FirstAccess.later()">Agora não</button></div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-ov hidden" id="modal-burnout" onclick="if(event.target===this)Burnout.closeModal()">
   <div class="modal-box" style="width:460px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
