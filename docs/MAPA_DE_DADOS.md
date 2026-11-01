@@ -71,7 +71,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 | Tabela | Para que serve | Escopo | Dado pessoal | Apagar dados do projeto | Apagar toda a base | Campos |
 |---|---|---|---|---|---|---|
 | `project_snapshots` | Fotografias diárias da saúde do projeto (tendência). | projeto | não | apaga (só Administrador) | apaga | `id`, `project_id`, `captured_at`, `source`, `health_score`, `health_status`, `budget_bac`, `budget_ac`, `budget_ev`, `budget_cpi`, `budget_eac`, `budget_consumo_pct`, `priority_index`, `critical_decisions_pending`, `team_overallocated_count`, `dims`, `captured_by` |
-| `project_settings` | Configurações por projeto (método, quadro, priorização, perfil de PMO). | projeto | não | apaga | apaga | `project_id`, `key`, `value`, `updated_at`, `updated_by` |
+| `project_settings` | Configurações por projeto, uma linha por chave: `methodology` (método), `agileConfig` (quadro e entrada de itens), `workCalendar` (calendário de trabalho: feriados do projeto, exceções autorizadas pelo gerente com justificativa), priorização e perfil de PMO. | projeto | não | apaga | apaga | `project_id`, `key`, `value`, `updated_at`, `updated_by` |
 | `projects` | Cadastro do projeto (nome, cliente, método, gerente responsável). | projeto | não | preserva | apaga | `id`, `name`, `client`, `icon`, `created_by`, `created_at`, `reference_date`, `area`, `methodology`, `manager_id` |
 | `project_access` | Quem pode abrir cada projeto. | projeto | não | preserva | apaga (cascata) | `project_id`, `user_id`, `granted_by`, `granted_at` |
 
@@ -246,3 +246,4 @@ Telas abertas a quem tem acesso ao projeto: `mywork`, `kanban`, `backlog`, `wbs`
 5. Indicador sem dado mostra "sem dados" — nunca verde, nunca vermelho. A varredura `npm run test:smoke` percorre todas as telas de um projeto vazio.
 6. Toda entrega que cria tabela, campo, chave do navegador, pasta de arquivos, função ou registro novo atualiza `docs/mapa-de-dados.json`, gera `docs/MAPA_DE_DADOS.md` e roda `npm run test:unit` e `npm run test:smoke` ANTES de ser entregue.
 7. Cada tela exige uma permissão de visão (mapa em `visoes`): o menu esconde e a tela barra a abertura direta; o banco também nega a leitura das tabelas de gestão e dos dados das pessoas a quem não tem a permissão.
+8. Datas planejadas (início e fim de sprint, início e fim planejados da WBS) não caem em fim de semana nem feriado; só o gerente do projeto autoriza exceção, com justificativa de 10 letras no mínimo, que fica no calendário do projeto e na auditoria. Datas reais não são travadas.

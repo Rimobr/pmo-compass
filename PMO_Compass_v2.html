@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.34.0'
+  version: '2.35.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1495,6 +1495,10 @@ body.icons-failed i[data-fb]::before{
   </div>
 
   <div id="settings-panel-pmo">
+  <div class="card" id="wc-card">
+    <div class="lbl"><i class="ti ti-calendar-event"></i>Calendário de trabalho<span class="help-q" data-help="Início e fim de sprint e as datas planejadas das entregas não podem cair em sábado, domingo ou feriado. Os feriados nacionais já estão aqui; acrescente os do estado, da cidade ou da empresa. Quando for preciso trabalhar num dia assim, o gerente do projeto autoriza uma exceção e escreve a justificativa. As datas REAIS (o que de fato aconteceu) não são travadas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div id="wc-root"></div>
+  </div>
   <div class="card">
     <div class="lbl"><i class="ti ti-route"></i>Metodologia deste projeto<span class="help-q" data-help="Define quais telas aparecem no menu deste projeto. Esconder uma tela não apaga nenhum dado: se você mudar de ideia, tudo volta. Projetos antigos ficam como Híbrido (todas as telas). Você pode abrir uma tela escondida pela busca (Ctrl+K) ou ligando 'Mostrar todas as telas'." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Escolha como este projeto é conduzido. O menu mostra só o que faz sentido para o método — menos telas, menos ruído.</p>
@@ -2156,9 +2160,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div class="field-group"><div class="field-label"><label for="as-name">Nome</label></div><input class="input" id="as-name" maxlength="80" placeholder="Ex: Sprint 5"></div>
     <div class="field-group"><div class="field-label"><label for="as-goal">Meta da sprint</label><span class="help-q" data-help="Uma frase com o que a sprint quer alcançar, por exemplo 'cliente consegue ver o extrato de 90 dias'. Orienta o que entra e o que fica de fora." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="as-goal" maxlength="300"></div>
     <div class="g2" style="gap:10px">
-      <div class="field-group"><div class="field-label"><label for="as-start">Início</label></div><input class="input" id="as-start" type="date"></div>
+      <div class="field-group"><div class="field-label"><label for="as-start">Início</label></div><input class="input" id="as-start" type="date" aria-describedby="as-cal-hint"></div>
       <div class="field-group"><div class="field-label"><label for="as-end">Fim</label></div><input class="input" id="as-end" type="date"></div>
     </div>
+    <div id="as-cal-hint" class="set-sub" style="margin:-4px 0 8px"><i class="ti ti-calendar-event"></i> Início e fim não podem cair em fim de semana ou feriado (o gerente pode autorizar uma exceção com justificativa).</div>
     <div class="field-group"><div class="field-label"><label for="as-cap">Capacidade (pontos)</label><span class="help-q" data-help="Quantos pontos o time consegue entregar nesta sprint. Use a velocidade das sprints anteriores como referência. Passar disso é sinal de sprint cheia demais." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="as-cap" type="number" min="0" max="1000"></div>
     <div class="btn-row" style="margin-top:14px;justify-content:space-between">
       <button class="btn btn-sm btn-red" id="as-del" onclick="Agile.deleteSprint()"><i class="ti ti-trash"></i>Excluir</button>
@@ -5891,6 +5896,130 @@ const BugReport = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: services/work-calendar ─ Calendário de trabalho: fim de semana e feriados não recebem datas do plano (exceção só do gerente, com justificativa) -->
+<script data-module="services/work-calendar">
+const WorkCal = (() => {
+  const WEEKDAY = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const pad = n => String(n).padStart(2, '0');
+  const iso = (y, m, d) => y + '-' + pad(m) + '-' + pad(d);
+  const parse = s => new Date(String(s).slice(0, 10) + 'T00:00:00Z');
+  const toIso = d => iso(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
+  const addDays = (s, n) => { const d = parse(s); d.setUTCDate(d.getUTCDate() + n); return toIso(d); };
+  const weekday = s => parse(s).getUTCDay();
+  const fmt = s => String(s).slice(0, 10).split('-').reverse().join('/');
+  // Páscoa (algoritmo gregoriano): base dos feriados móveis
+  function easter(y) {
+    const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const mo = Math.floor((h + l - 7 * m + 114) / 31), da = ((h + l - 7 * m + 114) % 31) + 1;
+    return iso(y, mo, da);
+  }
+  const NAT_CACHE = {};
+  // Feriados nacionais do Brasil (lei) + pontos facultativos que a maioria das empresas observa (Carnaval, Corpus Christi)
+  function national(y) {
+    if(NAT_CACHE[y]) return NAT_CACHE[y];
+    const p = easter(y);
+    const list = [
+      [iso(y, 1, 1), 'Confraternização Universal', 'feriado'], [iso(y, 4, 21), 'Tiradentes', 'feriado'], [iso(y, 5, 1), 'Dia do Trabalho', 'feriado'],
+      [iso(y, 9, 7), 'Independência do Brasil', 'feriado'], [iso(y, 10, 12), 'Nossa Senhora Aparecida', 'feriado'], [iso(y, 11, 2), 'Finados', 'feriado'],
+      [iso(y, 11, 15), 'Proclamação da República', 'feriado'], [iso(y, 11, 20), 'Dia da Consciência Negra', 'feriado'], [iso(y, 12, 25), 'Natal', 'feriado'],
+      [addDays(p, -48), 'Carnaval (segunda-feira)', 'facultativo'], [addDays(p, -47), 'Carnaval (terça-feira)', 'facultativo'],
+      [addDays(p, -2), 'Sexta-feira Santa', 'feriado'], [addDays(p, 60), 'Corpus Christi', 'facultativo']
+    ].map(x => ({ date: x[0], name: x[1], kind: x[2] })).sort((a, b) => a.date.localeCompare(b.date));
+    return (NAT_CACHE[y] = list);
+  }
+  const norm = cfg => ({ holidays: Array.isArray(cfg && cfg.holidays) ? cfg.holidays : [], exceptions: Array.isArray(cfg && cfg.exceptions) ? cfg.exceptions : [], facultativos: !(cfg && cfg.facultativos === false) });
+  // Por que o dia NÃO é útil ("" = é dia de trabalho). Uma exceção autorizada pelo gerente libera a data.
+  function reason(date, cfg) {
+    if(!date) return '';
+    const c = norm(cfg), d = String(date).slice(0, 10);
+    if(c.exceptions.some(e => e.date === d)) return '';
+    const w = weekday(d); if(w === 0 || w === 6) return WEEKDAY[w];
+    const custom = c.holidays.find(h => h.date === d); if(custom) return 'feriado (' + custom.name + ')';
+    const nat = national(+d.slice(0, 4)).find(h => h.date === d);
+    if(nat && (nat.kind === 'feriado' || c.facultativos)) return (nat.kind === 'feriado' ? 'feriado' : 'ponto facultativo') + ' (' + nat.name + ')';
+    return '';
+  }
+  const isOff = (date, cfg) => reason(date, cfg) !== '';
+  const nextWorking = (date, cfg) => { let d = String(date).slice(0, 10), n = 0; while(isOff(d, cfg) && n++ < 40) d = addDays(d, 1); return d; };
+  const prevWorking = (date, cfg) => { let d = String(date).slice(0, 10), n = 0; while(isOff(d, cfg) && n++ < 40) d = addDays(d, -1); return d; };
+  const workingDays = (a, b, cfg) => { let n = 0; for(let d = String(a).slice(0, 10), k = 0; d <= String(b).slice(0, 10) && k < 4000; d = addDays(d, 1), k++) if(!isOff(d, cfg)) n++; return n; };
+  function addException(cfg, e) { const c = norm(cfg); return { ...c, exceptions: c.exceptions.filter(x => x.date !== e.date).concat([{ date: e.date, reason: e.reason, by: e.by || '', at: e.at || '' }]).sort((a, b) => a.date.localeCompare(b.date)) }; }
+  function addHoliday(cfg, h) { const c = norm(cfg); return { ...c, holidays: c.holidays.filter(x => x.date !== h.date).concat([{ date: h.date, name: h.name }]).sort((a, b) => a.date.localeCompare(b.date)) }; }
+  const removeHoliday = (cfg, date) => { const c = norm(cfg); return { ...c, holidays: c.holidays.filter(x => x.date !== date) }; };
+  const removeException = (cfg, date) => { const c = norm(cfg); return { ...c, exceptions: c.exceptions.filter(x => x.date !== date) }; };
+
+  // ── do projeto ativo (guarda nos Ajustes do projeto: "workCalendar") ──
+  const cfgNow = () => norm(typeof DB !== 'undefined' ? DB.get('workCalendar') : null);
+  function save(c) {
+    DB.set('workCalendar', c);
+    if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'workCalendar', c);
+    if(typeof AgileCalc !== 'undefined' && AgileCalc.setOffDay) AgileCalc.setOffDay(d => isOff(d, cfgNow()));
+  }
+  // Libera uma data para o plano: dia útil passa direto; dia não útil exige o gerente (edit_plan) e uma justificativa, que fica registrada
+  function ensure(date, what) {
+    const r = reason(date, cfgNow()); if(!r) return true;
+    const msg = fmt(date) + ' é ' + r + '. ' + (what || 'As datas do plano') + ' não podem cair em fim de semana ou feriado.';
+    if(typeof Auth !== 'undefined' && !Auth.isPreview() && Auth.can('edit_plan')) {
+      const j = prompt(msg + '\n\nComo gerente do projeto você pode autorizar uma EXCEÇÃO para este dia. Escreva a justificativa (mínimo 10 letras) ou cancele:');
+      if(j === null) return false;
+      if(j.trim().length < 10) { T.show('⚠️ Justificativa curta demais (mínimo 10 letras). Nada foi alterado.'); return false; }
+      save(addException(cfgNow(), { date: String(date).slice(0, 10), reason: j.trim().slice(0, 300), by: Auth.getName(), at: new Date().toISOString() }));
+      if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('calendar_exception', 'Exceção de calendário em ' + fmt(date) + ': ' + j.trim().slice(0, 120), { date: String(date).slice(0, 10) });
+      T.show('✅ Exceção autorizada para ' + fmt(date) + ' (justificativa registrada).');
+      return true;
+    }
+    if(typeof T !== 'undefined') T.show('🔒 ' + msg + ' Peça ao gerente do projeto para autorizar uma exceção.', 7000);
+    return false;
+  }
+  // Várias datas de uma vez (início e fim): só segue se todas passarem
+  const ensureAll = (dates, what) => dates.every(d => !d || ensure(d, what));
+  if(typeof AgileCalc !== 'undefined' && AgileCalc.setOffDay) AgileCalc.setOffDay(d => isOff(d, cfgNow()));
+  return { national, reason, isOff, nextWorking, prevWorking, workingDays, easter, norm, addException, addHoliday, removeHoliday, removeException, cfgNow, save, ensure, ensureAll, fmt, WEEKDAY };
+})();
+</script>
+
+<!-- ■ MODULE: ui/work-calendar-ui ─ Calendário de trabalho nas Configurações: feriados nacionais, feriados do projeto e exceções autorizadas -->
+<script data-module="ui/work-calendar-ui">
+const WorkCalUi = (() => {
+  const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmt = d => WorkCal.fmt(d), when = v => v ? new Date(v).toLocaleDateString('pt-BR') : '';
+  function render() {
+    const root = document.getElementById('wc-root'); if(!root) return;
+    const cfg = WorkCal.cfgNow(), y = Clock.today().getFullYear(), canEdit = Auth.can('edit_plan') && !Auth.isPreview();
+    const nat = [y, y + 1].flatMap(yy => WorkCal.national(yy)).filter(h => cfg.facultativos || h.kind === 'feriado');
+    const chip = h => '<span class="chip" title="' + esc(h.kind === 'feriado' ? 'Feriado nacional' : 'Ponto facultativo') + '">' + fmt(h.date).slice(0, 5) + '/' + h.date.slice(2, 4) + ' · ' + esc(h.name) + '</span>';
+    root.innerHTML = '<p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin:0 0 8px">Fim de semana e feriados <b>não recebem datas do plano</b>. O gerente pode autorizar uma exceção com justificativa.</p>'
+      + '<label style="display:flex;gap:8px;align-items:center;font-size:12.5px;margin-bottom:10px;cursor:pointer"><input type="checkbox" id="wc-fac"' + (cfg.facultativos ? ' checked' : '') + (canEdit ? '' : ' disabled') + ' onchange="WorkCalUi.setFacultativos(this.checked)"> Tratar Carnaval e Corpus Christi (pontos facultativos) como dia não útil</label>'
+      + '<div class="field-label" style="margin-bottom:4px">Feriados nacionais (' + y + ' e ' + (y + 1) + ')</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">' + nat.map(chip).join('') + '</div>'
+      + '<div class="field-label" style="margin-bottom:4px">Feriados do estado, da cidade ou da empresa</div>'
+      + (cfg.holidays.length ? cfg.holidays.map(h => '<div class="set-row"><div class="set-lbl">' + fmt(h.date) + ' · ' + esc(h.name) + '</div>' + (canEdit ? '<button class="btn btn-sm" aria-label="Remover o feriado ' + esc(h.name) + '" onclick="WorkCalUi.removeHoliday(\'' + h.date + '\')"><i class="ti ti-trash"></i></button>' : '') + '</div>').join('') : '<div style="font-size:12px;color:var(--t3);margin-bottom:6px">Nenhum cadastrado.</div>')
+      + (canEdit ? '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:8px 0 14px"><div class="field"><label for="wc-h-date">Data</label><input class="input" id="wc-h-date" type="date"></div><div class="field" style="flex:1 1 200px"><label for="wc-h-name">Nome</label><input class="input" id="wc-h-name" maxlength="60" placeholder="Ex.: Aniversário da cidade"></div><button class="btn btn-sm" onclick="WorkCalUi.addHoliday()"><i class="ti ti-plus"></i>Cadastrar feriado</button></div>' : '')
+      + '<div class="field-label" style="margin-bottom:4px">Exceções autorizadas pelo gerente (dias não úteis liberados para o plano)</div>'
+      + (cfg.exceptions.length ? cfg.exceptions.map(e => '<div class="set-row" style="align-items:flex-start"><div><div class="set-lbl">' + fmt(e.date) + ' · ' + esc(WorkCal.WEEKDAY[new Date(e.date + 'T00:00:00Z').getUTCDay()]) + '</div><div class="set-sub">' + esc(e.reason) + (e.by ? ' — ' + esc(e.by) : '') + (e.at ? ' · ' + when(e.at) : '') + '</div></div>' + (canEdit ? '<button class="btn btn-sm" aria-label="Remover a exceção de ' + fmt(e.date) + '" onclick="WorkCalUi.removeException(\'' + e.date + '\')"><i class="ti ti-trash"></i></button>' : '') + '</div>').join('') : '<div style="font-size:12px;color:var(--t3);margin-bottom:6px">Nenhuma exceção autorizada.</div>')
+      + (canEdit ? '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px"><div class="field"><label for="wc-e-date">Data</label><input class="input" id="wc-e-date" type="date"></div><div class="field" style="flex:1 1 260px"><label for="wc-e-why">Justificativa (obrigatória)</label><input class="input" id="wc-e-why" maxlength="300" placeholder="Ex.: Virada de sistema: o cutover só pode ocorrer no sábado"></div><button class="btn btn-sm btn-acc" onclick="WorkCalUi.addException()"><i class="ti ti-check"></i>Autorizar exceção</button></div>' : '<div style="font-size:11.5px;color:var(--t3);margin-top:6px"><i class="ti ti-lock"></i> Só o gerente do projeto cadastra feriados e autoriza exceções.</div>');
+  }
+  const guard = () => Auth.guard('edit_plan');
+  function setFacultativos(on) { if(!guard()) { render(); return; } WorkCal.save({ ...WorkCal.cfgNow(), facultativos: !!on }); render(); }
+  function addHoliday() {
+    if(!guard()) return; const d = document.getElementById('wc-h-date').value, n = document.getElementById('wc-h-name').value.trim().slice(0, 60);
+    if(!d || n.length < 2) { T.show('⚠️ Informe a data e o nome do feriado.'); return; }
+    WorkCal.save(WorkCal.addHoliday(WorkCal.cfgNow(), { date: d, name: n })); T.show('✅ Feriado cadastrado.'); render();
+  }
+  function removeHoliday(d) { if(!guard()) return; WorkCal.save(WorkCal.removeHoliday(WorkCal.cfgNow(), d)); render(); }
+  function addException() {
+    if(!guard()) return; const d = document.getElementById('wc-e-date').value, j = document.getElementById('wc-e-why').value.trim();
+    if(!d) { T.show('⚠️ Escolha a data.'); return; }
+    if(j.length < 10) { T.show('⚠️ Escreva a justificativa (mínimo 10 letras).'); return; }
+    WorkCal.save(WorkCal.addException(WorkCal.cfgNow(), { date: d, reason: j.slice(0, 300), by: Auth.getName(), at: new Date().toISOString() }));
+    if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('calendar_exception', 'Exceção de calendário em ' + fmt(d) + ': ' + j.slice(0, 120), { date: d });
+    T.show('✅ Exceção autorizada.'); render();
+  }
+  function removeException(d) { if(!guard()) return; WorkCal.save(WorkCal.removeException(WorkCal.cfgNow(), d)); render(); }
+  return { render, setFacultativos, addHoliday, removeHoliday, addException, removeException };
+})();
+</script>
+
 <!-- ■ MODULE: pages/noproject ─ Base nova ou conta sem projeto: convida a criar o primeiro projeto (nada de projeto de enchimento) -->
 <script data-module="pages/noproject">
 const NoProject = (() => {
@@ -7139,6 +7268,7 @@ const R = (() => {
     if(id === 'account' && typeof Account !== 'undefined') Account.render();
     if(id === 'sprintnow' && typeof SprintNow !== 'undefined') SprintNow.render();
     if(id === 'noproject' && typeof NoProject !== 'undefined') NoProject.render();
+    if(id === 'settings' && typeof WorkCalUi !== 'undefined') WorkCalUi.render();
     if(id === 'settings' && typeof SettingsTabs !== 'undefined') SettingsTabs.show();
     if(typeof Agile !== 'undefined') Agile.renderDashboard();
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
@@ -10396,6 +10526,7 @@ const SheetImport = (() => {
         if(cell(r, map, 'start') && !start) warn(i, `"${name}": data de início não reconhecida — deixada em branco.`);
         if(cell(r, map, 'end') && !end) warn(i, `"${name}": data de término não reconhecida — deixada em branco.`);
         if(start && end && end < start) { warn(i, `"${name}": término antes do início — datas trocadas.`); }
+        if(ctx.offReason) [['início', start], ['término', end]].forEach(([lbl, d]) => { const r = d && ctx.offReason(d); if(r) warn(i, `"${name}": ${lbl} em ${d.split('-').reverse().join('/')} é ${r} — ajuste a data ou peça ao gerente para autorizar a exceção.`); });
         const [s, e] = (start && end && end < start) ? [end, start] : [start, end];
         let pct = SheetParse.parseNumber(raw(r, map, 'pct'));
         if(pct != null && pct > 0 && pct <= 1 && String(raw(r, map, 'pct')).indexOf('%') < 0 && String(raw(r, map, 'pct')).indexOf('.') >= 0) pct = pct * 100; // 0,45 = 45%
@@ -11250,9 +11381,11 @@ const AgileCalc = (() => {
 
   // ── Capacidade por pessoa (alocação e folgas) ──
   // Dias úteis (segunda a sexta) entre duas datas, inclusive
+  let offDay = null; // calendário do projeto (feriados); sem ele só o fim de semana fica de fora
+  const setOffDay = fn => { offDay = typeof fn === 'function' ? fn : null; };
   function workingDays(startOn, endOn) {
     let n = 0; const total = diffDays(startOn, endOn);
-    for(let d = 0; d <= total; d++) { const wd = new Date(addDays(startOn, d) + 'T00:00:00Z').getUTCDay(); if(wd !== 0 && wd !== 6) n++; }
+    for(let d = 0; d <= total; d++) { const day = addDays(startOn, d), wd = new Date(day + 'T00:00:00Z').getUTCDay(); if(wd !== 0 && wd !== 6 && !(offDay && offDay(day))) n++; }
     return n;
   }
   // Ritmo real de cada pessoa: média de pontos concluídos por sprint nas últimas 3 sprints encerradas em que ela teve item
@@ -11302,7 +11435,7 @@ const AgileCalc = (() => {
     return advice;
   }
 
-  return { COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, bugParentError, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, bugParentError, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
 })();
 </script>
 
@@ -12151,6 +12284,7 @@ const Agile = (() => {
     const name = val('as-name').trim(), start = val('as-start'), end = val('as-end'), cap = val('as-cap').trim();
     if(name.length < 2) { T.show('⚠️ Dê um nome à sprint.'); return; }
     if(!start || !end || end < start) { T.show('⚠️ Confira as datas: o fim não pode ser antes do início.'); return; }
+    if(typeof WorkCal !== 'undefined' && !WorkCal.ensureAll([start, end], 'O início e o fim da sprint')) return;
     let s = sprintCtx ? sprints.find(x => x.id === sprintCtx) : null;
     const f = { name, goal: val('as-goal').trim(), startOn: start, endOn: end, capacity: cap === '' ? '' : Math.max(0, parseInt(cap, 10) || 0) };
     if(s) Object.assign(s, f); else { s = { id: AgileCalc.nextId('SP', sprints), state: 'planejada', closedOn: '', ...f }; sprints.push(s); }
@@ -14022,6 +14156,7 @@ const ImportUi = (() => {
     if(ctx.target === 'team') return { existingNames: (DB.get('team') || []).map(m => m.name) };
     if(ctx.target === 'risks') return { existingTitles: Risks.titles() };
     if(ctx.target === 'hours') return { existingKeys: Hours.keys() };
+    if(ctx.target === 'wbs') return { offReason: d => (typeof WorkCal !== 'undefined' ? WorkCal.reason(d, WorkCal.cfgNow()) : '') };
     if(ctx.target === 'backlog') return { today, existingTitles: Agile.titles(), existingItems: Agile.itemRefs(), sprints: Agile.sprintRefs() };
     if(ctx.target === 'costs') return { today, existingKeys: (DB.get('costActuals') || []).map(a => norm(a.label) + '|' + a.amount + '|' + a.date) };
     return { idSeed: Date.now().toString(36) };
@@ -16635,6 +16770,7 @@ const WBS = (() => {
     let value = rawValue;
     if(field === 'pct') value = Math.max(0, Math.min(100, parseInt(rawValue,10) || 0));
     else if(['start','end','startActual','endActual'].includes(field)) value = rawValue || null;
+    if((field === 'start' || field === 'end') && value && typeof WorkCal !== 'undefined' && !WorkCal.ensure(value, 'A data planejada')) { renderTable(); return; }
     if(String(old==null?'':old) === String(value==null?'':value)) return; // sem mudança real, não polui a Trilha
     item[field] = value;
     if(field === 'status' && scope === 'module') item.critical = (value === 'red');
@@ -17070,6 +17206,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     if(!start || !end) { T.show('⚠️ Preencha as datas de início e fim.'); return; }
     if(parseDate(end) < parseDate(start)) { T.show('⚠️ A data de fim não pode ser antes da data de início.'); return; }
     if(startActual && endActual && parseDate(endActual) < parseDate(startActual)) { T.show('⚠️ O fim real não pode ser antes do início real.'); return; }
+    if(typeof WorkCal !== 'undefined' && !WorkCal.ensureAll([start, end], 'O início e o fim planejados')) return; // as datas REAIS não são travadas: registram o que de fato aconteceu
 
     if(modalCtx.mode === 'add-module') {
       data.push({ id:genId('wm'), label, status, pct, start, end, startActual, endActual, responsavel, critical: status==='red', predecessors, children:[] });
@@ -17307,9 +17444,10 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
         <input class="input" id="wbs-f-label" placeholder="Ex: Cadastro de matrículas">
       </div>
       <div class="g2" style="gap:10px">
-        <div><div class="field-label">Início planejado</div><input class="input" type="date" id="wbs-f-start" oninput="WBS.updateExpectedNoteFromForm()"></div>
+        <div><div class="field-label">Início planejado</div><input class="input" type="date" id="wbs-f-start" oninput="WBS.updateExpectedNoteFromForm()" aria-describedby="wbs-cal-hint"></div>
         <div><div class="field-label">Fim planejado</div><input class="input" type="date" id="wbs-f-end" oninput="WBS.updateExpectedNoteFromForm()"></div>
       </div>
+      <div id="wbs-cal-hint" class="set-sub" style="margin:-2px 0 8px"><i class="ti ti-calendar-event"></i> As datas planejadas não podem cair em fim de semana ou feriado (o gerente pode autorizar uma exceção). As datas reais não têm essa trava.</div>
       <div class="g2" style="gap:10px">
         <div><div class="field-label">Início real</div><input class="input" type="date" id="wbs-f-start-actual"></div>
         <div><div class="field-label">Fim real</div><input class="input" type="date" id="wbs-f-end-actual"></div>

@@ -46,7 +46,7 @@
     },
     "project_settings": {
       "domain": "Projetos",
-      "desc": "Configurações por projeto (método, quadro, priorização, perfil de PMO).",
+      "desc": "Configurações por projeto, uma linha por chave: `methodology` (método), `agileConfig` (quadro e entrada de itens), `workCalendar` (calendário de trabalho: feriados do projeto, exceções autorizadas pelo gerente com justificativa), priorização e perfil de PMO.",
       "scope": "projeto",
       "personal": false,
       "clearProject": "apaga",
@@ -549,7 +549,8 @@
     "Sair da conta apaga os dados do navegador; outra pessoa que entra apaga os da anterior antes de sincronizar.",
     "Indicador sem dado mostra \"sem dados\" — nunca verde, nunca vermelho. A varredura `npm run test:smoke` percorre todas as telas de um projeto vazio.",
     "Toda entrega que cria tabela, campo, chave do navegador, pasta de arquivos, função ou registro novo atualiza `docs/mapa-de-dados.json`, gera `docs/MAPA_DE_DADOS.md` e roda `npm run test:unit` e `npm run test:smoke` ANTES de ser entregue.",
-    "Cada tela exige uma permissão de visão (mapa em `visoes`): o menu esconde e a tela barra a abertura direta; o banco também nega a leitura das tabelas de gestão e dos dados das pessoas a quem não tem a permissão."
+    "Cada tela exige uma permissão de visão (mapa em `visoes`): o menu esconde e a tela barra a abertura direta; o banco também nega a leitura das tabelas de gestão e dos dados das pessoas a quem não tem a permissão.",
+    "Datas planejadas (início e fim de sprint, início e fim planejados da WBS) não caem em fim de semana nem feriado; só o gerente do projeto autoriza exceção, com justificativa de 10 letras no mínimo, que fica no calendário do projeto e na auditoria. Datas reais não são travadas."
   ],
   "visoes": {
     "permissoes": {
