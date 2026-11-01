@@ -107,6 +107,12 @@ Deno.serve(async (req) => {
         nm ? count(db.from("backlog_items").select("id", { count: "exact", head: true }).ilike("assignee", nm)) : 0,
         nm ? count(db.from("time_entries").select("id", { count: "exact", head: true }).ilike("person_name", nm)) : 0,
       ]);
+      // O log de auditoria é permanente (nem o administrador apaga): quem já deixou rastro nele só pode ser inativado
+      const audit = await count(db.from("audit_log").select("id", { count: "exact", head: true }).eq("actor_id", id));
+      if (links.every((n: number) => n === 0) && audit > 0) {
+        results.push({ id, name: p.name, status: "blocked", reason: `Tem ${audit} registro(s) no log de auditoria (permanente, por segurança) — inative em vez de excluir.`, must_inactivate: true });
+        continue;
+      }
       if (links.some((n: number) => n > 0)) { results.push({ id, name: p.name, status: "blocked", reason: "Tem vínculo com projeto ou atividade — inative em vez de excluir.", must_inactivate: true }); continue; }
       const { error: de } = await db.auth.admin.deleteUser(id);
       results.push(de ? { id, name: p.name, status: "blocked", reason: "Tem histórico no sistema — inative em vez de excluir.", must_inactivate: true } : { id, name: p.name, status: "deleted" });
