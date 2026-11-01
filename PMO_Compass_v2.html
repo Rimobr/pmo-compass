@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.38.0'
+  version: '2.38.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -17708,8 +17708,8 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     <!-- Supabase conectado, mas ninguém logado: login/cadastro direto aqui, sem precisar ir em Configurações -->
     <div id="auth-cloud-login-box" style="display:none;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--b1)">
       <div class="field-label" style="margin-bottom:6px"><i class="ti ti-cloud"></i> Entrar com sua conta Supabase</div>
-      <input class="input" id="auth-f-email" type="email" placeholder="seu@email.com" style="margin-bottom:8px">
-      <input class="input" id="auth-f-password" type="password" placeholder="Senha" style="margin-bottom:8px">
+      <input class="input" id="auth-f-email" type="email" autocomplete="username" onkeydown="if(event.key==='Enter'){event.preventDefault();Auth.doSignIn()}" placeholder="seu@email.com" style="margin-bottom:8px">
+      <input class="input" id="auth-f-password" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter'){event.preventDefault();Auth.doSignIn()}" placeholder="Senha" style="margin-bottom:8px">
       <div class="btn-row">
         <button class="btn btn-sm btn-acc" onclick="Auth.doSignIn()"><i class="ti ti-login"></i>Entrar</button>
       </div>
@@ -17719,7 +17719,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
            sem isso, o botão simplesmente mostra o erro do Supabase, sem quebrar nada. -->
       <div style="display:flex;align-items:center;gap:8px;margin:12px 0"><div style="flex:1;height:1px;background:var(--b1)"></div><span style="font-size:11px;color:var(--t3)">OU</span><div style="flex:1;height:1px;background:var(--b1)"></div></div>
       <div class="field-label" style="margin-bottom:6px"><i class="ti ti-building"></i> Login corporativo (SSO/SAML)</div>
-      <div class="prov-inp-row"><input class="input" id="auth-f-sso-domain" placeholder="dominio-da-sua-empresa.com.br"><button class="btn btn-sm" onclick="Auth.doSignInSSO()"><i class="ti ti-arrow-right"></i>Entrar com SSO</button></div>
+      <div class="prov-inp-row"><input class="input" id="auth-f-sso-domain" onkeydown="if(event.key==='Enter'){event.preventDefault();Auth.doSignInSSO()}" placeholder="dominio-da-sua-empresa.com.br"><button class="btn btn-sm" onclick="Auth.doSignInSSO()"><i class="ti ti-arrow-right"></i>Entrar com SSO</button></div>
       <div style="font-size:11px;color:var(--t3);margin-top:6px">Só funciona se o administrador desta instância já configurou SSO no Supabase para o seu domínio corporativo.</div>
     </div>
 
