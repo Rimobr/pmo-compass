@@ -94,3 +94,14 @@ test('teste de conexão da IA: botão por provedor, explica chave recusada e fal
   assert.match(explain('Failed to fetch'), /internet/);
   assert.equal(explain('algo diferente'), '');
 });
+
+test('ciclo de vida do usuário: inativar tira o perfil, só admin/gerente responsável troca responsável, nulo nunca autoriza', () => {
+  const sql = ['20261101110000_user_lifecycle.sql', '20261101110100_user_lifecycle_fix.sql'].map(f => readFileSync(join(root, 'supabase', 'migrations', f), 'utf8')).join('\n');
+  assert.match(sql, /where id = auth\.uid\(\) and active/);
+  assert.match(sql, /coalesce\(public\.current_role\(\), ''\) = 'admin' or coalesce\(public\.is_project_manager\(pid\), false\)/);
+  assert.match(sql, /status <> 'done'/); assert.match(sql, /status <> 'grn'/); // concluídas nunca mudam
+  assert.match(sql, /guard_profile_active/);
+  assert.match(fn, /set_active/); assert.match(fn, /último administrador/); assert.match(fn, /ban_duration/);
+  assert.match(fn, /status: "blocked"[\s\S]{0,120}inative em vez de excluir/);
+  for (const k of ['Users.startLife', 'Users.rwRun', 'Cloud.manageUsers', 'chave salva']) assert.ok(html.includes(k), k);
+});

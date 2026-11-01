@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.20.1'
+  version: '2.21.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1492,17 +1492,21 @@ body.icons-failed i[data-fb]::before{
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin:0">Três camadas, nesta ordem: <strong style="color:var(--t1)">1. a conta</strong> (quem entra) tem um <strong style="color:var(--t1)">2. perfil de acesso</strong> (o que pode fazer, em todos os projetos) e é <strong style="color:var(--t1)">3. membro de cada projeto</strong> que pode ver. O perfil só o Administrador altera. Quem entra em cada projeto o Administrador e o <strong style="color:var(--t1)">gerente responsável</strong> por aquele projeto decidem; os demais perfis veem apenas o que o perfil libera.</p>
   </div>
 
+  <div class="card" id="users-hint" style="display:none"><div class="lbl"><i class="ti ti-users"></i>Usuários e acesso</div><p style="font-size:12.5px;color:var(--t2);line-height:1.6">Para <strong style="color:var(--t1)">criar, inativar ou trocar usuários</strong>, entre com a conta de <strong style="color:var(--t1)">Administrador</strong> (botão de perfil no canto superior direito → <em>Entrar</em>). Sem conexão com a nuvem, esta área não aparece.</p></div>
+
   <div class="card" id="users-card" style="display:none">
     <div class="lbl"><i class="ti ti-users"></i>Pessoas e acesso<span class="help-q" data-help="Cada pessoa tem um perfil (o que ela pode fazer) e os projetos que ela pode abrir. Administradores veem todos os projetos. Aqui você muda as duas coisas no mesmo lugar, sem trocar de tela." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Para cada pessoa: escolha o <strong style="color:var(--t1)">perfil</strong> e inclua nos <strong style="color:var(--t1)">projetos</strong> que ela pode ver. Não existe cadastro aberto: <strong style="color:var(--t1)">o administrador cria a conta</strong> em "Nova conta" (e-mail, perfil, projetos e senha temporária) e passa os dados à pessoa.</p>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Para cada pessoa: escolha o <strong style="color:var(--t1)">perfil</strong> e inclua nos <strong style="color:var(--t1)">projetos</strong> que ela pode ver. Não existe cadastro aberto: <strong style="color:var(--t1)">o administrador cria o usuário</strong> em "Novo usuário" (nome, e-mail, perfil e projetos); a senha temporária segue por e-mail. Marque as caixas para <strong style="color:var(--t1)">inativar, reativar ou excluir</strong> vários de uma vez.</p>
     <div class="btn-row" style="margin-bottom:10px">
       <input class="input" id="users-q" type="search" placeholder="Buscar pessoa…" aria-label="Buscar pessoa" style="max-width:240px" oninput="Users.setFilter()">
       <select class="input" id="users-proj" aria-label="Filtrar por projeto" style="width:auto;max-width:300px" onchange="Users.setFilter()"></select>
       <button class="btn btn-sm" onclick="Users.refresh()"><i class="ti ti-refresh"></i>Atualizar</button>
-      <button class="btn btn-sm btn-pri" data-perm="admin" onclick="Users.newAccount()"><i class="ti ti-user-plus"></i>Nova conta</button>
+      <button class="btn btn-sm btn-pri" data-perm="admin" onclick="Users.newAccount()"><i class="ti ti-user-plus"></i>Novo usuário</button>
     </div>
     <div id="users-new-root"></div>
+    <div id="users-life-root"></div>
     <div id="users-list-root"></div>
+    <div id="users-reassign"></div>
     <div id="users-managers"></div>
   </div>
 
@@ -4023,7 +4027,7 @@ const Cloud = (() => {
   // usado pela tela de Usuários, pra promover/rebaixar gente sem precisar de SQL manual.
   async function listProfiles() {
     if(!client || !session) return [];
-    const { data, error } = await client.from('profiles').select('id,name,role,created_at').order('created_at', { ascending:true });
+    const { data, error } = await client.from('profiles').select('id,name,role,active,created_at').order('created_at', { ascending:true });
     if(error) { console.warn('Supabase: falha ao listar perfis', error); return []; }
     return data || [];
   }
@@ -4121,7 +4125,7 @@ const Cloud = (() => {
     if(!client) { T.show('⚠️ Configure a URL e a chave do Supabase primeiro.'); return false; }
     if(!email || !password) { T.show('⚠️ Preencha e-mail e senha.'); return false; }
     const { data, error } = await client.auth.signInWithPassword({ email, password });
-    if(error) { T.show('❌ ' + error.message); return false; }
+    if(error) { T.show('❌ ' + (/banned/i.test(error.message) ? 'Esta conta está inativa. Fale com o administrador.' : error.message)); return false; }
     session = data.session;
     reflectUi();
     await afterSignIn();
@@ -4185,6 +4189,40 @@ const Cloud = (() => {
     pushAuditEvent(v.consent ? 'whatsapp_consent_given' : 'profile_completed', v.consent ? 'Autorizou o uso do WhatsApp para mensagens do sistema' : 'Cadastro complementar preenchido (sem telefone)', {});
     return true;
   }
+  // Inativar, reativar ou excluir contas (função de servidor; o servidor decide o que pode ser excluído)
+  async function manageUsers(action, ids, active) {
+    const res = await invokeFn('users-admin', { action, user_ids:ids, active });
+    if(res.error) { T.show('❌ ' + res.error); return null; }
+    const out = (res.data && res.data.results) || [];
+    const n = st => out.filter(r => r.status === st).length;
+    pushAuditEvent('users_' + action, action === 'delete' ? n('deleted') + ' conta(s) excluída(s)' : (active ? n('reactivated') + ' conta(s) reativada(s)' : n('inactivated') + ' conta(s) inativada(s)'), { ids });
+    return out;
+  }
+  async function listTeamLinks(userIds) {
+    if(!client || !session || !userIds.length) return [];
+    const { data, error } = await client.from('team_members').select('project_id,name,user_id').in('user_id', userIds);
+    if(error) { console.warn('Supabase: falha ao ler equipe', error); return []; }
+    return data || [];
+  }
+  async function listTeamNames(pid) {
+    if(!client || !session) return [];
+    const { data } = await client.from('team_members').select('name').eq('project_id', pid).order('name');
+    return (data || []).map(r => r.name).filter(Boolean);
+  }
+  async function pendingWork(pid, person) {
+    if(!client || !session) return null;
+    const { data, error } = await client.rpc('pending_work', { pid, person });
+    if(error) { T.show('❌ ' + error.message); return null; }
+    return data;
+  }
+  async function reassignWork(pid, from, to) {
+    if(!client || !session) return null;
+    const { data, error } = await client.rpc('reassign_work', { pid, from_person:from, to_person:to || '' });
+    if(error) { T.show('❌ ' + error.message); return null; }
+    pushAuditEvent('work_reassigned', 'Atividades pendentes passadas de "' + from + '" para "' + (to || 'sem responsável') + '"', { projectId:pid, from, to:to || null, counts:data });
+    if(pid === DB.getActiveProjectId()) { try { await pullAll(); } catch(e) {} }
+    return data;
+  }
   async function changeOwnPassword(password) {
     if(!client || !session) { T.show('⚠️ Entre na conta primeiro.'); return false; }
     if(!password || password.length < 8) { T.show('⚠️ A nova senha precisa ter pelo menos 8 caracteres.'); return false; }
@@ -4223,8 +4261,9 @@ const Cloud = (() => {
       // As definições dos perfis (o que cada um pode) vêm do banco; sem elas valem os perfis prontos
       const { data: aps } = await client.from('access_profiles').select('*').order('created_at', { ascending:true });
       if(aps && aps.length) Auth.setProfileDefs(aps);
-      const { data: profile, error } = await client.from('profiles').select('name,role').eq('id', session.user.id).single();
+      const { data: profile, error } = await client.from('profiles').select('name,role,active').eq('id', session.user.id).single();
       if(error) throw error;
+      if(profile && profile.active === false) { T.show('🔒 Esta conta está inativa. Fale com o administrador.', 8000); await signOut(); return; }
       Auth.setFromCloud((profile && profile.name) || session.user.email, (profile && profile.role) || 'consulta');
       await syncProjects();
       await syncAllTeamMembers();
@@ -4633,7 +4672,7 @@ const Cloud = (() => {
   }
 
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
-    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
+    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, manageUsers, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument, pushRow, pushMany, deleteRow, msgTable, invokeFn,
@@ -4880,6 +4919,7 @@ const Users = (() => {
     const show = cloud && Auth.getRole() === 'admin';
     const showTeam = cloud && (show || (Auth.can('business') && managed().length > 0));
     if(card) { card.style.display = showTeam ? '' : 'none'; if(showTeam) refresh(); }
+    const hint = document.getElementById('users-hint'); if(hint) hint.style.display = showTeam ? 'none' : '';
     if(apCard) { apCard.style.display = show ? '' : 'none'; if(show) renderProfiles(); }
     if(typeof Erase !== 'undefined') Erase.render();
   }
@@ -4962,7 +5002,7 @@ const Users = (() => {
     if(!creating) { root.innerHTML = ''; return; }
     if(creating.done) {
       root.innerHTML = `<div class="card" style="margin-bottom:10px;background:var(--bg2)" role="status">
-        <div class="lbl"><i class="ti ti-circle-check"></i>${creating.done.reset ? 'Nova senha definida' : 'Conta criada'}</div>
+        <div class="lbl"><i class="ti ti-circle-check"></i>${creating.done.reset ? 'Nova senha definida' : 'Usuário criado'}</div>
         ${creating.done.sent
           ? `<p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:8px">Enviamos um e-mail para <strong>${escapeHtml(creating.done.email)}</strong> com a senha temporária. No primeiro acesso a pessoa será obrigada a criar uma nova senha e a completar o cadastro.</p>
             <div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-sm" onclick="Users.cancelNew()">Fechar</button></div>`
@@ -4975,7 +5015,7 @@ const Users = (() => {
     const roleOpts = Object.keys(defs()).filter(r => r !== 'admin').map(r => `<option value="${r}"${r === 'consulta' ? ' selected' : ''}>${escapeHtml(roleName(r))}</option>`).join('');
     const projs = projectsAll().map(p => `<label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" class="nc-proj" value="${p.id}"> ${escapeHtml(p.name || p.id)}</label>`).join('') || '<span style="font-size:12px;color:var(--t3)">Nenhum projeto ainda.</span>';
     root.innerHTML = `<div class="card" style="margin-bottom:10px;background:var(--bg2)">
-      <div class="lbl"><i class="ti ti-user-plus"></i>Nova conta</div>
+      <div class="lbl"><i class="ti ti-user-plus"></i>Novo usuário</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">
         <div class="field"><label for="nc-name">Nome (obrigatório)</label><input class="input" id="nc-name" maxlength="80" autocomplete="off"></div>
         <div class="field"><label for="nc-email">E-mail (obrigatório — recebe a senha temporária)</label><input class="input" id="nc-email" type="email" maxlength="160" autocomplete="off"></div>
@@ -4983,7 +5023,7 @@ const Users = (() => {
         <div class="field"><label for="nc-pass">Senha temporária</label><div class="prov-inp-row"><input class="input" id="nc-pass" value="${genPassword()}" autocomplete="off" style="font-family:var(--font-mono)"><button class="btn btn-sm" type="button" aria-label="Gerar outra senha" onclick="document.getElementById('nc-pass').value=Users.genPassword()"><i class="ti ti-refresh"></i></button></div></div>
       </div>
       <fieldset style="border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:8px 0"><legend style="font-size:11px;color:var(--t3);padding:0 4px">Projetos que ela poderá abrir (opcional — dá para incluir depois)</legend><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 12px">${projs}</div></fieldset>
-      <div style="display:flex;gap:8px"><button class="btn btn-sm btn-pri" id="nc-save" onclick="Users.createAccount()"><i class="ti ti-check"></i>Criar conta</button><button class="btn btn-sm" onclick="Users.cancelNew()">Cancelar</button></div>
+      <div style="display:flex;gap:8px"><button class="btn btn-sm btn-pri" id="nc-save" onclick="Users.createAccount()"><i class="ti ti-check"></i>Criar usuário</button><button class="btn btn-sm" onclick="Users.cancelNew()">Cancelar</button></div>
     </div>`;
   }
   async function createAccount() {
@@ -5015,6 +5055,131 @@ const Users = (() => {
     const el = document.getElementById('users-new-root'); if(el && el.scrollIntoView) el.scrollIntoView({ block:'nearest' });
   }
 
+  // ── Inativar, reativar e excluir (um ou vários) — só o Administrador ──
+  const sel = new Set();
+  let life = null; // { kind:'inativar'|'reativar'|'excluir', ids, pend, result }
+  function toggleSel(id, on) { if(on) sel.add(id); else sel.delete(id); renderPeople(); }
+  function selAll(on) {
+    const myId = Cloud.getUserId();
+    visible().filter(p => p.id !== myId).forEach(p => on ? sel.add(p.id) : sel.delete(p.id));
+    renderPeople();
+  }
+  const nameOf = id => ((people.find(p => p.id === id) || {}).name) || 'Conta';
+  async function startLife(kind) {
+    if(!isAdminUser()) return;
+    const ids = Array.from(sel).filter(id => id !== Cloud.getUserId());
+    if(!ids.length) { T.show('⚠️ Marque ao menos um usuário na lista.'); return; }
+    life = { kind, ids, pend: [], result: null };
+    renderLife();
+    if(kind === 'inativar') {
+      // Atividades que ficariam sem dono: por projeto em que a pessoa está na equipe
+      const links = await Cloud.listTeamLinks(ids);
+      const rows = await Promise.all(links.map(async l => ({ ...l, w: await Cloud.pendingWork(l.project_id, l.name) })));
+      life.pend = rows.filter(r => r.w && (r.w.backlog || r.w.cronograma));
+      renderLife();
+    }
+  }
+  function cancelLife() { life = null; renderLife(); }
+  function renderLife() {
+    const root = document.getElementById('users-life-root'); if(!root) return;
+    if(!life) { root.innerHTML = ''; return; }
+    const names = life.ids.map(id => escapeHtml(nameOf(id))).join(', ');
+    const n = life.ids.length;
+    if(life.result) {
+      const lbl = { deleted:'Excluído', inactivated:'Inativado', reactivated:'Reativado', blocked:'Não foi possível', error:'Erro' };
+      const blocked = life.result.filter(r => r.must_inactivate);
+      root.innerHTML = `<div class="card" style="margin-bottom:10px;background:var(--bg2)" role="status"><div class="lbl"><i class="ti ti-list-check"></i>Resultado</div>
+        ${life.result.map(r => `<div class="set-row"><div class="set-lbl">${escapeHtml(r.name || nameOf(r.id))}</div><div class="set-sub">${lbl[r.status] || r.status}${r.reason ? ' — ' + escapeHtml(r.reason) : ''}</div></div>`).join('')}
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">${blocked.length ? `<button class="btn btn-sm btn-pri" onclick="Users.inactivateBlocked()"><i class="ti ti-user-off"></i>Inativar ${blocked.length === 1 ? 'esse usuário' : 'esses ' + blocked.length + ' usuários'}</button>` : ''}<button class="btn btn-sm" onclick="Users.cancelLife()">Fechar</button></div></div>`;
+      return;
+    }
+    let body = '';
+    if(life.kind === 'inativar') {
+      const targets = people.filter(p => p.active !== false && !life.ids.includes(p.id));
+      const pend = life.pend.length
+        ? `<p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin:8px 0 4px">Há <strong>atividades ainda não concluídas</strong> no nome de quem será inativado:</p><ul style="margin:0 0 8px 18px;font-size:12.5px;color:var(--t2)">${life.pend.map(r => `<li>${escapeHtml(r.name)} — ${escapeHtml(projName(r.project_id))}: ${r.w.backlog} no backlog, ${r.w.cronograma} no cronograma</li>`).join('')}</ul>
+           <div class="field"><label for="lf-to">Passar essas atividades para</label><select class="input" id="lf-to"><option value="__keep">Deixar como está (continuam no nome atual)</option><option value="">Sem responsável</option>${targets.map(p => `<option value="${escapeHtml(p.name || '')}">${escapeHtml(p.name || '(sem nome)')}</option>`).join('')}</select></div>`
+        : '<p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin:8px 0">Nenhuma atividade pendente no nome de quem será inativado.</p>';
+      body = `<p style="font-size:12.5px;color:var(--t2);line-height:1.6">Inativar <strong>${names}</strong>: a pessoa deixa de entrar no sistema, mas o histórico (projetos, horas, atividades já feitas) fica guardado. Dá para reativar depois.</p>${pend}`;
+    } else if(life.kind === 'reativar') {
+      body = `<p style="font-size:12.5px;color:var(--t2);line-height:1.6">Reativar <strong>${names}</strong>: a pessoa volta a entrar com o mesmo e-mail e senha, com o perfil e os projetos que tinha.</p>`;
+    } else {
+      body = `<p style="font-size:12.5px;color:var(--t2);line-height:1.6">Excluir <strong>${names}</strong> apaga a conta de vez. Só é possível para quem <strong>não tem vínculo</strong> com projeto, equipe, horas ou atividades; quem tem será indicado para <strong>inativar</strong> em vez de excluir.</p>`;
+    }
+    const verb = { inativar:'Inativar', reativar:'Reativar', excluir:'Excluir' }[life.kind];
+    root.innerHTML = `<div class="card" style="margin-bottom:10px;background:var(--bg2)"><div class="lbl"><i class="ti ti-${life.kind === 'excluir' ? 'trash' : life.kind === 'inativar' ? 'user-off' : 'user-check'}"></i>${verb} ${n} usuário(s)</div>${body}
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn btn-sm ${life.kind === 'excluir' ? 'btn-red' : 'btn-pri'}" id="lf-go" onclick="Users.runLife()">${verb}</button><button class="btn btn-sm" onclick="Users.cancelLife()">Cancelar</button></div></div>`;
+  }
+  async function runLife() {
+    if(!life || life.result) return;
+    const btn = document.getElementById('lf-go'); if(btn) btn.disabled = true;
+    if(life.kind === 'inativar') {
+      const toEl = document.getElementById('lf-to');
+      if(toEl && toEl.value !== '__keep') {
+        const seen = new Set();
+        for(const r of life.pend) {
+          const k = r.project_id + '|' + r.name; if(seen.has(k)) continue; seen.add(k);
+          if(await Cloud.reassignWork(r.project_id, r.name, toEl.value) === null) { if(btn) btn.disabled = false; return; }
+        }
+      }
+    }
+    const res = life.kind === 'excluir' ? await Cloud.manageUsers('delete', life.ids) : await Cloud.manageUsers('set_active', life.ids, life.kind === 'reativar');
+    if(btn) btn.disabled = false;
+    if(!res) return;
+    life.result = res; res.forEach(r => { if(r.status !== 'blocked' && r.status !== 'error') sel.delete(r.id); });
+    renderLife(); refresh();
+  }
+  function inactivateBlocked() {
+    const ids = life.result.filter(r => r.must_inactivate).map(r => r.id);
+    sel.clear(); ids.forEach(id => sel.add(id));
+    life = null; startLife('inativar');
+  }
+
+  // ── Trocar responsável das atividades pendentes (Administrador e gerente responsável, durante o projeto) ──
+  let rwProj = '', rwNames = [];
+  async function renderReassign() {
+    const root = document.getElementById('users-reassign'); if(!root) return;
+    const projs = scopeProjects();
+    if(!projs.length) { root.innerHTML = ''; return; }
+    if(!projs.some(p => p.id === rwProj)) rwProj = projs[0].id;
+    rwNames = await Cloud.listTeamNames(rwProj);
+    const opt = (v, t) => `<option value="${escapeHtml(v)}">${escapeHtml(t)}</option>`;
+    root.innerHTML = `<div class="lbl" style="margin-top:16px"><i class="ti ti-arrows-exchange"></i>Trocar o responsável das atividades<span class="help-q" data-help="Passa as atividades que ainda NÃO foram concluídas (itens do backlog e tarefas do cronograma) de uma pessoa para outra, ou para sem responsável. As já concluídas não mudam. Use quando alguém sai, entra em férias ou muda de função durante o projeto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;align-items:end">
+        <div class="field"><label for="rw-proj">Projeto</label><select class="input" id="rw-proj" onchange="Users.rwProject(this.value)">${projs.map(p => `<option value="${p.id}"${p.id === rwProj ? ' selected' : ''}>${escapeHtml(p.name || p.id)}</option>`).join('')}</select></div>
+        <div class="field"><label for="rw-from">De</label><select class="input" id="rw-from" onchange="Users.rwPreview()"><option value="">Escolha…</option>${rwNames.map(n => opt(n, n)).join('')}</select></div>
+        <div class="field"><label for="rw-to">Para</label><select class="input" id="rw-to"><option value="">Sem responsável</option>${rwNames.map(n => opt(n, n)).join('')}</select></div>
+        <div class="field"><button class="btn btn-sm btn-pri" id="rw-go" onclick="Users.rwRun()"><i class="ti ti-arrows-exchange"></i>Trocar</button></div>
+      </div>
+      <div id="rw-info" role="status" aria-live="polite" style="font-size:12px;color:var(--t2);margin-top:4px"></div>`;
+  }
+  function rwProject(id) { rwProj = id; renderReassign(); }
+  async function rwPreview() {
+    const from = (document.getElementById('rw-from') || {}).value, info = document.getElementById('rw-info');
+    if(!info) return;
+    if(!from) { info.textContent = ''; return; }
+    const w = await Cloud.pendingWork(rwProj, from);
+    info.textContent = w ? from + ' tem ' + w.backlog + ' item(ns) do backlog e ' + w.cronograma + ' tarefa(s) do cronograma ainda não concluídos neste projeto.' : '';
+  }
+  async function rwRun() {
+    const from = document.getElementById('rw-from').value, to = document.getElementById('rw-to').value;
+    if(!from) { T.show('⚠️ Escolha de quem as atividades serão tiradas.'); return; }
+    if(to && to.toLowerCase() === from.toLowerCase()) { T.show('⚠️ Escolha uma pessoa diferente.'); return; }
+    if(!confirm('Passar as atividades NÃO concluídas de "' + from + '" para "' + (to || 'sem responsável') + '" no projeto "' + projName(rwProj) + '"?')) return;
+    const btn = document.getElementById('rw-go'); btn.disabled = true;
+    const r = await Cloud.reassignWork(rwProj, from, to);
+    btn.disabled = false;
+    if(r) { T.show('✅ ' + r.backlog + ' item(ns) do backlog e ' + r.cronograma + ' tarefa(s) do cronograma passaram para ' + (to || 'sem responsável') + '.'); rwPreview(); }
+  }
+
+  const visible = () => {
+    const q = ((document.getElementById('users-q') || {}).value || '').trim().toLowerCase();
+    const proj = (document.getElementById('users-proj') || {}).value || '';
+    const myId = Cloud.getUserId(), admin = isAdminUser();
+    const mine = pid => new Set(access.filter(a => a.user_id === pid).map(a => a.project_id));
+    return people.filter(p => (admin || (p.role !== 'admin' && p.id !== myId)) && (!q || (p.name || '').toLowerCase().includes(q)) && (!proj || p.role === 'admin' || mine(p.id).has(proj)));
+  };
+
   // Lista de pessoas com perfil e projetos no mesmo lugar (filtra por nome ou por projeto)
   let people = [], access = [];
   const projectsAll = () => DB.listProjects().slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'));
@@ -5032,7 +5197,7 @@ const Users = (() => {
     openFor = '';
     const sel = document.getElementById('users-proj');
     if(sel) { const keep = sel.value; sel.innerHTML = '<option value="">' + (isAdminUser() ? 'Todos os projetos' : 'Todos os meus projetos') + '</option>' + scopeProjects().map(p => `<option value="${p.id}">${escapeHtml(p.name || p.id)}</option>`).join(''); sel.value = keep || ''; }
-    renderPeople(); renderManagers();
+    renderPeople(); renderManagers(); renderReassign();
   }
   function setFilter() { renderPeople(); }
   function renderPeople() {
@@ -5044,10 +5209,11 @@ const Users = (() => {
     const myId = Cloud.getUserId();
     const mine = pid => new Set(access.filter(a => a.user_id === pid).map(a => a.project_id));
     const admin = isAdminUser(), myScope = scopeProjects();
-    const list = people.filter(p => (admin || (p.role !== 'admin' && p.id !== myId)) && (!q || (p.name || '').toLowerCase().includes(q)) && (!proj || p.role === 'admin' || mine(p.id).has(proj)));
+    const list = visible().sort((a, b) => (a.active === false) - (b.active === false));
     if(!list.length) { root.innerHTML = '<div style="font-size:12px;color:var(--t3)">Ninguém corresponde ao filtro.</div>'; return; }
     const all = myScope;
-    root.innerHTML = list.map(p => {
+    const bar = admin ? `<div class="btn-row" style="margin-bottom:8px;align-items:center"><label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" aria-label="Marcar todos os usuários da lista" onchange="Users.selAll(this.checked)"> Marcar todos</label><span style="font-size:12px;color:var(--t3)">${sel.size} marcado(s)</span><button class="btn btn-sm" ${sel.size ? '' : 'disabled'} onclick="Users.startLife('inativar')"><i class="ti ti-user-off"></i>Inativar</button><button class="btn btn-sm" ${sel.size ? '' : 'disabled'} onclick="Users.startLife('reativar')"><i class="ti ti-user-check"></i>Reativar</button><button class="btn btn-sm" ${sel.size ? '' : 'disabled'} onclick="Users.startLife('excluir')"><i class="ti ti-trash"></i>Excluir</button></div>` : '';
+    root.innerHTML = bar + list.map(p => {
       const isMe = p.id === myId, nm = escapeHtml(p.name || '(sem nome)');
       const opts = Object.keys(defs()).map(r => `<option value="${r}"${r === p.role ? ' selected' : ''}>${escapeHtml(roleName(r))}</option>`).join('');
       const has = mine(p.id), isAdmin = p.role === 'admin';
@@ -5060,7 +5226,7 @@ const Users = (() => {
           ${all.map(x => `<label><input type="checkbox"${has.has(x.id) ? ' checked' : ''} onchange="Users.setAccess('${p.id}','${x.id}', this.checked)"> ${escapeHtml(x.name || x.id)}</label>`).join('')}
         </div></details>`;
       return `<div class="set-row" style="align-items:flex-start;flex-wrap:wrap;gap:10px">
-        <div style="min-width:180px;flex:1 1 180px"><div class="set-lbl">${nm}${isMe ? ' <span class="badge b-acc">você</span>' : ''}</div><div class="set-sub" style="font-family:var(--font-mono);font-size:11px" title="Identificador da conta">${escapeHtml(p.id.slice(0, 8))}…</div></div>
+        ${admin && !isMe ? `<input type="checkbox" aria-label="Marcar ${nm}" ${sel.has(p.id) ? 'checked' : ''} onchange="Users.toggleSel('${p.id}', this.checked)" style="margin-top:3px">` : (admin ? '<span style="width:13px"></span>' : '')}<div style="min-width:180px;flex:1 1 180px"><div class="set-lbl">${nm}${isMe ? ' <span class="badge b-acc">você</span>' : ''}${p.active === false ? ' <span class="badge b-red">Inativo</span>' : ''}</div><div class="set-sub" style="font-family:var(--font-mono);font-size:11px" title="Identificador da conta">${escapeHtml(p.id.slice(0, 8))}…</div></div>
         <div style="flex:2 1 280px;display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${admin ? `<select class="input" style="width:auto" aria-label="Perfil de acesso de ${nm}" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>` : `<span class="badge">${escapeHtml(roleName(p.role))}</span>`}${add}${admin && !isMe ? `<button class="btn btn-sm" aria-label="Definir nova senha temporária para ${nm}" onclick="Users.resetPw('${p.id}')"><i class="ti ti-key"></i>Nova senha</button>` : ''}</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">${chips}</div>
@@ -5121,7 +5287,7 @@ const Users = (() => {
     }
   }
 
-  return { render, refresh, setFilter, setManager, pickToggle, setAccess, setAll, removeAccess, changeRole, newProfile, editProfile, cancelProfile, saveProfile, removeProfile , newAccount, cancelNew, createAccount, copyNew, resetPw, genPassword };
+  return { render, refresh, setFilter, setManager, pickToggle, setAccess, setAll, removeAccess, changeRole, newProfile, editProfile, cancelProfile, saveProfile, removeProfile , newAccount, cancelNew, createAccount, copyNew, resetPw, genPassword , toggleSel, selAll, startLife, cancelLife, runLife, inactivateBlocked, rwProject, rwPreview, rwRun };
 })();
 </script>
 
@@ -6155,10 +6321,19 @@ const Store = (() => {
       if(inp) inp.value = (!signedIn && state.apiKeys[p]) ? state.apiKeys[p] : '';
       if(statusEl) statusEl.style.display = 'none';
       if(removeBtn) removeBtn.style.display = 'none';
+      markSaved(p, false);
     });
     if(signedIn) refreshCloudStatus();
   }
 
+  // Chave salva na conta nunca volta ao navegador: o campo mostra pontos e o aviso "chave salva", para saber que ela existe
+  function markSaved(p, saved) {
+    const inp = document.getElementById('api-inp-' + p);
+    if(!inp) return;
+    if(inp.dataset.ph === undefined) inp.dataset.ph = inp.getAttribute('placeholder') || '';
+    inp.setAttribute('placeholder', saved ? '••••••••••••••••••••  ✓ chave salva — cole outra para trocar' : inp.dataset.ph);
+    inp.setAttribute('aria-label', (inp.dataset.lbl = inp.dataset.lbl || inp.getAttribute('aria-label') || '') + (saved ? ' — já há uma chave salva' : ''));
+  }
   async function refreshCloudStatus() {
     if(typeof Cloud === 'undefined') return;
     const has = await Cloud.getAiKeyStatus();
@@ -6170,6 +6345,7 @@ const Store = (() => {
       const removeBtn = document.getElementById('prov-remove-'+p);
       if(statusEl) statusEl.style.display = has[p] ? '' : 'none';
       if(removeBtn) removeBtn.style.display = has[p] ? '' : 'none';
+      markSaved(p, !!has[p]);
     });
   }
 

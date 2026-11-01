@@ -2,6 +2,8 @@
 //
 // O cadastro de contas é FECHADO: ninguém cria conta sozinho. Só o administrador, aqui:
 //   create         → cria a conta (e-mail confirmado), define o perfil e, se pedido, os projetos; envia a senha temporária por e-mail
+//   set_active     → inativa/reativa contas (bloqueia o login no Auth e tira o perfil); nunca a si mesmo nem o último administrador
+//   delete         → exclui contas SEM vínculo; quem já está em projeto, tem atividade ou foi responsável precisa ser inativado
 //   reset_password → define uma nova senha temporária para uma conta existente (e envia por e-mail)
 // Toda senha temporária obriga a troca no primeiro acesso (user_metadata.must_change_password).
 // Autenticação: JWT do Supabase + perfil "admin" conferido no servidor.
@@ -70,6 +72,46 @@ Deno.serve(async (req) => {
     if (pe) return json({ error: "Não foi possível trocar a senha: " + pe.message }, 400);
     const mail = tgt?.user?.email ? await notify(env, { name: meta.name, email: tgt.user.email, password: v.value.password, reset: true }) : { email_sent: false };
     return json({ ok: true, email: tgt?.user?.email || null, ...mail });
+  }
+
+  if (body.action === "set_active" || body.action === "delete") {
+    const ids = [...new Set((Array.isArray(body.user_ids) ? body.user_ids : []).map(String))].filter((i) => /^[0-9a-f-]{36}$/i.test(i)).slice(0, 50);
+    if (!ids.length) return json({ error: "Escolha ao menos uma conta." }, 400);
+    const active = body.active !== false;
+    const { data: admins } = await db.from("profiles").select("id").eq("role", "admin").eq("active", true);
+    const remainingAdmins = new Set((admins || []).map((a: any) => a.id));
+    const results: any[] = [];
+    for (const id of ids) {
+      if (id === u.user.id) { results.push({ id, status: "blocked", reason: "Você não pode inativar nem excluir a sua própria conta." }); continue; }
+      const { data: p } = await db.from("profiles").select("id,name,role,active").eq("id", id).maybeSingle();
+      if (!p) { results.push({ id, status: "error", reason: "Conta não encontrada." }); continue; }
+      const leaving = body.action === "delete" || !active;
+      if (leaving && p.role === "admin" && p.active && remainingAdmins.has(id)) {
+        if (remainingAdmins.size <= 1) { results.push({ id, name: p.name, status: "blocked", reason: "É o último administrador ativo." }); continue; }
+        remainingAdmins.delete(id);
+      }
+      if (body.action === "set_active") {
+        const { error: be } = await db.auth.admin.updateUserById(id, { ban_duration: active ? "none" : "876000h" });
+        if (be) { results.push({ id, name: p.name, status: "error", reason: be.message }); continue; }
+        const { error: pe } = await db.from("profiles").update({ active }).eq("id", id);
+        results.push(pe ? { id, name: p.name, status: "error", reason: pe.message } : { id, name: p.name, status: active ? "reactivated" : "inactivated" });
+        continue;
+      }
+      // Exclusão: só sem vínculo nenhum (projeto, equipe, criação/gerência de projeto ou trabalho em seu nome)
+      const nm = String(p.name || "").trim().replace(/[%_]/g, "");
+      const count = async (q: any) => (await q).count || 0;
+      const links = await Promise.all([
+        count(db.from("project_access").select("user_id", { count: "exact", head: true }).eq("user_id", id)),
+        count(db.from("team_members").select("id", { count: "exact", head: true }).eq("user_id", id)),
+        count(db.from("projects").select("id", { count: "exact", head: true }).or(`created_by.eq.${id},manager_id.eq.${id}`)),
+        nm ? count(db.from("backlog_items").select("id", { count: "exact", head: true }).ilike("assignee", nm)) : 0,
+        nm ? count(db.from("time_entries").select("id", { count: "exact", head: true }).ilike("person_name", nm)) : 0,
+      ]);
+      if (links.some((n: number) => n > 0)) { results.push({ id, name: p.name, status: "blocked", reason: "Tem vínculo com projeto ou atividade — inative em vez de excluir.", must_inactivate: true }); continue; }
+      const { error: de } = await db.auth.admin.deleteUser(id);
+      results.push(de ? { id, name: p.name, status: "blocked", reason: "Tem histórico no sistema — inative em vez de excluir.", must_inactivate: true } : { id, name: p.name, status: "deleted" });
+    }
+    return json({ ok: true, results });
   }
 
   return json({ error: "Ação desconhecida." }, 400);
