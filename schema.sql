@@ -1,6 +1,6 @@
 -- =========================================================================
 -- PMO Compass — esquema completo (GERADO por scripts/build-schema.mjs — não edite à mão)
--- Fonte: supabase/migrations/ (22 arquivos). Para instalação do zero, rode este arquivo inteiro
+-- Fonte: supabase/migrations/ (25 arquivos). Para instalação do zero, rode este arquivo inteiro
 -- no SQL Editor; para um banco que já existe, use `node scripts/db-apply.mjs` (aplica só o que falta).
 -- =========================================================================
 
@@ -1714,3 +1714,236 @@ end;
 $$ language plpgsql stable security definer set search_path = public;
 
 grant execute on function public.person_details(uuid) to authenticated;
+
+-- ▼▼▼ 20261101130000_skills_reviews.sql ▼▼▼
+-- 1) Conhecimentos e ferramentas com nível (júnior/pleno/sênior), pesquisáveis pelo gerente de projetos.
+--    Substitui os dois campos de texto livre por uma lista: [{ "kind": "conhecimento"|"ferramenta", "name": "SAP FI", "level": "junior"|"pleno"|"senior" }]
+-- 2) Avaliações do profissional por projeto: a própria pessoa (autoavaliação) e o gerente responsável.
+
+alter table public.profile_details add column if not exists skills jsonb not null default '[]'::jsonb
+  check (jsonb_typeof(skills) = 'array' and pg_column_size(skills) < 8000);
+alter table public.profile_details drop column if exists knowledge;
+alter table public.profile_details drop column if exists tools;
+create index if not exists profile_details_skills_idx on public.profile_details using gin (skills jsonb_path_ops);
+
+-- Cadastro completo = departamento + ao menos 1 conhecimento + ao menos 1 ferramenta
+create or replace function public.guard_profile_details() returns trigger as $$
+begin
+  new.updated_at := now();
+  if not new.whatsapp_consent then
+    new.phone := null; new.whatsapp_consent_at := null;
+  elsif tg_op = 'INSERT' or not old.whatsapp_consent or new.whatsapp_consent_at is null then
+    new.whatsapp_consent_at := now();
+  else
+    new.whatsapp_consent_at := old.whatsapp_consent_at;
+  end if;
+  if char_length(btrim(new.department)) > 0
+     and jsonb_path_exists(new.skills, '$[*] ? (@.kind == "conhecimento")')
+     and jsonb_path_exists(new.skills, '$[*] ? (@.kind == "ferramenta")') then
+    new.completed_at := coalesce(new.completed_at, now());
+  else
+    new.completed_at := null;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+create or replace function public.person_details(uid uuid) returns jsonb as $$
+declare
+  is_admin boolean := coalesce(public.current_role(), '') = 'admin';
+  allowed boolean;
+  r jsonb;
+begin
+  allowed := is_admin or uid = auth.uid() or exists (
+    select 1 from public.projects pr
+    where coalesce(public.is_project_manager(pr.id), false)
+      and (exists (select 1 from public.project_access pa where pa.project_id = pr.id and pa.user_id = uid)
+        or exists (select 1 from public.team_members tm where tm.project_id = pr.id and tm.user_id = uid)));
+  if not allowed then raise exception 'Sem permissão para ver este cadastro.'; end if;
+  select jsonb_build_object(
+      'id', p.id, 'name', p.name, 'role', p.role, 'active', p.active, 'email', u.email,
+      'has_details', d.user_id is not null,
+      'department', d.department, 'skills', coalesce(d.skills, '[]'::jsonb),
+      'completed_at', d.completed_at,
+      'whatsapp_consent', coalesce(d.whatsapp_consent, false), 'whatsapp_consent_at', d.whatsapp_consent_at,
+      'phone', case when is_admin or uid = auth.uid() then d.phone end)
+    into r
+    from public.profiles p
+    join auth.users u on u.id = p.id
+    left join public.profile_details d on d.user_id = p.id
+    where p.id = uid;
+  return r;
+end;
+$$ language plpgsql stable security definer set search_path = public;
+
+-- Quem tem tal conhecimento/ferramenta em tal nível (para o gerente escolher um profissional). Nome parcial, sem acento/caixa.
+-- Só devolve nome, departamento e a habilidade — nunca e-mail nem telefone — e só para Administrador e gerentes de projeto.
+create or replace function public.find_people(term text, min_level text default null) returns jsonb as $$
+declare rank_min int := case min_level when 'senior' then 3 when 'pleno' then 2 when 'junior' then 1 else 0 end;
+begin
+  if not (coalesce(public.current_role(), '') = 'admin' or public.is_any_project_manager()) then
+    raise exception 'Só o Administrador ou o gerente de projetos pode pesquisar profissionais.';
+  end if;
+  if char_length(btrim(coalesce(term, ''))) < 2 then return '[]'::jsonb; end if;
+  return coalesce((
+    select jsonb_agg(jsonb_build_object('id', p.id, 'name', p.name, 'department', d.department, 'skill', s.value->>'name', 'kind', s.value->>'kind', 'level', s.value->>'level') order by p.name)
+    from public.profile_details d
+    join public.profiles p on p.id = d.user_id and p.active
+    cross join lateral jsonb_array_elements(d.skills) s(value)
+    where lower(s.value->>'name') like '%' || lower(replace(replace(btrim(term), '%', ''), '_', '')) || '%'
+      and (case s.value->>'level' when 'senior' then 3 when 'pleno' then 2 when 'junior' then 1 else 0 end) >= rank_min
+    limit 100), '[]'::jsonb);
+end;
+$$ language plpgsql stable security definer set search_path = public;
+grant execute on function public.find_people(text, text) to authenticated;
+
+-- Avaliações por projeto: "self" = a pessoa se avalia; "manager" = o gerente responsável avalia
+create table if not exists public.person_reviews (
+  project_id text not null references public.projects(id) on delete cascade,
+  person_id uuid not null references auth.users(id) on delete cascade,
+  kind text not null check (kind in ('self', 'manager')),
+  reviewer_id uuid not null references auth.users(id) on delete cascade,
+  scores jsonb not null,
+  would_work_again boolean,
+  comment text check (comment is null or char_length(comment) <= 1000),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (project_id, person_id, kind)
+);
+alter table public.person_reviews enable row level security;
+
+-- Cada critério de 1 a 5 (qualidade, prazos, comunicação, colaboração, autonomia); nada além disso
+create or replace function public.guard_person_review() returns trigger as $$
+declare k text;
+begin
+  if jsonb_typeof(new.scores) <> 'object' then raise exception 'Notas inválidas.'; end if;
+  for k in select unnest(array['qualidade','prazos','comunicacao','colaboracao','autonomia']) loop
+    if not (new.scores ? k) or jsonb_typeof(new.scores->k) <> 'number' or (new.scores->>k)::numeric not between 1 and 5 or (new.scores->>k)::numeric <> trunc((new.scores->>k)::numeric) then
+      raise exception 'Dê uma nota de 1 a 5 em cada critério.';
+    end if;
+  end loop;
+  if (select count(*) from jsonb_object_keys(new.scores)) <> 5 then raise exception 'Notas inválidas.'; end if;
+  new.updated_at := now();
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+drop trigger if exists guard_person_review on public.person_reviews;
+create trigger guard_person_review before insert or update on public.person_reviews
+  for each row execute function public.guard_person_review();
+
+-- Lê: o Administrador, a própria pessoa e o gerente responsável do projeto
+create policy "person_reviews_select" on public.person_reviews for select using (
+  coalesce(public.current_role(), '') = 'admin' or person_id = auth.uid() or coalesce(public.is_project_manager(project_id), false));
+-- Escreve: a pessoa só a própria autoavaliação (em projeto onde está); o gerente responsável, a de quem está no projeto dele
+create policy "person_reviews_write_self" on public.person_reviews for insert with check (
+  kind = 'self' and person_id = auth.uid() and reviewer_id = auth.uid() and public.current_role() is not null
+  and exists (select 1 from public.project_access pa where pa.project_id = person_reviews.project_id and pa.user_id = auth.uid()));
+create policy "person_reviews_update_self" on public.person_reviews for update
+  using (kind = 'self' and person_id = auth.uid() and public.current_role() is not null)
+  with check (kind = 'self' and person_id = auth.uid() and reviewer_id = auth.uid());
+create policy "person_reviews_write_manager" on public.person_reviews for insert with check (
+  kind = 'manager' and reviewer_id = auth.uid() and person_id <> auth.uid() and coalesce(public.is_project_manager(project_id), false)
+  and exists (select 1 from public.project_access pa where pa.project_id = person_reviews.project_id and pa.user_id = person_reviews.person_id));
+create policy "person_reviews_update_manager" on public.person_reviews for update
+  using (kind = 'manager' and coalesce(public.is_project_manager(project_id), false))
+  with check (kind = 'manager' and reviewer_id = auth.uid() and person_id <> auth.uid() and coalesce(public.is_project_manager(project_id), false));
+
+-- ▼▼▼ 20261101140000_skill_catalog.sql ▼▼▼
+-- Catálogo comum de conhecimentos e ferramentas: a pessoa escolhe da lista; se não achar, digita e o item é CRIADO e passa a aparecer para todos.
+-- Reduz divergência de escrita ("SAP FI", "sap fi", "S.A.P. FI"): o servidor reconhece o mesmo nome (sem caixa, acento nem espaço repetido) e devolve o item que já existe.
+-- Preparado para uma futura ferramenta de unificação: `merged_into` aponta o item "oficial" e o administrador pode renomear/juntar.
+
+create table if not exists public.skill_catalog (
+  id uuid primary key default gen_random_uuid(),
+  kind text not null check (kind in ('conhecimento', 'ferramenta')),
+  name text not null check (char_length(name) between 2 and 60),
+  name_key text not null,
+  merged_into uuid references public.skill_catalog(id) on delete set null,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create unique index if not exists skill_catalog_key_uidx on public.skill_catalog(kind, name_key);
+alter table public.skill_catalog enable row level security;
+create policy "skill_catalog_read" on public.skill_catalog for select using (auth.role() = 'authenticated');
+create policy "skill_catalog_admin_write" on public.skill_catalog for all
+  using (coalesce(public.current_role(), '') = 'admin') with check (coalesce(public.current_role(), '') = 'admin');
+
+-- Mesmo nome, sem diferenças de caixa, acento, pontuação solta ou espaços
+create or replace function public.skill_key(t text) returns text as $$
+  select btrim(regexp_replace(regexp_replace(
+    translate(lower(coalesce(t, '')), 'áàâãäéèêëíìîïóòôõöúùûüçñ', 'aaaaaeeeeiiiiooooouuuucn'),
+    '[^a-z0-9+#.]+', ' ', 'g'), '\s+', ' ', 'g'));
+$$ language sql immutable;
+
+-- Recebe [{kind, name}] e devolve [{kind, skill_id, name}]: reaproveita o que já existe e cria o que falta (máx. 20 novos por pessoa por dia)
+create or replace function public.resolve_skills(items jsonb) returns jsonb as $$
+declare it jsonb; k text; nm text; nk text; row public.skill_catalog; out jsonb := '[]'::jsonb; created_today int;
+begin
+  if auth.uid() is null or public.current_role() is null then raise exception 'Entre na sua conta para cadastrar.'; end if;
+  if jsonb_typeof(items) <> 'array' or jsonb_array_length(items) > 40 then raise exception 'Lista inválida.'; end if;
+  for it in select * from jsonb_array_elements(items) loop
+    k := it->>'kind'; nm := btrim(regexp_replace(coalesce(it->>'name', ''), '\s+', ' ', 'g'));
+    if k not in ('conhecimento', 'ferramenta') then raise exception 'Tipo inválido.'; end if;
+    if char_length(nm) < 2 or char_length(nm) > 60 then raise exception 'O nome precisa ter de 2 a 60 caracteres: %', left(nm, 30); end if;
+    nk := public.skill_key(nm);
+    if nk = '' then raise exception 'Nome inválido: %', left(nm, 30); end if;
+    select * into row from public.skill_catalog where kind = k and name_key = nk;
+    if not found then
+      select count(*) into created_today from public.skill_catalog where created_by = auth.uid() and created_at > now() - interval '1 day';
+      if created_today >= 20 then raise exception 'Limite de 20 itens novos por dia — escolha na lista ou peça ao administrador.'; end if;
+      insert into public.skill_catalog(kind, name, name_key, created_by) values (k, nm, nk, auth.uid()) returning * into row;
+    end if;
+    while row.merged_into is not null loop select * into row from public.skill_catalog where id = row.merged_into; end loop;
+    out := out || jsonb_build_object('kind', row.kind, 'skill_id', row.id, 'name', row.name);
+  end loop;
+  return out;
+end;
+$$ language plpgsql security definer set search_path = public;
+grant execute on function public.resolve_skills(jsonb) to authenticated;
+
+-- Itens iniciais comuns, para a lista não nascer vazia e a escrita já nascer padronizada
+insert into public.skill_catalog(kind, name, name_key) select v.kind, v.name, public.skill_key(v.name) from (values
+  ('conhecimento','Gestão de projetos'),('conhecimento','Metodologias ágeis'),('conhecimento','Scrum'),('conhecimento','Análise de requisitos'),
+  ('conhecimento','Testes e qualidade (QA)'),('conhecimento','Desenvolvimento web'),('conhecimento','Banco de dados'),('conhecimento','UX/UI'),
+  ('conhecimento','Segurança da informação'),('conhecimento','SAP FI'),('conhecimento','SAP MM'),('conhecimento','Gestão de riscos'),
+  ('ferramenta','Excel'),('ferramenta','Power BI'),('ferramenta','Jira'),('ferramenta','SQL'),('ferramenta','Python'),('ferramenta','MS Project'),
+  ('ferramenta','Azure DevOps'),('ferramenta','Confluence'),('ferramenta','Trello'),('ferramenta','Figma'),('ferramenta','Git')
+) as v(kind, name) on conflict (kind, name_key) do nothing;
+
+-- A lista de habilidades de cada pessoa precisa ser do formato certo (e, quando traz o item do catálogo, o tipo tem de bater)
+create or replace function public.guard_profile_details() returns trigger as $$
+declare s jsonb; c public.skill_catalog;
+begin
+  new.updated_at := now();
+  if jsonb_array_length(new.skills) > 40 then raise exception 'Muitas habilidades (máximo 40).'; end if;
+  for s in select * from jsonb_array_elements(new.skills) loop
+    if jsonb_typeof(s) <> 'object' or (s->>'kind') not in ('conhecimento', 'ferramenta') or (s->>'level') not in ('junior', 'pleno', 'senior')
+       or char_length(btrim(coalesce(s->>'name', ''))) not between 2 and 60 then
+      raise exception 'Habilidade inválida: informe nome, tipo e nível (júnior, pleno ou sênior).';
+    end if;
+    if s ? 'skill_id' then
+      select * into c from public.skill_catalog where id = (s->>'skill_id')::uuid;
+      if not found or c.kind <> s->>'kind' then raise exception 'Item do catálogo inválido.'; end if;
+    end if;
+  end loop;
+  if not new.whatsapp_consent then
+    new.phone := null; new.whatsapp_consent_at := null;
+  elsif tg_op = 'INSERT' or not old.whatsapp_consent or new.whatsapp_consent_at is null then
+    new.whatsapp_consent_at := now();
+  else
+    new.whatsapp_consent_at := old.whatsapp_consent_at;
+  end if;
+  if char_length(btrim(new.department)) > 0
+     and jsonb_path_exists(new.skills, '$[*] ? (@.kind == "conhecimento")')
+     and jsonb_path_exists(new.skills, '$[*] ? (@.kind == "ferramenta")') then
+    new.completed_at := coalesce(new.completed_at, now());
+  else
+    new.completed_at := null;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+-- ▼▼▼ 20261101150000_reviews_admin_delete.sql ▼▼▼
+-- O Administrador pode apagar avaliações de um projeto (usado por "Apagar dados" do projeto e da base inteira)
+create policy "person_reviews_admin_delete" on public.person_reviews for delete using (coalesce(public.current_role(), '') = 'admin');

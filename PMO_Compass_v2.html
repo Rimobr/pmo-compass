@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.22.0'
+  version: '2.23.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -324,7 +324,8 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .sb-xray-btn.on i,.sb-board-btn.on i,.sb-exec-btn.on i,.sb-pmo-btn.on i{color:var(--acc)}
 .sb-xray-btn:focus-visible,.sb-board-btn:focus-visible,.sb-exec-btn:focus-visible,.sb-pmo-btn:focus-visible,.si:focus-visible,.sb-group-hdr:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 </style>
-<style>.page{padding:20px;display:none;flex-direction:column;gap:14px;animation:pgIn .15s ease}
+<style>
+.fp-skills{border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:0}.fp-skills legend{font-size:12px;font-weight:600;padding:0 4px}.fp-skill-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}.fp-skill-row .input:first-child{flex:1 1 auto;min-width:0}.fp-skill-row select{width:auto;flex:0 0 auto}.page{padding:20px;display:none;flex-direction:column;gap:14px;animation:pgIn .15s ease}
 .page.on{display:flex}
 @keyframes pgIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 .pg-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -2016,6 +2017,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div class="btn-row"><button class="btn btn-sm" onclick="R.go('hours')"><i class="ti ti-clock-plus"></i>Apontar horas</button></div>
   </div>
   <div id="mw-root"></div>
+  <div id="mw-review"></div>
 </section>
 
 <section class="page" id="p-ritos" data-module="pages/ritos">
@@ -3795,7 +3797,7 @@ const Cloud = (() => {
   // Tabelas de dados do PROJETO (têm project_id e são apagadas por "Zerar base"/"Limpar projeto"). Fonte única:
   // clearProjectData e resetForNewUsers percorrem esta lista — tabela nova entra aqui, nunca em lista escrita à mão.
   // A ordem respeita chaves estrangeiras (filhas antes das mães). tests/run.js confere esta lista contra o schema.sql.
-  const PROJECT_DATA_TABLES = ['wbs_tasks','cost_actuals','budget_lines','wbs_modules','decisions','documents','scope_changes','risks','time_entries','baselines','raci_entries','backlog_items','sprints','sprint_rites','impediments','project_docs'];
+  const PROJECT_DATA_TABLES = ['wbs_tasks','cost_actuals','budget_lines','wbs_modules','decisions','documents','scope_changes','risks','time_entries','baselines','raci_entries','backlog_items','sprints','sprint_rites','impediments','project_docs','person_reviews'];
   // Mapeadores local ⇄ nuvem das tabelas novas (um só lugar para push, pull e importação em lote)
   const ROW = {
     scope_changes: {
@@ -4184,10 +4186,36 @@ const Cloud = (() => {
   }
   async function saveMyDetails(v) {
     if(!client || !session) return false;
-    const row = { user_id:session.user.id, department:v.department, knowledge:v.knowledge, tools:v.tools, phone:v.phone, whatsapp_consent:v.consent };
+    const row = { user_id:session.user.id, department:v.department, skills:v.skills, phone:v.phone, whatsapp_consent:v.consent };
     const { error } = await client.from('profile_details').upsert(row);
     if(error) { T.show('❌ ' + error.message); return false; }
     pushAuditEvent(v.consent ? 'whatsapp_consent_given' : 'profile_completed', v.consent ? 'Autorizou o uso do WhatsApp para mensagens do sistema' : 'Cadastro complementar preenchido (sem telefone)', {});
+    return true;
+  }
+  // Catálogo comum de conhecimentos e ferramentas (todos veem; o que a pessoa digita de novo é criado para todos)
+  async function listSkillCatalog() {
+    if(!client || !session) return [];
+    const { data, error } = await client.from('skill_catalog').select('id,kind,name').is('merged_into', null).order('name');
+    if(error) { console.warn('Supabase: falha ao ler o catálogo', error); return []; }
+    return data || [];
+  }
+  async function resolveSkills(items) {
+    if(!client || !session) return null;
+    const { data, error } = await client.rpc('resolve_skills', { items });
+    if(error) { T.show('❌ ' + error.message); return null; }
+    return data;
+  }
+  async function listReviews(personId) {
+    if(!client || !session) return [];
+    const { data, error } = await client.from('person_reviews').select('*').eq('person_id', personId);
+    if(error) { console.warn('Supabase: falha ao ler avaliações', error); return []; }
+    return data || [];
+  }
+  async function saveReview(r) {
+    if(!client || !session) return false;
+    const { error } = await client.from('person_reviews').upsert({ project_id:r.projectId, person_id:r.personId, kind:r.kind, reviewer_id:session.user.id, scores:r.scores, would_work_again:r.again, comment:r.comment || null });
+    if(error) { T.show('❌ ' + error.message); return false; }
+    pushAuditEvent('review_saved', (r.kind === 'self' ? 'Autoavaliação' : 'Avaliação do gerente') + ' registrada', { projectId:r.projectId, personId:r.personId, kind:r.kind });
     return true;
   }
   // Inativar, reativar ou excluir contas (função de servidor; o servidor decide o que pode ser excluído)
@@ -4679,7 +4707,7 @@ const Cloud = (() => {
   }
 
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
-    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, manageUsers, personDetails, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
+    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument, pushRow, pushMany, deleteRow, msgTable, invokeFn,
@@ -5070,15 +5098,21 @@ const Users = (() => {
     if(!d) { root.innerHTML = ''; return; }
     const projs = access.filter(a => a.user_id === id).map(a => projName(a.project_id));
     const when = v => v ? new Date(v).toLocaleDateString('pt-BR') : '';
+    const LV = { junior:'Júnior', pleno:'Pleno', senior:'Sênior' };
+    const skillChips = (list, kind) => (Array.isArray(list) ? list : []).filter(x => x.kind === kind).map(x => `<span class="chip">${escapeHtml(x.name)} · ${LV[x.level] || ''}</span>`).join(' ');
     const row = (l, v) => `<div class="set-row"><div class="set-lbl">${l}</div><div class="set-sub" style="white-space:pre-wrap;overflow-wrap:anywhere;max-width:62%;text-align:right">${v || '<span style="color:var(--t3)">não informado</span>'}</div></div>`;
     const wa = d.whatsapp_consent
       ? (d.phone ? '+' + escapeHtml(d.phone) + ' <span class="badge b-grn">autorizou</span> desde ' + when(d.whatsapp_consent_at) : '<span class="badge b-grn">autorizou</span> desde ' + when(d.whatsapp_consent_at) + ' <span style="color:var(--t3)">(o número fica visível só para o Administrador)</span>')
       : '<span class="badge">não autorizou</span> <span style="color:var(--t3)">nenhum número guardado</span>';
     root.innerHTML = `<div class="card" style="margin-bottom:10px;background:var(--bg2)"><div class="lbl"><i class="ti ti-id"></i>Cadastro de ${escapeHtml(d.name || '(sem nome)')}${d.active === false ? ' <span class="badge b-red">Inativo</span>' : ''}</div>
       ${row('E-mail', escapeHtml(d.email || ''))}${row('Perfil de acesso', escapeHtml(roleName(d.role)))}${row('Projetos', d.role === 'admin' ? 'Todos' : escapeHtml(projs.join(', ')))}
-      ${d.has_details ? row('Departamento', escapeHtml(d.department || '')) + row('Conhecimentos', escapeHtml(d.knowledge || '')) + row('Ferramentas que domina', escapeHtml(d.tools || '')) + row('WhatsApp para mensagens do sistema', wa) + row('Cadastro completo em', when(d.completed_at))
-        : '<p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin:8px 0"><i class="ti ti-info-circle"></i> Esta pessoa ainda <strong>não preencheu o cadastro complementar</strong> (departamento, conhecimentos, ferramentas e WhatsApp). A janela aparece para ela a cada acesso até ser preenchida.</p>'}
+      ${d.has_details ? row('Departamento', escapeHtml(d.department || '')) + row('Conhecimentos', skillChips(d.skills, 'conhecimento')) + row('Ferramentas que domina', skillChips(d.skills, 'ferramenta')) + row('WhatsApp para mensagens do sistema', wa) + row('Cadastro completo em', when(d.completed_at))
+        : (FirstAccess.isRequired(d.role)
+          ? '<p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin:8px 0"><i class="ti ti-info-circle"></i> Esta pessoa ainda <strong>não preencheu o cadastro complementar</strong> (departamento, conhecimentos, ferramentas e WhatsApp). A janela aparece para ela a cada acesso até ser preenchida.</p>'
+          : '<p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin:8px 0"><i class="ti ti-info-circle"></i> O perfil <strong>' + escapeHtml(roleName(d.role)) + '</strong> é dispensado do cadastro complementar. Se a pessoa mudar para um perfil de execução (gerente, product owner, Scrum Master ou membro do time), o cadastro passa a ser obrigatório.</p>')}
+      <div id="person-reviews"></div>
       <div style="margin-top:8px"><button class="btn btn-sm" onclick="Users.closePerson()">Fechar</button></div></div>`;
+    if(typeof Reviews !== 'undefined') Reviews.renderFor(id, document.getElementById('person-reviews'), { managed:managed().map(p => p.id), access, projName });
     if(root.scrollIntoView) root.scrollIntoView({ block:'nearest' });
   }
   function closePerson() { const r = document.getElementById('users-person-root'); if(r) r.innerHTML = ''; }
@@ -5324,14 +5358,32 @@ const Users = (() => {
 const FirstAccess = (() => {
   const $ = id => document.getElementById(id);
   let postponed = false; // "Agora não": só volta a perguntar no próximo acesso
+  // Perfis dispensados do cadastro complementar; quem muda para outro perfil (gerente, PO, Scrum Master, membro do time ou personalizado) passa a ser obrigado
+  const EXEMPT = ['admin', 'patrocinador', 'consulta', 'manutencao'];
+  const isRequired = role => !EXEMPT.includes(role);
 
   // Mesmas regras do servidor (supabase/functions/_shared/useradmin.mjs, validateDetails): o telefone só existe com o "sim"
+  const LEVELS = ['junior', 'pleno', 'senior'], KINDS = ['conhecimento', 'ferramenta'];
+  const LEVEL_LABEL = { junior:'Júnior', pleno:'Pleno', senior:'Sênior' };
   function validate(d) {
     const clean = (v, max) => String(v == null ? '' : v).trim().replace(/\s+/g, ' ').slice(0, max);
-    const department = clean(d && d.department, 80), knowledge = clean(d && d.knowledge, 600), tools = clean(d && d.tools, 400);
+    const department = clean(d && d.department, 80);
     if(!department) return { ok:false, error:'Informe o departamento.' };
-    if(!knowledge) return { ok:false, error:'Descreva brevemente os seus conhecimentos.' };
-    if(!tools) return { ok:false, error:'Informe as ferramentas que você domina.' };
+    const raw = Array.isArray(d && d.skills) ? d.skills : [];
+    const seen = new Set(), skills = [];
+    for(const s of raw) {
+      const name = clean(s && s.name, 60);
+      if(!name && !(s && s.level)) continue;
+      if(!KINDS.includes(s && s.kind)) return { ok:false, error:'Tipo de habilidade inválido.' };
+      if(name.length < 2) return { ok:false, error:'Dê um nome (mínimo 2 letras) a cada conhecimento e ferramenta, ou apague a linha em branco.' };
+      if(!LEVELS.includes(s.level)) return { ok:false, error:'Escolha o nível (júnior, pleno ou sênior) de "' + name + '".' };
+      const key = s.kind + '|' + name.toLowerCase();
+      if(seen.has(key)) continue;
+      seen.add(key); skills.push({ kind:s.kind, name, level:s.level });
+    }
+    if(!skills.some(s => s.kind === 'conhecimento')) return { ok:false, error:'Informe ao menos um conhecimento, com o nível.' };
+    if(!skills.some(s => s.kind === 'ferramenta')) return { ok:false, error:'Informe ao menos uma ferramenta, com o nível.' };
+    if(skills.length > 40) return { ok:false, error:'Muitas habilidades (máximo 40).' };
     const consent = !!d && d.consent === true;
     let phone = null;
     const digits = String(d && d.phone || '').replace(/\D/g, '');
@@ -5343,13 +5395,31 @@ const FirstAccess = (() => {
     } else if(consent) {
       return { ok:false, error:'Você autorizou as mensagens: informe o telefone com WhatsApp (ou escolha "Não").' };
     }
-    return { ok:true, value:{ department, knowledge, tools, phone, consent:!!phone } };
+    return { ok:true, value:{ department, skills, phone, consent:!!phone } };
+  }
+
+  // Linhas de conhecimento/ferramenta: nome (com sugestões do catálogo) + nível
+  const rowsId = kind => kind === 'conhecimento' ? 'fp-know-rows' : 'fp-tool-rows';
+  function rowHtml(kind, name, level) {
+    const lvl = LEVELS.map(l => '<option value="' + l + '"' + (l === level ? ' selected' : '') + '>' + LEVEL_LABEL[l] + '</option>').join('');
+    const lab = kind === 'conhecimento' ? 'conhecimento' : 'ferramenta';
+    return '<div class="fp-skill-row" data-kind="' + kind + '"><input class="input fp-sk-name" list="fp-dl-' + kind + '" maxlength="60" autocomplete="off" aria-label="Nome do ' + lab + '" placeholder="' + (kind === 'conhecimento' ? 'Ex.: Gestão de projetos' : 'Ex.: Excel') + '" value="' + String(name || '').replace(/"/g, '&quot;') + '"><select class="input fp-sk-level" aria-label="Nível neste ' + lab + '"><option value="">Nível…</option>' + lvl + '</select><button class="btn btn-sm" type="button" aria-label="Remover este ' + lab + '" onclick="this.parentNode.remove()"><i class="ti ti-x"></i></button></div>';
+  }
+  function addSkill(kind, name, level) { const el = $(rowsId(kind)); if(el) { el.insertAdjacentHTML('beforeend', rowHtml(kind, name, level)); const r = el.querySelectorAll('.fp-sk-name'); if(!name) r[r.length - 1].focus(); } }
+  function readSkills() {
+    const out = [];
+    document.querySelectorAll('#modal-firstprofile .fp-skill-row').forEach(r => out.push({ kind:r.dataset.kind, name:r.querySelector('.fp-sk-name').value, level:r.querySelector('.fp-sk-level').value }));
+    return out;
+  }
+  async function loadCatalog() {
+    const items = await Cloud.listSkillCatalog();
+    KINDS.forEach(k => { const dl = $('fp-dl-' + k); if(dl) dl.innerHTML = items.filter(i => i.kind === k).map(i => '<option value="' + String(i.name).replace(/"/g, '&quot;') + '"></option>').join(''); });
   }
 
   async function check() {
     if(typeof Cloud === 'undefined' || !Cloud.isSignedIn()) return;
     if(Cloud.mustChangePassword()) { showPassword(); return; }
-    if(postponed) return;
+    if(postponed || !isRequired(Auth.getRole())) return;
     const d = await Cloud.getMyDetails();
     if(d === undefined) return; // tabela ainda não existe ou falha de leitura: não incomoda
     if(!d || !d.completed_at) showProfile(d);
@@ -5379,7 +5449,11 @@ const FirstAccess = (() => {
   function showProfile(d) {
     const m = $('modal-firstprofile'); if(!m) return;
     d = d || {};
-    $('fp-dept').value = d.department || ''; $('fp-know').value = d.knowledge || ''; $('fp-tools').value = d.tools || '';
+    $('fp-dept').value = d.department || '';
+    KINDS.forEach(k => { $(rowsId(k)).innerHTML = ''; });
+    const have = Array.isArray(d.skills) ? d.skills : [];
+    KINDS.forEach(k => { const mine = have.filter(x => x.kind === k); (mine.length ? mine : [{}]).forEach(x => addSkill(k, x.name || '', x.level || '')); });
+    loadCatalog();
     $('fp-phone').value = d.phone || '';
     const yes = $('fp-consent-yes'), no = $('fp-consent-no');
     yes.checked = !!d.whatsapp_consent; no.checked = !d.whatsapp_consent;
@@ -5393,10 +5467,14 @@ const FirstAccess = (() => {
     if(!on) $('fp-phone').value = '';
   }
   async function saveProfile() {
-    const r = validate({ department:$('fp-dept').value, knowledge:$('fp-know').value, tools:$('fp-tools').value, phone:$('fp-phone').value, consent:$('fp-consent-yes').checked });
+    const r = validate({ department:$('fp-dept').value, skills:readSkills(), phone:$('fp-phone').value, consent:$('fp-consent-yes').checked });
     if(!r.ok) { T.show('⚠️ ' + r.error); return; }
     const btn = $('fp-save'); btn.disabled = true;
-    const ok = await Cloud.saveMyDetails(r.value);
+    // O servidor padroniza os nomes: reaproveita o item que já existe (mesmo com caixa/acento diferentes) ou cria o que faltar
+    const resolved = await Cloud.resolveSkills(r.value.skills.map(s => ({ kind:s.kind, name:s.name })));
+    if(!resolved) { btn.disabled = false; return; }
+    const skills = r.value.skills.map((s, i) => ({ kind:s.kind, name:resolved[i].name, skill_id:resolved[i].skill_id, level:s.level }));
+    const ok = await Cloud.saveMyDetails({ ...r.value, skills });
     btn.disabled = false;
     if(!ok) return;
     $('modal-firstprofile').classList.add('hidden');
@@ -5404,7 +5482,99 @@ const FirstAccess = (() => {
   }
   function later() { postponed = true; $('modal-firstprofile').classList.add('hidden'); T.show('Tudo bem — pedimos de novo no próximo acesso.'); }
 
-  return { check, validate, savePassword, saveProfile, toggleConsent, later, showProfile };
+  return { check, validate, savePassword, saveProfile, toggleConsent, later, showProfile, addSkill, isRequired, EXEMPT };
+})();
+</script>
+
+<!-- ■ MODULE: ui/reviews ─ Avaliação do profissional por projeto: a própria pessoa (autoavaliação) e o gerente responsável; mostra as duas visões lado a lado -->
+<script data-module="ui/reviews">
+const Reviews = (() => {
+  const CRITERIA = [['qualidade', 'Qualidade do trabalho'], ['prazos', 'Cumprimento de prazos'], ['comunicacao', 'Comunicação'], ['colaboracao', 'Colaboração com o time'], ['autonomia', 'Autonomia e proatividade']];
+  const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmt = n => n == null ? '—' : String(n).replace('.', ',');
+  const average = sc => { const v = CRITERIA.map(([k]) => Number(sc && sc[k])).filter(n => n >= 1 && n <= 5); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length * 10) / 10 : null; };
+  // Critérios em que a percepção da pessoa e a do gerente diferem em 2 pontos ou mais
+  const gaps = (self, mgr) => CRITERIA.filter(([k]) => self && mgr && Math.abs(Number(self[k]) - Number(mgr[k])) >= 2).map(([, l]) => l);
+  function validate(r) {
+    const scores = {};
+    for(const [k, label] of CRITERIA) { const n = Number(r && r.scores && r.scores[k]); if(!Number.isInteger(n) || n < 1 || n > 5) return { ok:false, error:'Dê uma nota de 1 a 5 em "' + label + '".' }; scores[k] = n; }
+    return { ok:true, value:{ scores, comment:String(r.comment || '').trim().slice(0, 1000), again: r.again === true ? true : r.again === false ? false : null } };
+  }
+  const NOTE = ['', '1 — Muito abaixo', '2 — Abaixo', '3 — Esperado', '4 — Acima', '5 — Excelente'];
+  function form(p, withAgain, cur) {
+    const sel = k => '<select class="input" id="' + p + '-' + k + '"><option value="">Nota…</option>' + [1,2,3,4,5].map(n => '<option value="' + n + '"' + (cur && cur.scores && Number(cur.scores[k]) === n ? ' selected' : '') + '>' + NOTE[n] + '</option>').join('') + '</select>';
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px">' + CRITERIA.map(([k, l]) => '<div class="field"><label for="' + p + '-' + k + '">' + l + '</label>' + sel(k) + '</div>').join('') + '</div>'
+      + (withAgain ? '<div class="field"><label for="' + p + '-again">Voltaria a trabalhar com esta pessoa?</label><select class="input" id="' + p + '-again" style="max-width:220px"><option value="">Prefiro não responder</option><option value="true"' + (cur && cur.would_work_again === true ? ' selected' : '') + '>Sim</option><option value="false"' + (cur && cur.would_work_again === false ? ' selected' : '') + '>Não</option></select></div>' : '')
+      + '<div class="field"><label for="' + p + '-comment">Comentário (opcional)</label><textarea class="input" id="' + p + '-comment" rows="2" maxlength="1000" style="resize:vertical;font-family:inherit">' + esc(cur && cur.comment || '') + '</textarea></div>';
+  }
+  function read(p, withAgain) {
+    const scores = {}; CRITERIA.forEach(([k]) => { scores[k] = Number((document.getElementById(p + '-' + k) || {}).value); });
+    const ag = withAgain ? (document.getElementById(p + '-again') || {}).value : '';
+    return validate({ scores, comment:(document.getElementById(p + '-comment') || {}).value, again: ag === 'true' ? true : ag === 'false' ? false : null });
+  }
+  function summary(self, mgr) {
+    const g = gaps(self && self.scores, mgr && mgr.scores);
+    return '<div style="font-size:12.5px;line-height:1.7">'
+      + '<span class="badge">Como a pessoa se vê: <b>' + fmt(average(self && self.scores)) + '</b></span> <span class="badge b-acc">Como o gerente vê: <b>' + fmt(average(mgr && mgr.scores)) + '</b></span>'
+      + (mgr && mgr.would_work_again === true ? ' <span class="badge b-grn">Voltaria a trabalhar junto</span>' : mgr && mgr.would_work_again === false ? ' <span class="badge b-red">Não voltaria a trabalhar junto</span>' : '')
+      + (g.length ? '<div style="color:var(--t2)"><i class="ti ti-arrows-diff"></i> Percepções diferentes (2 pontos ou mais) em: ' + g.map(esc).join(', ') + '.</div>' : '')
+      + '<details style="margin-top:4px"><summary style="cursor:pointer;color:var(--t2)">Ver as notas por critério</summary><table style="width:100%;font-size:12px;margin-top:4px"><thead><tr><th scope="col" style="text-align:left">Critério</th><th scope="col">Pessoa</th><th scope="col">Gerente</th></tr></thead><tbody>'
+      + CRITERIA.map(([k, l]) => '<tr><td>' + l + '</td><td style="text-align:center">' + fmt(self && self.scores ? self.scores[k] : null) + '</td><td style="text-align:center">' + fmt(mgr && mgr.scores ? mgr.scores[k] : null) + '</td></tr>').join('')
+      + '</tbody></table>' + [['Pessoa', self], ['Gerente', mgr]].filter(x => x[1] && x[1].comment).map(x => '<div style="margin-top:4px"><b>' + x[0] + ':</b> ' + esc(x[1].comment) + '</div>').join('') + '</details></div>';
+  }
+
+  // Dentro de "Ver cadastro": as duas visões por projeto e, para o gerente responsável, o formulário
+  async function renderFor(personId, el, ctx) {
+    if(!el) return;
+    const rows = await Cloud.listReviews(personId);
+    const byProj = {}; rows.forEach(r => { (byProj[r.project_id] = byProj[r.project_id] || {})[r.kind] = r; });
+    const can = (ctx.managed || []).filter(pid => (ctx.access || []).some(a => a.user_id === personId && a.project_id === pid));
+    let html = '<div class="lbl" style="margin-top:12px"><i class="ti ti-star"></i>Avaliações por projeto<span class="help-q" data-help="A pessoa se avalia (autoavaliação) e o gerente responsável avalia o trabalho dela, com os mesmos 5 critérios de 1 a 5. Os dois lados aparecem juntos para mostrar onde a percepção é diferente." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>';
+    const pids = Object.keys(byProj);
+    html += pids.length ? pids.map(pid => '<div class="set-row" style="align-items:flex-start;flex-direction:column;gap:4px"><div class="set-lbl">' + esc(ctx.projName(pid)) + '</div>' + summary(byProj[pid].self, byProj[pid].manager) + '</div>').join('') : '<p style="font-size:12.5px;color:var(--t3)">Nenhuma avaliação registrada ainda.</p>';
+    if(can.length) {
+      const first = can[0], cur = (byProj[first] || {}).manager;
+      html += '<div class="card" style="margin-top:8px"><div class="lbl"><i class="ti ti-edit"></i>Avaliar o trabalho desta pessoa</div>'
+        + '<div class="field"><label for="rv-proj">Projeto</label><select class="input" id="rv-proj" style="max-width:320px" onchange="Reviews.switchProject(this.value)">' + can.map(pid => '<option value="' + esc(pid) + '">' + esc(ctx.projName(pid)) + '</option>').join('') + '</select></div>'
+        + '<div id="rv-form">' + form('rv', true, cur) + '</div><button class="btn btn-sm btn-pri" id="rv-save" onclick="Reviews.saveManager()"><i class="ti ti-check"></i>Salvar avaliação</button></div>';
+      state = { personId, rows, el, ctx };
+    }
+    el.innerHTML = html;
+  }
+  let state = null;
+  function switchProject(pid) {
+    const cur = state && state.rows.find(r => r.project_id === pid && r.kind === 'manager');
+    document.getElementById('rv-form').innerHTML = form('rv', true, cur);
+  }
+  async function saveManager() {
+    const r = read('rv', true); if(!r.ok) { T.show('⚠️ ' + r.error); return; }
+    const btn = document.getElementById('rv-save'); btn.disabled = true;
+    const ok = await Cloud.saveReview({ projectId:document.getElementById('rv-proj').value, personId:state.personId, kind:'manager', scores:r.value.scores, again:r.value.again, comment:r.value.comment });
+    btn.disabled = false;
+    if(ok) { T.show('✅ Avaliação salva.'); renderFor(state.personId, state.el, state.ctx); }
+  }
+
+  // Em "Meu trabalho": a própria pessoa se avalia no projeto ativo e vê como o gerente a avaliou
+  async function renderSelf(el) {
+    if(!el) return;
+    el.innerHTML = '';
+    if(typeof Cloud === 'undefined' || !Cloud.isSignedIn() || !FirstAccess.isRequired(Auth.getRole())) return;
+    const pid = DB.getActiveProjectId(), me = Cloud.getUserId();
+    const rows = (await Cloud.listReviews(me)).filter(r => r.project_id === pid);
+    const self = rows.find(r => r.kind === 'self'), mgr = rows.find(r => r.kind === 'manager');
+    const proj = (DB.listProjects().find(p => p.id === pid) || {}).name || pid;
+    el.innerHTML = '<div class="card" style="margin-top:12px"><div class="lbl"><i class="ti ti-star"></i>Minha avaliação neste projeto — ' + esc(proj) + '<span class="help-q" data-help="Avalie o seu próprio trabalho no projeto, de 1 a 5 em cinco critérios. O gerente responsável faz a avaliação dele; as duas aparecem lado a lado para conversarem sobre as diferenças. Você pode alterar a sua enquanto o projeto não terminar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>'
+      + (self || mgr ? summary(self, mgr) : '<p style="font-size:12.5px;color:var(--t3)">Você ainda não se avaliou neste projeto.</p>')
+      + '<details style="margin-top:8px"' + (self ? '' : ' open') + '><summary style="cursor:pointer;font-size:12.5px">' + (self ? 'Alterar a minha autoavaliação' : 'Fazer a minha autoavaliação') + '</summary><div style="margin-top:8px">' + form('rs', false, self) + '<button class="btn btn-sm btn-pri" id="rs-save" onclick="Reviews.saveSelf()"><i class="ti ti-check"></i>Salvar</button></div></details></div>';
+  }
+  async function saveSelf() {
+    const r = read('rs', false); if(!r.ok) { T.show('⚠️ ' + r.error); return; }
+    const btn = document.getElementById('rs-save'); btn.disabled = true;
+    const ok = await Cloud.saveReview({ projectId:DB.getActiveProjectId(), personId:Cloud.getUserId(), kind:'self', scores:r.value.scores, again:null, comment:r.value.comment });
+    btn.disabled = false;
+    if(ok) { T.show('✅ Autoavaliação salva.'); renderSelf(document.getElementById('mw-review')); }
+  }
+  return { CRITERIA, average, gaps, validate, renderFor, renderSelf, saveSelf, saveManager, switchProject };
 })();
 </script>
 
@@ -10593,6 +10763,7 @@ const MyWork = (() => {
   }
   function render() {
     const root = document.getElementById('mw-root'); if(!root) return;
+    if(typeof Reviews !== 'undefined') Reviews.renderSelf(document.getElementById('mw-review'));
     const me = myNames();
     if(!me.names.length) {
       root.innerHTML = `<div class="card"><div class="rk-empty">Não encontrei você na equipe deste projeto. Peça ao administrador para ligar a sua conta ao seu nome em <b>Colaboradores → Editar → Conta vinculada</b>.</div></div>`;
@@ -17208,8 +17379,10 @@ const Messaging = (() => {
     <div class="modal-sub">Leva um minuto e ajuda a equipe a saber quem faz o quê.</div>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label class="field-label" for="fp-dept">Departamento (obrigatório)</label><input class="input" id="fp-dept" maxlength="80" placeholder="Ex.: Tecnologia, Financeiro, Operações"></div>
-      <div><label class="field-label" for="fp-know">Conhecimentos, em poucas palavras (obrigatório)</label><textarea class="input" id="fp-know" rows="2" maxlength="600" style="resize:vertical;font-family:inherit" placeholder="Ex.: gestão de projetos, SAP FI, integrações"></textarea></div>
-      <div><label class="field-label" for="fp-tools">Ferramentas que você domina (obrigatório)</label><input class="input" id="fp-tools" maxlength="400" placeholder="Ex.: Excel, Power BI, Jira, SQL"></div>
+      <fieldset class="fp-skills"><legend>Conhecimentos (obrigatório — ao menos um)</legend><div id="fp-know-rows"></div><button class="btn btn-sm" type="button" onclick="FirstAccess.addSkill('conhecimento')"><i class="ti ti-plus"></i>Adicionar conhecimento</button></fieldset>
+      <fieldset class="fp-skills"><legend>Ferramentas que você domina (obrigatório — ao menos uma)</legend><div id="fp-tool-rows"></div><button class="btn btn-sm" type="button" onclick="FirstAccess.addSkill('ferramenta')"><i class="ti ti-plus"></i>Adicionar ferramenta</button></fieldset>
+      <p style="font-size:11.5px;color:var(--t3);line-height:1.5;margin:-4px 0 0"><i class="ti ti-info-circle"></i> Escolha da lista para manter a escrita padronizada. Não achou? Digite o nome: ele será criado e ficará disponível para todos. Em cada item, indique o seu nível: Júnior, Pleno ou Sênior.</p>
+      <datalist id="fp-dl-conhecimento"></datalist><datalist id="fp-dl-ferramenta"></datalist>
       <fieldset style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:0">
         <legend style="font-size:12px;font-weight:600;padding:0 4px">Mensagens do sistema no seu WhatsApp</legend>
         <p style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:8px">Podemos usar o seu número de WhatsApp para enviar mensagens do PMO Compass (alertas e avisos dos projetos em que você atua)? Usamos o número <strong>somente para isso</strong>, ele fica visível só para você e para o administrador, e você pode <strong>retirar a autorização a qualquer momento</strong> (LGPD, art. 8º). Se escolher "Não", nada é guardado.</p>

@@ -49,11 +49,16 @@ test('a função só atende o administrador e o app não tem mais cadastro abert
 import { validateDetails, accessEmail } from '../../supabase/functions/_shared/useradmin.mjs';
 const m = html.match(/<script data-module="ui\/first-access">([\s\S]*?)<\/script>/);
 const FirstAccess = new Function('document', 'Cloud', 'T', `${m[1]}\nreturn FirstAccess;`)({ getElementById: () => null }, undefined, undefined);
-const base = { department: ' TI ', knowledge: 'gestão', tools: 'Excel' };
+const base = { department: ' TI ', skills: [{ kind: 'conhecimento', name: ' Gestão  de projetos ', level: 'senior' }, { kind: 'ferramenta', name: 'Excel', level: 'pleno' }] };
 
 test('cadastro complementar: departamento, conhecimentos e ferramentas são obrigatórios', () => {
-  for (const f of ['department', 'knowledge', 'tools']) assert.equal(validateDetails({ ...base, [f]: '  ' }).ok, false, f);
-  const r = validateDetails(base); assert.ok(r.ok); assert.equal(r.value.department, 'TI'); assert.equal(r.value.phone, null); assert.equal(r.value.consent, false);
+  assert.equal(validateDetails({ ...base, department: '  ' }).ok, false, 'departamento');
+  assert.equal(validateDetails({ ...base, skills: base.skills.filter(x => x.kind === 'ferramenta') }).ok, false, 'sem conhecimento');
+  assert.equal(validateDetails({ ...base, skills: base.skills.filter(x => x.kind === 'conhecimento') }).ok, false, 'sem ferramenta');
+  assert.equal(validateDetails({ ...base, skills: [{ kind: 'conhecimento', name: 'X', level: 'senior' }, base.skills[1]] }).ok, false, 'nome curto');
+  assert.equal(validateDetails({ ...base, skills: [{ kind: 'conhecimento', name: 'Scrum', level: 'mestre' }, base.skills[1]] }).ok, false, 'nível inválido');
+  assert.equal(validateDetails({ ...base, skills: [...base.skills, { kind: 'ferramenta', name: 'excel', level: 'junior' }] }).value.skills.length, 2, 'repetido some');
+  const r = validateDetails(base); assert.ok(r.ok); assert.equal(r.value.department, 'TI'); assert.equal(r.value.skills[0].name, 'Gestão de projetos'); assert.equal(r.value.phone, null); assert.equal(r.value.consent, false);
 });
 
 test('LGPD: telefone só com o "sim"; "sim" exige telefone; sem DDI assume Brasil', () => {
@@ -67,7 +72,7 @@ test('LGPD: telefone só com o "sim"; "sim" exige telefone; sem DDI assume Brasi
 
 test('as regras da tela são idênticas às do servidor', () => {
   const cases = [base, { ...base, department: '' }, { ...base, phone: '11912345678', consent: true }, { ...base, phone: '11912345678', consent: false },
-    { ...base, phone: '', consent: true }, { ...base, phone: '123', consent: true }, { ...base, tools: 'x'.repeat(900) }, null, {}];
+    { ...base, phone: '', consent: true }, { ...base, phone: '123', consent: true }, { ...base, skills: [{ kind: 'conhecimento', name: 'x'.repeat(90), level: 'pleno' }, base.skills[1]] }, { ...base, skills: [] }, null, {}];
   for (const c of cases) assert.deepEqual(FirstAccess.validate(c), validateDetails(c), JSON.stringify(c));
 });
 
@@ -112,4 +117,23 @@ test('ver cadastro: gerente só vê pessoas dos seus projetos e nunca o telefone
   assert.match(sql, /'phone', case when is_admin or uid = auth\.uid\(\) then d\.phone end/);
   assert.match(sql, /raise exception 'Sem permissão/);
   for (const k of ['Users.showPerson', 'Cloud.personDetails', 'person_details']) assert.ok(html.includes(k), k);
+});
+
+test('perfis dispensados do cadastro complementar; os demais passam a ser obrigados', () => {
+  for (const r of ['admin', 'patrocinador', 'consulta', 'manutencao']) assert.equal(FirstAccess.isRequired(r), false, r);
+  for (const r of ['gerente', 'po', 'sm', 'time', 'perfil_personalizado']) assert.equal(FirstAccess.isRequired(r), true, r);
+});
+
+
+test('avaliações: 5 critérios de 1 a 5, média e divergência entre a pessoa e o gerente', () => {
+  const rv = html.match(/<script data-module="ui\/reviews">([\s\S]*?)<\/script>/);
+  const Reviews = new Function('document', 'Cloud', 'T', 'DB', 'FirstAccess', 'Auth', rv[1] + '\nreturn Reviews;')({ getElementById: () => null }, {}, {}, {}, {}, {});
+  const ok5 = { qualidade: 4, prazos: 3, comunicacao: 5, colaboracao: 4, autonomia: 4 };
+  assert.equal(Reviews.average(ok5), 4); assert.equal(Reviews.validate({ scores: ok5 }).ok, true);
+  assert.equal(Reviews.validate({ scores: { ...ok5, prazos: 6 } }).ok, false); assert.equal(Reviews.validate({ scores: { ...ok5, prazos: 2.5 } }).ok, false);
+  assert.equal(Reviews.validate({ scores: { qualidade: 4 } }).ok, false);
+  assert.deepEqual(Reviews.gaps({ ...ok5, prazos: 5 }, { ...ok5, prazos: 2 }), ['Cumprimento de prazos']);
+  assert.deepEqual(Reviews.gaps(ok5, ok5), []);
+  const sql = ['20261101130000_skills_reviews.sql', '20261101140000_skill_catalog.sql'].map(f => readFileSync(join(root, 'supabase', 'migrations', f), 'utf8')).join('\n');
+  for (const k of ['person_reviews_select', "kind = 'self' and person_id = auth.uid()", 'is_project_manager(project_id)', 'find_people', 'resolve_skills', 'merged_into', 'skill_catalog_admin_write']) assert.ok(sql.includes(k), k);
 });

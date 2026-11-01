@@ -49,14 +49,30 @@ export function accessEmail({ name, email, password, appUrl, reset = false }) {
   return { subject, text, html };
 }
 
-// Cadastro complementar da própria pessoa: obrigatórios departamento, conhecimentos e ferramentas;
-// o telefone só vale com o "sim" do consentimento (LGPD).
+export const LEVELS = ['junior', 'pleno', 'senior'];
+export const KINDS = ['conhecimento', 'ferramenta'];
+
+// Cadastro complementar da própria pessoa: obrigatórios o departamento, ao menos 1 conhecimento e 1 ferramenta (cada um com nível júnior/pleno/sênior);
+// o telefone só vale com o "sim" do consentimento (LGPD). A padronização dos nomes é feita no catálogo do banco (resolve_skills).
 export function validateDetails(d) {
   const clean = (v, max) => String(v == null ? '' : v).trim().replace(/\s+/g, ' ').slice(0, max);
-  const department = clean(d && d.department, 80), knowledge = clean(d && d.knowledge, 600), tools = clean(d && d.tools, 400);
+  const department = clean(d && d.department, 80);
   if (!department) return { ok: false, error: 'Informe o departamento.' };
-  if (!knowledge) return { ok: false, error: 'Descreva brevemente os seus conhecimentos.' };
-  if (!tools) return { ok: false, error: 'Informe as ferramentas que você domina.' };
+  const raw = Array.isArray(d && d.skills) ? d.skills : [];
+  const seen = new Set(), skills = [];
+  for (const s of raw) {
+    const name = clean(s && s.name, 60);
+    if (!name && !(s && s.level)) continue; // linha em branco
+    if (!KINDS.includes(s && s.kind)) return { ok: false, error: 'Tipo de habilidade inválido.' };
+    if (name.length < 2) return { ok: false, error: 'Dê um nome (mínimo 2 letras) a cada conhecimento e ferramenta, ou apague a linha em branco.' };
+    if (!LEVELS.includes(s.level)) return { ok: false, error: 'Escolha o nível (júnior, pleno ou sênior) de "' + name + '".' };
+    const key = s.kind + '|' + name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key); skills.push({ kind: s.kind, name, level: s.level });
+  }
+  if (!skills.some(s => s.kind === 'conhecimento')) return { ok: false, error: 'Informe ao menos um conhecimento, com o nível.' };
+  if (!skills.some(s => s.kind === 'ferramenta')) return { ok: false, error: 'Informe ao menos uma ferramenta, com o nível.' };
+  if (skills.length > 40) return { ok: false, error: 'Muitas habilidades (máximo 40).' };
   const consent = d && d.consent === true;
   let phone = null;
   const digits = String(d && d.phone || '').replace(/\D/g, '');
@@ -68,5 +84,22 @@ export function validateDetails(d) {
   } else if (consent) {
     return { ok: false, error: 'Você autorizou as mensagens: informe o telefone com WhatsApp (ou escolha "Não").' };
   }
-  return { ok: true, value: { department, knowledge, tools, phone, consent: !!phone } };
+  return { ok: true, value: { department, skills, phone, consent: !!phone } };
 }
+
+// Avaliação: 5 critérios de 1 a 5
+export const CRITERIA = [
+  ['qualidade', 'Qualidade do trabalho'], ['prazos', 'Cumprimento de prazos'], ['comunicacao', 'Comunicação'],
+  ['colaboracao', 'Colaboração com o time'], ['autonomia', 'Autonomia e proatividade'],
+];
+export function validateReview(r) {
+  const scores = {};
+  for (const [k, label] of CRITERIA) {
+    const n = Number(r && r.scores && r.scores[k]);
+    if (!Number.isInteger(n) || n < 1 || n > 5) return { ok: false, error: 'Dê uma nota de 1 a 5 em "' + label + '".' };
+    scores[k] = n;
+  }
+  const comment = String(r && r.comment || '').trim().slice(0, 1000);
+  return { ok: true, value: { scores, comment, again: r && r.again === true ? true : r && r.again === false ? false : null } };
+}
+export const average = scores => { const v = CRITERIA.map(([k]) => Number(scores && scores[k])).filter(n => n >= 1 && n <= 5); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length * 10) / 10 : null; };
