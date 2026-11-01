@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.21.0'
+  version: '2.22.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1505,6 +1505,7 @@ body.icons-failed i[data-fb]::before{
     </div>
     <div id="users-new-root"></div>
     <div id="users-life-root"></div>
+    <div id="users-person-root"></div>
     <div id="users-list-root"></div>
     <div id="users-reassign"></div>
     <div id="users-managers"></div>
@@ -4209,6 +4210,12 @@ const Cloud = (() => {
     const { data } = await client.from('team_members').select('name').eq('project_id', pid).order('name');
     return (data || []).map(r => r.name).filter(Boolean);
   }
+  async function personDetails(uid) {
+    if(!client || !session) return null;
+    const { data, error } = await client.rpc('person_details', { uid });
+    if(error) { T.show('❌ ' + error.message); return null; }
+    return data;
+  }
   async function pendingWork(pid, person) {
     if(!client || !session) return null;
     const { data, error } = await client.rpc('pending_work', { pid, person });
@@ -4672,7 +4679,7 @@ const Cloud = (() => {
   }
 
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
-    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, manageUsers, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
+    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, manageUsers, personDetails, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument, pushRow, pushMany, deleteRow, msgTable, invokeFn,
@@ -5055,6 +5062,27 @@ const Users = (() => {
     const el = document.getElementById('users-new-root'); if(el && el.scrollIntoView) el.scrollIntoView({ block:'nearest' });
   }
 
+  // ── Ver o cadastro de uma pessoa (Administrador: tudo; gerente responsável: das pessoas dos seus projetos, sem telefone) ──
+  async function showPerson(id) {
+    const root = document.getElementById('users-person-root'); if(!root) return;
+    root.innerHTML = '<div style="font-size:12px;color:var(--t3);margin-bottom:10px"><i class="ti ti-loader-2"></i> Carregando…</div>';
+    const d = await Cloud.personDetails(id);
+    if(!d) { root.innerHTML = ''; return; }
+    const projs = access.filter(a => a.user_id === id).map(a => projName(a.project_id));
+    const when = v => v ? new Date(v).toLocaleDateString('pt-BR') : '';
+    const row = (l, v) => `<div class="set-row"><div class="set-lbl">${l}</div><div class="set-sub" style="white-space:pre-wrap;overflow-wrap:anywhere;max-width:62%;text-align:right">${v || '<span style="color:var(--t3)">não informado</span>'}</div></div>`;
+    const wa = d.whatsapp_consent
+      ? (d.phone ? '+' + escapeHtml(d.phone) + ' <span class="badge b-grn">autorizou</span> desde ' + when(d.whatsapp_consent_at) : '<span class="badge b-grn">autorizou</span> desde ' + when(d.whatsapp_consent_at) + ' <span style="color:var(--t3)">(o número fica visível só para o Administrador)</span>')
+      : '<span class="badge">não autorizou</span> <span style="color:var(--t3)">nenhum número guardado</span>';
+    root.innerHTML = `<div class="card" style="margin-bottom:10px;background:var(--bg2)"><div class="lbl"><i class="ti ti-id"></i>Cadastro de ${escapeHtml(d.name || '(sem nome)')}${d.active === false ? ' <span class="badge b-red">Inativo</span>' : ''}</div>
+      ${row('E-mail', escapeHtml(d.email || ''))}${row('Perfil de acesso', escapeHtml(roleName(d.role)))}${row('Projetos', d.role === 'admin' ? 'Todos' : escapeHtml(projs.join(', ')))}
+      ${d.has_details ? row('Departamento', escapeHtml(d.department || '')) + row('Conhecimentos', escapeHtml(d.knowledge || '')) + row('Ferramentas que domina', escapeHtml(d.tools || '')) + row('WhatsApp para mensagens do sistema', wa) + row('Cadastro completo em', when(d.completed_at))
+        : '<p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin:8px 0"><i class="ti ti-info-circle"></i> Esta pessoa ainda <strong>não preencheu o cadastro complementar</strong> (departamento, conhecimentos, ferramentas e WhatsApp). A janela aparece para ela a cada acesso até ser preenchida.</p>'}
+      <div style="margin-top:8px"><button class="btn btn-sm" onclick="Users.closePerson()">Fechar</button></div></div>`;
+    if(root.scrollIntoView) root.scrollIntoView({ block:'nearest' });
+  }
+  function closePerson() { const r = document.getElementById('users-person-root'); if(r) r.innerHTML = ''; }
+
   // ── Inativar, reativar e excluir (um ou vários) — só o Administrador ──
   const sel = new Set();
   let life = null; // { kind:'inativar'|'reativar'|'excluir', ids, pend, result }
@@ -5228,7 +5256,7 @@ const Users = (() => {
       return `<div class="set-row" style="align-items:flex-start;flex-wrap:wrap;gap:10px">
         ${admin && !isMe ? `<input type="checkbox" aria-label="Marcar ${nm}" ${sel.has(p.id) ? 'checked' : ''} onchange="Users.toggleSel('${p.id}', this.checked)" style="margin-top:3px">` : (admin ? '<span style="width:13px"></span>' : '')}<div style="min-width:180px;flex:1 1 180px"><div class="set-lbl">${nm}${isMe ? ' <span class="badge b-acc">você</span>' : ''}${p.active === false ? ' <span class="badge b-red">Inativo</span>' : ''}</div><div class="set-sub" style="font-family:var(--font-mono);font-size:11px" title="Identificador da conta">${escapeHtml(p.id.slice(0, 8))}…</div></div>
         <div style="flex:2 1 280px;display:flex;flex-direction:column;gap:8px">
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${admin ? `<select class="input" style="width:auto" aria-label="Perfil de acesso de ${nm}" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>` : `<span class="badge">${escapeHtml(roleName(p.role))}</span>`}${add}${admin && !isMe ? `<button class="btn btn-sm" aria-label="Definir nova senha temporária para ${nm}" onclick="Users.resetPw('${p.id}')"><i class="ti ti-key"></i>Nova senha</button>` : ''}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${admin ? `<select class="input" style="width:auto" aria-label="Perfil de acesso de ${nm}" onchange="Users.changeRole('${p.id}', this.value, ${isMe})">${opts}</select>` : `<span class="badge">${escapeHtml(roleName(p.role))}</span>`}${add}<button class="btn btn-sm" aria-label="Ver o cadastro de ${nm}" onclick="Users.showPerson('${p.id}')"><i class="ti ti-id"></i>Ver cadastro</button>${admin && !isMe ? `<button class="btn btn-sm" aria-label="Definir nova senha temporária para ${nm}" onclick="Users.resetPw('${p.id}')"><i class="ti ti-key"></i>Nova senha</button>` : ''}</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">${chips}</div>
         </div>
       </div>`;
@@ -5287,7 +5315,7 @@ const Users = (() => {
     }
   }
 
-  return { render, refresh, setFilter, setManager, pickToggle, setAccess, setAll, removeAccess, changeRole, newProfile, editProfile, cancelProfile, saveProfile, removeProfile , newAccount, cancelNew, createAccount, copyNew, resetPw, genPassword , toggleSel, selAll, startLife, cancelLife, runLife, inactivateBlocked, rwProject, rwPreview, rwRun };
+  return { render, refresh, setFilter, setManager, pickToggle, setAccess, setAll, removeAccess, changeRole, newProfile, editProfile, cancelProfile, saveProfile, removeProfile , newAccount, cancelNew, createAccount, copyNew, resetPw, genPassword , toggleSel, selAll, startLife, cancelLife, runLife, inactivateBlocked, rwProject, rwPreview, rwRun , showPerson, closePerson };
 })();
 </script>
 

@@ -105,3 +105,11 @@ test('ciclo de vida do usuário: inativar tira o perfil, só admin/gerente respo
   assert.match(fn, /status: "blocked"[\s\S]{0,120}inative em vez de excluir/);
   for (const k of ['Users.startLife', 'Users.rwRun', 'Cloud.manageUsers', 'chave salva']) assert.ok(html.includes(k), k);
 });
+
+test('ver cadastro: gerente só vê pessoas dos seus projetos e nunca o telefone', () => {
+  const sql = readFileSync(join(root, 'supabase', 'migrations', '20261101120000_person_details.sql'), 'utf8');
+  assert.match(sql, /is_project_manager\(pr\.id\)/); assert.match(sql, /project_access/); assert.match(sql, /team_members/);
+  assert.match(sql, /'phone', case when is_admin or uid = auth\.uid\(\) then d\.phone end/);
+  assert.match(sql, /raise exception 'Sem permissão/);
+  for (const k of ['Users.showPerson', 'Cloud.personDetails', 'person_details']) assert.ok(html.includes(k), k);
+});
