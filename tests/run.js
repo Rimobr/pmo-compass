@@ -179,6 +179,19 @@ test('getStatus: limiares grn/amb/red', () => {
   assert.strictEqual(HealthScore.getStatus(0).label, 'Em risco');
 });
 
+test('Sem dado não é saúde: nenhuma dimensão com dado → score null e status "Sem dados"', () => {
+  const vazio = { schedule: null, budget: null, team: null, quality: null, learning: null, scope: null, risks: null };
+  assert.strictEqual(HealthScore.calculate(vazio), null);
+  assert.strictEqual(HealthScore.calculate({}), null);
+  assert.strictEqual(HealthScore.getStatus(null).label, 'Sem dados');
+});
+
+test('Dimensão sem dado fica fora da média (os pesos se reajustam entre as que têm dado)', () => {
+  assert.strictEqual(HealthScore.calculate({ schedule: 80, budget: null, team: null, quality: null, learning: null, scope: null, risks: null }), 80);
+  // cronograma 100 (peso .25) e riscos 40 (peso .10): (100*.25 + 40*.10) / .35 = 82,86 → 83
+  assert.strictEqual(HealthScore.calculate({ schedule: 100, risks: 40 }), 83);
+});
+
 // ── services/forecast → Forecast.analyze() ──────────────────────────────────
 section('Tendência e previsão — Forecast.analyze() (services/forecast)');
 const Forecast = loadModule('services/forecast', 'Forecast');

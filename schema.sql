@@ -1,6 +1,6 @@
 -- =========================================================================
 -- PMO Compass — esquema completo (GERADO por scripts/build-schema.mjs — não edite à mão)
--- Fonte: supabase/migrations/ (25 arquivos). Para instalação do zero, rode este arquivo inteiro
+-- Fonte: supabase/migrations/ (28 arquivos). Para instalação do zero, rode este arquivo inteiro
 -- no SQL Editor; para um banco que já existe, use `node scripts/db-apply.mjs` (aplica só o que falta).
 -- =========================================================================
 
@@ -1947,3 +1947,85 @@ $$ language plpgsql security definer set search_path = public;
 -- ▼▼▼ 20261101150000_reviews_admin_delete.sql ▼▼▼
 -- O Administrador pode apagar avaliações de um projeto (usado por "Apagar dados" do projeto e da base inteira)
 create policy "person_reviews_admin_delete" on public.person_reviews for delete using (coalesce(public.current_role(), '') = 'admin');
+
+-- ▼▼▼ 20261101160000_bug_reports.sql ▼▼▼
+-- Relato de problemas (bugs) dentro do sistema: quem usa descreve o caminho, o passo a passo e anexa prints; o Administrador acompanha.
+-- Os anexos ficam num bucket PRIVADO (cada pessoa envia só para a própria pasta; só o autor e o Administrador leem).
+
+create table if not exists public.bug_reports (
+  id uuid primary key default gen_random_uuid(),
+  reporter_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  reporter_name text check (reporter_name is null or char_length(reporter_name) <= 120),
+  title text not null check (char_length(title) between 5 and 160),
+  severity text not null default 'atrapalha' check (severity in ('impede', 'atrapalha', 'detalhe')),
+  path text not null check (char_length(path) between 2 and 300),
+  steps text not null check (char_length(steps) between 10 and 4000),
+  expected text check (expected is null or char_length(expected) <= 2000),
+  actual text not null check (char_length(actual) between 3 and 2000),
+  context jsonb not null default '{}'::jsonb check (jsonb_typeof(context) = 'object' and pg_column_size(context) < 20000),
+  attachments jsonb not null default '[]'::jsonb check (jsonb_typeof(attachments) = 'array' and jsonb_array_length(attachments) <= 6),
+  status text not null default 'aberto' check (status in ('aberto', 'em_analise', 'resolvido')),
+  admin_note text check (admin_note is null or char_length(admin_note) <= 2000),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists bug_reports_status_idx on public.bug_reports(status, created_at desc);
+alter table public.bug_reports enable row level security;
+
+create policy "bug_reports_insert_own" on public.bug_reports for insert
+  with check (reporter_id = auth.uid() and public.current_role() is not null and status = 'aberto');
+create policy "bug_reports_select" on public.bug_reports for select
+  using (reporter_id = auth.uid() or coalesce(public.current_role(), '') = 'admin');
+create policy "bug_reports_admin_update" on public.bug_reports for update
+  using (coalesce(public.current_role(), '') = 'admin') with check (coalesce(public.current_role(), '') = 'admin');
+create policy "bug_reports_admin_delete" on public.bug_reports for delete
+  using (coalesce(public.current_role(), '') = 'admin');
+
+create or replace function public.touch_bug_report() returns trigger as $$
+begin new.updated_at := now(); return new; end;
+$$ language plpgsql set search_path = public;
+drop trigger if exists touch_bug_report on public.bug_reports;
+create trigger touch_bug_report before update on public.bug_reports for each row execute function public.touch_bug_report();
+
+-- Anexos: bucket privado, só imagens, PDF e planilhas/textos pequenos, até 5 MB cada
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('bug-reports', 'bug-reports', false, 5242880,
+  array['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf', 'text/plain', 'text/csv',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])
+on conflict (id) do update set public = false, file_size_limit = 5242880, allowed_mime_types = excluded.allowed_mime_types;
+
+create policy "bug_reports_files_insert" on storage.objects for insert to authenticated
+  with check (bucket_id = 'bug-reports' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "bug_reports_files_select" on storage.objects for select to authenticated
+  using (bucket_id = 'bug-reports' and ((storage.foldername(name))[1] = auth.uid()::text or coalesce(public.current_role(), '') = 'admin'));
+create policy "bug_reports_files_delete" on storage.objects for delete to authenticated
+  using (bucket_id = 'bug-reports' and coalesce(public.current_role(), '') = 'admin');
+
+-- ▼▼▼ 20261101170000_bug_parent.sql ▼▼▼
+-- Todo BUG precisa estar ligado ao item (entrega) em que foi encontrado: o bug é "filho" desse item.
+-- Regra só para bugs novos ou alterados (os já existentes continuam podendo mudar de coluna sem a ligação).
+alter table public.backlog_items add column if not exists parent_id text check (parent_id is null or char_length(parent_id) between 1 and 60);
+create index if not exists backlog_items_parent_idx on public.backlog_items(project_id, parent_id) where parent_id is not null;
+
+create or replace function public.guard_bug_parent() returns trigger as $$
+declare p public.backlog_items;
+begin
+  if new.kind <> 'bug' then new.parent_id := null; return new; end if;
+  if tg_op = 'UPDATE' and old.kind = 'bug' and new.parent_id is not distinct from old.parent_id then return new; end if;
+  if new.parent_id is null then raise exception 'Todo bug precisa estar ligado ao item (entrega) em que foi encontrado.'; end if;
+  if new.parent_id = new.id then raise exception 'Um bug não pode ser filho dele mesmo.'; end if;
+  select * into p from public.backlog_items where project_id = new.project_id and id = new.parent_id;
+  if not found then raise exception 'O item pai % não existe neste projeto.', new.parent_id; end if;
+  if p.kind = 'bug' then raise exception 'Um bug não pode ser filho de outro bug — ligue ao item de entrega.'; end if;
+  return new;
+end;
+$$ language plpgsql set search_path = public;
+
+drop trigger if exists guard_bug_parent on public.backlog_items;
+create trigger guard_bug_parent before insert or update on public.backlog_items
+  for each row execute function public.guard_bug_parent();
+
+-- ▼▼▼ 20261101180000_sprint_history.sql ▼▼▼
+-- Histórico da sprint: o que foi devolvido ao backlog quando ela terminou (o que foi entregue já fica nos itens concluídos da sprint)
+alter table public.sprints add column if not exists carried jsonb not null default '[]'::jsonb
+  check (jsonb_typeof(carried) = 'array' and jsonb_array_length(carried) <= 500);

@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.23.0'
+  version: '2.24.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -886,6 +886,7 @@ body.icons-failed i[data-fb]::before{
     <button class="ico-btn" onclick="CmdK.open()" title="Busca rápida (Ctrl/Cmd+K)"><i class="ti ti-search"></i></button>
     <button class="ico-btn" onclick="R.go('decisions')" title="Notificações"><i class="ti ti-bell"></i><span class="bdot"></span></button>
     <button class="ico-btn" data-perm="business" onclick="Wizard.open()" title="Novo projeto"><i class="ti ti-plus"></i></button>
+    <button class="ico-btn" onclick="BugReport.open()" title="Reportar um problema" aria-label="Reportar um problema"><i class="ti ti-bug"></i></button>
     <button class="ico-btn" onclick="R.go('settings')" title="Configurações"><i class="ti ti-settings"></i></button>
     <span id="tb-cloud-badge" onclick="Auth.openModal()" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:999px;background:var(--s2);color:var(--t3)" title="Carregando…"><i class="ti ti-cloud" style="font-size:12px"></i></span>
     <span class="role-badge" id="tb-role-tag" onclick="Auth.openModal()" title="Clique para ver sua conta" style="cursor:pointer">Administrador</span>
@@ -1601,6 +1602,11 @@ body.icons-failed i[data-fb]::before{
   </div><!-- /settings-panel-comunic -->
 
   <div id="settings-panel-dados" style="display:none">
+  <div class="card" id="bugs-card" data-perm="admin" style="display:none">
+    <div class="lbl"><i class="ti ti-bug"></i>Problemas reportados<span class="help-q" data-help="Relatos enviados por quem usa o sistema, com caminho, passo a passo, contexto técnico e prints. Acompanhe a situação de cada um e deixe uma nota." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div class="btn-row" style="margin-bottom:8px"><select class="input" id="bugs-filter" aria-label="Filtrar relatos por situação" style="width:auto" onchange="BugReport.renderAdmin()"><option value="">Todas as situações</option><option value="aberto" selected>Abertos</option><option value="em_analise">Em análise</option><option value="resolvido">Resolvidos</option></select><button class="btn btn-sm" onclick="BugReport.renderAdmin(true)"><i class="ti ti-refresh"></i>Atualizar</button></div>
+    <div id="bugs-root"></div>
+  </div>
   <div class="card" data-perm="settings">
     <div class="lbl"><i class="ti ti-cloud"></i>Backend em nuvem (Supabase) — opcional</div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px">Sem configurar nada aqui, o app continua funcionando 100% localmente neste navegador (como hoje). Conectar um projeto Supabase faz WBS, Decisões e Repositório serem salvos de verdade na nuvem, sincronizados entre dispositivos, com os 4 perfis de acesso validados pelo próprio banco de dados.</p>
@@ -1967,13 +1973,14 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
 <section class="page" id="p-kanban" data-module="pages/kanban">
   <div class="pg-hdr">
     <div><div class="pg-title">Quadro Kanban<span class="help-q" data-help="O trabalho em colunas: A fazer, Em andamento, Em revisão e Concluído. Arraste o cartão ou use as setas ◀ ▶. Cada coluna de trabalho tem um limite (WIP): passar dele avisa que a equipe começou coisa demais antes de terminar o que já está aberto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Veja o que está em andamento, o que trava e o que já foi entregue.</div></div>
-    <div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="manage_backlog" onclick="Agile.openItem()"><i class="ti ti-plus"></i>Novo item</button></div>
+    <div class="btn-row"><button class="btn btn-sm" data-perm="manage_backlog" onclick="ImportUi.open('backlog')"><i class="ti ti-table-import"></i>Importar planilha</button><button class="btn btn-sm btn-acc" data-perm="manage_backlog" onclick="Agile.openItem()"><i class="ti ti-plus"></i>Novo item</button></div>
   </div>
   <div class="kb-bar">
     <select class="input" id="kb-sprint" aria-label="Sprint exibida no quadro" onchange="Agile.setBoardSprint(this.value)"></select>
     <button class="btn btn-sm" data-perm="manage_backlog" onclick="Agile.openBoardCfg()"><i class="ti ti-adjustments"></i>Personalizar quadro<span class="help-q" data-help="Renomeie as colunas, acrescente colunas do seu fluxo (por exemplo Em teste ou Aguardando cliente), defina o limite de itens em andamento de cada uma (WIP) e escolha quais informações aparecem em cada cartão. As colunas A fazer e Concluído são fixas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
     <span id="kb-imp"></span>
   </div>
+  <div id="kb-sprint-bar" role="status" aria-live="polite" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;margin:0 0 10px"></div>
   <div id="kb-root"></div>
 </section>
 
@@ -2042,8 +2049,9 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
   <div class="modal-box" style="width:520px;max-width:96vw" role="dialog" aria-modal="true" aria-labelledby="ai-title-h">
     <div class="modal-title" id="ai-title-h">Novo item</div>
     <div class="field-group"><div class="field-label"><label for="ai-title">Título</label></div><input class="input" id="ai-title" maxlength="200" placeholder="Ex: Como cliente, quero consultar meu extrato"></div>
+    <div class="field-group" id="ai-parent-grp" style="display:none"><div class="field-label"><label for="ai-parent">Item (entrega) em que o bug foi encontrado — obrigatório</label></div><select class="input" id="ai-parent"></select></div>
     <div class="g2" style="gap:10px">
-      <div class="field-group"><div class="field-label"><label for="ai-kind">Tipo</label></div><select class="input" id="ai-kind"><option value="bug">Bug</option><option value="historia" selected>História</option><option value="tarefa">Tarefa</option></select></div>
+      <div class="field-group"><div class="field-label"><label for="ai-kind">Tipo</label></div><select class="input" id="ai-kind" onchange="Agile.kindChanged()"><option value="bug">Bug</option><option value="historia" selected>História</option><option value="tarefa">Tarefa</option></select></div>
       <div class="field-group"><div class="field-label"><label for="ai-points">Pontos</label><span class="help-q" data-help="Estimativa de esforço relativo (1, 2, 3, 5, 8, 13...). Compare com outros itens: um item de 5 dá mais trabalho que um de 2. Deixe vazio se ainda não foi estimado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="ai-points" type="number" min="0" max="100" placeholder="Ex: 5"></div>
     </div>
     <div class="g2" style="gap:10px">
@@ -2052,6 +2060,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     </div>
     <div class="field-group" id="ai-status-grp"><div class="field-label"><label for="ai-status">Situação</label></div><select class="input" id="ai-status"><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="review">Em revisão</option><option value="done">Concluído</option></select></div>
     <div class="field-group"><div class="field-label"><label for="ai-desc">Descrição e critérios de aceite</label></div><textarea class="input" id="ai-desc" rows="3" maxlength="2000" style="resize:vertical;font-family:inherit"></textarea></div>
+    <div id="ai-children" style="display:none;margin-top:10px"></div>
     <div class="btn-row" style="margin-top:14px;justify-content:space-between">
       <button class="btn btn-sm btn-red" id="ai-del" onclick="Agile.deleteItem()"><i class="ti ti-trash"></i>Excluir</button>
       <span style="display:flex;gap:8px"><button class="btn btn-sm" onclick="Agile.closeItem()">Cancelar</button><button class="btn btn-sm btn-acc" onclick="Agile.saveItem()"><i class="ti ti-check"></i>Salvar</button></span>
@@ -2599,7 +2608,7 @@ const StatusMsg = (() => {
     // Projeto sem nenhuma entrega nem orçamento não tem o que avaliar: "sem dados", nunca um verde enganoso
     if(typeof HealthScore !== 'undefined' && (wbs.length || g('budgetLines').length)) {
       const score = HealthScore.calculate(HealthScore.computeMetrics(pid));
-      snapshot = { captured_at: Clock.iso(Clock.today(pid)), health_status: HealthScore.getStatus(score).label, health_score: score };
+      if(score != null) snapshot = { captured_at: Clock.iso(Clock.today(pid)), health_status: HealthScore.getStatus(score).label, health_score: score };
     }
     return {
       project: { id: pid, name: proj.name, client: proj.client || '', reference_date: proj.refDate || null },
@@ -3816,13 +3825,13 @@ const Cloud = (() => {
       local: 'baselines'
     },
     backlog_items: {
-      toDb: (x, pid) => ({ project_id:pid, id:x.id, title:x.title, description:x.description||null, kind:x.kind||'historia', status:x.status||'todo', points:(x.points===''||x.points==null)?null:x.points, assignee:x.assignee||null, sprint_id:x.sprintId||null, rank:x.rank||0, created_on:x.createdOn||null, done_on:x.doneOn||null, updated_at:new Date().toISOString() }),
-      fromDb: r => ({ id:r.id, title:r.title, description:r.description||'', kind:r.kind, status:r.status, points:r.points==null?'':r.points, assignee:r.assignee||'', sprintId:r.sprint_id||'', rank:r.rank||0, createdOn:r.created_on||'', doneOn:r.done_on||'' }),
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, title:x.title, description:x.description||null, kind:x.kind||'historia', status:x.status||'todo', points:(x.points===''||x.points==null)?null:x.points, assignee:x.assignee||null, sprint_id:x.sprintId||null, rank:x.rank||0, created_on:x.createdOn||null, done_on:x.doneOn||null, parent_id:(x.kind==='bug' && x.parentId)?x.parentId:null, updated_at:new Date().toISOString() }),
+      fromDb: r => ({ id:r.id, title:r.title, description:r.description||'', kind:r.kind, status:r.status, points:r.points==null?'':r.points, assignee:r.assignee||'', sprintId:r.sprint_id||'', rank:r.rank||0, createdOn:r.created_on||'', doneOn:r.done_on||'', parentId:r.parent_id||'' }),
       local: 'backlog'
     },
     sprints: {
-      toDb: (x, pid) => ({ project_id:pid, id:x.id, name:x.name, goal:x.goal||null, start_on:x.startOn, end_on:x.endOn, capacity:(x.capacity===''||x.capacity==null)?null:x.capacity, state:x.state||'planejada', closed_on:x.closedOn||null, availability:x.availability||{}, updated_at:new Date().toISOString() }),
-      fromDb: r => ({ id:r.id, name:r.name, goal:r.goal||'', startOn:r.start_on, endOn:r.end_on, capacity:r.capacity==null?'':r.capacity, state:r.state, closedOn:r.closed_on||'', availability:r.availability||{} }),
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, name:x.name, goal:x.goal||null, start_on:x.startOn, end_on:x.endOn, capacity:(x.capacity===''||x.capacity==null)?null:x.capacity, state:x.state||'planejada', closed_on:x.closedOn||null, availability:x.availability||{}, carried:Array.isArray(x.carried)?x.carried:[], updated_at:new Date().toISOString() }),
+      fromDb: r => ({ id:r.id, name:r.name, goal:r.goal||'', startOn:r.start_on, endOn:r.end_on, capacity:r.capacity==null?'':r.capacity, state:r.state, closedOn:r.closed_on||'', availability:r.availability||{}, carried:Array.isArray(r.carried)?r.carried:[] }),
       local: 'sprints'
     },
     sprint_rites: {
@@ -4193,6 +4202,41 @@ const Cloud = (() => {
     return true;
   }
   // Catálogo comum de conhecimentos e ferramentas (todos veem; o que a pessoa digita de novo é criado para todos)
+  // Relato de problemas: anexos num bucket privado (pasta da própria pessoa) e o relato numa tabela que só o autor e o Administrador leem
+  async function submitBugReport(r, files) {
+    if(!client || !session) return null;
+    const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now());
+    const uid = session.user.id, attachments = [];
+    for(let i = 0; i < files.length; i++) {
+      const f = files[i], safe = String(f.name || 'arquivo').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);
+      const path = uid + '/' + id + '/' + (i + 1) + '-' + safe;
+      const { error } = await client.storage.from('bug-reports').upload(path, f, { contentType: f.type || undefined, upsert:false });
+      if(error) { T.show('❌ Não consegui enviar o anexo "' + f.name + '": ' + error.message); return null; }
+      attachments.push({ path, name:f.name, size:f.size, type:f.type });
+    }
+    const { error } = await client.from('bug_reports').insert({ id, reporter_id:uid, reporter_name:Auth.getName() || null, title:r.title, severity:r.severity, path:r.path, steps:r.steps, expected:r.expected || null, actual:r.actual, context:r.context, attachments });
+    if(error) { T.show('❌ ' + error.message); return null; }
+    pushAuditEvent('bug_reported', 'Problema relatado: ' + r.title.slice(0, 80), { id });
+    return id;
+  }
+  async function listBugReports() {
+    if(!client || !session) return [];
+    const { data, error } = await client.from('bug_reports').select('*').order('created_at', { ascending:false }).limit(200);
+    if(error) { console.warn('Supabase: falha ao ler relatos', error); return []; }
+    return data || [];
+  }
+  async function updateBugReport(id, patch) {
+    if(!client || !session) return false;
+    const { error } = await client.from('bug_reports').update(patch).eq('id', id);
+    if(error) { T.show('❌ ' + error.message); return false; }
+    return true;
+  }
+  async function bugFileUrl(path) {
+    if(!client || !session) return null;
+    const { data, error } = await client.storage.from('bug-reports').createSignedUrl(path, 300);
+    if(error) { T.show('❌ ' + error.message); return null; }
+    return data && data.signedUrl;
+  }
   async function listSkillCatalog() {
     if(!client || !session) return [];
     const { data, error } = await client.from('skill_catalog').select('id,kind,name').is('merged_into', null).order('name');
@@ -4707,7 +4751,7 @@ const Cloud = (() => {
   }
 
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
-    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
+    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, submitBugReport, listBugReports, updateBugReport, bugFileUrl, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument, pushRow, pushMany, deleteRow, msgTable, invokeFn,
@@ -4735,6 +4779,7 @@ const Snapshots = (() => {
     if(typeof HealthScore === 'undefined' || typeof Budget === 'undefined' || typeof DB === 'undefined') return null;
     const dims = HealthScore.computeMetrics(projectId);
     const healthScore = HealthScore.calculate(dims);
+    if(healthScore == null) return null; // projeto sem dados não gera leitura de saúde
     const healthStatus = HealthScore.getStatus(healthScore).label;
     const bm = Budget.computeMetrics(projectId);
     const priorityIndex = (typeof Prioritization !== 'undefined') ? Prioritization.computeValue(Prioritization.getScores(projectId)) : null;
@@ -4957,6 +5002,7 @@ const Users = (() => {
     const hint = document.getElementById('users-hint'); if(hint) hint.style.display = showTeam ? 'none' : '';
     if(apCard) { apCard.style.display = show ? '' : 'none'; if(show) renderProfiles(); }
     if(typeof Erase !== 'undefined') Erase.render();
+    if(typeof BugReport !== 'undefined') BugReport.renderAdmin();
   }
 
   // ── Perfis de acesso: lista, edição das permissões, criação e exclusão ──
@@ -5575,6 +5621,129 @@ const Reviews = (() => {
     if(ok) { T.show('✅ Autoavaliação salva.'); renderSelf(document.getElementById('mw-review')); }
   }
   return { CRITERIA, average, gaps, validate, renderFor, renderSelf, saveSelf, saveManager, switchProject };
+})();
+</script>
+
+<!-- ■ MODULE: ui/bugreport ─ Relato de problemas: formulário guiado com anexos, contexto técnico automático e lista de acompanhamento do Administrador -->
+<script data-module="ui/bugreport">
+const BugReport = (() => {
+  const $ = id => document.getElementById(id);
+  const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const MAX_FILES = 6, MAX_BYTES = 5 * 1024 * 1024;
+  const OK_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf', 'text/plain', 'text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+  const SEV = { impede:'Não consigo continuar', atrapalha:'Atrapalha, tem jeito', detalhe:'Detalhe' };
+  const STATUS = { aberto:'Aberto', em_analise:'Em análise', resolvido:'Resolvido' };
+  let files = [];
+
+  // Últimos erros do navegador (sem dados do usuário), para ir junto no relato
+  const errors = [];
+  const keep = m => { errors.push(String(m).slice(0, 200)); if(errors.length > 5) errors.shift(); };
+  window.addEventListener('error', e => keep(e.message));
+  window.addEventListener('unhandledrejection', e => keep('Promessa rejeitada: ' + ((e.reason && e.reason.message) || e.reason)));
+
+  function context() {
+    const page = document.querySelector('.page.on');
+    const proj = (typeof DB !== 'undefined') ? DB.getActiveProjectId() : '';
+    return {
+      versao: (typeof BRAND !== 'undefined' && BRAND.version) || '',
+      tela: page ? page.id.replace(/^p-/, '') : '', titulo: page && page.querySelector('.pg-title') ? page.querySelector('.pg-title').childNodes[0].textContent.trim() : '',
+      perfil: (typeof Auth !== 'undefined') ? Auth.getRole() : '', projeto: proj, nuvem: (typeof Cloud !== 'undefined') && Cloud.isSignedIn(),
+      navegador: navigator.userAgent, janela: window.innerWidth + 'x' + window.innerHeight, tema: document.documentElement.getAttribute('data-theme') || 'padrão',
+      online: navigator.onLine, quando: new Date().toISOString(), erros: errors.slice(),
+    };
+  }
+  // Caminho sugerido a partir da tela aberta (a pessoa pode ajustar)
+  function suggestPath() {
+    const page = document.querySelector('.page.on'); if(!page) return '';
+    const bc = page.querySelector('.pg-breadcrumb'), t = page.querySelector('.pg-title');
+    const title = t ? t.childNodes[0].textContent.trim() : '';
+    const trail = bc ? bc.innerText.replace(/\s*[›>]\s*/g, ' → ').replace(/\s+/g, ' ').trim() : '';
+    return trail || title;
+  }
+
+  function open() {
+    files = []; renderFiles();
+    ['title', 'steps', 'exp', 'act'].forEach(k => { $('bug-f-' + k).value = ''; });
+    $('bug-f-sev').value = 'atrapalha'; $('bug-f-path').value = suggestPath();
+    $('modal-bug').classList.remove('hidden');
+    setTimeout(() => $('bug-f-title').focus(), 50);
+  }
+  function close() { $('modal-bug').classList.add('hidden'); }
+
+  function addFiles(list) {
+    for(const f of Array.from(list || [])) {
+      if(files.length >= MAX_FILES) { T.show('⚠️ No máximo ' + MAX_FILES + ' arquivos.'); break; }
+      if(!OK_TYPES.includes(f.type)) { T.show('⚠️ "' + f.name + '": tipo não aceito (use imagem, PDF, planilha .xlsx, .csv ou texto).'); continue; }
+      if(f.size > MAX_BYTES) { T.show('⚠️ "' + f.name + '" passa de 5 MB.'); continue; }
+      files.push(f);
+    }
+    renderFiles();
+  }
+  function removeFile(i) { files.splice(i, 1); renderFiles(); }
+  function renderFiles() {
+    const el = $('bug-files'); if(!el) return;
+    el.innerHTML = files.map((f, i) => '<span class="chip"><i class="ti ti-' + (f.type.startsWith('image/') ? 'photo' : 'file') + '"></i> ' + esc(f.name) + ' <button class="link-a" style="padding:0 2px" aria-label="Remover o anexo ' + esc(f.name) + '" onclick="BugReport.removeFile(' + i + ')"><i class="ti ti-x"></i></button></span>').join('');
+  }
+  // Colar o print direto na janela (Ctrl+V)
+  document.addEventListener('paste', e => {
+    const m = $('modal-bug'); if(!m || m.classList.contains('hidden')) return;
+    const imgs = Array.from((e.clipboardData && e.clipboardData.files) || []).filter(f => f.type.startsWith('image/'));
+    if(imgs.length) { e.preventDefault(); addFiles(imgs.map((f, i) => new File([f], 'print-' + Date.now() + '-' + (i + 1) + '.png', { type:f.type }))); T.show('✅ Print colado.'); }
+  });
+
+  function validate(r) {
+    if(r.title.trim().length < 5) return 'Escreva um resumo do problema (mínimo 5 letras).';
+    if(r.path.trim().length < 2) return 'Informe o caminho no sistema (menu → tela → função).';
+    if(r.steps.trim().length < 10) return 'Descreva o que você fez, passo a passo (mínimo 10 letras).';
+    if(r.actual.trim().length < 3) return 'Conte o que aconteceu de fato.';
+    return '';
+  }
+  function reportText(r) {
+    return ['RELATO DE PROBLEMA — ' + r.title, 'Gravidade: ' + (SEV[r.severity] || r.severity), 'Caminho: ' + r.path, '', 'O que fez (passo a passo):', r.steps, '', 'O que esperava:', r.expected || '(não informado)', '', 'O que aconteceu:', r.actual, '', 'Contexto técnico:', JSON.stringify(r.context, null, 2)].join('\n');
+  }
+  async function send() {
+    const r = { title:$('bug-f-title').value.trim(), severity:$('bug-f-sev').value, path:$('bug-f-path').value.trim(), steps:$('bug-f-steps').value.trim(), expected:$('bug-f-exp').value.trim(), actual:$('bug-f-act').value.trim(), context:context() };
+    const bad = validate(r); if(bad) { T.show('⚠️ ' + bad); return; }
+    if(!files.length && !confirm('Você não anexou nenhum print. Um print do ocorrido acelera muito a correção. Enviar mesmo assim?')) return;
+    const btn = $('bug-send'); btn.disabled = true;
+    if(typeof Cloud !== 'undefined' && Cloud.isSignedIn()) {
+      const id = await Cloud.submitBugReport(r, files);
+      btn.disabled = false;
+      if(!id) return;
+      close(); T.show('✅ Relato enviado. Obrigado — ele já está com o administrador.');
+    } else {
+      // Sem nuvem não há para onde enviar: baixa o relato para ser mandado junto com os prints
+      const blob = new Blob([reportText(r)], { type:'text/plain;charset=utf-8' }), a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = 'relato-problema-' + new Date().toISOString().slice(0, 10) + '.txt'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      btn.disabled = false; close(); T.show('📄 Sem conexão com a nuvem: baixei o relato. Envie este arquivo junto com os prints ao administrador.', 7000);
+    }
+  }
+
+  // ── Administrador: acompanhar os relatos ──
+  async function renderAdmin(force) {
+    const card = $('bugs-card'), root = $('bugs-root'); if(!card || !root) return;
+    const show = (typeof Cloud !== 'undefined') && Cloud.isSignedIn() && Auth.getRole() === 'admin';
+    card.style.display = show ? '' : 'none'; if(!show) return;
+    root.innerHTML = '<div style="font-size:12px;color:var(--t3)"><i class="ti ti-loader-2"></i> Carregando…</div>';
+    const f = $('bugs-filter').value;
+    const all = await Cloud.listBugReports();
+    const rows = all.filter(b => !f || b.status === f);
+    if(!rows.length) { root.innerHTML = '<div style="font-size:12px;color:var(--t3)">Nenhum relato' + (f ? ' nesta situação' : '') + '.</div>'; return; }
+    const when = v => new Date(v).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' });
+    root.innerHTML = rows.map(b => '<details class="set-row" style="display:block;padding:8px 0"><summary style="cursor:pointer;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="set-lbl">' + esc(b.title) + '</span><span class="badge' + (b.severity === 'impede' ? ' b-red' : '') + '">' + esc(SEV[b.severity] || b.severity) + '</span><span class="badge b-acc">' + esc(STATUS[b.status] || b.status) + '</span><span style="font-size:11.5px;color:var(--t3)">' + esc(b.reporter_name || '') + ' · ' + when(b.created_at) + '</span></summary>'
+      + '<div style="font-size:12.5px;line-height:1.65;margin-top:8px;overflow-wrap:anywhere"><b>Caminho:</b> ' + esc(b.path) + '<br><b>O que fez:</b> <span style="white-space:pre-wrap">' + esc(b.steps) + '</span><br><b>Esperava:</b> ' + esc(b.expected || '—') + '<br><b>Aconteceu:</b> ' + esc(b.actual)
+      + '<details style="margin:6px 0"><summary style="cursor:pointer;color:var(--t2)">Contexto técnico</summary><pre style="white-space:pre-wrap;font-size:11px;margin:4px 0">' + esc(JSON.stringify(b.context, null, 2)) + '</pre></details>'
+      + ((b.attachments || []).length ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0">' + b.attachments.map(a => '<button class="btn btn-sm" onclick="BugReport.openFile(\'' + esc(a.path) + '\')"><i class="ti ti-' + (String(a.type).startsWith('image/') ? 'photo' : 'file') + '"></i>' + esc(a.name) + '</button>').join('') + '</div>' : '<div style="color:var(--t3)">Sem anexos.</div>')
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:6px"><div class="field"><label for="bg-st-' + b.id + '">Situação</label><select class="input" id="bg-st-' + b.id + '">' + Object.keys(STATUS).map(k => '<option value="' + k + '"' + (k === b.status ? ' selected' : '') + '>' + STATUS[k] + '</option>').join('') + '</select></div>'
+      + '<div class="field" style="flex:1 1 220px"><label for="bg-nt-' + b.id + '">Nota</label><input class="input" id="bg-nt-' + b.id + '" maxlength="2000" value="' + esc(b.admin_note || '') + '"></div><button class="btn btn-sm btn-pri" onclick="BugReport.saveStatus(\'' + b.id + '\')"><i class="ti ti-check"></i>Salvar</button></div></div></details>').join('');
+  }
+  async function saveStatus(id) {
+    const ok = await Cloud.updateBugReport(id, { status:$('bg-st-' + id).value, admin_note:$('bg-nt-' + id).value.trim() || null });
+    if(ok) { T.show('✅ Relato atualizado.'); renderAdmin(); }
+  }
+  async function openFile(path) { const u = await Cloud.bugFileUrl(path); if(u) window.open(u, '_blank', 'noopener'); }
+
+  return { open, close, addFiles, removeFile, send, renderAdmin, saveStatus, openFile, validate, context };
 })();
 </script>
 
@@ -7513,7 +7682,9 @@ const RaioXHistory = (() => {
     const today = new Date().toISOString().slice(0,10);
     const past = list().filter(h => h.date !== today && h.saudeGeral);
     if(!past.length) return null;
-    const statusLabel = HealthScore.getStatus(HealthScore.calculate(HealthScore.computeMetrics())).label;
+    const nowScore = HealthScore.calculate(HealthScore.computeMetrics());
+    if(nowScore == null) return null;
+    const statusLabel = HealthScore.getStatus(nowScore).label;
     const currentCode = statusLabel === 'Saudável' ? 'grn' : (statusLabel === 'Atenção' ? 'amb' : 'red');
     const hits = past.filter(h => h.saudeGeral === currentCode).length;
     return { total:past.length, hits, pct:Math.round(hits/past.length*100), currentCode };
@@ -9457,8 +9628,8 @@ const Dashboard = (() => {
     HealthScore.updateRingDisplay(score);
 
     const ringLbl = document.getElementById('hs-ring-lbl');
-    if(ringLbl) ringLbl.innerHTML = score + '<small>/100</small>';
-    setText('hs-index-text', 'Índice geral: ' + score);
+    if(ringLbl) ringLbl.innerHTML = score == null ? '—' : score + '<small>/100</small>';
+    setText('hs-index-text', score == null ? 'Índice geral: sem dados' : 'Índice geral: ' + score);
 
     // Antes, essa métrica só aparecia no card de resultado do Raio-X, no momento da avaliação —
     // quem não voltasse lá nunca via o histórico de acerto. Agora fica também aqui, ao lado do
@@ -9466,9 +9637,12 @@ const Dashboard = (() => {
     const accEl = document.getElementById('hs-raiox-accuracy');
     if(accEl) accEl.innerHTML = (typeof RaioXHistory !== 'undefined') ? RaioXHistory.accuracyHtml() : '';
 
-    const attentionDims = Object.entries(metrics).filter(([k,v]) => v < 70);
+    const withData = Object.entries(metrics).filter(([k,v]) => v != null);
+    const attentionDims = withData.filter(([k,v]) => v < 70);
     const attEl = document.getElementById('hs-attention-text');
-    if(attEl) attEl.textContent = attentionDims.length ? `${attentionDims.length} dimensão(ões) com atenção` : 'Todas as dimensões saudáveis';
+    if(attEl) attEl.textContent = !withData.length ? 'Ainda não há dados para avaliar: crie sprints e itens, cadastre a equipe, riscos e custos.'
+      : attentionDims.length ? `${attentionDims.length} dimensão(ões) com atenção`
+      : withData.length < Object.keys(metrics).length ? `As ${withData.length} dimensão(ões) com dados estão saudáveis — ${Object.keys(metrics).length - withData.length} ainda sem dados` : 'Todas as dimensões saudáveis';
     const badgesRoot = document.getElementById('hs-badges-root');
     if(badgesRoot) {
       badgesRoot.innerHTML = attentionDims.map(([k,v]) => {
@@ -9481,9 +9655,9 @@ const Dashboard = (() => {
       const v = metrics[k];
       const fillEl = document.getElementById('hs-hbar-'+k+'-fill');
       const pctEl = document.getElementById('hs-hbar-'+k+'-pct');
-      const color = v >= 70 ? 'var(--grn)' : (v >= 50 ? 'var(--amb)' : 'var(--red)');
-      if(fillEl) { fillEl.style.width = v + '%'; fillEl.style.background = color; }
-      if(pctEl) pctEl.textContent = v + '%';
+      const color = v == null ? 'var(--t3)' : v >= 70 ? 'var(--grn)' : (v >= 50 ? 'var(--amb)' : 'var(--red)');
+      if(fillEl) { fillEl.style.width = (v == null ? 0 : v) + '%'; fillEl.style.background = color; }
+      if(pctEl) pctEl.textContent = v == null ? 'Sem dados' : v + '%';
     });
     const schedLbl = document.getElementById('hs-hbar-schedule-lbl');
     if(schedLbl) schedLbl.textContent = HealthScore.dimLabel('schedule', DB.getActiveProjectId()); // "Ritmo da sprint" no ágil
@@ -9852,6 +10026,7 @@ const SheetImport = (() => {
       { key:'assignee', label:'Responsável', syn:['responsavel','assignee','dono','owner','atribuido a','atribuido'] },
       { key:'status', label:'Situação', syn:['situacao','status','estado','coluna'] },
       { key:'sprint', label:'Sprint', syn:['sprint','iteracao','iteration'] },
+      { key:'parent', label:'Item pai do bug (código ou título)', syn:['item pai','pai','parent','parent id','relacionado a','item relacionado','historia pai','entrega','entrega relacionada'] },
       { key:'priority', label:'Prioridade (1 = mais importante)', syn:['prioridade','priority','ordem','rank','posicao'] },
       { key:'description', label:'Descrição / critérios de aceite', syn:['descricao','description','detalhe','detalhes','criterios de aceite','acceptance criteria'] } ] }
   };
@@ -10026,15 +10201,135 @@ const SheetImport = (() => {
         const spTxt = cell(r, map, 'sprint'); let sprintId = '';
         if(spTxt) { sprintId = sprintByName.get(SheetParse.norm(spTxt)) || ''; if(!sprintId) warn(i, `"${title}": a sprint "${spTxt}" não existe — o item entrou no backlog, sem sprint. Crie a sprint e atribua depois.`); }
         const pr = SheetParse.parseNumber(raw(r, map, 'priority'));
-        out.push({ title, kind, points, assignee: safeText(cell(r, map, 'assignee')).slice(0, 80), status, sprintId, description: String(cell(r, map, 'description')).slice(0, 2000), priority: pr == null ? null : pr, doneOn: status === 'done' ? (ctx.today || '') : '', order: i });
+        out.push({ title, kind, points, assignee: safeText(cell(r, map, 'assignee')).slice(0, 80), status, sprintId, description: String(cell(r, map, 'description')).slice(0, 2000), priority: pr == null ? null : pr, doneOn: status === 'done' ? (ctx.today || '') : '', order: i, parentRef: safeText(cell(r, map, 'parent')) });
       });
+      // Todo bug precisa de um item pai: um item que já existe (código ou título) ou uma história/tarefa da própria planilha
+      const existing = ctx.existingItems || [];
+      const norm = SheetParse.norm, sheetParents = out.filter(x => x.kind !== 'bug');
+      for(let k = out.length - 1; k >= 0; k--) {
+        const x = out[k]; if(x.kind !== 'bug') continue;
+        const ref = x.parentRef;
+        const hit = ref && existing.find(e => e.kind !== 'bug' && (String(e.id).toLowerCase() === ref.toLowerCase() || norm(e.title) === norm(ref)));
+        if(hit) { x.parentId = hit.id; continue; }
+        const inSheet = ref && sheetParents.find(p => norm(p.title) === norm(ref));
+        if(inSheet) { x.parentTitle = inSheet.title; continue; }
+        err(x.order, ref ? `Bug "${x.title}": o item pai "${ref}" não foi encontrado — ignorado.` : `Bug "${x.title}": falta o item pai (coluna "Item pai") — todo bug precisa estar ligado ao item em que foi encontrado. Ignorado.`);
+        out.splice(k, 1);
+      }
       // Ordem de prioridade: coluna Prioridade (menor número primeiro); sem ela, a ordem da planilha
       out.sort((a, b) => (a.priority == null ? 1e9 : a.priority) - (b.priority == null ? 1e9 : b.priority) || a.order - b.order);
     }
     return { rows: out, errors, warnings };
   }
 
-  return { TARGETS, autoMap, detectHeaderRow, build };
+  // Planilhas modelo (uma por tipo): cabeçalho reconhecido, linhas de exemplo e guia de preenchimento.
+  // Os testes importam cada modelo de verdade para provar que funcionam sem erro.
+  const MODELS = {
+    backlog: {
+      file: 'modelo-importacao-backlog', sheet: 'Backlog',
+      headers: ['Item', 'Tipo', 'Pontos', 'Responsável', 'Situação', 'Sprint', 'Item pai', 'Prioridade', 'Descrição'],
+      rows: [
+        ['Cadastro de clientes', 'História', 5, 'Ana Souza', 'A fazer', 'Sprint 1', '', 1, 'Como gerente, quero cadastrar clientes para acompanhar os contratos.'],
+        ['Tela de login', 'História', 3, 'Bruno Lima', 'Em andamento', 'Sprint 1', '', 2, 'Entrar com e-mail e senha; bloquear após 5 tentativas.'],
+        ['Erro ao salvar cliente sem e-mail', 'Bug', 2, 'Ana Souza', 'A fazer', 'Sprint 1', 'Cadastro de clientes', 3, 'Passos: abrir Clientes, deixar o e-mail vazio, salvar. Esperado: aviso. Ocorreu: erro 500.'],
+        ['Configurar o ambiente de testes', 'Tarefa', 1, 'Carla Dias', 'Concluído', '', '', 4, ''],
+      ],
+      guide: [
+        ['Item', 'Sim', 'Título do item.', 'Cadastro de clientes'],
+        ['Tipo', 'Não', 'História, Bug ou Tarefa (sem informar, vira História).', 'História · Bug · Tarefa'],
+        ['Pontos', 'Não', 'Número de 0 a 100.', '5'],
+        ['Responsável', 'Não', 'Nome de quem vai fazer.', 'Ana Souza'],
+        ['Situação', 'Não', 'A fazer, Em andamento, Em revisão ou Concluído.', 'A fazer'],
+        ['Sprint', 'Não', 'Nome de uma sprint que JÁ exista (senão o item entra sem sprint).', 'Sprint 1'],
+        ['Item pai', 'Sim, para Bug', 'TODO bug precisa de um item pai: o código (US-1) ou o título de um item que já existe, ou de uma história/tarefa desta mesma planilha.', 'Cadastro de clientes'],
+        ['Prioridade', 'Não', '1 = mais importante. Sem ela vale a ordem da planilha.', '1'],
+        ['Descrição', 'Não', 'Detalhes e critérios de aceite (até 2000 letras).', ''],
+      ],
+      ctx: { today: '2026-11-01', existingTitles: [], existingItems: [], sprints: [{ id: 'S1', name: 'Sprint 1' }] }, expect: 4,
+    },
+    wbs: {
+      file: 'modelo-importacao-cronograma', sheet: 'Cronograma',
+      headers: ['ID', 'Nome da tarefa', 'Início', 'Término', '% concluído', 'Nível', 'Predecessoras', 'Responsável'],
+      rows: [
+        [1, 'Planejamento', '01/11/2026', '15/11/2026', 100, 1, '', 'Ana Souza'],
+        [2, 'Levantar requisitos', '01/11/2026', '07/11/2026', 100, 2, '', 'Ana Souza'],
+        [3, 'Aprovar o escopo', '08/11/2026', '15/11/2026', 100, 2, '2', 'Bruno Lima'],
+        [4, 'Execução', '16/11/2026', '30/12/2026', 20, 1, '', 'Bruno Lima'],
+        [5, 'Configurar o sistema', '16/11/2026', '30/11/2026', 40, 2, '3', 'Carla Dias'],
+        [6, 'Treinar os usuários', '01/12/2026', '30/12/2026', 0, 2, '5', 'Carla Dias'],
+      ],
+      guide: [
+        ['ID', 'Não', 'Número da linha; serve para as Predecessoras.', '1'],
+        ['Nome da tarefa', 'Sim', 'Entrega (nível 1) ou subtarefa (nível 2).', 'Planejamento'],
+        ['Início / Término', 'Não', 'Datas no formato dia/mês/ano.', '01/11/2026'],
+        ['% concluído', 'Não', 'De 0 a 100.', '40'],
+        ['Nível', 'Não', '1 = entrega; 2 = subtarefa dessa entrega.', '2'],
+        ['Predecessoras', 'Não', 'ID da linha que precisa terminar antes.', '2'],
+        ['Responsável', 'Não', 'Nome de quem executa.', 'Ana Souza'],
+      ],
+      ctx: { today: '2026-11-01', existingTitles: [] }, expect: 2, // 2 entregas (nível 1), cada uma com 2 subtarefas
+    },
+    costs: {
+      file: 'modelo-importacao-custos', sheet: 'Custos',
+      headers: ['Descrição', 'Valor (R$)', 'Data', 'Tipo'],
+      rows: [['Licenças de software', 12500, '10/11/2026', 'Real'], ['Consultoria especializada', 30000, '20/11/2026', 'Comprometido'], ['Treinamento da equipe', 4800.5, '05/12/2026', 'Real']],
+      guide: [
+        ['Descrição', 'Sim', 'O que foi gasto.', 'Licenças de software'],
+        ['Valor (R$)', 'Sim', 'Número; pode usar vírgula decimal.', '12500'],
+        ['Data', 'Não', 'Dia/mês/ano; sem data usa o dia da importação.', '10/11/2026'],
+        ['Tipo', 'Não', 'Real (já pago) ou Comprometido (contratado, a pagar). Sem informar, vira Real.', 'Real'],
+      ],
+      ctx: { today: '2026-11-01', existingTitles: [] }, expect: 3,
+    },
+    team: {
+      file: 'modelo-importacao-equipe', sheet: 'Equipe',
+      headers: ['Nome', 'Função', 'Alocação no projeto (%)', 'Carga de trabalho (%)'],
+      rows: [['Ana Souza', 'Gerente de projeto', 50, 60], ['Bruno Lima', 'Desenvolvedor', 100, 85], ['Carla Dias', 'Analista de testes', 100, 70]],
+      guide: [
+        ['Nome', 'Sim', 'Nome da pessoa.', 'Ana Souza'],
+        ['Função', 'Não', 'Papel no projeto.', 'Desenvolvedor'],
+        ['Alocação no projeto (%)', 'Não', 'De 0 a 150.', '100'],
+        ['Carga de trabalho (%)', 'Não', 'De 0 a 150; acima de 100 indica sobrecarga.', '85'],
+      ],
+      ctx: { today: '2026-11-01', existingTitles: [] }, expect: 3,
+    },
+    hours: {
+      file: 'modelo-importacao-horas', sheet: 'Horas',
+      headers: ['Pessoa', 'Data', 'Horas', 'Entrega/atividade', 'Observação'],
+      rows: [['Ana Souza', '03/11/2026', 4, 'Levantar requisitos', 'Reunião com o cliente'], ['Bruno Lima', '03/11/2026', '7:30', 'Configurar o sistema', ''], ['Carla Dias', '04/11/2026', '8h', 'Treinar os usuários', 'Turma 1']],
+      guide: [
+        ['Pessoa', 'Sim', 'Nome de quem trabalhou.', 'Ana Souza'],
+        ['Data', 'Sim', 'Dia/mês/ano.', '03/11/2026'],
+        ['Horas', 'Sim', 'De 0 a 24: 4, 4,5, 7:30 ou 8h.', '4'],
+        ['Entrega/atividade', 'Não', 'Em que trabalhou.', 'Levantar requisitos'],
+        ['Observação', 'Não', 'Comentário livre.', ''],
+      ],
+      ctx: { today: '2026-11-01', existingTitles: [] }, expect: 3,
+    },
+    risks: {
+      file: 'modelo-importacao-riscos', sheet: 'Riscos',
+      headers: ['Risco', 'Probabilidade (1–5)', 'Impacto (1–5)', 'Categoria', 'Responsável', 'Resposta', 'Ação de mitigação', 'Situação'],
+      rows: [['Atraso na entrega do fornecedor', 4, 4, 'Externo', 'Ana Souza', 'Mitigar', 'Antecipar o pedido e manter um segundo fornecedor.', 'Aberto'], ['Saída de um desenvolvedor-chave', 2, 5, 'Colaboradores', 'Bruno Lima', 'Mitigar', 'Documentar o conhecimento e formar um substituto.', 'Aberto'], ['Mudança de escopo sem aprovação', 3, 3, 'Escopo', 'Ana Souza', 'Evitar', 'Exigir aprovação formal de toda mudança.', 'Mitigando']],
+      guide: [
+        ['Risco', 'Sim', 'Descrição do risco.', 'Atraso na entrega do fornecedor'],
+        ['Probabilidade (1–5)', 'Sim', '1 = muito baixa … 5 = muito alta.', '4'],
+        ['Impacto (1–5)', 'Sim', '1 = muito baixo … 5 = muito alto.', '4'],
+        ['Categoria', 'Não', 'Prazo, Custo, Escopo, Qualidade, Técnico, Externo, Legal, Colaboradores ou Outros.', 'Externo'],
+        ['Responsável', 'Não', 'Quem cuida do risco.', 'Ana Souza'],
+        ['Resposta', 'Não', 'Aceitar, Evitar, Mitigar ou Transferir.', 'Mitigar'],
+        ['Ação de mitigação', 'Não', 'O que será feito.', ''],
+        ['Situação', 'Não', 'Aberto, Mitigando, Aceito, Ocorrido ou Encerrado.', 'Aberto'],
+      ],
+      ctx: { today: '2026-11-01', existingTitles: [] }, expect: 3,
+    },
+  };
+  // Folhas do arquivo modelo: "Modelo" (o que o sistema lê) e "Como preencher"
+  const modelSheets = target => {
+    const m = MODELS[target]; if(!m) return null;
+    return [{ name: m.sheet, rows: [m.headers, ...m.rows], widths: m.headers.map(h => Math.max(14, Math.min(46, String(h).length + 8))) },
+            { name: 'Como preencher', rows: [['Coluna', 'Obrigatória?', 'Como preencher', 'Exemplo'], ...m.guide], widths: [26, 16, 70, 34] }];
+  };
+  return { TARGETS, autoMap, detectHeaderRow, build, MODELS, modelSheets };
 })();
 </script>
 
@@ -10521,6 +10816,18 @@ const Risks = (() => {
 const AgileCalc = (() => {
   const COLS = [{ key:'todo', label:'A fazer' }, { key:'doing', label:'Em andamento' }, { key:'review', label:'Em revisão' }, { key:'done', label:'Concluído' }];
   const KINDS = { bug:'Bug', historia:'História', tarefa:'Tarefa' };
+  // Bug "filho": todo bug está ligado ao item (entrega) em que foi encontrado; o item pai nunca é outro bug
+  const bugsOf = (list, parentId) => list.filter(x => x.kind === 'bug' && x.parentId === parentId);
+  const parentOptions = (list, selfId) => list.filter(x => x.kind !== 'bug' && x.id !== selfId);
+  function bugParentError(item, list) {
+    if(!item || item.kind !== 'bug') return '';
+    if(!item.parentId) return 'Todo bug precisa estar ligado ao item (entrega) em que foi encontrado.';
+    if(item.parentId === item.id) return 'Um bug não pode ser filho dele mesmo.';
+    const p = list.find(x => x.id === item.parentId);
+    if(!p) return 'O item pai não existe neste projeto.';
+    if(p.kind === 'bug') return 'Um bug não pode ser filho de outro bug — ligue ao item de entrega.';
+    return '';
+  }
   const DEFAULT_CFG = { wip: { doing: 3, review: 2 }, reservePct: 15 };
   const DAY = 86400000;
   const pts = x => Number(x && x.points) || 0;
@@ -10684,7 +10991,7 @@ const AgileCalc = (() => {
     return advice;
   }
 
-  return { COLS, cols, colLabel, DEFAULT_CARD, KINDS, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+  return { COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, bugParentError, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
 })();
 </script>
 
@@ -11044,8 +11351,18 @@ const Agile = (() => {
     const root = document.getElementById('kb-root'); if(!root) return;
     load();
     const sel = document.getElementById('kb-sprint');
+    const act = active(), stateLbl = { ativa:'ativa', planejada:'planejada', encerrada:'encerrada' };
+    const ord = { ativa:0, planejada:1, encerrada:2 };
+    const bar = document.getElementById('kb-sprint-bar');
+    if(bar) {
+      const shown = boardSprint === '__auto' ? act : sprints.find(x => x.id === boardSprint);
+      const fmtD = d => d ? d.split('-').reverse().slice(0, 2).join('/') : '';
+      const planned = sprints.filter(x => x.state === 'planejada').length;
+      if(act) { const st = AgileCalc.sprintStats(act, items, todayIso()); bar.innerHTML = '<span class="badge b-grn">Sprint ativa</span> <b>' + esc(act.name) + '</b> <span style="color:var(--t2)">' + fmtD(act.startOn) + ' a ' + fmtD(act.endOn) + ' · ' + st.daysLeft + ' dia(s) restantes · ' + st.pct + '% concluído</span>' + (shown && shown.id !== act.id ? ' <span class="badge b-amb">Você está vendo: ' + esc(shown.name) + ' (' + stateLbl[shown.state] + ')</span>' : '') + (boardSprint === '__all' ? ' <span class="badge b-amb">Você está vendo: todos os itens</span>' : ''); }
+      else bar.innerHTML = '<span class="badge b-amb">Nenhuma sprint ativa</span> <span style="color:var(--t2)">' + (planned ? planned + ' planejada(s) aguardando início' : 'ainda não há sprint planejada') + '.</span> <button class="btn btn-sm" onclick="R.go(\'sprints\')"><i class="ti ti-player-play"></i>' + (planned ? 'Iniciar uma sprint' : 'Criar sprint') + '</button>' + (boardSprint === '__all' ? ' <span class="badge b-amb">Você está vendo: todos os itens</span>' : '');
+    }
     if(sel) {
-      const opts = [['__auto', 'Sprint ativa'], ['__all', 'Todos os itens'], ...sprints.map(s => [s.id, s.name + (s.state === 'ativa' ? ' (ativa)' : '')])];
+      const opts = [['__auto', act ? 'Sprint ativa — ' + act.name : 'Sprint ativa (nenhuma)'], ['__all', 'Todos os itens'], ...sprints.slice().sort((a, b) => (ord[a.state] - ord[b.state]) || (b.startOn || '').localeCompare(a.startOn || '')).map(s => [s.id, s.name + ' (' + stateLbl[s.state] + ')'])];
       sel.innerHTML = opts.map(([v, l]) => `<option value="${esc(v)}"${v === boardSprint ? ' selected' : ''}>${esc(l)}</option>`).join('');
     }
     const columns = AgileCalc.cols(cfg), keys = columns.map(c => c.key);
@@ -11055,8 +11372,9 @@ const Agile = (() => {
     const open = impediments().filter(x => x.status === 'aberto').length;
     const imp = document.getElementById('kb-imp');
     if(imp) imp.innerHTML = open ? `<button class="btn btn-sm" onclick="R.go('ritos')"><i class="ti ti-alert-octagon"></i>${open} impedimento(s) aberto(s)</button>` : '';
-    if(!items.length) { root.innerHTML = '<div class="rk-empty">Nenhum item ainda. Use “Novo item” para cadastrar a primeira história — ela aparece em “A fazer”.</div>'; return; }
-    root.innerHTML = `<div class="kb-board" style="grid-template-columns:repeat(${columns.length},minmax(${columns.length > 4 ? 210 : 0}px,1fr))">` + columns.map(col => {
+    // Sem nenhum item o quadro continua com todas as colunas (para dar para ver o desenho e arrastar depois), com um aviso do que fazer
+    const emptyHint = items.length ? '' : '<div class="rk-empty" style="margin-bottom:10px">Nenhum item ainda. Use <b>Novo item</b> para cadastrar a primeira história ou <b>Importar planilha</b> para trazer vários de uma vez — eles aparecem em “A fazer”.</div>';
+    root.innerHTML = emptyHint + `<div class="kb-board" style="grid-template-columns:repeat(${columns.length},minmax(${columns.length > 4 ? 210 : 0}px,1fr))">` + columns.map(col => {
       const st = stats.find(s => s.key === col.key);
       const cards = list.filter(i => i.status === col.key).map(i => card(i)).join('') || '<div style="font-size:11.5px;color:var(--t3);padding:6px 2px">Nenhum item</div>';
       return `<div class="kb-col${st.over ? ' over-wip' : ''}" data-status="${esc(col.key)}" ondragover="Agile.dragOver(event)" ondragleave="this.classList.remove('drop')" ondrop="Agile.drop(event,'${esc(col.key)}')" role="group" aria-label="${esc(col.label)}: ${st.count} item(ns)">
@@ -11069,7 +11387,9 @@ const Agile = (() => {
     const prev = AgileCalc.neighbor(i.status, -1, cfg), next = AgileCalc.neighbor(i.status, 1, cfg);
     const lbl = k => AgileCalc.colLabel(cfg, k), f = cfg.card;
     const top = [f.id && `<span class="chip">${esc(i.id)}</span>`, f.kind && `<span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>`, f.points && i.points !== '' && i.points != null && `<span class="badge b-acc">${esc(i.points)} pts</span>`].filter(Boolean).join('');
-    const bottom = [f.assignee && (i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'), f.sprint && sp && `<span class="chip">${esc(sp.name)}</span>`].filter(Boolean).join('');
+    const kidsAll = AgileCalc.bugsOf(items, i.id), kidsOpen = kidsAll.filter(k => k.status !== 'done');
+    const rel = i.kind === 'bug' ? (i.parentId ? `<span class="chip" title="Este bug é filho do item ${esc(i.parentId)}"><i class="ti ti-corner-down-right"></i>de ${esc(i.parentId)}</span>` : '<span class="badge b-amb" title="Bug antigo, sem item pai: abra o cartão e escolha o item">sem item pai</span>') : (kidsAll.length ? `<span class="chip" title="Bugs ligados a este item"><i class="ti ti-bug"></i>${kidsOpen.length}/${kidsAll.length} bug(s)</span>` : '');
+    const bottom = [rel, f.assignee && (i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'), f.sprint && sp && `<span class="chip">${esc(sp.name)}</span>`].filter(Boolean).join('');
     // O cartão é um grupo; só o título é o botão de abrir (botão dentro de botão não é acessível por leitor de tela)
     return `<div class="kb-card" draggable="true" role="group" data-id="${esc(i.id)}" ondragstart="Agile.dragStart(event,'${esc(i.id)}')" ondragend="this.classList.remove('dragging')" onclick="Agile.openItem('${esc(i.id)}')" aria-label="${esc(i.id)}: ${esc(i.title)}">
       ${top ? `<div class="kb-meta">${top}</div>` : ''}
@@ -11082,6 +11402,7 @@ const Agile = (() => {
     AgileCalc.moveTo(it, status, todayIso());
     saveItems(); pushItem(it);
     const over = AgileCalc.wip(boardItems(), cfg).find(s => s.key === status && s.over);
+    if(status === 'done' && it.kind !== 'bug') { const openKids = AgileCalc.bugsOf(items, it.id).filter(k => k.status !== 'done'); if(openKids.length) T.show('⚠️ ' + it.id + ' foi concluído, mas ainda tem ' + openKids.length + ' bug(s) aberto(s): ' + openKids.map(k => k.id).join(', ') + '.', 6000); }
     if(over) T.show(`⚠️ Limite de "${over.label}" excedido (${over.count} de ${over.limit}). Termine algo antes de começar mais.`, 4500);
     return was !== status;
   }
@@ -11238,27 +11559,48 @@ const Agile = (() => {
       const ss = AgileCalc.sprintStats(s, items, today);
       return `<div class="ag-sp"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="font-size:13px;color:var(--t1)">${esc(s.name)}</b><span class="badge ${badge[s.state]}">${s.state === 'ativa' ? 'Ativa' : s.state === 'planejada' ? 'Planejada' : 'Encerrada'}</span><span class="chip">${fmt(s.startOn)} a ${fmt(s.endOn)}</span>${s.capacity !== '' && s.capacity != null ? `<span class="chip">capacidade ${esc(s.capacity)}</span>` : ''}${ss.overCapacity ? '<span class="badge b-amb">acima da capacidade</span>' : ''}
         <span style="margin-left:auto;display:flex;gap:6px" data-perm="manage_backlog">${s.state !== 'encerrada' ? `<button class="btn btn-sm" onclick="Agile.openPlan('${esc(s.id)}')"><i class="ti ti-wand"></i>Planejar</button>` : ''}${s.state === 'planejada' ? `<button class="btn btn-sm btn-acc" onclick="Agile.startSprint('${esc(s.id)}')">Iniciar</button>` : ''}${s.state === 'ativa' ? `<button class="btn btn-sm" onclick="Agile.closeSprintNow('${esc(s.id)}')">Encerrar</button>` : ''}<button class="btn btn-sm" aria-label="Editar ${esc(s.name)}" onclick="Agile.openSprint('${esc(s.id)}')"><i class="ti ti-edit"></i></button></span></div>
-        <div style="font-size:12px;color:var(--t2);margin-top:5px">${esc(s.goal || 'Sem meta definida.')} · ${ss.count} item(ns), ${ss.done} de ${ss.committed} pts concluídos</div></div>`;
+        <div style="font-size:12px;color:var(--t2);margin-top:5px">${esc(s.goal || 'Sem meta definida.')} · ${ss.count} item(ns), ${ss.done} de ${ss.committed} pts concluídos</div>${history(s)}</div>`;
     }).join('');
+  }
+  // História da sprint: o que foi entregue, o que voltou ao backlog e os bugs ligados aos itens
+  function history(sp) {
+    const mine = items.filter(i => i.sprintId === sp.id), done = mine.filter(i => i.status === 'done'), pend = mine.filter(i => i.status !== 'done');
+    const carried = Array.isArray(sp.carried) ? sp.carried : [];
+    if(sp.state === 'planejada' && !mine.length) return '';
+    const pts = l => l.reduce((a, i) => a + (Number(i.points) || 0), 0);
+    const li = (i, extra) => '<li>' + esc(i.id) + ' — ' + esc(i.title) + (i.points !== '' && i.points != null ? ' · ' + esc(i.points) + ' pts' : '') + (extra || '') + '</li>';
+    const sec = (t, list, empty) => '<div style="margin-top:6px"><b>' + t + '</b>' + (list.length ? '<ul style="margin:2px 0 0 18px">' + list.join('') + '</ul>' : '<div style="color:var(--t3)">' + empty + '</div>') + '</div>';
+    const head = sp.state === 'encerrada' ? 'O que esta sprint entregou' : sp.state === 'ativa' ? 'Andamento desta sprint' : 'Itens planejados para esta sprint';
+    return '<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:var(--acc)">' + head + ' (' + done.length + ' de ' + mine.length + (sp.state === 'encerrada' ? ' entregues' : ' concluídos') + ')</summary><div style="font-size:12px;line-height:1.55;color:var(--t2)">'
+      + sec('Entregue — ' + done.length + ' item(ns), ' + pts(done) + ' pts', done.map(i => li(i, i.doneOn ? ' · concluído em ' + i.doneOn.split('-').reverse().join('/') : '' )), 'Nada concluído ainda.')
+      + (sp.state === 'encerrada' ? sec('Não concluído e devolvido ao backlog — ' + carried.length, carried.map(i => li(i)), 'Tudo o que foi planejado foi entregue.')
+        : sec('Ainda em aberto — ' + pend.length + ' item(ns), ' + pts(pend) + ' pts', pend.map(i => li(i, ' · ' + esc(AgileCalc.colLabel(cfg, i.status)))), 'Nenhum item em aberto.'))
+      + '</div></details>';
   }
   function startSprint(id) {
     if(!Auth.guard('manage_backlog')) return;
     load(); const s = sprints.find(x => x.id === id); if(!s) return;
-    if(active()) { T.show(`⚠️ Já existe uma sprint ativa ("${active().name}"). Encerre-a antes de iniciar outra.`, 4500); return; }
+    const cur = active();
+    if(cur) {
+      // Uma sprint ativa por vez; mas não engessa: encerra a atual e inicia esta no mesmo passo
+      if(!closeSprintNow(cur.id, 'Iniciar "' + s.name + '" encerra a sprint ativa "' + cur.name + '".')) return;
+    }
     s.state = 'ativa'; saveSprints(); pushSprint(s); boardSprint = '__auto'; renderAll();
     Trail.log(`Sprint iniciada: ${s.name}`, Auth.getName(), '', 'b-acc'); T.show(`✅ "${s.name}" iniciada.`);
   }
-  function closeSprintNow(id) {
-    if(!Auth.guard('manage_backlog')) return;
-    load(); const s = sprints.find(x => x.id === id); if(!s) return;
+  function closeSprintNow(id, prefix) {
+    if(!Auth.guard('manage_backlog')) return false;
+    load(); const s = sprints.find(x => x.id === id); if(!s) return false;
     const open = items.filter(i => i.sprintId === id && i.status !== 'done');
-    if(!confirm(open.length ? `Encerrar "${s.name}"? ${open.length} item(ns) não concluído(s) volta(m) para o backlog, em "A fazer".` : `Encerrar "${s.name}"?`)) return;
+    if(!confirm((prefix ? prefix + ' ' : '') + (open.length ? `Encerrar "${s.name}"? ${open.length} item(ns) não concluído(s) volta(m) para o backlog, em "A fazer" (fica o registro na história da sprint).` : `Encerrar "${s.name}"?`))) return false;
+    s.carried = open.map(i => ({ id: i.id, title: i.title, points: i.points === '' ? null : i.points, status: i.status }));
     open.forEach(i => { i.sprintId = ''; i.status = 'todo'; i.doneOn = ''; pushItem(i); });
     s.state = 'encerrada'; s.closedOn = todayIso();
     saveItems(); saveSprints(); pushSprint(s); renderAll();
     const done = AgileCalc.sum(items.filter(i => i.sprintId === id && i.status === 'done'));
     Trail.log(`Sprint encerrada: ${s.name} (${done} pts concluídos)`, Auth.getName(), '', 'b-grn');
     T.show(`✅ "${s.name}" encerrada: ${done} pts entregues${open.length ? `, ${open.length} item(ns) devolvido(s) ao backlog` : ''}.`, 5000);
+    return true;
   }
 
   // ───────── Modais ─────────
@@ -11280,7 +11622,40 @@ const Agile = (() => {
     document.getElementById('ai-del').style.display = it ? '' : 'none';
     document.getElementById('ai-people').innerHTML = [...new Set((DB.get('team') || []).map(m => m.name).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(n => `<option value="${esc(n)}">`).join('');
     fillSprintSelect(it ? it.sprintId : (active() ? '' : ''));
+    fillParent(it ? it.parentId : '', it ? it.id : '');
+    kindChanged();
+    renderChildren(it);
     document.getElementById('modal-agile-item').classList.remove('hidden');
+    document.getElementById('ai-title').focus();
+  }
+  // Bug filho: o campo "item pai" só aparece (e é obrigatório) quando o tipo é Bug
+  function fillParent(selected, selfId) {
+    const el = document.getElementById('ai-parent'); if(!el) return;
+    el.innerHTML = '<option value="">Escolha o item…</option>' + AgileCalc.parentOptions(items, selfId).map(x => '<option value="' + esc(x.id) + '">' + esc(x.id) + ' — ' + esc(x.title) + '</option>').join('');
+    el.value = selected || '';
+  }
+  function kindChanged() {
+    const isBug = document.getElementById('ai-kind').value === 'bug';
+    document.getElementById('ai-parent-grp').style.display = isBug ? '' : 'none';
+  }
+  // No cartão de um item de entrega: lista os bugs filhos e permite abrir um novo já ligado a ele
+  function renderChildren(it) {
+    const el = document.getElementById('ai-children'); if(!el) return;
+    if(!it || it.kind === 'bug') { el.style.display = 'none'; el.innerHTML = ''; return; }
+    const kids = AgileCalc.bugsOf(items, it.id), open = kids.filter(k => k.status !== 'done');
+    el.style.display = '';
+    el.innerHTML = '<div class="field-label"><i class="ti ti-bug"></i> Bugs deste item' + (kids.length ? ' (' + open.length + ' aberto(s) de ' + kids.length + ')' : '') + '</div>'
+      + (kids.length ? '<div style="display:flex;flex-direction:column;gap:4px;margin:4px 0">' + kids.map(k => '<button type="button" class="link-a" style="text-align:left" onclick="Agile.openItem(\'' + esc(k.id) + '\')">' + esc(k.id) + ' — ' + esc(k.title) + ' · ' + esc(AgileCalc.colLabel(cfg, k.status)) + '</button>').join('') + '</div>' : '<div style="font-size:12px;color:var(--t3);margin:4px 0">Nenhum bug aberto para este item.</div>')
+      + '<button type="button" class="btn btn-sm" onclick="Agile.openBugFor(\'' + esc(it.id) + '\')"><i class="ti ti-bug"></i>Abrir um bug neste item</button>';
+  }
+  function openBugFor(parentId) {
+    load(); const p = items.find(x => x.id === parentId); if(!p) return;
+    openItem();
+    document.getElementById('ai-kind').value = 'bug'; kindChanged();
+    document.getElementById('ai-parent').value = parentId;
+    document.getElementById('ai-title-h').textContent = 'Novo bug — filho de ' + parentId;
+    document.getElementById('ai-title').placeholder = 'Ex: Ao salvar com campo vazio, aparece erro 500';
+    if(p.sprintId) document.getElementById('ai-sprint').value = p.sprintId;
     document.getElementById('ai-title').focus();
   }
   function closeItem() { document.getElementById('modal-agile-item').classList.add('hidden'); }
@@ -11292,6 +11667,9 @@ const Agile = (() => {
     const p = val('ai-points').trim(), points = p === '' ? '' : Math.max(0, Math.min(100, parseInt(p, 10) || 0));
     let it = itemCtx ? items.find(x => x.id === itemCtx) : null;
     const f = { title, kind: val('ai-kind'), points, assignee: val('ai-assignee').trim(), description: val('ai-desc').trim(), sprintId: val('ai-sprint') };
+    f.parentId = f.kind === 'bug' ? val('ai-parent') : '';
+    const bad = AgileCalc.bugParentError({ ...f, id: itemCtx || '' }, items);
+    if(bad) { T.show('⚠️ ' + bad); document.getElementById('ai-parent').focus(); return; }
     if(it) { Object.assign(it, f); AgileCalc.moveTo(it, val('ai-status'), todayIso()); }
     else { it = { id: AgileCalc.nextId('US', items), status: 'todo', rank: (Math.max(0, ...items.map(x => x.rank || 0)) + 1), createdOn: todayIso(), doneOn: '', ...f }; items.push(it); }
     saveItems(); pushItem(it); closeItem(); renderAll();
@@ -11300,6 +11678,8 @@ const Agile = (() => {
   function deleteItem() {
     if(!Auth.guard('manage_backlog')) return;
     load(); const it = items.find(x => x.id === itemCtx); if(!it) return;
+    const kids = AgileCalc.bugsOf(items, it.id);
+    if(kids.length) { T.show('⚠️ ' + it.id + ' tem ' + kids.length + ' bug(s) ligado(s) (' + kids.map(k => k.id).join(', ') + '). Exclua ou religue os bugs antes.', 6000); return; }
     if(!confirm(`Excluir ${it.id}? Isso remove o item do backlog e do quadro.`)) return;
     items = items.filter(x => x.id !== it.id); saveItems();
     if(typeof Cloud !== 'undefined') Cloud.deleteRow('backlog_items', it.id);
@@ -11367,13 +11747,17 @@ const Agile = (() => {
   // ───────── Importação de planilha (usa o importador comum) ─────────
   const titles = () => { load(); return items.map(i => i.title); };
   const sprintRefs = () => { load(); return sprints.map(s => ({ id: s.id, name: s.name })); };
+  const itemRefs = () => { load(); return items.map(i => ({ id: i.id, title: i.title, kind: i.kind })); };
   function addMany(rows) {
     load();
     let rank = Math.max(0, ...items.map(x => x.rank || 0));
     const created = rows.map(x => {
       const it = { id: AgileCalc.nextId('US', items), title: x.title, description: x.description || '', kind: x.kind, status: x.status, points: x.points, assignee: x.assignee || '', sprintId: x.sprintId || '', rank: ++rank, createdOn: todayIso(), doneOn: x.doneOn || '' };
+      if(x.kind === 'bug' && x.parentId) it.parentId = x.parentId;
       items.push(it); return it;
     });
+    // Bug filho de um item que veio na mesma planilha: liga agora que todos já têm código
+    created.forEach((it, k) => { const t = rows[k].parentTitle; if(it.kind === 'bug' && t && !it.parentId) { const p = created.find(c => c.kind !== 'bug' && c.title === t); if(p) it.parentId = p.id; } });
     saveItems();
     if(typeof Cloud !== 'undefined') Cloud.pushMany('backlog_items', created);
     renderAll();
@@ -11526,7 +11910,7 @@ const Agile = (() => {
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
     aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, moveCol, setColLabel, setColWip, setCardField,
-    cfgNow: () => { load(); return cfg; } };
+    cfgNow: () => { load(); return cfg; }, kindChanged, openBugFor, itemRefs };
 })();
 </script>
 
@@ -13114,6 +13498,10 @@ const ImportUi = (() => {
   }
   function close() { el('modal-import').classList.add('hidden'); }
   function changeTarget(t) { if(ALLOWED_TARGETS.includes(t)) { ctx.target = t; el('imp-expect').textContent = expectText(t); } }
+  async function downloadModel() {
+    const sheets = SheetImport.modelSheets(ctx.target); if(!sheets) return;
+    try { await XlsxExport.download(SheetImport.MODELS[ctx.target].file + '.xlsx', sheets); } catch(e) { T.show('⚠️ Não consegui gerar o modelo: ' + (e.message || e)); }
+  }
   function back() { show(1); }
 
   async function handleFiles(files) {
@@ -13185,7 +13573,7 @@ const ImportUi = (() => {
     if(ctx.target === 'team') return { existingNames: (DB.get('team') || []).map(m => m.name) };
     if(ctx.target === 'risks') return { existingTitles: Risks.titles() };
     if(ctx.target === 'hours') return { existingKeys: Hours.keys() };
-    if(ctx.target === 'backlog') return { today, existingTitles: Agile.titles(), sprints: Agile.sprintRefs() };
+    if(ctx.target === 'backlog') return { today, existingTitles: Agile.titles(), existingItems: Agile.itemRefs(), sprints: Agile.sprintRefs() };
     if(ctx.target === 'costs') return { today, existingKeys: (DB.get('costActuals') || []).map(a => norm(a.label) + '|' + a.amount + '|' + a.date) };
     return { idSeed: Date.now().toString(36) };
   }
@@ -13264,7 +13652,7 @@ const ImportUi = (() => {
     show(3);
   }
 
-  return { open, close, changeTarget, back, handleFiles, usePasted, pickSheet, setMap, commit };
+  return { open, close, changeTarget, back, handleFiles, usePasted, pickSheet, setMap, commit , downloadModel };
 })();
 </script>
 
@@ -14975,8 +15363,9 @@ const Board = (() => {
       const p = r.project;
       const dimColor = (v) => v >= 80 ? 'var(--grn)' : v >= 60 ? 'var(--amb)' : 'var(--red)';
       const dimsHtml = DIM_KEYS.map(k => {
-        const v = Math.max(0, Math.min(100, r.dims[k] ?? 100));
-        return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="width:52px;flex-shrink:0;font-size:11px;color:var(--t3)">${DIM_LABEL_SHORT[k]}</span><div style="flex:1;height:6px;background:var(--s3);border-radius:3px;overflow:hidden"><div style="width:${v}%;height:100%;background:${dimColor(v)}"></div></div><span style="width:24px;text-align:right;font-size:11px;color:var(--t3);font-variant-numeric:tabular-nums">${v}</span></div>`;
+        const noData = r.dims[k] == null;
+        const v = noData ? 0 : Math.max(0, Math.min(100, r.dims[k]));
+        return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="width:52px;flex-shrink:0;font-size:11px;color:var(--t3)">${DIM_LABEL_SHORT[k]}</span><div style="flex:1;height:6px;background:var(--s3);border-radius:3px;overflow:hidden"><div style="width:${v}%;height:100%;background:${dimColor(v)}"></div></div><span style="width:24px;text-align:right;font-size:11px;color:var(--t3);font-variant-numeric:tabular-nums">${noData ? '—' : v}</span></div>`;
       }).join('');
       const costSub = (r.bm && r.bm.BAC > 0) ? `<div style="font-size:11px;color:var(--t3);margin-top:2px">Gasto: ${fmtMoney(r.bm.AC)} de ${fmtMoney(r.bm.BAC)}</div>` : `<div style="font-size:11px;color:var(--t3);margin-top:2px">Sem orçamento lançado ainda</div>`;
       const vrLabel = r.vr.status === 'total' ? 'Valor: totalmente entregue' : r.vr.status === 'parcial' ? 'Valor: parcialmente entregue' : r.vr.status === 'nao_iniciado' ? 'Valor: ainda não entregue' : 'Valor: não validado ainda';
@@ -16976,6 +17365,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
         <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm btn-acc" onclick="ImportUi.usePasted()"><i class="ti ti-arrow-right"></i>Usar texto colado</button></div>
       </div>
       <div id="imp-expect" style="font-size:11.5px;color:var(--t3);margin-top:12px"></div>
+      <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm" onclick="ImportUi.downloadModel()"><i class="ti ti-download"></i>Baixar a planilha modelo</button><span style="font-size:11.5px;color:var(--t3)">já com exemplos e a aba “Como preencher” — é só trocar pelos seus dados</span></div>
     </div>
 
     <div id="imp-step-2" style="display:none">
@@ -17393,6 +17783,32 @@ const Messaging = (() => {
         <div id="fp-phone-wrap" style="display:none"><label class="field-label" for="fp-phone">Telefone com WhatsApp (DDD + número)</label><input class="input" id="fp-phone" type="tel" inputmode="tel" maxlength="20" autocomplete="tel" placeholder="(11) 91234-5678"></div>
       </fieldset>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-pri" id="fp-save" onclick="FirstAccess.saveProfile()"><i class="ti ti-check"></i>Salvar cadastro</button><button class="btn" onclick="FirstAccess.later()">Agora não</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Relato de problema: guia a pessoa a descrever bem (caminho, passo a passo, o que esperava, o que ocorreu) e a anexar o print -->
+<div class="modal-ov hidden" id="modal-bug" role="dialog" aria-modal="true" aria-labelledby="bug-title">
+  <div class="modal-box" style="width:600px;max-height:92vh;overflow:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" id="bug-title">Reportar um problema</div>
+      <button class="btn btn-sm" aria-label="Fechar" onclick="BugReport.close()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-sub" style="line-height:1.6">Quanto mais você <strong>descrever e exemplificar</strong> o problema, mais rápido conseguimos corrigir. Conte: o <strong>caminho no sistema</strong>; o que você <strong>fez</strong> (cliques, mudança de tela, função usada); o que esperava e o que aconteceu — e feche com um <strong>print</strong> do ocorrido.</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:10px">
+      <div><label class="field-label" for="bug-f-title">Resumo do problema (obrigatório)</label><input class="input" id="bug-f-title" maxlength="160" placeholder="Ex.: O botão Importar planilha não abre a janela"></div>
+      <div><label class="field-label" for="bug-f-sev">Quanto isso atrapalha?</label><select class="input" id="bug-f-sev" style="max-width:340px"><option value="atrapalha">Atrapalha, mas dá para contornar</option><option value="impede">Não consigo continuar trabalhando</option><option value="detalhe">Detalhe visual ou de texto</option></select></div>
+      <div><label class="field-label" for="bug-f-path">Caminho no sistema (obrigatório)</label><input class="input" id="bug-f-path" maxlength="300" placeholder="Ex.: Execução ágil → Quadro Kanban → Importar planilha"></div>
+      <div><label class="field-label" for="bug-f-steps">O que você fez, passo a passo (obrigatório)</label><textarea class="input" id="bug-f-steps" rows="4" maxlength="4000" style="resize:vertical;font-family:inherit" placeholder="Ex.: 1) Abri o Quadro Kanban. 2) Cliquei em Importar planilha. 3) Escolhi o arquivo itens.xlsx. 4) Cliquei em Importar."></textarea></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px">
+        <div><label class="field-label" for="bug-f-exp">O que você esperava que acontecesse</label><textarea class="input" id="bug-f-exp" rows="2" maxlength="2000" style="resize:vertical;font-family:inherit" placeholder="Ex.: Os 12 itens aparecerem em A fazer"></textarea></div>
+        <div><label class="field-label" for="bug-f-act">O que aconteceu de fato (obrigatório)</label><textarea class="input" id="bug-f-act" rows="2" maxlength="2000" style="resize:vertical;font-family:inherit" placeholder="Ex.: Apareceu a mensagem “erro” e nenhum item entrou"></textarea></div>
+      </div>
+      <div><div class="field-label">Prints e arquivos de exemplo</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label class="btn btn-sm" for="bug-f-files" style="cursor:pointer"><i class="ti ti-paperclip"></i>Anexar arquivo</label><input type="file" id="bug-f-files" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.txt,.csv,.xlsx" style="position:absolute;width:1px;height:1px;opacity:0" onchange="BugReport.addFiles(this.files);this.value=''"><span style="font-size:11.5px;color:var(--t3)">ou cole o print aqui com Ctrl+V · até 6 arquivos de 5 MB (imagem, PDF, planilha ou texto)</span></div>
+        <div id="bug-files" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div></div>
+      <p style="font-size:11.5px;color:var(--t3);line-height:1.5;margin:0"><i class="ti ti-info-circle"></i> Vão junto, automaticamente: a versão do sistema, a tela em que você está, o seu perfil, o navegador, o tamanho da tela e os últimos erros. Nenhuma senha ou chave é enviada.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-pri" id="bug-send" onclick="BugReport.send()"><i class="ti ti-send"></i>Enviar relato</button><button class="btn" onclick="BugReport.close()">Cancelar</button></div>
     </div>
   </div>
 </div>
@@ -17854,14 +18270,20 @@ const HealthScore = (() => {
     risks: 0.10
   };
 
+  // Média ponderada SÓ das dimensões que têm dado (os pesos são reajustados entre elas). Sem nenhuma dimensão com dado devolve null:
+  // projeto vazio não é "100% saudável", é "sem dados".
   function calculate(metrics) {
-    const score = Object.entries(WEIGHTS).reduce((sum, [k, w]) => {
-      return sum + (metrics[k] || 0) * w;
-    }, 0);
-    return Math.round(score);
+    let sum = 0, weight = 0;
+    Object.entries(WEIGHTS).forEach(([k, w]) => {
+      const v = metrics ? metrics[k] : null;
+      if(v == null || Number.isNaN(Number(v))) return;
+      sum += Number(v) * w; weight += w;
+    });
+    return weight ? Math.round(sum / weight) : null;
   }
 
   function getStatus(score) {
+    if(score == null) return { label:'Sem dados', color:'var(--t3)', badge:'b-neu' };
     if(score >= 80) return { label:'Saudável', color:'var(--grn)', badge:'b-grn' };
     if(score >= 60) return { label:'Atenção', color:'var(--amb)', badge:'b-amb' };
     return { label:'Em risco', color:'var(--red)', badge:'b-red' };
@@ -17871,17 +18293,18 @@ const HealthScore = (() => {
     const ring = document.querySelector('.ring-wrap circle:last-child');
     if(!ring) return;
     const circumference = 2 * Math.PI * 26; // r=26
-    const offset = circumference - (score / 100) * circumference;
+    const none = score == null;
+    const offset = none ? circumference : circumference - (score / 100) * circumference;
     ring.setAttribute('stroke-dashoffset', offset.toFixed(1));
-    const color = score >= 80 ? 'var(--grn)' : score >= 60 ? 'var(--amb)' : 'var(--red)';
+    const color = none ? 'var(--t3)' : score >= 80 ? 'var(--grn)' : score >= 60 ? 'var(--amb)' : 'var(--red)';
     ring.setAttribute('stroke', color);
     const label = document.querySelector('.ring-lbl');
-    if(label) label.innerHTML = score + '<small>/100</small>';
+    if(label) label.innerHTML = none ? '—' : score + '<small>/100</small>';
   }
 
   // Reúne as 6 dimensões a partir de dados reais do projeto ativo — cada uma tem uma fonte
-  // concreta, nenhuma é decorativa. Onde não há dado suficiente para julgar, assume-se 100
-  // (neutro/sem problema detectado) em vez de inventar um número.
+  // concreta, nenhuma é decorativa. Onde não há dado suficiente para julgar, a dimensão vale null ("sem dados"):
+  // não entra na média e aparece como "Sem dados" — nunca como um 100 que pareça saúde.
   const DIM_LABEL = { schedule:'Cronograma', budget:'Orçamento', team:'Equipe', quality:'Qualidade', learning:'Aprendizado', scope:'Scope creep', risks:'Riscos' };
 
   // Ritmo da sprint como nota 0-100: 100 = no ritmo ou adiantada; cada ponto percentual do compromisso que falta além da linha ideal tira 1 ponto.
@@ -17918,31 +18341,34 @@ const HealthScore = (() => {
 
     // Cronograma: aderência média da WBS (mesma base usada no Dashboard e no Relatório).
     // Projeto ÁGIL com sprint ativa: vale o ritmo da sprint (quanto falta contra a linha ideal do burndown) — a WBS não manda no ágil.
-    let schedule = wbs.length ? Math.round(wbs.reduce((s,m) => s + (m.pct||0), 0) / wbs.length) : 100;
+    let schedule = wbs.length ? Math.round(wbs.reduce((s,m) => s + (m.pct||0), 0) / wbs.length) : null;
     const agileSched = sprintSchedule(pid);
     if(agileSched != null) schedule = agileSched;
 
     // Scope creep: penaliza mudanças de escopo ainda abertas (mesma fórmula já usada no Relatório)
     const scopeAbertos = scope.filter(s => s.status === 'pending' || s.status === 'analysis');
-    const scopeScore = Math.max(0, 100 - Math.min(scopeAbertos.length * 10, 100));
+    // Só tem o que avaliar quando o projeto já tem plano (entregas, itens ou sprints); projeto vazio não tem "escopo controlado"
+    const hasPlan = wbs.length > 0 || getTable('backlog').length > 0 || getTable('sprints').length > 0;
+    const scopeScore = hasPlan ? Math.max(0, 100 - Math.min(scopeAbertos.length * 10, 100)) : null;
 
     // Equipe: penaliza membros em zona crítica de carga (mesma fórmula já usada no Relatório)
     const membrosCriticos = team.filter(m => (m.workloadPct||0) >= 85);
-    const teamScore = Math.max(0, 100 - Math.min(membrosCriticos.length * 30, 100));
+    const teamScore = team.length ? Math.max(0, 100 - Math.min(membrosCriticos.length * 30, 100)) : null;
 
     // Orçamento: CPI real (services/budget-js) — sem custo real lançado ainda, considera neutro
     const bm = (typeof Budget !== 'undefined') ? Budget.computeMetrics(pid) : { CPI:null };
-    const budgetScore = bm.CPI != null ? Math.max(0, Math.min(100, Math.round(bm.CPI * 100))) : 100;
+    const budgetScore = bm.CPI != null ? Math.max(0, Math.min(100, Math.round(bm.CPI * 100))) : null;
 
     // Qualidade: proxy real — % de ações de reunião já concluídas (execução do que foi combinado)
     const allActions = meetings.reduce((arr,m) => arr.concat(m.actions||[]), []);
-    const qualityScore = allActions.length ? Math.round(allActions.filter(a => a.done).length / allActions.length * 100) : 100;
+    const qualityScore = allActions.length ? Math.round(allActions.filter(a => a.done).length / allActions.length * 100) : null;
 
     // Aprendizado: % de lições aprendidas já aplicadas neste projeto
-    const learningScore = lessons.length ? Math.round(lessons.filter(l => l.applied).length / lessons.length * 100) : 100;
+    const learningScore = lessons.length ? Math.round(lessons.filter(l => l.applied).length / lessons.length * 100) : null;
 
     // Riscos: cada risco em aberto tira pontos conforme a faixa (crítico 25 · alto 10 · médio 3) — sem riscos registrados, neutro
-    const risksScore = (typeof RiskMatrix !== 'undefined') ? RiskMatrix.healthScore(getTable('risks')) : 100;
+    const riskList = getTable('risks');
+    const risksScore = (riskList.length && typeof RiskMatrix !== 'undefined') ? RiskMatrix.healthScore(riskList) : null; // sem riscos registrados, a análise de riscos não foi feita
 
     return { schedule, budget:budgetScore, team:teamScore, quality:qualityScore, learning:learningScore, scope:scopeScore, risks:risksScore };
   }

@@ -59,14 +59,14 @@ test('importar backlog: colunas do Jira/Excel são reconhecidas', () => {
 });
 
 test('importar backlog: tipos, situações, pontos, sprint existente e ordem por prioridade', () => {
-  const header = ['Título', 'Tipo', 'Pontos', 'Responsável', 'Situação', 'Sprint', 'Prioridade'];
+  const header = ['Título', 'Tipo', 'Pontos', 'Responsável', 'Situação', 'Sprint', 'Prioridade', 'Item pai'];
   const map = SheetImport.autoMap(header, 'backlog');
   const rows = [
-    ['Pagar com Pix', 'História', '13', 'Ana', 'A fazer', '', '3'],
-    ['Corrigir login', 'Bug', '2', '', 'Em andamento', 'Sprint 4', '1'],
-    ['Tela nova', 'Tarefa', 'muitos', '', 'Concluído', 'Sprint 99', '2'],
-    ['Item repetido', '', '5', '', '', '', ''], ['Item repetido', '', '5', '', '', '', ''],
-    ['', '', '', '', '', '', ''], ['x', '', '', '', '', '', '']];
+    ['Pagar com Pix', 'História', '13', 'Ana', 'A fazer', '', '3', ''],
+    ['Corrigir login', 'Bug', '2', '', 'Em andamento', 'Sprint 4', '1', 'Pagar com Pix'],
+    ['Tela nova', 'Tarefa', 'muitos', '', 'Concluído', 'Sprint 99', '2', ''],
+    ['Item repetido', '', '5', '', '', '', '', ''], ['Item repetido', '', '5', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''], ['x', '', '', '', '', '', '', '']];
   const r = SheetImport.build('backlog', rows, map, { today: '2026-06-20', existingTitles: [], sprints: [{ id: 'SP-004', name: 'Sprint 4' }] }, 1);
   assert.deepEqual(r.rows.map(x => x.title), ['Corrigir login', 'Tela nova', 'Pagar com Pix', 'Item repetido']); // por prioridade 1, 2, 3, sem prioridade
   const bug = r.rows[0]; assert.equal(bug.kind, 'bug'); assert.equal(bug.points, 2); assert.equal(bug.status, 'doing'); assert.equal(bug.sprintId, 'SP-004');

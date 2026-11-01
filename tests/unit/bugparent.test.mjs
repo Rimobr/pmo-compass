@@ -1,0 +1,51 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const html = readFileSync(join(root, 'PMO_Compass_v2.html'), 'utf8');
+const load = (name, exports) => { const m = html.match(new RegExp(`<script data-module="${name.replace('/', '\\/')}">([\\s\\S]*?)<\\/script>`)); return new Function(`${m[1]}\nreturn { ${exports} };`)(); };
+const { AgileCalc } = load('services/agile-calc', 'AgileCalc');
+const { SheetParse, SheetImport } = load('services/sheet-import', 'SheetParse, SheetImport');
+
+const items = [{ id: 'US-1', kind: 'historia', title: 'Cadastro' }, { id: 'US-2', kind: 'bug', title: 'Erro', parentId: 'US-1' }, { id: 'US-3', kind: 'tarefa', title: 'Tarefa' }];
+
+test('todo bug precisa de um item pai que exista e não seja outro bug', () => {
+  assert.equal(AgileCalc.bugParentError({ id: 'N', kind: 'historia' }, items), '');
+  assert.match(AgileCalc.bugParentError({ id: 'N', kind: 'bug' }, items), /precisa estar ligado/);
+  assert.match(AgileCalc.bugParentError({ id: 'N', kind: 'bug', parentId: 'NAO' }, items), /não existe/);
+  assert.match(AgileCalc.bugParentError({ id: 'N', kind: 'bug', parentId: 'US-2' }, items), /outro bug/);
+  assert.match(AgileCalc.bugParentError({ id: 'US-9', kind: 'bug', parentId: 'US-9' }, [...items, { id: 'US-9', kind: 'historia' }]), /dele mesmo/);
+  assert.equal(AgileCalc.bugParentError({ id: 'N', kind: 'bug', parentId: 'US-3' }, items), '');
+});
+
+test('bugs de um item e opções de item pai (nunca um bug, nunca o próprio item)', () => {
+  assert.deepEqual(AgileCalc.bugsOf(items, 'US-1').map(x => x.id), ['US-2']);
+  assert.deepEqual(AgileCalc.parentOptions(items, 'US-1').map(x => x.id), ['US-3']);
+});
+
+test('importação: bug sem item pai é recusado; com pai existente ou da própria planilha entra', () => {
+  const map = { title: 0, kind: 1, parent: 2 };
+  const rows = [['Nova história', 'História', ''], ['Bug ligado à história da planilha', 'Bug', 'Nova história'], ['Bug ligado ao item existente', 'Bug', 'US-1'], ['Bug solto', 'Bug', ''], ['Bug de pai inexistente', 'Bug', 'Fantasma'], ['Bug filho de bug', 'Bug', 'Erro']];
+  const r = SheetImport.build('backlog', rows, map, { existingTitles: [], existingItems: items, sprints: [] }, 0);
+  const titles = r.rows.map(x => x.title);
+  assert.deepEqual(titles.sort(), ['Bug ligado ao item existente', 'Bug ligado à história da planilha', 'Nova história'].sort());
+  assert.equal(r.rows.find(x => x.title === 'Bug ligado ao item existente').parentId, 'US-1');
+  assert.equal(r.rows.find(x => x.title === 'Bug ligado à história da planilha').parentTitle, 'Nova história');
+  assert.equal(r.errors.length, 3);
+  assert.ok(r.errors.some(e => /falta o item pai/.test(e.msg || e.message || JSON.stringify(e))));
+});
+
+test('o banco aplica a mesma regra e o app mostra o bug como filho', () => {
+  const sql = readFileSync(join(root, 'supabase', 'migrations', '20261101170000_bug_parent.sql'), 'utf8');
+  for (const k of ['guard_bug_parent', 'Todo bug precisa estar ligado', 'filho de outro bug', "old.kind = 'bug' and new.parent_id is not distinct from old.parent_id"]) assert.ok(sql.includes(k), k);
+  for (const k of ['Agile.openBugFor', 'ai-parent', 'parent_id:(x.kind', 'Abrir um bug neste item']) assert.ok(html.includes(k), k);
+});
+
+test('sprints: história do que foi entregue e devolvido, e troca de sprint sem engessar', () => {
+  const sql = readFileSync(join(root, 'supabase', 'migrations', '20261101180000_sprint_history.sql'), 'utf8');
+  assert.match(sql, /carried jsonb/);
+  for (const k of ['kb-sprint-bar', 'Nenhuma sprint ativa', 'O que esta sprint entregou', 'devolvido ao backlog', 'encerra a sprint ativa']) assert.ok(html.includes(k), k);
+});
