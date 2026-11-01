@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.37.0'
+  version: '2.38.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1970,8 +1970,9 @@ body.icons-failed i[data-fb]::before{
 .kb-bar .input{width:auto;min-width:130px}
 .kb-wip{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--t2)}
 .kb-wip input{width:62px}
-.kb-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:start}
-@media(max-width:900px){.kb-board{grid-template-columns:minmax(0,1fr)}}
+.kb-board{display:grid;grid-template-columns:repeat(var(--kb-cols,4),minmax(var(--kb-min,0px),1fr));gap:10px;align-items:start}
+/* celular/tablet: colunas com largura legivel e rolagem lateral so do quadro (nunca texto quebrado palavra por palavra) */
+@media(max-width:900px){.kb-board{grid-template-columns:repeat(var(--kb-cols,4),minmax(250px,82%));overflow-x:auto;scroll-snap-type:x proximity;padding-bottom:6px;overscroll-behavior-x:contain}.kb-board>.kb-col{scroll-snap-align:start}}
 .kb-col{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r10);padding:8px;min-height:120px}
 .kb-col.over-wip{border-color:var(--rb)}
 .kb-col.drop{outline:2px dashed var(--acc);outline-offset:-3px}
@@ -2220,6 +2221,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
 .rc-tbl small{font-size:11px}
 .rc-hint{grid-column:1/-1;padding:12px 14px;border:1px dashed var(--b3);border-radius:var(--r8);color:var(--t2);font-size:12.5px}
 @media(max-width:900px){.rc-k{grid-template-columns:repeat(2,minmax(0,1fr))}.rc-k .kpi{padding:10px}.rc-k .kpi-val{font-size:20px}}
+/* o "Ver como" e ferramenta do administrador no computador; no celular a barra do topo nao comporta e cortava o controle */
+@media(max-width:700px){#tb-viewas{display:none!important}}
 @media(max-width:600px){.rc-legend{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.rc-d{display:none}}
 </style>
 
@@ -12027,7 +12030,7 @@ const Agile = (() => {
     if(scrum && boardSprint === '__auto' && !act) emptyHint = '<div class="rk-empty" style="margin-bottom:10px">Este quadro mostra o que está <b>na sprint</b>. Crie e importe os itens no <b>Backlog</b>, use <b>Planejar sprint</b> para escolher o que cabe e depois inicie a sprint em <b>Sprints</b>. <button class="btn btn-sm" onclick="R.go(\'backlog\')">Ir ao Backlog</button></div>';
     else if(scrum && !list.length) emptyHint = '<div class="rk-empty" style="margin-bottom:10px">Nenhum item nesta sprint ainda. No <b>Backlog</b>, use <b>Planejar sprint</b> (ou escolha a sprint no próprio item) para trazer o que cabe. <button class="btn btn-sm" onclick="R.go(\'backlog\')">Ir ao Backlog</button></div>';
     else if(!scrum && !items.length) emptyHint = '<div class="rk-empty" style="margin-bottom:10px">Nenhum item ainda. Use <b>Novo item</b> para cadastrar a primeira história ou <b>Importar planilha</b> para trazer vários de uma vez — eles aparecem em “A fazer”.</div>';
-    root.innerHTML = emptyHint + `<div class="kb-board" style="grid-template-columns:repeat(${columns.length},minmax(${columns.length > 4 ? 210 : 0}px,1fr))">` + columns.map(col => {
+    root.innerHTML = emptyHint + `<div class="kb-board" style="--kb-cols:${columns.length};--kb-min:${columns.length > 4 ? 210 : 0}px">` + columns.map(col => {
       const st = stats.find(s => s.key === col.key);
       const cards = list.filter(i => i.status === col.key).map(i => card(i)).join('') || '<div style="font-size:11.5px;color:var(--t3);padding:6px 2px">Nenhum item</div>';
       return `<div class="kb-col${st.over ? ' over-wip' : ''}" data-status="${esc(col.key)}" ondragover="Agile.dragOver(event)" ondragleave="this.classList.remove('drop')" ondrop="Agile.drop(event,'${esc(col.key)}')" role="group" aria-label="${esc(col.label)}: ${st.count} item(ns)">
