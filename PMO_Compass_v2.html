@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.20.0'
+  version: '2.20.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1538,7 +1538,8 @@ body.icons-failed i[data-fb]::before{
       <div class="prov-body">
         <div class="prov-name"><i class="ti ti-brain" style="color:var(--acc)"></i>Claude (Anthropic)<span class="badge b-acc" id="prov-badge-anthropic" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-anthropic" style="display:none">Configurada</span></div>
         <div class="prov-desc">Padrão do <span data-brand="name">PMO Compass</span> — forte em analisar documentos longos e avaliar risco de projetos.</div>
-        <div class="prov-inp-row"><input class="input" id="api-inp-anthropic" type="password" aria-label="Chave de API de Claude (Anthropic)" autocomplete="off" placeholder="sk-ant-api03-..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('anthropic')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-anthropic" aria-label="Remover a chave de Claude (Anthropic)" title="Remover a chave" style="display:none" onclick="Store.removeKey('anthropic')"><i class="ti ti-trash"></i></button></div>
+        <div class="prov-inp-row"><input class="input" id="api-inp-anthropic" type="password" aria-label="Chave de API de Claude (Anthropic)" autocomplete="off" placeholder="sk-ant-api03-..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('anthropic')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-anthropic" aria-label="Remover a chave de Claude (Anthropic)" title="Remover a chave" style="display:none" onclick="Store.removeKey('anthropic')"><i class="ti ti-trash"></i></button><button class="btn btn-sm" data-perm="settings" id="prov-test-btn-anthropic" onclick="AI.test('anthropic')" title="Faz uma pergunta mínima ao provedor para confirmar que a chave e a conexão funcionam"><i class="ti ti-plug-connected"></i>Testar</button></div>
+        <div id="prov-test-anthropic" role="status" aria-live="polite" style="font-size:12px;margin-top:6px"></div>
         <div style="font-size:11px;color:var(--t3);margin-top:5px">Obtenha em <a href="https://console.anthropic.com" target="_blank" rel="noopener" style="color:var(--acc)">console.anthropic.com</a> · claude-sonnet-4-6</div>
       </div>
     </div>
@@ -1548,7 +1549,8 @@ body.icons-failed i[data-fb]::before{
       <div class="prov-body">
         <div class="prov-name"><i class="ti ti-sparkles" style="color:var(--grn)"></i>ChatGPT (OpenAI)<span class="badge b-acc" id="prov-badge-openai" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-openai" style="display:none">Configurada</span></div>
         <div class="prov-desc">Alternativa da OpenAI — bom custo-benefício para chat e resumos rápidos.</div>
-        <div class="prov-inp-row"><input class="input" id="api-inp-openai" type="password" aria-label="Chave de API de ChatGPT (OpenAI)" autocomplete="off" placeholder="sk-proj-..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('openai')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-openai" aria-label="Remover a chave de ChatGPT (OpenAI)" title="Remover a chave" style="display:none" onclick="Store.removeKey('openai')"><i class="ti ti-trash"></i></button></div>
+        <div class="prov-inp-row"><input class="input" id="api-inp-openai" type="password" aria-label="Chave de API de ChatGPT (OpenAI)" autocomplete="off" placeholder="sk-proj-..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('openai')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-openai" aria-label="Remover a chave de ChatGPT (OpenAI)" title="Remover a chave" style="display:none" onclick="Store.removeKey('openai')"><i class="ti ti-trash"></i></button><button class="btn btn-sm" data-perm="settings" id="prov-test-btn-openai" onclick="AI.test('openai')" title="Faz uma pergunta mínima ao provedor para confirmar que a chave e a conexão funcionam"><i class="ti ti-plug-connected"></i>Testar</button></div>
+        <div id="prov-test-openai" role="status" aria-live="polite" style="font-size:12px;margin-top:6px"></div>
         <div style="font-size:11px;color:var(--t3);margin-top:5px">Obtenha em <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" style="color:var(--acc)">platform.openai.com</a> · gpt-4o</div>
       </div>
     </div>
@@ -1558,7 +1560,8 @@ body.icons-failed i[data-fb]::before{
       <div class="prov-body">
         <div class="prov-name"><i class="ti ti-brand-google" style="color:var(--pur)"></i>Gemini (Google)<span class="badge b-acc" id="prov-badge-google" style="display:none">Ativo</span> <span class="badge b-grn" id="prov-status-google" style="display:none">Configurada</span></div>
         <div class="prov-desc">Alternativa do Google — boa opção se você já usa o ecossistema Google Workspace.</div>
-        <div class="prov-inp-row"><input class="input" id="api-inp-google" type="password" aria-label="Chave de API de Gemini (Google)" autocomplete="off" placeholder="AIza..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('google')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-google" aria-label="Remover a chave de Gemini (Google)" title="Remover a chave" style="display:none" onclick="Store.removeKey('google')"><i class="ti ti-trash"></i></button></div>
+        <div class="prov-inp-row"><input class="input" id="api-inp-google" type="password" aria-label="Chave de API de Gemini (Google)" autocomplete="off" placeholder="AIza..." style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm btn-acc" data-perm="settings" onclick="Store.saveKey('google')"><i class="ti ti-device-floppy"></i>Salvar</button><button class="btn btn-sm btn-red" data-perm="settings" id="prov-remove-google" aria-label="Remover a chave de Gemini (Google)" title="Remover a chave" style="display:none" onclick="Store.removeKey('google')"><i class="ti ti-trash"></i></button><button class="btn btn-sm" data-perm="settings" id="prov-test-btn-google" onclick="AI.test('google')" title="Faz uma pergunta mínima ao provedor para confirmar que a chave e a conexão funcionam"><i class="ti ti-plug-connected"></i>Testar</button></div>
+        <div id="prov-test-google" role="status" aria-live="polite" style="font-size:12px;margin-top:6px"></div>
         <div style="font-size:11px;color:var(--t3);margin-top:5px">Obtenha em <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--acc)">aistudio.google.com</a> · gemini-3.6-flash</div>
       </div>
     </div>
@@ -7302,6 +7305,40 @@ Regras obrigatórias:
     } catch(e) { return { error: e.message||'Erro de conexão' }; }
   }
 
+  // Teste de conexão: uma pergunta mínima ao provedor escolhido, pelo mesmo caminho que o uso real (servidor se logado, navegador se local).
+  // Não grava nada nem usa dados do projeto; custa alguns centavos de token. Devolve { ok, ms, via, model, text } ou { ok:false, error, hint }.
+  function explain(err) {
+    const e = String(err || '');
+    if(/401|invalid.*(key|api)|incorrect api key|api key not valid|unauthorized|authentication/i.test(e)) return 'A chave foi recusada pelo provedor — confira se foi copiada inteira e se está ativa.';
+    if(/429|quota|rate.?limit|insufficient|billing|credit/i.test(e)) return 'A chave é válida, mas o provedor recusou por limite ou saldo — confira o plano/crédito na conta do provedor.';
+    if(/não configurada|not configured|chave/i.test(e)) return 'Ainda não há chave para este provedor — cole a chave e salve antes de testar.';
+    if(/failed to fetch|network|rede|conex/i.test(e)) return 'Não foi possível falar com o provedor — confira a internet ou o bloqueio de rede da empresa.';
+    return '';
+  }
+  async function test(provider) {
+    provider = CONFIG[provider] ? provider : Store.getProvider();
+    const cfg = CONFIG[provider];
+    const out = document.getElementById('prov-test-' + provider), btn = document.getElementById('prov-test-btn-' + provider);
+    const show = (html, color) => { if(out) out.innerHTML = '<span style="color:' + color + '">' + html + '</span>'; };
+    if(!Store.hasKeyOrCloud(provider)) { show('<i class="ti ti-alert-triangle"></i> Cole e salve a chave de ' + cfg.label + ' antes de testar.', 'var(--amb)'); return { ok:false, error:'sem chave' }; }
+    if(btn) btn.disabled = true;
+    show('<i class="ti ti-loader-2"></i> Testando ' + cfg.label + '…', 'var(--t2)');
+    const via = (typeof Cloud !== 'undefined' && Cloud.isSignedIn()) ? 'servidor' : 'navegador';
+    const t0 = Date.now();
+    const r = await sendInner([{ role:'user', content:'Responda somente com a palavra: OK' }], { provider, system:'Você é um teste de conexão. Responda somente com a palavra OK.' });
+    const ms = Date.now() - t0;
+    if(btn) btn.disabled = false;
+    if(r && r.text) {
+      show('<i class="ti ti-circle-check"></i> Conexão OK — ' + cfg.label + ' (' + cfg.model + ') respondeu em ' + (ms / 1000).toFixed(1).replace('.', ',') + ' s, pelo ' + via + '.', 'var(--grn)');
+      return { ok:true, ms, via, model:cfg.model, text:r.text };
+    }
+    const err = (r && r.error) || 'Resposta vazia do provedor.';
+    const hint = explain(err);
+    show('<i class="ti ti-circle-x"></i> Falhou: ' + escapeHtml(String(err).slice(0, 220)) + (hint ? '<br>' + escapeHtml(hint) : ''), 'var(--red)');
+    return { ok:false, error:err, hint };
+  }
+  const escapeHtml = x => String(x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
   async function sendAnthropic(messages, key, opts) {
     const system = (opts && opts.system) || buildSystem();
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -7341,7 +7378,7 @@ Regras obrigatórias:
     return { text: data.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('') || '' };
   }
 
-  return { send, CONFIG };
+  return { send, CONFIG , test, explain };
 })();
 </script>
 

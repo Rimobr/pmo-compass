@@ -83,3 +83,14 @@ test('migração do cadastro complementar: telefone só com consentimento, leitu
   assert.match(sql, /user_id = auth\.uid\(\) or public\.current_role\(\) = 'admin'/);
   assert.doesNotMatch(sql, /for update using \(public\.current_role/); // admin não escreve no telefone de terceiros
 });
+
+test('teste de conexão da IA: botão por provedor, explica chave recusada e falta de saldo', () => {
+  for (const p of ['anthropic', 'openai', 'google']) assert.match(html, new RegExp(`onclick="AI\.test\('${p}'\)"`));
+  const a = html.match(/<script data-module="services\/ai">([\s\S]*?)<\/script>/);
+  assert.ok(a && /async function test\(provider\)/.test(a[1]) && /function explain\(err\)/.test(a[1]));
+  const explain = new Function(a[1].match(/function explain\(err\) \{[\s\S]*?\n  \}/)[0] + '\nreturn explain;')();
+  assert.match(explain('HTTP 401 Incorrect API key provided'), /recusada/);
+  assert.match(explain('You exceeded your current quota'), /limite ou saldo/);
+  assert.match(explain('Failed to fetch'), /internet/);
+  assert.equal(explain('algo diferente'), '');
+});
