@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.19.1'
+  version: '2.19.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1719,14 +1719,14 @@ body.icons-failed i[data-fb]::before{
     <div class="lbl"><i class="ti ti-search"></i>Consulta semântica rápida</div>
     <p style="font-size:12.5px;color:var(--t2);margin-bottom:10px">Digite qualquer pergunta sobre o projeto — a IA busca nos documentos e responde com citação de fonte.</p>
     <div style="display:flex;gap:8px">
-      <input class="input" id="repo-search" type="text" placeholder="Ex: qual é o requisito RF-ERP-008? quais são os critérios de aceite da HU-001?">
+      <input class="input" id="repo-search" type="text" placeholder="Ex: qual é o requisito de integração? quais são os critérios de aceite de uma história?">
       <button class="btn btn-acc" title="Abre o Chat contextual e envia a pergunta" onclick="Chat.ask(document.getElementById('repo-search').value)"><i class="ti ti-message-2"></i>Perguntar à IA</button>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
       <span style="font-size:11px;color:var(--t3)">Sugestões:</span>
-      <button class="chat-sug" onclick="document.getElementById('repo-search').value=this.textContent">RF-ERP-008</button>
-      <button class="chat-sug" onclick="document.getElementById('repo-search').value=this.textContent">critérios de aceite HU-001</button>
-      <button class="chat-sug" onclick="document.getElementById('repo-search').value=this.textContent">lições aprendidas integração ERP</button>
+      <button class="chat-sug" onclick="document.getElementById('repo-search').value=this.textContent">requisitos principais</button>
+      <button class="chat-sug" onclick="document.getElementById('repo-search').value=this.textContent">critérios de aceite</button>
+      <button class="chat-sug" onclick="document.getElementById('repo-search').value=this.textContent">lições aprendidas do projeto</button>
     </div>
   </div>
 </section>
@@ -1737,7 +1737,7 @@ body.icons-failed i[data-fb]::before{
     <div><div class="pg-title">Gestão de Stakeholders<span class="help-q" data-help="Lista de quem tem influência ou interesse no projeto (patrocinador, cliente, usuário-chave...), com alerta de quando faz tempo demais que ninguém fala com essa pessoa." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub"><span id="sh-count">11</span> mapeados · IA detecta padrões de desengajamento antes que virem bloqueio</div></div>
     <div class="btn-row">
       <button class="btn btn-sm btn-acc" data-perm="business" onclick="Stakeholders.openAdd()"><i class="ti ti-plus"></i>Adicionar</button>
-      <button class="btn btn-sm"><i class="ti ti-send"></i>Gerar comunicações</button>
+      <button class="btn btn-sm" onclick="R.go('statusmsg')"><i class="ti ti-send"></i>Gerar comunicações</button>
     </div>
   </div>
 
@@ -1750,23 +1750,12 @@ body.icons-failed i[data-fb]::before{
     </div>
 
     <div class="card">
-      <div class="lbl"><i class="ti ti-mail"></i>Plano de comunicação — gerado pela IA</div>
+      <div class="lbl"><i class="ti ti-mail"></i>Comunicar com os stakeholders</div>
+      <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">A comunicação sai dos dados reais do projeto — nada aqui é texto fixo. Escolha o formato e envie a quem está no mapa ao lado.</p>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <div style="background:var(--rd);border:1px solid var(--rb);border-radius:var(--r8);padding:10px 12px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><span style="font-size:12.5px;font-weight:500;color:var(--t1)">Diretor de TI</span><span class="badge b-red">Urgente — hoje</span></div>
-          <div style="font-size:12px;color:var(--t2);line-height:1.55;font-style:italic;margin-bottom:8px">"Precisamos confirmar a arquitetura de integração (API REST vs CSV) até 20/06. Sem esta decisão, a Fase 2 não pode iniciar. Posso agendar 30min esta semana?"</div>
-          <button class="btn btn-sm btn-red" data-perm="business" onclick="Auth.guard('business')&&T.show('🔒 Versão futura — envio por e-mail exige um provedor pago configurado no servidor. Por enquanto, copie o texto e envie por fora.', 5000)"><i class="ti ti-send"></i>Enviar e-mail</button>
-        </div>
-        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><span style="font-size:12.5px;font-weight:500;color:var(--t1)">Patrocinador</span><span class="badge b-amb">Esta semana</span></div>
-          <div style="font-size:12px;color:var(--t2);margin-bottom:8px">Status report semanal + decisão sobre integração ERP. Tom: executivo, direto ao valor.</div>
-          <button class="btn btn-sm" onclick="R.go('report')"><i class="ti ti-file-report"></i>Usar status report</button>
-        </div>
-        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><span style="font-size:12.5px;font-weight:500;color:var(--t1)">Coord. Operacional</span><span class="badge b-neu">Próximos 7 dias</span></div>
-          <div style="font-size:12px;color:var(--t2);margin-bottom:8px">Check-in sobre o piloto operacional. Tom: parceiro, informal.</div>
-          <button class="btn btn-sm" onclick="T.show('🔒 Em breve — lembretes agendados. Por enquanto, anote o contato na Trilha ou numa ata.', 4500)"><i class="ti ti-calendar"></i>Agendar lembrete · em breve</button>
-        </div>
+        <button class="btn btn-sm" onclick="R.go('statusmsg')"><i class="ti ti-brand-whatsapp"></i>Mensagem de status pronta para a diretoria</button>
+        <button class="btn btn-sm" onclick="R.go('report')"><i class="ti ti-file-report"></i>Status report do projeto</button>
+        <button class="btn btn-sm" onclick="R.go('loop')"><i class="ti ti-refresh-alert"></i>Comunicações do Loop de Ação (por perfil)</button>
       </div>
     </div>
   </div>
@@ -3321,6 +3310,8 @@ const PmoView = (() => {
     <div class="loop-steps" id="loop-steps"></div>
   </div>
 
+  <div id="loop-body">
+  <div style="font-size:11.5px;color:var(--t3);margin-bottom:8px"><i class="ti ti-info-circle"></i> Os blocos abaixo são um exemplo ilustrativo de como o ciclo se fecha; o cronograma e as mensagens reais dependem do risco e dos dados do projeto.</div>
   <div class="g2">
     <div class="card">
       <div class="lbl" style="color:var(--acc)"><i class="ti ti-calendar"></i>Cronograma revisado — gerado pela IA</div>
@@ -3366,6 +3357,7 @@ const PmoView = (() => {
   </div>
 
   <div class="btn-row"><button class="btn btn-grn" data-perm="business" onclick="Loop.approveAll()"><i class="ti ti-check"></i>Aprovar tudo e registrar na trilha</button><button class="btn"><i class="ti ti-edit"></i>Editar antes de enviar</button><button class="btn btn-red" data-perm="business" onclick="Loop.discard()"><i class="ti ti-x"></i>Descartar recomendação</button></div>
+  </div>
 </section>
 
 
@@ -4586,6 +4578,14 @@ const Cloud = (() => {
         const { error } = await client.from(t).delete().not('id', 'is', null);
         if(error) throw new Error(t + ': ' + error.message);
       }
+      // Equipe, configurações, decisões da diretoria e histórico de saúde (tudo que tem project_id)
+      for(const t of PROJECT_EXTRA_TABLES) {
+        const { error } = await client.from(t).delete().not('project_id', 'is', null);
+        if(error) throw new Error(t + ': ' + error.message);
+      }
+      // Os projetos em si (o acesso das pessoas a eles sai junto). Sem isto, os projetos de demonstração voltavam na próxima abertura.
+      const { error: pErr } = await client.from('projects').delete().not('id', 'is', null);
+      if(pErr) throw new Error('projects: ' + pErr.message);
     } catch(e) { T.show('❌ Falha ao apagar dados da nuvem: ' + (e.message || e)); return; }
     if(typeof DB !== 'undefined' && DB.factoryReset) DB.factoryReset();
     T.show('✅ Reset completo! Recarregando…');
@@ -5022,7 +5022,7 @@ const Erase = (() => {
   const OPTS = () => [
     { id: 'data', label: 'Só os dados deste projeto', sub: 'O projeto continua existindo (nome, cliente e quem tem acesso); WBS, riscos, backlog, orçamento, equipe e demais registros são apagados.', ok: true },
     { id: 'project', label: 'O projeto inteiro', sub: 'Apaga os dados e também o projeto e o acesso das pessoas a ele. Só o Administrador.', ok: isAdmin() },
-    { id: 'all', label: 'Toda a base (para começar com usuários novos)', sub: 'Apaga os dados compartilhados de TODOS os projetos na nuvem e os projetos de demonstração deste navegador; contas e chaves de IA ficam. Só o Administrador conectado à nuvem.', ok: isAdmin() && cloud() },
+    { id: 'all', label: 'Toda a base (para começar com usuários novos)', sub: 'Apaga TODOS os projetos e os dados deles na nuvem (cronogramas, equipe, custos, decisões, histórico) e os projetos de demonstração deste navegador; contas e chaves de IA ficam e você recomeça com um projeto em branco. Só o Administrador conectado à nuvem.', ok: isAdmin() && cloud() },
   ].filter(o => o.ok);
   function counts() {
     const n = k => { const v = DB.get(k); return Array.isArray(v) ? v.length : 0; };
@@ -5711,7 +5711,7 @@ const DB = (() => {
       T.show('🗑️ Apagando dados deste projeto na nuvem…');
       await Cloud.clearProjectData(pid);
     }
-    try { localStorage.removeItem(storageKeyFor(pid)); } catch(e){}
+    try { localStorage.setItem(storageKeyFor(pid), JSON.stringify(seedEmpty())); } catch(e){} // vazio de verdade: sem a chave, os projetos de exemplo se recriam sozinhos
     if(pid === 'nexus') { try { localStorage.removeItem('pmo_v1'); } catch(e){} } // chaves de IA (Store) — só limpa junto se for o projeto principal
     T.show('🗑️ Dados do projeto atual foram apagados. Recarregando…');
     setTimeout(() => location.reload(), 900);
@@ -13493,10 +13493,12 @@ const Loop = (() => {
       if(bodyEl) bodyEl.textContent = 'Todas as decisões críticas e de alta severidade já foram resolvidas. O loop reabre automaticamente quando um novo risco for detectado.';
       if(stepsEl) stepsEl.innerHTML = '';
       card.style.borderColor = 'var(--b1)';
+      const lb = document.getElementById('loop-body'); if(lb) lb.style.display = 'none';
       return;
     }
 
     card.style.borderColor = '';
+    const lb = document.getElementById('loop-body'); if(lb) lb.style.display = '';
     if(titleEl) titleEl.textContent = risk.title;
     if(badgeEl) { badgeEl.style.display = ''; badgeEl.textContent = (risk.severity==='crit'?'CRÍTICO':'ALTO'); }
     if(chipsEl) chipsEl.innerHTML = (risk.sources||[]).map(s => `<span class="chip"><i class="ti ti-${s.icon}"></i>${escapeHtml(s.label)}</span>`).join('');
