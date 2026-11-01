@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.38.3'
+  version: '2.39.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -288,6 +288,14 @@ body.no-login #login-gate{display:flex}
 .proj-pick-list{position:absolute;z-index:20;margin-top:4px;min-width:260px;max-width:min(360px,86vw);max-height:280px;overflow:auto;background:var(--s1);border:1px solid var(--b2);border-radius:var(--r8);padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 .proj-pick-list label{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--t1);cursor:pointer}
 .proj-pick-list label:hover{background:var(--s2)}
+.sprint-due{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 12px;padding:10px 14px;border:1px solid var(--ambb);background:var(--amd);color:var(--t1);border-radius:var(--r10);font-size:12.5px;line-height:1.5}
+.sprint-due>i{font-size:18px;color:var(--amb)}
+.sd-opts{display:flex;flex-direction:column;gap:6px}
+.sd-opt{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--b1);border-radius:var(--r8);cursor:pointer;font-size:12.5px}
+.sd-opt:hover{background:var(--s2)}
+.sd-opt:has(input:checked){border-color:var(--acc);background:var(--s2)}
+.sd-opt small{display:block;color:var(--t2);margin-top:2px;font-size:11.5px;line-height:1.5}
+.sd-opt input{margin-top:3px;accent-color:var(--acc)}
 .proj-pick-foot{position:sticky;bottom:-6px;display:flex;align-items:center;gap:6px;margin:6px -6px -6px;padding:8px;background:var(--s2);border-top:1px solid var(--b1);font-size:12px;color:var(--t2)}
 .proj-pick-foot .pp-n{flex:1}
 .proj-pick-all{border-bottom:1px solid var(--b1);margin-bottom:4px;border-radius:6px 6px 0 0}
@@ -2022,6 +2030,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <button class="btn btn-sm" data-perm="manage_backlog" onclick="Agile.openBoardCfg()"><i class="ti ti-adjustments"></i>Personalizar quadro<span class="help-q" data-help="Renomeie as colunas, acrescente colunas do seu fluxo (por exemplo Em teste ou Aguardando cliente), defina o limite de itens em andamento de cada uma (WIP) e escolha quais informações aparecem em cada cartão. As colunas A fazer e Concluído são fixas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
     <span id="kb-imp"></span>
   </div>
+  <div class="sprint-due-slot"></div>
   <div id="kb-sprint-bar" role="status" aria-live="polite" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;margin:0 0 10px"></div>
   <div id="kb-root"></div>
 </section>
@@ -2052,6 +2061,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div><div class="pg-title">Sprints<span class="help-q" data-help="Sprint é um ciclo curto de trabalho (em geral 1 a 4 semanas) com uma meta. O burndown mostra os pontos que faltam entregar dia a dia contra a linha ideal; a velocidade é quantos pontos o time entrega por sprint e serve para prever quanto falta do backlog." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Ciclos de entrega, ritmo do time (velocidade) e burndown da sprint ativa.</div></div>
     <div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="manage_backlog" onclick="Agile.openSprint()"><i class="ti ti-plus"></i>Nova sprint</button></div>
   </div>
+  <div class="sprint-due-slot"></div>
   <div class="g4 rc-k" id="sp-kpis"></div>
   <div class="ag-grid">
     <div class="card"><div class="lbl"><i class="ti ti-chart-line"></i>Burndown da sprint ativa<span class="help-q" data-help="Linha tracejada = ritmo ideal para zerar os pontos no último dia. Linha cheia = pontos que realmente faltam. Se a cheia está acima da tracejada, a sprint está atrasada." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div id="sp-burn"></div></div>
@@ -2069,6 +2079,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div><h1 class="pg-title">Sprint atual<span class="help-q" data-help="A meta da sprint, o andamento, o que está travando (impedimentos) e as ações combinadas na última retrospectiva. É a visão do time; velocidade, capacidade e registro dos ritos ficam com quem conduz a sprint." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></h1><div class="pg-sub">A meta, o andamento e o que está travando.</div></div>
     <div class="btn-row"><button class="btn btn-sm" onclick="R.go('kanban')"><i class="ti ti-layout-kanban"></i>Abrir o quadro</button><button class="btn btn-sm" onclick="R.go('mywork')"><i class="ti ti-user-check"></i>Meu trabalho</button></div>
   </div>
+  <div class="sprint-due-slot"></div>
   <div id="sn-root"></div>
 </section>
 
@@ -2178,6 +2189,20 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
   </div>
 </div>
 
+<div class="modal-ov hidden" id="modal-sprint-due" onclick="if(event.target===this)Agile.closeDue()">
+  <div class="modal-box" style="width:520px;max-width:96vw" role="dialog" aria-modal="true" aria-labelledby="sd-title">
+    <div class="modal-title" id="sd-title">Fim da sprint</div>
+    <p id="sd-sum" style="font-size:12.5px;color:var(--t2);line-height:1.6;margin:0 0 10px"></p>
+    <div class="sd-opts" role="radiogroup" aria-label="O que fazer ao fim da sprint">
+      <label class="sd-opt"><input type="radio" name="sd-opt" id="sd-o-ext" value="ext" onchange="Agile.dueChoose()"><span><b>Estender por mais uma semana</b><small id="sd-ext-sub"></small></span></label>
+      <label class="sd-opt"><input type="radio" name="sd-opt" value="carry" onchange="Agile.dueChoose()"><span><b>Encerrar e passar o que sobrou para a próxima sprint</b><small id="sd-carry-sub"></small></span></label>
+      <label class="sd-opt"><input type="radio" name="sd-opt" value="back" onchange="Agile.dueChoose()"><span><b>Encerrar e devolver o que sobrou ao backlog</b><small id="sd-back-sub"></small></span></label>
+    </div>
+    <div class="field-group" id="sd-reason-grp" style="margin-top:10px"><div class="field-label"><label for="sd-reason">Motivo da extensão (opcional)</label></div><input class="input" id="sd-reason" maxlength="200" placeholder="Ex.: entrega do parceiro atrasou"></div>
+    <div class="field-group" id="sd-next-grp" style="margin-top:10px;display:none"><div class="field-label"><label for="sd-next">Passar para</label></div><select class="input" id="sd-next"></select></div>
+    <div class="btn-row" style="margin-top:14px;justify-content:flex-end"><button class="btn btn-sm" onclick="Agile.closeDue()">Decidir depois</button><button class="btn btn-sm btn-acc" onclick="Agile.runDue()"><i class="ti ti-check"></i>Confirmar</button></div>
+  </div>
+</div>
 <div class="modal-ov hidden" id="modal-agile-sprint" onclick="if(event.target===this)Agile.closeSprint()">
   <div class="modal-box" style="width:480px;max-width:96vw" role="dialog" aria-modal="true" aria-labelledby="as-title-h">
     <div class="modal-title" id="as-title-h">Nova sprint</div>
@@ -3973,8 +3998,8 @@ const Cloud = (() => {
       local: 'backlog'
     },
     sprints: {
-      toDb: (x, pid) => ({ project_id:pid, id:x.id, name:x.name, goal:x.goal||null, start_on:x.startOn, end_on:x.endOn, capacity:(x.capacity===''||x.capacity==null)?null:x.capacity, state:x.state||'planejada', closed_on:x.closedOn||null, availability:x.availability||{}, carried:Array.isArray(x.carried)?x.carried:[], updated_at:new Date().toISOString() }),
-      fromDb: r => ({ id:r.id, name:r.name, goal:r.goal||'', startOn:r.start_on, endOn:r.end_on, capacity:r.capacity==null?'':r.capacity, state:r.state, closedOn:r.closed_on||'', availability:r.availability||{}, carried:Array.isArray(r.carried)?r.carried:[] }),
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, name:x.name, goal:x.goal||null, start_on:x.startOn, end_on:x.endOn, capacity:(x.capacity===''||x.capacity==null)?null:x.capacity, state:x.state||'planejada', closed_on:x.closedOn||null, availability:x.availability||{}, carried:Array.isArray(x.carried)?x.carried:[], extensions:Array.isArray(x.extensions)?x.extensions:[], updated_at:new Date().toISOString() }),
+      fromDb: r => ({ id:r.id, name:r.name, goal:r.goal||'', startOn:r.start_on, endOn:r.end_on, capacity:r.capacity==null?'':r.capacity, state:r.state, closedOn:r.closed_on||'', availability:r.availability||{}, carried:Array.isArray(r.carried)?r.carried:[], extensions:Array.isArray(r.extensions)?r.extensions:[] }),
       local: 'sprints'
     },
     sprint_rites: {
@@ -6187,6 +6212,7 @@ const SprintNow = (() => {
   const kpi = (l, v, sub, dot) => '<div class="kpi"><div class="kpi-lbl">' + (dot ? '<span class="sdot ' + dot + '"></span>' : '') + l + '</div><div class="kpi-val">' + v + '</div><div class="kpi-delta">' + sub + '</div></div>';
   function render() {
     const root = document.getElementById('sn-root'); if(!root) return;
+    if(typeof Agile !== 'undefined') Agile.renderDue();
     const today = Clock.iso(Clock.today()), sprints = DB.get('sprints') || [], items = DB.get('backlog') || [], rites = DB.get('rites') || [], imps = DB.get('impediments') || [];
     const a = sprints.find(x => x.state === 'ativa');
     if(!a) {
@@ -12247,7 +12273,7 @@ const Agile = (() => {
     list.innerHTML = sprints.slice().sort((x, y) => y.startOn.localeCompare(x.startOn)).map(s => {
       const ss = AgileCalc.sprintStats(s, items, today);
       return `<div class="ag-sp"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="font-size:13px;color:var(--t1)">${esc(s.name)}</b><span class="badge ${badge[s.state]}">${s.state === 'ativa' ? 'Ativa' : s.state === 'planejada' ? 'Planejada' : 'Encerrada'}</span><span class="chip">${fmt(s.startOn)} a ${fmt(s.endOn)}</span>${s.capacity !== '' && s.capacity != null ? `<span class="chip">capacidade ${esc(s.capacity)}</span>` : ''}${ss.overCapacity ? '<span class="badge b-amb">acima da capacidade</span>' : ''}
-        <span style="margin-left:auto;display:flex;gap:6px" data-perm="manage_backlog">${s.state !== 'encerrada' ? `<button class="btn btn-sm" onclick="Agile.openPlan('${esc(s.id)}')"><i class="ti ti-wand"></i>Planejar</button>` : ''}${s.state === 'planejada' ? `<button class="btn btn-sm btn-acc" onclick="Agile.startSprint('${esc(s.id)}')">Iniciar</button>` : ''}${s.state === 'ativa' ? `<button class="btn btn-sm" onclick="Agile.closeSprintNow('${esc(s.id)}')">Encerrar</button>` : ''}<button class="btn btn-sm" aria-label="Editar ${esc(s.name)}" onclick="Agile.openSprint('${esc(s.id)}')"><i class="ti ti-edit"></i></button></span></div>
+        <span style="margin-left:auto;display:flex;gap:6px" data-perm="manage_backlog">${s.state !== 'encerrada' ? `<button class="btn btn-sm" onclick="Agile.openPlan('${esc(s.id)}')"><i class="ti ti-wand"></i>Planejar</button>` : ''}${s.state === 'planejada' ? `<button class="btn btn-sm btn-acc" onclick="Agile.startSprint('${esc(s.id)}')">Iniciar</button>` : ''}${s.state === 'ativa' ? `<button class="btn btn-sm" onclick="Agile.openDue('${esc(s.id)}')">Encerrar</button>` : ''}<button class="btn btn-sm" aria-label="Editar ${esc(s.name)}" onclick="Agile.openSprint('${esc(s.id)}')"><i class="ti ti-edit"></i></button></span></div>
         <div style="font-size:12px;color:var(--t2);margin-top:5px">${esc(s.goal || 'Sem meta definida.')} · ${ss.count} item(ns), ${ss.done} de ${ss.committed} pts concluídos</div>${history(s)}</div>`;
     }).join('');
   }
@@ -12262,7 +12288,7 @@ const Agile = (() => {
     const head = sp.state === 'encerrada' ? 'O que esta sprint entregou' : sp.state === 'ativa' ? 'Andamento desta sprint' : 'Itens planejados para esta sprint';
     return '<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:var(--acc)">' + head + ' (' + done.length + ' de ' + mine.length + (sp.state === 'encerrada' ? ' entregues' : ' concluídos') + ')</summary><div style="font-size:12px;line-height:1.55;color:var(--t2)">'
       + sec('Entregue — ' + done.length + ' item(ns), ' + pts(done) + ' pts', done.map(i => li(i, i.doneOn ? ' · concluído em ' + i.doneOn.split('-').reverse().join('/') : '' )), 'Nada concluído ainda.')
-      + (sp.state === 'encerrada' ? sec('Não concluído e devolvido ao backlog — ' + carried.length, carried.map(i => li(i)), 'Tudo o que foi planejado foi entregue.')
+      + (sp.state === 'encerrada' ? sec(carried.some(c => c.to) ? 'Não concluído e passou para outra sprint — ' + carried.length : 'Não concluído e devolvido ao backlog — ' + carried.length, carried.map(i => li(i)), 'Tudo o que foi planejado foi entregue.')
         : sec('Ainda em aberto — ' + pend.length + ' item(ns), ' + pts(pend) + ' pts', pend.map(i => li(i, ' · ' + esc(AgileCalc.colLabel(cfg, i.status)))), 'Nenhum item em aberto.'))
       + '</div></details>';
   }
@@ -12290,6 +12316,86 @@ const Agile = (() => {
     Trail.log(`Sprint encerrada: ${s.name} (${done} pts concluídos)`, Auth.getName(), '', 'b-grn');
     T.show(`✅ "${s.name}" encerrada: ${done} pts entregues${open.length ? `, ${open.length} item(ns) devolvido(s) ao backlog` : ''}.`, 5000);
     return true;
+  }
+
+  // ───────── Ponto de validação do fim da sprint: estender 1 semana, transbordar para a próxima ou devolver ao backlog ─────────
+  // A sprint ativa cuja data de fim chegou (ou passou) pede uma decisão de quem conduz; ninguém muda nada sozinho.
+  const dueSprint = () => { const a = active(); return a && a.endOn && a.endOn <= todayIso() ? a : null; };
+  const nextPlanned = id => sprints.filter(s => s.state === 'planejada' && s.id !== id).sort((x, y) => (x.startOn || '').localeCompare(y.startOn || ''));
+  const fmtFull = iso => String(iso || '').slice(0, 10).split('-').reverse().join('/');
+  const weekAfter = end => { const d = AgileCalc.addDays(end, 7); return typeof WorkCal !== 'undefined' ? WorkCal.nextWorking(d) : d; };
+  function renderDue() {
+    const slots = document.querySelectorAll('.sprint-due-slot'); if(!slots.length) return;
+    load();
+    const a = dueSprint();
+    const html = !a ? '' : (() => {
+      const open = items.filter(i => i.sprintId === a.id && i.status !== 'done'), late = a.endOn < todayIso();
+      return '<div class="sprint-due" role="alert"><i class="ti ti-flag-3"></i><div style="flex:1;min-width:220px"><b>' + esc(a.name) + (late ? ' passou da data de encerramento' : ' termina hoje') + ' (' + fmtFull(a.endOn) + ').</b> '
+        + (open.length ? open.length + ' item(ns) ainda não concluído(s). ' : 'Tudo foi concluído. ') + 'Decida: estender por mais uma semana, passar o que sobrou para a próxima sprint ou devolver ao backlog.</div>'
+        + '<button class="btn btn-sm btn-acc" data-perm="manage_backlog" onclick="Agile.openDue(\'' + esc(a.id) + '\')"><i class="ti ti-gavel"></i>Decidir agora</button></div>';
+    })();
+    slots.forEach(el => { el.innerHTML = html; });
+  }
+  let dueCtx = null;
+  function openDue(id) {
+    if(!Auth.guard('manage_backlog')) return;
+    load(); const s = sprints.find(x => x.id === (id || (active() || {}).id)); if(!s) return;
+    dueCtx = s.id;
+    const mine = items.filter(i => i.sprintId === s.id), open = mine.filter(i => i.status !== 'done');
+    const nxt = nextPlanned(s.id);
+    document.getElementById('sd-title').textContent = 'Fim da ' + s.name;
+    document.getElementById('sd-sum').innerHTML = '<b>' + (mine.length - open.length) + '</b> de ' + mine.length + ' item(ns) concluído(s) · <b>' + open.length + '</b> em aberto (' + AgileCalc.sum(open) + ' pts) · fim previsto em ' + fmtFull(s.endOn) + '.';
+    const ext = Array.isArray(s.extensions) ? s.extensions : [];
+    document.getElementById('sd-ext-sub').textContent = 'Novo fim: ' + fmtFull(weekAfter(s.endOn)) + (ext.length ? ' · já foi estendida ' + ext.length + ' vez(es)' : '') + '. Os itens continuam onde estão.';
+    document.getElementById('sd-next').innerHTML = nxt.map(n => '<option value="' + esc(n.id) + '">' + esc(n.name) + ' (' + fmtFull(n.startOn) + ' a ' + fmtFull(n.endOn) + ')</option>').join('') + '<option value="__new">Criar a próxima sprint agora</option>';
+    document.getElementById('sd-carry-sub').textContent = open.length ? open.length + ' item(ns) mudam para a próxima sprint, mantendo a situação em que estão.' : 'Não há itens em aberto: só encerra a sprint.';
+    document.getElementById('sd-back-sub').textContent = open.length ? open.length + ' item(ns) voltam ao backlog em "A fazer"; fica o registro na história da sprint.' : 'Não há itens em aberto: só encerra a sprint.';
+    document.getElementById('sd-reason').value = '';
+    document.getElementById('sd-o-ext').checked = true;
+    dueChoose();
+    document.getElementById('modal-sprint-due').classList.remove('hidden');
+    document.getElementById('sd-o-ext').focus();
+  }
+  function closeDue() { document.getElementById('modal-sprint-due').classList.add('hidden'); dueCtx = null; }
+  function dueChoose() {
+    const v = (document.querySelector('input[name="sd-opt"]:checked') || {}).value;
+    document.getElementById('sd-next-grp').style.display = v === 'carry' ? '' : 'none';
+    document.getElementById('sd-reason-grp').style.display = v === 'ext' ? '' : 'none';
+  }
+  function runDue() {
+    if(!Auth.guard('manage_backlog')) return;
+    load(); const s = sprints.find(x => x.id === dueCtx); if(!s) return;
+    const v = (document.querySelector('input[name="sd-opt"]:checked') || {}).value;
+    if(v === 'ext') {
+      const to = weekAfter(s.endOn), reason = val('sd-reason').trim().slice(0, 200);
+      const nxt = nextPlanned(s.id)[0];
+      s.extensions = (Array.isArray(s.extensions) ? s.extensions : []).concat([{ from: s.endOn, to, by: Auth.getName(), on: todayIso(), reason }]);
+      s.endOn = to; saveSprints(); pushSprint(s); closeDue(); renderAll(); renderDue();
+      Trail.log('Sprint estendida: ' + s.name + ' até ' + fmtFull(to) + (reason ? ' — ' + reason : ''), Auth.getName(), '', 'b-amb');
+      T.show('✅ "' + s.name + '" estendida até ' + fmtFull(to) + '.' + (nxt && nxt.startOn <= to ? ' Atenção: "' + nxt.name + '" começa em ' + fmtFull(nxt.startOn) + ' — ajuste as datas dela.' : ''), 6000);
+      return;
+    }
+    const open = items.filter(i => i.sprintId === s.id && i.status !== 'done');
+    let dest = null;
+    if(v === 'carry' && open.length) {
+      const pick = val('sd-next');
+      if(pick === '__new') {
+        const start = typeof WorkCal !== 'undefined' ? WorkCal.nextWorking(AgileCalc.addDays(s.endOn, 1)) : AgileCalc.addDays(s.endOn, 1);
+        const span = Math.max(6, Math.round((new Date(s.endOn) - new Date(s.startOn)) / 86400000));
+        let end = AgileCalc.addDays(start, span); if(typeof WorkCal !== 'undefined') end = WorkCal.prevWorking(end);
+        dest = { id: AgileCalc.nextId('SP', sprints), name: 'Sprint ' + (sprints.length + 1), goal: '', startOn: start, endOn: end, capacity: s.capacity, state: 'planejada', closedOn: '' };
+        sprints.push(dest);
+      } else dest = sprints.find(x => x.id === pick);
+      if(!dest) { T.show('⚠️ Escolha a sprint que recebe os itens.'); return; }
+    }
+    s.carried = open.map(i => ({ id: i.id, title: i.title, points: i.points === '' ? null : i.points, status: i.status, to: dest ? dest.id : '' }));
+    open.forEach(i => { if(dest) i.sprintId = dest.id; else { i.sprintId = ''; i.status = 'todo'; } i.doneOn = ''; pushItem(i); });
+    s.state = 'encerrada'; s.closedOn = todayIso();
+    saveItems(); saveSprints(); pushSprint(s); if(dest) pushSprint(dest);
+    closeDue(); renderAll(); renderDue();
+    const done = AgileCalc.sum(items.filter(i => i.sprintId === s.id && i.status === 'done'));
+    Trail.log('Sprint encerrada: ' + s.name + ' (' + done + ' pts concluídos' + (open.length ? ', ' + open.length + (dest ? ' item(ns) passaram para ' + dest.name : ' item(ns) devolvidos ao backlog') : '') + ')', Auth.getName(), '', 'b-grn');
+    T.show('✅ "' + s.name + '" encerrada: ' + done + ' pts entregues' + (open.length ? ', ' + open.length + (dest ? ' item(ns) passaram para "' + dest.name + '"' : ' item(ns) devolvido(s) ao backlog') : '') + '.' + (dest && v === 'carry' && !dest.goal ? ' Inicie a próxima sprint quando o time estiver pronto.' : ''), 6000);
   }
 
   // ───────── Modais ─────────
@@ -12630,10 +12736,10 @@ const Agile = (() => {
   }
   function closeAi() { document.getElementById('modal-agile-ai').classList.add('hidden'); aiResult = null; }
 
-  function renderAll() { renderKanban(); renderBacklog(); renderSprints(); renderDashboard(); }
+  function renderAll() { renderKanban(); renderBacklog(); renderSprints(); renderDashboard(); renderDue(); }
   function render() { renderAll(); }
   return { render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, rank, setSprintOf, setBacklogQuery, setShowDone,
-    openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, exportXlsx,
+    openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, renderDue, openDue, closeDue, dueChoose, runDue, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
     aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, moveCol, setColLabel, setColWip, setCardField,
     cfgNow: () => { load(); return cfg; }, kindChanged, kindPicked, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
