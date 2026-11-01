@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.27.0'
+  version: '2.28.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -3609,7 +3609,7 @@ const Auth = (() => {
 
   function getRole() { return state.role; }
   function getName() { return state.name; }
-  function label(role) { const r = role || state.role; return pendingCloudConfirm ? 'Confirmando perfil…' : ((defsOf()[r] && defsOf()[r].name) || LABEL[r] || r); }
+  function label(role) { const r = role || state.role; if(noLogin && !role) return 'Sem login'; return pendingCloudConfirm ? 'Confirmando perfil…' : ((defsOf()[r] && defsOf()[r].name) || LABEL[r] || r); }
   // Escopos: 'business' = editar o plano · 'settings' = configurações do sistema · qualquer permissão pelo nome (ex.: 'manage_backlog')
   function can(scope) {
     if(pendingCloudConfirm) return false;
@@ -3632,7 +3632,19 @@ const Auth = (() => {
   // Chamado pelo Cloud quando initClient() resolve e NÃO há sessão ativa (usuário nunca
   // logou, ou sessão expirou) — libera o papel local, já que não existe confirmação de
   // servidor pra esperar nesse caso.
-  function confirmNoCloudSession() { pendingCloudConfirm = false; apply(); }
+  let noLogin = false;
+  function confirmNoCloudSession() {
+    const configured = (typeof Cloud !== 'undefined') && Cloud.isConfigured && Cloud.isConfigured();
+    pendingCloudConfirm = false;
+    if(configured && !state.localChosen) {
+      // Nada de "Administrador" sem login: o perfil mostrado é neutro e só leitura, e a janela de entrada abre
+      noLogin = true; state = { ...state, role: 'consulta' };
+      apply();
+      setTimeout(() => { try { openModal(); } catch(e) {} }, 400);
+      return;
+    }
+    apply();
+  }
 
   function initialsFor(name, role) {
     const clean = (name||'').trim();
@@ -3679,7 +3691,7 @@ const Auth = (() => {
   // Chamado pelo módulo Cloud após um login real no Supabase — o perfil passa a vir do banco
   function setFromCloud(name, role) {
     cloudManaged = true;
-    pendingCloudConfirm = false;
+    pendingCloudConfirm = false; noLogin = false;
     state = { name: name || state.name, role: (typeof role === 'string' && role) ? role : 'consulta' };
     persist();
     apply();
@@ -3785,7 +3797,8 @@ const Auth = (() => {
     // Antes, campo vazio só herdava o nome anterior em silêncio — sem mensagem nenhuma, o
     // usuário não tinha como saber se o clique em branco "funcionou" ou não fez nada.
     if(!typed) { T.show('⚠️ Digite um nome antes de salvar — mantive o anterior.'); return; }
-    state = { name: typed, role: pendingRole || state.role };
+    state = { name: typed, role: pendingRole || state.role, localChosen: true };
+    noLogin = false;
     persist();
     apply();
     closeModal();
@@ -3896,6 +3909,33 @@ const Cloud = (() => {
   }
   async function flush() { await Promise.allSettled([...inFlight]); }
 
+  // Dados do usuário no navegador: tudo que começa com "pmo_" (projetos, chaves de IA locais, preferências) e a sessão do Supabase ("sb-…").
+  // Ficam só a conexão com o Supabase (para poder entrar de novo) e o tema. Com keepAuth a sessão recém-aberta é preservada.
+  const KEEP_ON_WIPE = ['pmo_cloud_v1', 'pmo_theme_v1'], OWNER_KEY = 'pmo_cache_owner_v1';
+  function localKeysToWipe(keys, keepAuth) {
+    return keys.filter(k => !KEEP_ON_WIPE.includes(k) && (/^pmo_/.test(k) || (!keepAuth && /^sb-/.test(k))));
+  }
+  // Limpa o navegador (dados, sessão e cache do aplicativo) e recarrega: o próximo usuário começa do zero
+  async function wipeLocalData(opts) {
+    const o = opts || {};
+    try { localKeysToWipe(Object.keys(localStorage), !!o.keepAuth).forEach(k => localStorage.removeItem(k)); } catch(e) {}
+    try { sessionStorage.clear(); } catch(e) {}
+    try { if(window.caches) { const ks = await caches.keys(); await Promise.all(ks.filter(k => /^pmo-compass/.test(k)).map(k => caches.delete(k))); } } catch(e) {}
+    if(o.owner) { try { localStorage.setItem(OWNER_KEY, o.owner); } catch(e) {} }
+    if(o.message) { try { sessionStorage.setItem('pmo_after_wipe', o.message); } catch(e) {} }
+    if(o.reload !== false) location.reload();
+  }
+  // Os dados guardados aqui pertencem a quem entrou por último. Se entra OUTRA pessoa, apaga os da anterior antes de qualquer sincronização
+  // (sem dono registrado — uso local anterior — nada é apagado: pode ser trabalho da própria pessoa, que será enviado à nuvem).
+  function claimLocalCache() {
+    if(!session || !session.user) return false;
+    let owner = null; try { owner = localStorage.getItem(OWNER_KEY); } catch(e) {}
+    if(owner && owner !== session.user.id) { wipeLocalData({ keepAuth:true, owner:session.user.id, message:'Entrou outro usuário: os dados do anterior foram removidos deste navegador.' }); return true; }
+    if(!owner) { try { localStorage.setItem(OWNER_KEY, session.user.id); } catch(e) {} }
+    return false;
+  }
+  let signingOut = false;
+
   function load() {
     try { const raw = localStorage.getItem(KEY); if(raw) cfg = { ...cfg, ...JSON.parse(raw) }; } catch(e){}
     if(cfg.url && cfg.anonKey) initClient();
@@ -3956,7 +3996,8 @@ const Cloud = (() => {
         if(event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !newSession)) {
           session = null;
           reflectUi();
-          if(!sessionExpiredNotified) { sessionExpiredNotified = true; T.show('🔒 Sua sessão expirou — faça login de novo pra continuar sincronizando com a nuvem.', 8000); }
+          if(signingOut) return; // saída pedida pela própria pessoa: não é expiração
+          if(!sessionExpiredNotified) { sessionExpiredNotified = true; T.show('🔒 Sua sessão expirou — faça login de novo pra continuar sincronizando com a nuvem.', 8000); try { Auth.confirmNoCloudSession(); } catch(e) {} }
         } else if(newSession) {
           session = newSession;
           sessionExpiredNotified = false;
@@ -3968,6 +4009,9 @@ const Cloud = (() => {
       if(typeof Auth !== 'undefined' && Auth.confirmNoCloudSession) Auth.confirmNoCloudSession();
     }
   }
+
+  // Depois de limpar e recarregar, diz o que aconteceu
+  try { const msg = sessionStorage.getItem('pmo_after_wipe'); if(msg) { sessionStorage.removeItem('pmo_after_wipe'); setTimeout(() => { try { T.show('🔒 ' + msg, 7000); } catch(e) {} }, 800); } } catch(e) {}
 
   async function configure() {
     const url = (document.getElementById('cloud-f-url')?.value || '').trim();
@@ -4307,12 +4351,15 @@ const Cloud = (() => {
   }
 
   async function signOut() {
+    signingOut = true;
     if(client && session) pushAuditEvent('logout', `Logout de ${session.user.email}`, {});
+    try { await flush(); } catch(e) {} // antes de apagar o navegador, termina de enviar o que estava pendente
     if(client) await client.auth.signOut();
     session = null;
     Auth.clearCloudManaged();
     reflectUi();
-    T.show('Sessão encerrada.');
+    // O navegador não pode guardar nada do usuário que saiu: apaga e recarrega (volta a pedir o login)
+    await wipeLocalData({ message:'Você saiu. Os dados deste usuário foram removidos do navegador.' });
   }
 
   // Roda a cada login E a cada reload com sessão já ativa (chamado por initClient) — é o que
@@ -4322,6 +4369,7 @@ const Cloud = (() => {
   // protegida pelo RLS do Supabase de qualquer forma, isto é só a interface acompanhar certo.
   async function afterSignIn() {
     if(!client || !session) return;
+    if(claimLocalCache()) return; // outra pessoa: o navegador foi limpo e recarrega já com a sessão dela
     try {
       // As definições dos perfis (o que cada um pode) vêm do banco; sem elas valem os perfis prontos
       const { data: aps } = await client.from('access_profiles').select('*').order('created_at', { ascending:true });
@@ -4737,7 +4785,7 @@ const Cloud = (() => {
   }
 
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
-    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, uploadItemFile, itemFileUrl, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
+    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument, pushRow, pushMany, deleteRow, msgTable, invokeFn,
@@ -10578,10 +10626,12 @@ const Risks = (() => {
     const s = RiskMatrix.summarize(ensureLoaded(), today());
     const k = (lbl, val, sub, dot) => `<div class="kpi"><div class="kpi-lbl"><span class="sdot ${dot}"></span>${lbl}</div><div class="kpi-val">${val}</div><div class="kpi-delta">${sub}</div></div>`;
     root.innerHTML =
+      // Sem nenhum risco registrado não existe "nenhum em aberto" verde: a análise de riscos ainda não foi feita
+      (!s.total ? k('Críticos (nota 15–25)', '—', 'sem riscos registrados', '') + k('Altos (nota 10–14)', '—', 'sem riscos registrados', '') :
       k('Críticos (nota 15–25)', s.byLevel.critico, s.byLevel.critico ? 'exigem ação imediata' : 'nenhum em aberto', s.byLevel.critico ? 'sdot-red' : 'sdot-grn') +
-      k('Altos (nota 10–14)', s.byLevel.alto, s.byLevel.alto ? 'acompanhar de perto' : 'nenhum em aberto', s.byLevel.alto ? 'sdot-amb' : 'sdot-grn') +
+      k('Altos (nota 10–14)', s.byLevel.alto, s.byLevel.alto ? 'acompanhar de perto' : 'nenhum em aberto', s.byLevel.alto ? 'sdot-amb' : 'sdot-grn')) +
       k('Riscos em aberto', s.open, `de ${s.total} registrados`, 'sdot-acc') +
-      k('Revisões vencidas', s.overdueReviews, s.overdueReviews ? 'passaram da data de revisão' : 'tudo em dia', s.overdueReviews ? 'sdot-amb' : 'sdot-grn');
+      (!s.total ? k('Revisões vencidas', '—', 'sem riscos registrados', '') : k('Revisões vencidas', s.overdueReviews, s.overdueReviews ? 'passaram da data de revisão' : 'tudo em dia', s.overdueReviews ? 'sdot-amb' : 'sdot-grn'));
   }
 
   function renderMatrix() {
@@ -11737,13 +11787,18 @@ const Agile = (() => {
     const body = document.getElementById('dash-agile-body'); if(!body) return;
     load();
     const a = active(), vel = AgileCalc.velocity(sprints, items), fc = AgileCalc.forecast(items, vel.avg), st = a ? AgileCalc.sprintStats(a, items, todayIso()) : null;
-    const w = AgileCalc.wip(items.filter(i => !a || i.sprintId === a.id), cfg).filter(x => x.limit > 0);
+    // O que está no quadro: a sprint ativa; sem sprint, só o Kanban contínuo mostra os itens soltos (no Scrum o quadro fica vazio)
+    const scope = a ? items.filter(i => i.sprintId === a.id) : (cfg.entry === 'kanban' ? items : []);
+    const w = AgileCalc.wip(scope, cfg).filter(x => x.limit > 0);
     const over = w.filter(x => x.over);
+    const doing = scope.filter(i => i.status !== 'todo' && i.status !== 'done').length;
     body.innerHTML =
       kpi('Sprint ativa', a ? esc(a.name) : '—', a ? `${st.daysLeft} dia(s) restantes` : 'nenhuma em andamento', a ? (st.behind ? 'sdot-amb' : 'sdot-grn') : '') +
-      kpi('Entregue na sprint', a ? `${st.pct}<span class="kpi-unit">%</span>` : '—', a ? `${st.done} de ${st.committed} pontos` : 'inicie uma sprint', a && st.behind ? 'sdot-amb' : 'sdot-grn') +
+      kpi('Entregue na sprint', a ? `${st.pct}<span class="kpi-unit">%</span>` : '—', a ? `${st.done} de ${st.committed} pontos` : 'inicie uma sprint', !a ? '' : st.behind ? 'sdot-amb' : 'sdot-grn') +
       kpi('Velocidade média', vel.avg == null ? '—' : vel.avg + ' pts', vel.avg == null ? 'sem sprint encerrada' : 'por sprint') +
-      kpi('Trabalho em andamento', over.length ? 'Acima do limite' : 'Dentro do limite', over.length ? over.map(x => `${x.label}: ${x.count}/${x.limit}`).join(' · ') : 'limite respeitado', over.length ? 'sdot-red' : 'sdot-grn');
+      // Sem itens para medir não existe "dentro do limite": mostra traço, nunca um verde
+      (!scope.length ? kpi('Trabalho em andamento', '—', 'sem itens no quadro', '')
+        : kpi('Trabalho em andamento', over.length ? 'Acima do limite' : 'Dentro do limite', over.length ? over.map(x => `${x.label}: ${x.count}/${x.limit}`).join(' · ') : `${doing} em andamento · limite respeitado`, over.length ? 'sdot-red' : 'sdot-grn'));
     const s = document.getElementById('dash-agile-status');
     if(s) s.innerHTML = a ? `<span class="sdot ${st.behind || over.length ? 'sdot-amb' : 'sdot-grn'}"></span>${st.behind || over.length ? 'Atenção' : 'No ritmo'}` : '<span class="sdot sdot-acc"></span>Sem sprint';
   }
@@ -14508,10 +14563,11 @@ const Loop = (() => {
     const stepsEl = document.getElementById('loop-steps');
 
     if(!risk) {
-      if(titleEl) titleEl.textContent = 'Nenhum risco crítico pendente no momento ✅';
+      const nothing = !((DB.get('decisions') || []).length) && !((DB.get('risks') || []).length);
+      if(titleEl) titleEl.textContent = nothing ? 'Ainda não há riscos nem decisões registrados' : 'Nenhum risco crítico pendente no momento ✅';
       if(badgeEl) badgeEl.style.display = 'none';
       if(chipsEl) chipsEl.innerHTML = '';
-      if(bodyEl) bodyEl.textContent = 'Todas as decisões críticas e de alta severidade já foram resolvidas. O loop reabre automaticamente quando um novo risco for detectado.';
+      if(bodyEl) bodyEl.textContent = nothing ? 'O loop de ação começa quando um risco crítico ou uma decisão importante é registrado. Cadastre os riscos do projeto para acompanhá-los aqui.' : 'Todas as decisões críticas e de alta severidade já foram resolvidas. O loop reabre automaticamente quando um novo risco for detectado.';
       if(stepsEl) stepsEl.innerHTML = '';
       card.style.borderColor = 'var(--b1)';
       const lb = document.getElementById('loop-body'); if(lb) lb.style.display = 'none';
@@ -16982,7 +17038,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
   <div class="modal-box" style="width:460px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
       <div class="modal-title" id="auth-modal-title">Sua conta</div>
-      <button class="btn btn-sm" onclick="Auth.closeModal()"><i class="ti ti-x"></i></button>
+      <button class="btn btn-sm" aria-label="Fechar" onclick="Auth.closeModal()"><i class="ti ti-x"></i></button>
     </div>
     <div class="modal-sub" id="auth-modal-sub">Quem está usando o <span data-brand="name">PMO Compass</span> agora — ponto único de entrada/saída</div>
 

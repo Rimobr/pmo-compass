@@ -137,3 +137,14 @@ test('avaliações: 5 critérios de 1 a 5, média e divergência entre a pessoa 
   const sql = ['20261101130000_skills_reviews.sql', '20261101140000_skill_catalog.sql'].map(f => readFileSync(join(root, 'supabase', 'migrations', f), 'utf8')).join('\n');
   for (const k of ['person_reviews_select', "kind = 'self' and person_id = auth.uid()", 'is_project_manager(project_id)', 'find_people', 'resolve_skills', 'merged_into', 'skill_catalog_admin_write']) assert.ok(sql.includes(k), k);
 });
+
+test('sair da conta apaga os dados do usuário no navegador e preserva só a conexão e o tema', () => {
+  const m = html.match(/const KEEP_ON_WIPE = [^\n]*\n\s*function localKeysToWipe\(keys, keepAuth\) \{[\s\S]*?\n  \}/);
+  assert.ok(m, 'regra encontrada');
+  const localKeysToWipe = new Function(m[0] + '\nreturn localKeysToWipe;')();
+  const keys = ['pmo_db_v1', 'pmo_db_v1__nexus', 'pmo_projects_v1', 'pmo_v1', 'pmo_auth_v1', 'pmo_cache_owner_v1', 'pmo_cloud_v1', 'pmo_theme_v1', 'sb-abc-auth-token', 'outro_site'];
+  assert.deepEqual(localKeysToWipe(keys, false).sort(), ['pmo_auth_v1', 'pmo_cache_owner_v1', 'pmo_db_v1', 'pmo_db_v1__nexus', 'pmo_projects_v1', 'pmo_v1', 'sb-abc-auth-token'].sort());
+  assert.ok(!localKeysToWipe(keys, true).includes('sb-abc-auth-token'), 'com keepAuth a sessão recém-aberta fica');
+  for (const k of ['pmo_cloud_v1', 'pmo_theme_v1', 'outro_site']) assert.ok(!localKeysToWipe(keys, false).includes(k), k);
+  for (const k of ['claimLocalCache', 'signingOut', 'Entrou outro usuário', 'Você saiu']) assert.ok(html.includes(k), k);
+});
