@@ -14,7 +14,7 @@
     "apagarBase": {
       "nome": "Apagar toda a base",
       "onde": "Configurações → Nuvem & dados → Apagar dados → Toda a base (digitar APAGAR)",
-      "efeito": "apaga todos os projetos e seus dados, os destinatários e o histórico de mensagens e deixa um projeto em branco no navegador; **preserva** contas, perfis de acesso, configurações e o log de auditoria"
+      "efeito": "apaga todos os projetos e seus dados, os destinatários e o histórico de mensagens e deixa a lista de projetos vazia (quem entrar cria o primeiro; não existe projeto de enchimento); **preserva** contas, perfis de acesso, configurações e o log de auditoria"
     },
     "sair": {
       "nome": "Sair da conta",
@@ -556,7 +556,9 @@
       "view_portfolio": "Painéis de portfólio e diretoria",
       "view_management": "Gestão do projeto (saúde, decisões, riscos, escopo, linha de base, atas, repositório, chat)",
       "view_team_load": "Carga de trabalho e sinais de burnout dos colegas",
-      "view_costs": "Custos e orçamento"
+      "view_costs": "Custos e orçamento",
+      "manage_backlog": "Gerir backlog e sprints (velocidade, capacidade, planejamento)",
+      "run_rites": "Conduzir e registrar os ritos da sprint"
     },
     "telas": {
       "board": [
@@ -662,21 +664,29 @@
       "budget": [
         "Orçamento e Custos",
         "view_costs"
+      ],
+      "sprints": [
+        "Sprints",
+        "manage_backlog"
+      ],
+      "ritos": [
+        "Ritos da sprint",
+        "run_rites"
       ]
     },
     "abertas": [
       "mywork",
       "kanban",
       "backlog",
-      "sprints",
-      "ritos",
       "wbs",
       "hours",
       "raci",
       "lessons",
       "help",
       "settings",
-      "account"
+      "account",
+      "sprintnow",
+      "noproject"
     ],
     "perfis": {
       "admin": "tudo",
@@ -684,7 +694,7 @@
       "patrocinador": "portfólio e gestão (com custos)",
       "po": "gestão do produto (sem portfólio nem carga do time)",
       "sm": "gestão e carga do time (sem portfólio)",
-      "time": "só o próprio trabalho: Meu trabalho, quadro, backlog, sprints, ritos, WBS, horas",
+      "time": "só o próprio trabalho: Meu trabalho, Sprint atual, quadro, backlog, WBS, horas",
       "consulta": "painéis de portfólio em leitura (sem gestão, custos nem pessoas)",
       "manutencao": "só configurações do sistema"
     }

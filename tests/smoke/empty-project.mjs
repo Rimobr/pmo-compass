@@ -57,6 +57,21 @@ ok(dash.pcts.every(p => /Sem dados/.test(p)), 'dashboard: todas as dimensões da
 await pg.evaluate(() => { R.go('board'); Board.render && Board.render(); }); await pg.waitForTimeout(300);
 const heat = await pg.evaluate(() => ((document.querySelector('#board-heatmap-root table') || {}).innerText || ''));
 ok(!/Cr[ií]tico|Saudável|Atenção/.test(heat.replace(/\s+/g, ' ').replace(/Projeto|Prazo|Custo|Equipe|Qualidade|Risco|Geral/g, '')), 'Painel da Diretoria: o farol do projeto vazio é "Sem dados" (sem Crítico, Saudável ou Atenção)', heat.replace(/\s+/g, ' ').slice(0, 200));
+// 5) Base totalmente vazia: nenhum projeto (depois de "Apagar toda a base" ou conta sem projeto)
+await pg.evaluate(() => DB.setProjectsFromCloud([]));
+await pg.waitForTimeout(300);
+ok(await pg.evaluate(() => DB.isEmpty() && DB.getActiveProjectId() === DB.NONE_ID), 'base vazia: não existe nenhum projeto (nem "Meu projeto" de enchimento)');
+const semProjeto = [];
+for (const id of pages.filter(p => !['settings', 'account', 'help', 'noproject'].includes(p))) {
+  const on = await pg.evaluate(async id => { try { R.go(id); } catch (e) { return 'erro: ' + e.message; } await new Promise(r => setTimeout(r, 120)); return Array.from(document.querySelectorAll('section.page.on')).map(s => s.id).join(','); }, id);
+  if (on !== 'p-noproject') semProjeto.push(id + ' → ' + on);
+}
+ok(!semProjeto.length, 'sem projeto, toda tela de projeto leva ao convite "Nenhum projeto ainda"', semProjeto.join(' | '));
+const np = await pg.evaluate(() => ({ txt: document.getElementById('p-noproject').innerText, label: document.getElementById('proj-name') && document.getElementById('proj-name').textContent, areaHidden: getComputedStyle(document.querySelector('.sb-proj-area')).display === 'none' }));
+ok(/Nenhum projeto ainda/.test(np.txt) && /Criar o meu projeto/.test(np.txt), 'o convite oferece criar o primeiro projeto');
+ok(np.label === 'Nenhum projeto' && np.areaHidden, 'o topo diz "Nenhum projeto" e o menu do projeto some');
+ok(!DEMO.test(np.txt), 'nenhum texto de demonstração');
+for (const id of ['settings', 'account', 'help']) { const on = await pg.evaluate(async id => { R.go(id); await new Promise(r => setTimeout(r, 150)); return document.getElementById('p-' + id).classList.contains('on'); }, id); ok(on, 'sem projeto, "' + id + '" continua abrindo'); }
 ok(!errs.length, 'sem erros de script', errs.join(' | '));
 
 await b.close(); srv.close();

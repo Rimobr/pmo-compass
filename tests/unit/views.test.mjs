@@ -25,7 +25,8 @@ test('o mapa de visões (docs) é o mesmo que o app usa', () => {
 
 test('Membro do time (Dev, QA): só o próprio trabalho — nada de diretoria, PMO, gestão, custos nem dados dos colegas', () => {
   const open = openPages('time');
-  assert.deepEqual(open.sort(), ['account', 'backlog', 'help', 'hours', 'kanban', 'lessons', 'mywork', 'raci', 'ritos', 'settings', 'sprints', 'wbs'].sort());
+  assert.deepEqual(open.sort(), ['account', 'backlog', 'help', 'hours', 'kanban', 'lessons', 'mywork', 'noproject', 'raci', 'settings', 'sprintnow', 'wbs'].sort());
+  for (const p of ['sprints', 'ritos']) assert.ok(!open.includes(p), 'o time usa "Sprint atual"; ' + p + ' é de quem conduz');
   for (const p of ['board', 'execview', 'pmoview', 'pfkpi', 'portfolio', 'prioritization', 'dashboard', 'xray', 'decisions', 'risks', 'repository', 'chat', 'budget', 'burnout', 'resources', 'report', 'stakeholders']) assert.ok(!open.includes(p), 'time não deve abrir ' + p);
   assert.equal(AccessProfiles.homeFor(has('time')), 'mywork');
 });
@@ -87,10 +88,15 @@ test('incluir uma pessoa de execução no projeto cria o colaborador ligado à c
   assert.ok(readFileSync(join(root, 'supabase', 'functions', 'users-admin', 'index.ts'), 'utf8').includes('ensure_team_member'));
 });
 
-test('"Meu projeto" vazio é só um espaço local: marcado como placeholder, nunca sobe para a nuvem e some com o primeiro projeto de verdade', () => {
-  assert.equal([...html.matchAll(/name:'Meu projeto'[^}]*placeholder:true/g)].length, 2, 'os dois lugares que o criam marcam placeholder');
-  assert.match(html, /!DEMO_PROJECT_IDS\.includes\(p\.id\) && !p\.placeholder/);
-  assert.match(html, /projects = loadProjects\(\)\.filter\(x => !x\.placeholder\);\s*projects\.push\(p\)/);
+test('base vazia de verdade: nenhum projeto de enchimento ("Meu projeto"); quem entra cria o primeiro', () => {
+  assert.doesNotMatch(html, /name:'Meu projeto'/);
+  for (const k of ['isEmpty, NONE_ID', "DB.isEmpty() && !['settings', 'account', 'help', 'noproject'].includes(id)", 'Nenhum projeto ainda', 'Criar o meu projeto', 'body.no-project .sb-proj-area', "setItem(PROJECTS_KEY, '[]')"]) assert.ok(html.includes(k), k);
+  assert.ok(html.includes('if(!Array.isArray(cloudList)) return;'), 'a nuvem manda, inclusive lista vazia (sem exigir ao menos um projeto)');
+  assert.ok(!html.includes('!cloudList.length) return;'));
+});
+
+test('Sprint atual: a visão do time (meta, andamento, impedimentos, ações da retro) no lugar de Sprints e Ritos', () => {
+  for (const k of ['id="p-sprintnow"', 'const SprintNow = ', 'O que está travando', 'Ações combinadas na retrospectiva', 'data-p="sprintnow"', "sprints: 'manage_backlog', ritos: 'run_rites'"]) assert.ok(html.includes(k), k);
 });
 
 test('"Ver como": só o Administrador, só na memória, sem gravar e sem permitir alterações', () => {

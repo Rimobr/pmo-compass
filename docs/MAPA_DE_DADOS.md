@@ -8,7 +8,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 
 - **Apagar dados do projeto** (Configurações → Nuvem & dados → Apagar dados → Dados do projeto): apaga tudo que tem `project_id` do projeto ativo (lista central `PROJECT_DATA_TABLES` + `PROJECT_EXTRA_TABLES`) e deixa o projeto em branco; o projeto, as pessoas e as configurações continuam
 - **Excluir o projeto** (Configurações → Nuvem & dados → Apagar dados → Projeto inteiro): apaga os dados do projeto, o próprio projeto e o acesso das pessoas a ele (cascata)
-- **Apagar toda a base** (Configurações → Nuvem & dados → Apagar dados → Toda a base (digitar APAGAR)): apaga todos os projetos e seus dados, os destinatários e o histórico de mensagens e deixa um projeto em branco no navegador; **preserva** contas, perfis de acesso, configurações e o log de auditoria
+- **Apagar toda a base** (Configurações → Nuvem & dados → Apagar dados → Toda a base (digitar APAGAR)): apaga todos os projetos e seus dados, os destinatários e o histórico de mensagens e deixa a lista de projetos vazia (quem entrar cria o primeiro; não existe projeto de enchimento); **preserva** contas, perfis de acesso, configurações e o log de auditoria
 - **Sair da conta** (menu lateral → Sistema → Sair / trocar de usuário): envia o que estava pendente, encerra a sessão e apaga do navegador tudo que começa com `pmo_` e a sessão `sb-…` (ficam só a conexão e o tema); recarrega
 - **Entrar outra pessoa** (automático no login): se o navegador guarda dados de outra pessoa (`pmo_cache_owner_v1`), apaga-os antes de sincronizar
 
@@ -190,6 +190,8 @@ O menu esconde, a abertura direta pelo endereço é barrada e o banco nega a lei
 | `view_management` | Gestão do projeto (saúde, decisões, riscos, escopo, linha de base, atas, repositório, chat) |
 | `view_team_load` | Carga de trabalho e sinais de burnout dos colegas |
 | `view_costs` | Custos e orçamento |
+| `manage_backlog` | Gerir backlog e sprints (velocidade, capacidade, planejamento) |
+| `run_rites` | Conduzir e registrar os ritos da sprint |
 
 | Tela | Exige |
 |---|---|
@@ -219,8 +221,10 @@ O menu esconde, a abertura direta pelo endereço é barrada e o banco nega a lei
 | Burnout Radar | `view_team_load` |
 | Colaboradores | `view_team_load` |
 | Orçamento e Custos | `view_costs` |
+| Sprints | `manage_backlog` |
+| Ritos da sprint | `run_rites` |
 
-Telas abertas a quem tem acesso ao projeto: `mywork`, `kanban`, `backlog`, `sprints`, `ritos`, `wbs`, `hours`, `raci`, `lessons`, `help`, `settings`, `account`.
+Telas abertas a quem tem acesso ao projeto: `mywork`, `kanban`, `backlog`, `wbs`, `hours`, `raci`, `lessons`, `help`, `settings`, `account`, `sprintnow`, `noproject`.
 
 | Perfil pronto | Vê |
 |---|---|
@@ -229,7 +233,7 @@ Telas abertas a quem tem acesso ao projeto: `mywork`, `kanban`, `backlog`, `spri
 | `patrocinador` | portfólio e gestão (com custos) |
 | `po` | gestão do produto (sem portfólio nem carga do time) |
 | `sm` | gestão e carga do time (sem portfólio) |
-| `time` | só o próprio trabalho: Meu trabalho, quadro, backlog, sprints, ritos, WBS, horas |
+| `time` | só o próprio trabalho: Meu trabalho, Sprint atual, quadro, backlog, WBS, horas |
 | `consulta` | painéis de portfólio em leitura (sem gestão, custos nem pessoas) |
 | `manutencao` | só configurações do sistema |
 
