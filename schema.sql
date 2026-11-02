@@ -1,6 +1,6 @@
 -- =========================================================================
 -- PMO Compass — esquema completo (GERADO por scripts/build-schema.mjs — não edite à mão)
--- Fonte: supabase/migrations/ (35 arquivos). Para instalação do zero, rode este arquivo inteiro
+-- Fonte: supabase/migrations/ (36 arquivos). Para instalação do zero, rode este arquivo inteiro
 -- no SQL Editor; para um banco que já existe, use `node scripts/db-apply.mjs` (aplica só o que falta).
 -- =========================================================================
 
@@ -2283,3 +2283,9 @@ begin
 end;
 $$ language plpgsql security definer set search_path = public;
 grant execute on function public.notify_project(text, text, text, text, text, text, text) to authenticated;
+
+-- ▼▼▼ 20261102140000_item_history.sql ▼▼▼
+-- Histórico por card: quem mudou o quê e quando, sempre "de → para" (título, tipo, pontos, responsável, descrição, situação, sprint, prioridade).
+-- Lista [{ at, by, field, from, to }] guardada no próprio item (até 300 registros; os mais antigos saem primeiro).
+alter table public.backlog_items add column if not exists history jsonb not null default '[]'::jsonb
+  check (jsonb_typeof(history) = 'array' and jsonb_array_length(history) <= 300);
