@@ -34,5 +34,5 @@ test('configuração de raias é saneada: máximo 6, tipo inválido some, raia s
   assert.deepEqual(many[0].kinds, ['bug']);
   assert.equal(AgileCalc.normLanes(null).length, 0);
   assert.equal(AgileCalc.laneEmpty(AgileCalc.normLanes({ lanes: [{ name: 'Vazia' }] })[0]), true);
-  for (const k of ['data-sec="lane-', "DB.get('boardLanes')", "'boardLanes', lanes", 'id="ab-lanes"', 'Raias (filtros do quadro)', 'Sec.restore(root)']) assert.ok(html.includes(k), k);
+  for (const k of ['data-sec="lane-', 'Agile.setLaneSel(', "DB.get('boardLanes')", "'boardLanes', lanes", 'id="ab-lanes"', 'Raias (filtros do quadro)', 'Sec.restore(root)']) assert.ok(html.includes(k), k);
 });

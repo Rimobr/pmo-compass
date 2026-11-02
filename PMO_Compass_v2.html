@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.40.0'
+  version: '2.41.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -931,6 +931,7 @@ body.icons-failed i[data-fb]::before{
     <button class="ico-btn" onclick="Theme.set(Theme.get()==='dark'?'light':(Theme.get()==='light'?'gray':'dark'))" title="Trocar tema (Escuro/Claro/Cinza)"><i class="ti ti-contrast-2"></i></button>
     <button class="ico-btn" onclick="CmdK.open()" title="Busca rápida (Ctrl/Cmd+K)"><i class="ti ti-search"></i></button>
     <button class="ico-btn" onclick="R.go('decisions')" title="Notificações"><i class="ti ti-bell"></i><span class="bdot"></span></button>
+    <button class="ico-btn" id="tb-notices" style="display:none;position:relative" onclick="Notices.open()" title="Avisos para você" aria-label="Avisos para você"><i class="ti ti-bell-ringing"></i><span id="tb-notices-n" class="notice-n" style="display:none"></span></button>
     <button class="ico-btn" data-perm="business" onclick="Wizard.open()" title="Novo projeto"><i class="ti ti-plus"></i></button>
     <button class="ico-btn" data-perm="manage_backlog" onclick="BugReport.open()" title="Relatar um bug (vira um item Bug, filho de uma entrega)" aria-label="Relatar um bug"><i class="ti ti-bug"></i></button>
     <button class="ico-btn" onclick="R.go('settings')" title="Configurações"><i class="ti ti-settings"></i></button>
@@ -1990,6 +1991,9 @@ body.icons-failed i[data-fb]::before{
 .kb-col{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r10);padding:8px;min-height:120px}
 .kb-col.over-wip{border-color:var(--rb)}
 .kb-col.drop{outline:2px dashed var(--acc);outline-offset:-3px}
+.notice-n{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--red);color:#fff;font-size:11px;font-weight:700;line-height:16px;text-align:center}
+.nt-item{border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;margin-bottom:8px}
+.nt-item.unread{border-color:var(--acc);background:var(--ad)}
 .kb-lane{margin:0 0 12px;padding:10px 12px}
 .kb-lane>.lbl{margin-bottom:8px;flex-wrap:wrap}
 .kb-lane.collapsed>.lbl{margin-bottom:0}
@@ -2039,6 +2043,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
   </div>
   <div class="kb-bar">
     <select class="input" id="kb-sprint" aria-label="Sprint exibida no quadro" onchange="Agile.setBoardSprint(this.value)"></select>
+    <button class="btn btn-sm" data-perm="manage_backlog" onclick="Agile.openRules()" title="Regras que rodam sozinhas: quando o item muda de coluna, é criado ou recebe responsável, atribui, altera dados ou avisa"><i class="ti ti-bolt"></i>Automações</button>
     <button class="btn btn-sm" data-perm="manage_backlog" onclick="Agile.openBoardCfg()"><i class="ti ti-adjustments"></i>Personalizar quadro<span class="help-q" data-help="Renomeie as colunas, acrescente colunas do seu fluxo (por exemplo Em teste ou Aguardando cliente), defina o limite de itens em andamento de cada uma (WIP) e escolha quais informações aparecem em cada cartão. As colunas A fazer e Concluído são fixas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
     <span id="kb-imp"></span>
   </div>
@@ -2183,6 +2188,20 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
   </div>
 </div>
 
+<div class="modal-ov hidden" id="modal-board-rules" onclick="if(event.target===this)Agile.closeRules()">
+  <div class="modal-box" style="width:640px;max-width:96vw;max-height:92vh;overflow-y:auto" role="dialog" aria-modal="true" aria-labelledby="br-title">
+    <div class="modal-title" id="br-title">Automações do quadro</div>
+    <div class="modal-sub">Regras que rodam sozinhas: <b>quando</b> algo acontece com o item (entra numa coluna, é criado, recebe responsável) ou a sprint está perto do fim, <b>então</b> atribui a um profissional, altera um dado do item, move de coluna ou avisa alguém na tela.</div>
+    <div id="br-body"></div>
+  </div>
+</div>
+<div class="modal-ov hidden" id="modal-notices" onclick="if(event.target===this)Notices.close()">
+  <div class="modal-box" style="width:560px;max-width:96vw;max-height:88vh;overflow-y:auto" role="dialog" aria-modal="true" aria-labelledby="nt-title">
+    <div class="modal-title" id="nt-title">Avisos para você</div>
+    <div id="nt-body"></div>
+    <div class="btn-row" style="margin-top:12px;justify-content:flex-end"><button class="btn btn-sm" onclick="Notices.readAll()"><i class="ti ti-checks"></i>Marcar todos como lidos</button><button class="btn btn-sm btn-acc" onclick="Notices.close()">Fechar</button></div>
+  </div>
+</div>
 <div class="modal-ov hidden" id="modal-agile-board" onclick="if(event.target===this)Agile.closeBoardCfg()">
   <div class="modal-box" style="width:600px;max-width:96vw;max-height:92vh;overflow-y:auto" role="dialog" aria-modal="true" aria-labelledby="ab-title-h">
     <div class="modal-title" id="ab-title-h">Personalizar quadro</div>
@@ -4455,6 +4474,24 @@ const Cloud = (() => {
     if(error) { console.warn('Supabase: falha ao ler o time', error); return []; }
     return data || [];
   }
+  // Avisos na tela: o servidor resolve os destinatários (confere o acesso ao projeto) e cada pessoa lê só os seus
+  async function notifyProject(pid, target, who, title, detail, page, source) {
+    if(!client || !session) return 0;
+    const { data, error } = await client.rpc('notify_project', { pid, target, who: who || '', p_title: title, p_detail: detail || '', p_page: page || '', p_source: source || '' });
+    if(error) { console.warn('Supabase: falha ao avisar', error); return 0; }
+    return data || 0;
+  }
+  async function listNotices() {
+    if(!client || !session) return [];
+    const { data, error } = await client.from('user_notices').select('*').order('created_at', { ascending: false }).limit(60);
+    if(error) { console.warn('Supabase: falha ao ler os avisos', error); return []; }
+    return data || [];
+  }
+  async function markNoticesRead(ids) {
+    if(!client || !session || !ids.length) return;
+    const { error } = await client.from('user_notices').update({ read_at: new Date().toISOString() }).in('id', ids);
+    if(error) console.warn('Supabase: falha ao marcar os avisos', error);
+  }
   async function listSkillCatalog() {
     if(!client || !session) return [];
     const { data, error } = await client.from('skill_catalog').select('id,kind,name').is('merged_into', null).order('name');
@@ -4981,7 +5018,7 @@ const Cloud = (() => {
   }
 
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
-    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
+    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument, pushRow, pushMany, deleteRow, msgTable, invokeFn,
@@ -6269,6 +6306,42 @@ const SprintNow = (() => {
     T.show('✅ Impedimento registrado: o time e o Scrum Master já veem.'); render();
   }
   return { render, addImpediment };
+})();
+</script>
+
+<!-- ■ MODULE: ui/notices ─ Avisos na tela depois do login (recados das automações e alertas de data) -->
+<script data-module="ui/notices">
+const Notices = (() => {
+  const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const $ = id => document.getElementById(id);
+  let list = [], shown = false;
+  const unread = () => list.filter(n => !n.read_at);
+  const when = iso => { try { return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch(e) { return ''; } };
+  function paint() {
+    const b = $('tb-notices'), n = unread().length; if(!b) return;
+    b.style.display = list.length ? '' : 'none';
+    const c = $('tb-notices-n'); c.textContent = n > 9 ? '9+' : String(n); c.style.display = n ? '' : 'none';
+  }
+  async function refresh() {
+    if(typeof Cloud === 'undefined' || !Cloud.getUserId || !Cloud.getUserId()) { list = []; paint(); return; }
+    list = await Cloud.listNotices(); paint();
+    if(!shown && unread().length) { shown = true; open(); }
+    if(typeof Agile !== 'undefined') { try { Agile.checkDates(); } catch(e) { /* sem projeto aberto */ } }
+  }
+  function render() {
+    const b = $('nt-body'); if(!b) return;
+    const names = Object.fromEntries((DB.listProjects() || []).map(p => [p.id, p.name]));
+    b.innerHTML = list.length ? list.map(n => '<div class="nt-item' + (n.read_at ? '' : ' unread') + '"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b style="font-size:13px">' + esc(n.title) + '</b><span style="margin-left:auto;font-size:11.5px;color:var(--t2)">' + esc(when(n.created_at)) + '</span></div>'
+      + (n.detail ? '<div style="font-size:12.5px;color:var(--t1);margin-top:3px">' + esc(n.detail) + '</div>' : '')
+      + '<div style="font-size:11.5px;color:var(--t2);margin-top:4px">' + esc(names[n.project_id] || '') + (n.source ? ' · ' + esc(n.source) : '') + '</div>'
+      + (n.page ? '<button class="btn btn-sm" style="margin-top:6px" onclick="Notices.go(\'' + esc(n.project_id) + '\',\'' + esc(n.page) + '\')">Abrir</button>' : '') + '</div>').join('') : '<div class="rk-empty">Nenhum aviso.</div>';
+  }
+  function open() { render(); $('modal-notices').classList.remove('hidden'); }
+  async function readAll() { const ids = unread().map(n => n.id); if(!ids.length) return; await Cloud.markNoticesRead(ids); const now = new Date().toISOString(); list.forEach(n => { if(!n.read_at) n.read_at = now; }); paint(); render(); }
+  function close() { $('modal-notices').classList.add('hidden'); readAll(); }
+  function go(pid, page) { close(); try { if(pid && DB.getActiveProjectId() !== pid) DB.switchProject(pid); } catch(e) { /* projeto indisponível */ } R.go(page); }
+  setTimeout(refresh, 5000); setTimeout(refresh, 20000); setInterval(refresh, 90000);
+  return { refresh, open, close, readAll, go };
 })();
 </script>
 
@@ -12067,6 +12140,66 @@ Cada item aparece em "estimativas" OU em "divisoes", nunca nos dois.`;
 })();
 </script>
 
+<!-- ■ MODULE: services/board-rules ─ Automações do quadro: gatilho (coluna, criação, responsável, fim da sprint) → ações (atribuir, alterar dado, mover, avisar) -->
+<script data-module="services/board-rules">
+const BoardRules = (() => {
+  const TRIGGERS = { enter: 'Item entra na coluna', created: 'Item é criado', assigned: 'Item recebe um responsável', sprint_end: 'Faltam poucos dias para o fim da sprint' };
+  const TARGETS = { assignee: 'Responsável do item', member: 'Uma pessoa da equipe', manager: 'Gerente responsável do projeto', role: 'Um perfil (ex.: Scrum Master, Dono do produto)', all: 'Todo o time do projeto' };
+  const FIELDS = { kind: 'Tipo', points: 'Pontos', sprint: 'Sprint' };
+  const KINDS = ['bug', 'historia', 'tarefa'];
+  const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
+  function normAction(a) {
+    const t = a && a.type;
+    if(t === 'assign') { const who = clean(a.who, 80); return who ? { type: t, who } : null; }
+    if(t === 'move') { const column = clean(a.column, 30); return column ? { type: t, column } : null; }
+    if(t === 'set') {
+      const field = FIELDS[a.field] ? a.field : '';
+      if(!field) return null;
+      if(field === 'kind') return KINDS.includes(a.value) ? { type: t, field, value: a.value } : null;
+      if(field === 'points') { const n = parseInt(a.value, 10); return Number.isFinite(n) ? { type: t, field, value: Math.max(0, Math.min(100, n)) } : null; }
+      return { type: t, field, value: clean(a.value, 30) };
+    }
+    if(t === 'notify') {
+      const to = TARGETS[a.to] ? a.to : '', title = clean(a.title, 120);
+      if(!to || !title) return null;
+      const who = clean(a.who, 80);
+      if((to === 'member' || to === 'role') && !who) return null;
+      return { type: t, to, who: (to === 'member' || to === 'role') ? who : '', title, detail: clean(a.detail, 300) };
+    }
+    return null;
+  }
+  function norm(raw) {
+    const list = Array.isArray(raw && raw.rules) ? raw.rules : [];
+    const rules = list.slice(0, 30).map((r, i) => {
+      const type = TRIGGERS[r && r.trigger && r.trigger.type] ? r.trigger.type : '';
+      const actions = (Array.isArray(r && r.actions) ? r.actions : []).slice(0, 5).map(normAction).filter(Boolean);
+      if(!type || !actions.length) return null;
+      const days = Math.max(1, Math.min(14, parseInt(r.trigger.days, 10) || 2));
+      const column = clean(r.trigger.column, 30);
+      if(type === 'enter' && !column) return null;
+      return {
+        id: String(r.id || 'ru' + (i + 1)).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 20) || 'ru' + (i + 1),
+        name: clean(r.name, 80) || 'Automação ' + (i + 1), on: r.on !== false,
+        trigger: { type, column: type === 'enter' ? column : '', days: type === 'sprint_end' ? days : 0 },
+        cond: { kind: KINDS.includes(r.cond && r.cond.kind) ? r.cond.kind : '', unassigned: !!(r.cond && r.cond.unassigned) },
+        actions
+      };
+    }).filter(Boolean);
+    return { rules };
+  }
+  // Evento de item (criado, entrou na coluna, recebeu responsável) contra uma regra; o fim da sprint é tratado à parte (por data)
+  function matches(rule, ev, item) {
+    if(!rule || !rule.on || rule.trigger.type !== ev.type || rule.trigger.type === 'sprint_end') return false;
+    if(rule.trigger.type === 'enter' && rule.trigger.column !== ev.column) return false;
+    if(rule.cond.kind && item.kind !== rule.cond.kind) return false;
+    if(rule.cond.unassigned && String(item.assignee || '').trim()) return false;
+    return true;
+  }
+  const fill = (text, vars) => String(text || '').replace(/\{(id|titulo|coluna|responsavel|sprint|data)\}/g, (_, k) => (vars && vars[k] != null ? vars[k] : ''));
+  return { TRIGGERS, TARGETS, FIELDS, KINDS, norm, matches, fill };
+})();
+</script>
+
 <!-- ■ MODULE: pages/agile-js ─ Quadro Kanban, Backlog e Sprints -->
 <script data-module="pages/agile-js">
 const Agile = (() => {
@@ -12168,6 +12301,7 @@ const Agile = (() => {
     const over = AgileCalc.wip(boardItems(), cfg).find(s => s.key === status && s.over);
     if(status === 'done' && it.kind !== 'bug') { const openKids = AgileCalc.bugsOf(items, it.id).filter(k => k.status !== 'done'); if(openKids.length) T.show('⚠️ ' + it.id + ' foi concluído, mas ainda tem ' + openKids.length + ' bug(s) aberto(s): ' + openKids.map(k => k.id).join(', ') + '.', 6000); }
     if(over) T.show(`⚠️ Limite de "${over.label}" excedido (${over.count} de ${over.limit}). Termine algo antes de começar mais.`, 4500);
+    if(was !== status) fireRules({ type: 'enter', column: status }, it);
     return was !== status;
   }
   // Quem gere o backlog mexe em qualquer item; quem só atualiza o próprio trabalho mexe apenas nos itens em que é o responsável
@@ -12222,16 +12356,17 @@ const Agile = (() => {
     const box = document.getElementById('ab-lanes'); if(!box) return;
     const d = boardDraft, people = [...new Set([...(DB.get('team') || []).map(m => m.name), ...items.map(i => i.assignee)].map(x => String(x || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     box.innerHTML = (d.lanes.map((l, i) => `<div class="kb-lane-cfg"><div style="display:flex;gap:8px;align-items:center"><input class="input" style="flex:1" maxlength="40" value="${esc(l.name)}" aria-label="Nome da raia ${i + 1}" oninput="Agile.setLaneName(${i}, this.value)"><button class="btn btn-sm btn-red" aria-label="Remover a raia ${esc(l.name)}" onclick="Agile.removeLane(${i})"><i class="ti ti-trash"></i></button></div>
-      <div class="ln-row"><b>Tipo</b>${Object.keys(AgileCalc.KINDS).sort((a, b) => AgileCalc.KINDS[a].localeCompare(AgileCalc.KINDS[b], 'pt-BR')).map(k => `<label><input type="checkbox" ${l.kinds.includes(k) ? 'checked' : ''} onchange="Agile.toggleLane(${i}, 'kinds', '${k}', this.checked)"> ${esc(AgileCalc.KINDS[k])}</label>`).join('')}</div>
-      <div class="ln-row"><b>Responsável</b><label><input type="checkbox" ${l.assignees.includes(AgileCalc.NO_ASSIGNEE) ? 'checked' : ''} onchange="Agile.toggleLane(${i}, 'assignees', '${AgileCalc.NO_ASSIGNEE}', this.checked)"> Sem responsável</label>${people.map(p => `<label><input type="checkbox" ${l.assignees.some(a => a.toLowerCase() === p.toLowerCase()) ? 'checked' : ''} onchange="Agile.toggleLane(${i}, 'assignees', this.dataset.v, this.checked)" data-v="${esc(p)}"> ${esc(p)}</label>`).join('')}</div>
+      <div class="ln-row"><b>Tipo</b><select class="input" style="width:auto" aria-label="Tipo na raia ${esc(l.name)}" onchange="Agile.setLaneSel(${i}, 'kinds', this.value)"><option value="">Qualquer</option>${Object.keys(AgileCalc.KINDS).sort((x, y) => AgileCalc.KINDS[x].localeCompare(AgileCalc.KINDS[y], 'pt-BR')).map(k => `<option value="${k}"${l.kinds[0] === k ? ' selected' : ''}>${esc(AgileCalc.KINDS[k])}</option>`).join('')}</select></div>
+      <div class="ln-row"><b>Responsável</b><select class="input" style="width:auto;max-width:100%" aria-label="Responsável na raia ${esc(l.name)}" onchange="Agile.setLaneSel(${i}, 'assignees', this.value)"><option value="">Qualquer</option><option value="${AgileCalc.NO_ASSIGNEE}"${l.assignees[0] === AgileCalc.NO_ASSIGNEE ? ' selected' : ''}>Sem responsável</option>${people.map(p => `<option value="${esc(p)}"${l.assignees[0] && l.assignees[0].toLowerCase() === p.toLowerCase() ? ' selected' : ''}>${esc(p)}</option>`).join('')}</select></div>
       <div class="ln-row"><b>Estimativa</b><select class="input" style="width:auto" aria-label="Estimativa na raia ${esc(l.name)}" onchange="Agile.setLaneEstimate(${i}, this.value)"><option value=""${l.estimate === '' ? ' selected' : ''}>Qualquer</option><option value="com"${l.estimate === 'com' ? ' selected' : ''}>Só com pontos</option><option value="sem"${l.estimate === 'sem' ? ' selected' : ''}>Só sem pontos</option></select></div>
-      ${AgileCalc.laneEmpty(l) ? '<div class="set-sub" style="margin-top:6px">Sem nenhum filtro marcado esta raia não aparece (a raia geral já mostra tudo).</div>' : ''}</div>`).join('') || '<div class="set-sub" style="margin-bottom:8px">Nenhuma raia criada: o quadro mostra só a raia geral.</div>');
+      ${AgileCalc.laneEmpty(l) ? '<div class="set-sub" style="margin-top:6px">Sem nenhum filtro escolhido esta raia não aparece (a raia geral já mostra tudo).</div>' : ''}</div>`).join('') || '<div class="set-sub" style="margin-bottom:8px">Nenhuma raia criada: o quadro mostra só a raia geral.</div>');
     document.getElementById('ab-lane-add').disabled = d.lanes.length >= 6;
   }
   function addLane() { const d = boardDraft; if(d.lanes.length >= 6) return; const n = Math.max(0, ...d.lanes.map(l => /^r(\d+)$/.test(l.id) ? +l.id.slice(1) : 0)) + 1; d.lanes.push({ id: 'r' + n, name: 'Raia ' + (d.lanes.length + 1), kinds: [], assignees: [], estimate: '' }); renderLanesCfg(); }
   const removeLane = i => { boardDraft.lanes.splice(i, 1); renderLanesCfg(); };
   const setLaneName = (i, v) => { boardDraft.lanes[i].name = v; };
   const setLaneEstimate = (i, v) => { boardDraft.lanes[i].estimate = v; renderLanesCfg(); };
+  const setLaneSel = (i, field, v) => { boardDraft.lanes[i][field] = v ? [v] : []; renderLanesCfg(); };
   function toggleLane(i, field, v, on) { const arr = boardDraft.lanes[i][field]; const k = arr.findIndex(x => String(x).toLowerCase() === String(v).toLowerCase()); if(on && k < 0) arr.push(v); if(!on && k >= 0) arr.splice(k, 1); renderLanesCfg(); }
   const setColLabel = (i, v) => { boardDraft.columns[i].label = v; };
   const setColWip = (i, v) => { boardDraft.columns[i].wip = Math.max(0, Math.min(99, parseInt(v, 10) || 0)); };
@@ -12481,6 +12616,167 @@ const Agile = (() => {
     T.show('✅ "' + s.name + '" encerrada: ' + done + ' pts entregues' + (open.length ? ', ' + open.length + (dest ? ' item(ns) passaram para "' + dest.name + '"' : ' item(ns) devolvido(s) ao backlog') : '') + '.' + (dest && v === 'carry' && !dest.goal ? ' Inicie a próxima sprint quando o time estiver pronto.' : ''), 6000);
   }
 
+  // ───────── Automações do quadro (gatilho → ações) ─────────
+  // Rodam no navegador de quem mexeu no item, com as mesmas permissões dessa pessoa; no máximo 3 níveis de encadeamento e cada regra uma vez por cadeia (sem laço).
+  let ruleDepth = 0, dateCheckedOn = '';
+  const ruleVars = (it, col) => ({ id: it.id, titulo: it.title, coluna: AgileCalc.colLabel(cfg, col || it.status), responsavel: it.assignee || 'sem responsável', sprint: (sprints.find(s => s.id === it.sprintId) || {}).name || 'sem sprint', data: fmtFull(todayIso()) });
+  function sendNotice(r, a, vars, assignee) {
+    const to = a.to === 'assignee' ? 'member' : a.to, who = a.to === 'assignee' ? assignee : a.who;
+    if(a.to === 'assignee' && !who) return false;
+    const title = BoardRules.fill(a.title, vars), detail = BoardRules.fill(a.detail, vars);
+    if(typeof Cloud !== 'undefined' && Cloud.getUserId && Cloud.getUserId()) { Cloud.notifyProject(DB.getActiveProjectId(), to, who || '', title, detail, 'kanban', 'Automação: ' + r.name); return true; }
+    T.show('🔔 (demonstração) Aviso para ' + (who || BoardRules.TARGETS[a.to]) + ': ' + title, 5000); return true;
+  }
+  function fireRules(ev, it, seen) {
+    seen = seen || [];
+    if(ruleDepth >= 3) return;
+    load();
+    const rules = BoardRules.norm(DB.get('boardRules')).rules.filter(r => !seen.includes(r.id) && BoardRules.matches(r, ev, it));
+    if(!rules.length) return;
+    ruleDepth++;
+    try { rules.forEach(r => runRule(r, it, seen.concat(r.id))); } finally { ruleDepth--; }
+  }
+  function runRule(r, it, seen) {
+    const did = [], keys = AgileCalc.cols(cfg).map(c => c.key);
+    let changed = false, followAssigned = false, followMove = '';
+    for(const a of r.actions) {
+      if(a.type === 'assign') { if((it.assignee || '') !== a.who) { it.assignee = a.who; did.push('responsável: ' + a.who); changed = followAssigned = true; } }
+      else if(a.type === 'set') {
+        if(a.field === 'kind' && it.kind !== a.value) { it.kind = a.value; did.push('tipo: ' + (AgileCalc.KINDS[a.value] || a.value)); changed = true; }
+        else if(a.field === 'points' && it.points !== a.value) { it.points = a.value; did.push('pontos: ' + a.value); changed = true; }
+        else if(a.field === 'sprint') { const sp = sprints.find(s => s.id === a.value && s.state !== 'encerrada'); if((a.value === '' || sp) && it.sprintId !== a.value) { it.sprintId = a.value; did.push('sprint: ' + (sp ? sp.name : 'nenhuma')); changed = true; } }
+      }
+      else if(a.type === 'move') { if(keys.includes(a.column) && it.status !== a.column) { AgileCalc.moveTo(it, a.column, todayIso()); did.push('coluna: ' + AgileCalc.colLabel(cfg, a.column)); changed = true; followMove = a.column; } }
+      else if(a.type === 'notify') { if(sendNotice(r, a, ruleVars(it), it.assignee)) did.push('aviso enviado'); }
+    }
+    if(changed) { saveItems(); pushItem(it); }
+    if(did.length) { Trail.log('Automação "' + r.name + '" em ' + it.id + ': ' + did.join('; '), Auth.getName(), '', 'b-acc'); T.show('⚙️ Automação "' + r.name + '": ' + did.join('; ') + '.', 5000); }
+    if(followAssigned) fireRules({ type: 'assigned' }, it, seen);
+    if(followMove) fireRules({ type: 'enter', column: followMove }, it, seen);
+    if(changed) renderAll();
+  }
+  // Alertas de data: roda uma vez por dia por navegador; o servidor ainda evita repetir o mesmo aviso na mesma pessoa em 20 horas
+  function checkDates() {
+    load(); const today = todayIso(), a = active();
+    if(!a || dateCheckedOn === today) return;
+    dateCheckedOn = today;
+    const left = AgileCalc.diffDays(today, a.endOn);
+    if(left < 0) return;
+    const rules = BoardRules.norm(DB.get('boardRules')).rules.filter(r => r.on && r.trigger.type === 'sprint_end' && left <= r.trigger.days);
+    if(!rules.length) return;
+    const open = items.filter(i => i.sprintId === a.id && i.status !== 'done');
+    rules.forEach(r => r.actions.filter(x => x.type === 'notify').forEach(x => {
+      const vars = { id: '', titulo: a.name, coluna: '', responsavel: '', sprint: a.name, data: fmtFull(a.endOn) };
+      if(x.to === 'assignee') [...new Set(open.map(i => (i.assignee || '').trim()).filter(Boolean))].forEach(who => sendNotice(r, x, { ...vars, responsavel: who }, who));
+      else sendNotice(r, x, vars, '');
+    }));
+  }
+
+  // ───────── Tela das automações (lista e editor) ─────────
+  let ruleEdit = null; // { i, r } enquanto edita
+  const saveRules = list => {
+    const v = { rules: list };
+    DB.set('boardRules', v);
+    if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'boardRules', v);
+  };
+  const rulesList = () => BoardRules.norm(DB.get('boardRules')).rules;
+  const colOpts = sel => AgileCalc.cols(cfg).map(c => `<option value="${esc(c.key)}"${c.key === sel ? ' selected' : ''}>${esc(c.label)}</option>`).join('');
+  function describeRule(r) {
+    const t = r.trigger.type === 'enter' ? 'o item entra em "' + AgileCalc.colLabel(cfg, r.trigger.column) + '"' : r.trigger.type === 'created' ? 'um item é criado' : r.trigger.type === 'assigned' ? 'um item recebe responsável' : 'faltam ' + r.trigger.days + ' dia(s) ou menos para o fim da sprint';
+    const c = [r.cond.kind ? 'tipo ' + (AgileCalc.KINDS[r.cond.kind] || r.cond.kind) : '', r.cond.unassigned ? 'sem responsável' : ''].filter(Boolean).join(' e ');
+    const acts = r.actions.map(a => a.type === 'assign' ? 'atribuir a ' + a.who : a.type === 'move' ? 'mover para "' + AgileCalc.colLabel(cfg, a.column) + '"' : a.type === 'set' ? 'definir ' + BoardRules.FIELDS[a.field].toLowerCase() + ' = ' + (a.field === 'kind' ? (AgileCalc.KINDS[a.value] || a.value) : a.field === 'sprint' ? ((sprints.find(s => s.id === a.value) || {}).name || 'nenhuma') : a.value) : 'avisar ' + (a.to === 'member' || a.to === 'role' ? a.who : BoardRules.TARGETS[a.to].toLowerCase())).join(', ');
+    return 'Quando ' + t + (c ? ' (' + c + ')' : '') + ': ' + acts + '.';
+  }
+  function openRules() {
+    if(!Auth.guard('manage_backlog')) return;
+    load(); ruleEdit = null; renderRules();
+    document.getElementById('modal-board-rules').classList.remove('hidden');
+  }
+  function closeRules() { document.getElementById('modal-board-rules').classList.add('hidden'); ruleEdit = null; }
+  function renderRules() {
+    const body = document.getElementById('br-body'); if(!body) return;
+    if(ruleEdit) { renderRuleEditor(body); return; }
+    const list = rulesList();
+    body.innerHTML = (list.map((r, i) => `<div class="kb-lane-cfg"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="display:inline-flex;gap:6px;align-items:center;font-weight:600;cursor:pointer"><input type="checkbox" ${r.on ? 'checked' : ''} aria-label="Ligar ou desligar a automação ${esc(r.name)}" onchange="Agile.toggleRule(${i}, this.checked)"> ${esc(r.name)}</label><span class="badge ${r.on ? 'b-grn' : 'b-neu'}">${r.on ? 'Ligada' : 'Desligada'}</span><span style="margin-left:auto;display:flex;gap:6px"><button class="btn btn-sm" onclick="Agile.editRule(${i})"><i class="ti ti-edit"></i>Editar</button><button class="btn btn-sm btn-red" aria-label="Excluir a automação ${esc(r.name)}" onclick="Agile.deleteRule(${i})"><i class="ti ti-trash"></i></button></span></div><div class="set-sub" style="margin-top:6px">${esc(describeRule(r))}</div></div>`).join('') || '<div class="rk-empty" style="margin-bottom:10px">Nenhuma automação ainda. Exemplo: quando um item entrar em "Em testes de QA", avisar o Scrum Master; quando um Bug for criado, atribuir à pessoa responsável pelo sistema.</div>')
+      + `<div class="btn-row" style="margin-top:8px"><button class="btn btn-sm btn-acc" ${list.length >= 30 ? 'disabled' : ''} onclick="Agile.editRule(-1)"><i class="ti ti-plus"></i>Nova automação</button><button class="btn btn-sm" onclick="Agile.closeRules()">Fechar</button></div>`;
+  }
+  function editRule(i) {
+    const list = rulesList();
+    ruleEdit = { i, r: i >= 0 ? JSON.parse(JSON.stringify(list[i])) : { id: 'ru' + Date.now().toString(36), name: '', on: true, trigger: { type: 'enter', column: AgileCalc.cols(cfg)[1] ? AgileCalc.cols(cfg)[1].key : 'todo', days: 2 }, cond: { kind: '', unassigned: false }, actions: [{ type: 'notify', to: 'assignee', who: '', title: '{id} entrou em {coluna}', detail: '{titulo}' }] } };
+    renderRules();
+  }
+  function renderRuleEditor(body) {
+    const r = ruleEdit.r, t = r.trigger.type;
+    const people = [...new Set([...(DB.get('team') || []).map(m => m.name), ...items.map(x => x.assignee)].map(x => String(x || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const defs = Auth.getProfileDefs() || {}, roleOpts = sel => Object.keys(defs).filter(k => k !== 'admin').map(k => `<option value="${esc(k)}"${k === sel ? ' selected' : ''}>${esc(defs[k].name || k)}</option>`).join('');
+    const actRow = (a, n) => {
+      const typeSel = `<select class="input" style="width:auto" aria-label="Ação ${n + 1}" onchange="Agile.ruleAct(${n}, 'type', this.value)">${[['notify', 'Avisar'], ['assign', 'Atribuir a um profissional'], ['set', 'Alterar um dado do item'], ['move', 'Mover para a coluna']].map(([v, l]) => `<option value="${v}"${a.type === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
+      let more = '';
+      if(a.type === 'assign') more = `<input class="input" style="flex:1 1 180px" list="br-people" autocomplete="off" maxlength="80" placeholder="Nome do profissional" value="${esc(a.who || '')}" aria-label="Profissional" oninput="Agile.ruleAct(${n}, 'who', this.value, true)">`;
+      else if(a.type === 'move') more = `<select class="input" style="width:auto" aria-label="Coluna de destino" onchange="Agile.ruleAct(${n}, 'column', this.value, true)">${colOpts(a.column)}</select>`;
+      else if(a.type === 'set') {
+        more = `<select class="input" style="width:auto" aria-label="Dado a alterar" onchange="Agile.ruleAct(${n}, 'field', this.value)">${Object.keys(BoardRules.FIELDS).map(k => `<option value="${k}"${a.field === k ? ' selected' : ''}>${BoardRules.FIELDS[k]}</option>`).join('')}</select>`;
+        if(a.field === 'kind') more += `<select class="input" style="width:auto" aria-label="Novo tipo" onchange="Agile.ruleAct(${n}, 'value', this.value, true)">${BoardRules.KINDS.map(k => `<option value="${k}"${a.value === k ? ' selected' : ''}>${esc(AgileCalc.KINDS[k])}</option>`).join('')}</select>`;
+        else if(a.field === 'sprint') more += `<select class="input" style="width:auto" aria-label="Nova sprint" onchange="Agile.ruleAct(${n}, 'value', this.value, true)"><option value="">Sem sprint</option>${sprints.filter(s => s.state !== 'encerrada').map(s => `<option value="${esc(s.id)}"${a.value === s.id ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}</select>`;
+        else more += `<input class="input" type="number" min="0" max="100" style="width:90px" aria-label="Novos pontos" value="${esc(a.value == null ? '' : a.value)}" oninput="Agile.ruleAct(${n}, 'value', this.value, true)">`;
+      } else {
+        more = `<select class="input" style="width:auto" aria-label="Quem recebe" onchange="Agile.ruleAct(${n}, 'to', this.value)">${Object.keys(BoardRules.TARGETS).map(k => `<option value="${k}"${a.to === k ? ' selected' : ''}>${esc(BoardRules.TARGETS[k])}</option>`).join('')}</select>`
+          + (a.to === 'member' ? `<input class="input" style="flex:1 1 150px" list="br-people" autocomplete="off" maxlength="80" placeholder="Nome na equipe" value="${esc(a.who || '')}" aria-label="Pessoa" oninput="Agile.ruleAct(${n}, 'who', this.value, true)">` : '')
+          + (a.to === 'role' ? `<select class="input" style="width:auto" aria-label="Perfil" onchange="Agile.ruleAct(${n}, 'who', this.value, true)"><option value="">Escolha…</option>${roleOpts(a.who)}</select>` : '')
+          + `<input class="input" style="flex:1 1 100%" maxlength="120" placeholder="Título do aviso (ex.: {id} entrou em {coluna})" value="${esc(a.title || '')}" aria-label="Título do aviso" oninput="Agile.ruleAct(${n}, 'title', this.value, true)"><input class="input" style="flex:1 1 100%" maxlength="300" placeholder="Detalhe (opcional)" value="${esc(a.detail || '')}" aria-label="Detalhe do aviso" oninput="Agile.ruleAct(${n}, 'detail', this.value, true)">`;
+      }
+      return `<div class="kb-lane-cfg"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${typeSel}${more}<button class="btn btn-sm btn-red" style="margin-left:auto" aria-label="Remover a ação ${n + 1}" onclick="Agile.ruleDelAct(${n})"><i class="ti ti-trash"></i></button></div></div>`;
+    };
+    body.innerHTML = `<datalist id="br-people">${people.map(p => `<option value="${esc(p)}">`).join('')}</datalist>
+      <div class="field-group"><div class="field-label"><label for="br-name">Nome da automação</label></div><input class="input" id="br-name" maxlength="80" placeholder="Ex.: Avisar o Scrum Master quando for para QA" value="${esc(r.name)}" oninput="Agile.ruleField('name', this.value, true)"></div>
+      <div class="lbl">Quando <span class="help-q" data-help="O gatilho. Ele roda para quem mexe no item, na hora. O alerta de fim da sprint é conferido uma vez por dia, quando alguém abre a ferramenta." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><select class="input" style="width:auto" aria-label="Gatilho" onchange="Agile.ruleField('trigger', this.value)">${Object.keys(BoardRules.TRIGGERS).map(k => `<option value="${k}"${t === k ? ' selected' : ''}>${BoardRules.TRIGGERS[k]}</option>`).join('')}</select>
+        ${t === 'enter' ? `<select class="input" style="width:auto" aria-label="Coluna" onchange="Agile.ruleField('column', this.value, true)">${colOpts(r.trigger.column)}</select>` : ''}
+        ${t === 'sprint_end' ? `<label style="font-size:12.5px;display:inline-flex;gap:6px;align-items:center">faltando até <input class="input" type="number" min="1" max="14" style="width:70px" value="${r.trigger.days || 2}" aria-label="Dias antes do fim" oninput="Agile.ruleField('days', this.value, true)"> dia(s)</label>` : ''}</div>
+      ${t === 'sprint_end' ? '' : `<div class="lbl">Só se <span class="help-q" data-help="Condições opcionais: a automação só roda para o item que combina." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-size:12.5px"><select class="input" style="width:auto" aria-label="Tipo do item" onchange="Agile.ruleField('ckind', this.value, true)"><option value="">Qualquer tipo</option>${BoardRules.KINDS.map(k => `<option value="${k}"${r.cond.kind === k ? ' selected' : ''}>${esc(AgileCalc.KINDS[k])}</option>`).join('')}</select><label style="display:inline-flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" ${r.cond.unassigned ? 'checked' : ''} onchange="Agile.ruleField('cunas', this.checked, true)"> Só itens sem responsável</label></div>`}
+      <div class="lbl">Então <span class="help-q" data-help="O que fazer. Use {id}, {titulo}, {coluna}, {responsavel}, {sprint} e {data} nos textos do aviso. Mudar dado do item vale para o item que disparou a automação." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+      ${r.actions.map(actRow).join('')}
+      <div class="btn-row" style="margin:6px 0 12px"><button class="btn btn-sm" ${r.actions.length >= 5 ? 'disabled' : ''} onclick="Agile.ruleAddAct()"><i class="ti ti-plus"></i>Outra ação</button></div>
+      <div class="set-sub" style="margin-bottom:10px"><i class="ti ti-info-circle"></i> Os avisos aparecem na tela da pessoa depois do login (o botão de avisos no topo). E-mail e WhatsApp entram quando o envio estiver configurado.</div>
+      <div class="btn-row" style="justify-content:flex-end"><button class="btn btn-sm" onclick="Agile.ruleCancel()">Cancelar</button><button class="btn btn-sm btn-acc" onclick="Agile.ruleSave()"><i class="ti ti-check"></i>Salvar automação</button></div>`;
+  }
+  // Setters do editor; o 3º argumento "quiet" evita redesenhar (e perder o foco) a cada tecla
+  function ruleField(k, v, quiet) {
+    const r = ruleEdit.r;
+    if(k === 'name') r.name = v;
+    else if(k === 'trigger') { r.trigger.type = v; if(v === 'enter' && !r.trigger.column) r.trigger.column = AgileCalc.cols(cfg)[1].key; if(v === 'sprint_end') r.trigger.days = r.trigger.days || 2; }
+    else if(k === 'column') r.trigger.column = v;
+    else if(k === 'days') r.trigger.days = v;
+    else if(k === 'ckind') r.cond.kind = v;
+    else if(k === 'cunas') r.cond.unassigned = !!v;
+    if(!quiet) renderRules();
+  }
+  function ruleAct(n, k, v, quiet) {
+    const a = ruleEdit.r.actions[n];
+    if(k === 'type') {
+      const base = { notify: { type: 'notify', to: 'assignee', who: '', title: '', detail: '' }, assign: { type: 'assign', who: '' }, set: { type: 'set', field: 'kind', value: 'bug' }, move: { type: 'move', column: AgileCalc.cols(cfg)[1].key } };
+      ruleEdit.r.actions[n] = base[v];
+    } else if(k === 'field') { a.field = v; a.value = v === 'kind' ? 'bug' : v === 'points' ? 0 : ''; }
+    else if(k === 'to') { a.to = v; a.who = ''; }
+    else a[k] = v;
+    if(!quiet) renderRules();
+  }
+  function ruleAddAct() { ruleEdit.r.actions.push({ type: 'notify', to: 'assignee', who: '', title: '', detail: '' }); renderRules(); }
+  function ruleDelAct(n) { ruleEdit.r.actions.splice(n, 1); renderRules(); }
+  function ruleCancel() { ruleEdit = null; renderRules(); }
+  function ruleSave() {
+    const r = ruleEdit.r;
+    if(!String(r.name).trim()) { T.show('⚠️ Dê um nome à automação.'); document.getElementById('br-name').focus(); return; }
+    const clean = BoardRules.norm({ rules: [r] }).rules[0];
+    if(!clean || clean.actions.length !== r.actions.length) { T.show('⚠️ Complete as ações: avisos precisam de título (e de quem recebe), atribuir precisa do nome do profissional.'); return; }
+    const list = rulesList();
+    if(ruleEdit.i >= 0) list[ruleEdit.i] = clean; else list.push(clean);
+    saveRules(list); ruleEdit = null; renderRules(); T.show('✅ Automação salva.');
+  }
+  function toggleRule(i, on) { const list = rulesList(); if(!list[i]) return; list[i].on = !!on; saveRules(list); renderRules(); }
+  function deleteRule(i) { const list = rulesList(); if(!list[i] || !confirm('Excluir a automação "' + list[i].name + '"?')) return; list.splice(i, 1); saveRules(list); renderRules(); }
+
   // ───────── Modais ─────────
   const val = id => document.getElementById(id).value;
   function fillSprintSelect(sel) {
@@ -12577,9 +12873,12 @@ const Agile = (() => {
     if(urg) { f.sprintId = urg.sprintId; f.description = (f.description ? f.description + '\n\n' : '') + 'Incluído durante a sprint (mudança de escopo) — motivo: ' + urg.reason; }
     const bad = AgileCalc.bugParentError({ ...f, id: itemCtx || '' }, items);
     if(bad) { T.show('⚠️ ' + bad); document.getElementById('ai-parent').focus(); return; }
+    const was = it ? { status: it.status, assignee: it.assignee || '' } : null;
     if(it) { Object.assign(it, f); AgileCalc.moveTo(it, val('ai-status'), todayIso()); }
     else { it = { id: AgileCalc.nextId('US', items), status: 'todo', rank: (Math.max(0, ...items.map(x => x.rank || 0)) + 1), createdOn: todayIso(), doneOn: '', ...f }; items.push(it); }
     saveItems(); pushItem(it);
+    if(!was) { fireRules({ type: 'created' }, it); if(it.assignee) fireRules({ type: 'assigned' }, it); }
+    else { if(it.status !== was.status) fireRules({ type: 'enter', column: it.status }, it); if(it.assignee && it.assignee !== was.assignee) fireRules({ type: 'assigned' }, it); }
     if(urg) { Trail.log('Item urgente incluído na sprint: ' + it.id + ' — ' + it.title, Auth.getName(), urg.reason, 'b-amb'); T.show('⚠️ ' + it.id + ' entrou na sprint como mudança de escopo (motivo registrado).', 5000); }
     closeItem(); renderAll();
     T.show(`✅ ${it.id} salvo.`);
@@ -12822,9 +13121,9 @@ const Agile = (() => {
   function renderAll() { renderKanban(); renderBacklog(); renderSprints(); renderDashboard(); renderDue(); }
   function render() { renderAll(); }
   return { render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, rank, setSprintOf, setBacklogQuery, setShowDone,
-    openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, renderDue, openDue, closeDue, dueChoose, runDue, exportXlsx,
+    openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, checkDates, openRules, closeRules, editRule, ruleField, ruleAct, ruleAddAct, ruleDelAct, ruleCancel, ruleSave, toggleRule, deleteRule, renderDue, openDue, closeDue, dueChoose, runDue, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
-    aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, toggleLane, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
+    aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
     cfgNow: () => { load(); return cfg; }, kindChanged, kindPicked, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
 })();
 </script>
