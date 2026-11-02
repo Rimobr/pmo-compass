@@ -46,7 +46,7 @@
     },
     "project_settings": {
       "domain": "Projetos",
-      "desc": "Configurações por projeto, uma linha por chave: `methodology` (método), `agileConfig` (quadro e entrada de itens), `workCalendar` (calendário de trabalho: feriados do projeto, exceções autorizadas pelo gerente com justificativa), priorização e perfil de PMO.",
+      "desc": "Configurações por projeto, uma linha por chave: `methodology` (método), `agileConfig` (quadro e entrada de itens), `boardLanes` (raias filtradas do quadro Kanban), `workCalendar` (calendário de trabalho: feriados do projeto, exceções autorizadas pelo gerente com justificativa), priorização e perfil de PMO.",
       "scope": "projeto",
       "personal": false,
       "clearProject": "apaga",
@@ -307,6 +307,14 @@
       "personal": true,
       "clearProject": "não se aplica",
       "resetAll": "preserva (permanente)"
+    },
+    "user_notices": {
+      "domain": "Decisões",
+      "desc": "Avisos na tela de cada pessoa (recados das automações do quadro e alertas de data); cada um lê só os seus.",
+      "scope": "projeto",
+      "personal": true,
+      "clearProject": "apaga",
+      "resetAll": "apaga"
     }
   },
   "localKeys": {

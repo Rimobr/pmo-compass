@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.39.0'
+  version: '2.40.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -288,6 +288,10 @@ body.no-login #login-gate{display:flex}
 .proj-pick-list{position:absolute;z-index:20;margin-top:4px;min-width:260px;max-width:min(360px,86vw);max-height:280px;overflow:auto;background:var(--s1);border:1px solid var(--b2);border-radius:var(--r8);padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 .proj-pick-list label{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--t1);cursor:pointer}
 .proj-pick-list label:hover{background:var(--s2)}
+.kpi-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi-row .kpi{padding:10px}.kpi-row .kpi-val{font-size:20px}}
+.ag-grip{cursor:grab;color:var(--t3);user-select:none;padding:0 4px;font-size:15px;line-height:1}
+.ag-row.col-over{outline:2px dashed var(--acc);outline-offset:-2px}
 .sprint-due{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 12px;padding:10px 14px;border:1px solid var(--ambb);background:var(--amd);color:var(--t1);border-radius:var(--r10);font-size:12.5px;line-height:1.5}
 .sprint-due>i{font-size:18px;color:var(--amb)}
 .sd-opts{display:flex;flex-direction:column;gap:6px}
@@ -1986,6 +1990,14 @@ body.icons-failed i[data-fb]::before{
 .kb-col{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r10);padding:8px;min-height:120px}
 .kb-col.over-wip{border-color:var(--rb)}
 .kb-col.drop{outline:2px dashed var(--acc);outline-offset:-3px}
+.kb-lane{margin:0 0 12px;padding:10px 12px}
+.kb-lane>.lbl{margin-bottom:8px;flex-wrap:wrap}
+.kb-lane.collapsed>.lbl{margin-bottom:0}
+.kb-lane .kb-lane-meta{font-weight:400;font-size:11.5px;color:var(--t2);text-transform:none;letter-spacing:0}
+.kb-lane-cfg{border:1px solid var(--b1);border-radius:var(--r8);padding:8px 10px;margin-bottom:8px}
+.kb-lane-cfg .ln-row{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;margin-top:6px;align-items:center}
+.kb-lane-cfg .ln-row>b{font-size:11.5px;color:var(--t2);min-width:84px}
+.kb-lane-cfg label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
 .kb-hdr{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12.5px;margin-bottom:8px;color:var(--t1)}
 .kb-count{font-size:11px;background:var(--s3);border-radius:20px;padding:1px 8px;color:var(--t1)}
 .kb-card{background:var(--s2);border:1px solid var(--b1);border-radius:var(--r8);padding:8px 10px;margin-bottom:8px;cursor:grab}
@@ -2128,7 +2140,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
       <div class="field-group"><div class="field-label"><label for="ai-points">Pontos</label><span class="help-q" data-help="Estimativa de esforço relativo (1, 2, 3, 5, 8, 13...). Compare com outros itens: um item de 5 dá mais trabalho que um de 2. Deixe vazio se ainda não foi estimado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="ai-points" type="number" min="0" max="100" placeholder="Ex: 5"></div>
     </div>
     <div class="g2" style="gap:10px">
-      <div class="field-group"><div class="field-label"><label for="ai-assignee">Responsável</label></div><input class="input" id="ai-assignee" list="ai-people" maxlength="80" placeholder="Quem vai fazer"><datalist id="ai-people"></datalist></div>
+      <div class="field-group"><div class="field-label"><label for="ai-assignee">Responsável</label></div><input class="input" id="ai-assignee" list="ai-people" autocomplete="off" maxlength="80" placeholder="Quem vai fazer"><datalist id="ai-people"></datalist></div>
       <div class="field-group"><div class="field-label"><label for="ai-sprint">Sprint</label></div><select class="input" id="ai-sprint"></select></div>
     </div>
     <div class="field-group" id="ai-status-grp"><div class="field-label"><label for="ai-status">Situação</label></div><select class="input" id="ai-status"><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="review">Em revisão</option><option value="done">Concluído</option></select></div>
@@ -2174,10 +2186,13 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
 <div class="modal-ov hidden" id="modal-agile-board" onclick="if(event.target===this)Agile.closeBoardCfg()">
   <div class="modal-box" style="width:600px;max-width:96vw;max-height:92vh;overflow-y:auto" role="dialog" aria-modal="true" aria-labelledby="ab-title-h">
     <div class="modal-title" id="ab-title-h">Personalizar quadro</div>
-    <div class="modal-sub">Monte as colunas do seu fluxo de trabalho. "A fazer" e "Concluído" são fixas; as do meio você escolhe (até 5).</div>
+    <div class="modal-sub">Monte as colunas do seu fluxo de trabalho. "A fazer" e "Concluído" são fixas; as do meio você escolhe (até 5) e muda a ordem arrastando o ⠿ ou pelas setas. <b>Mudar a ordem ou o nome não altera nenhum item, nem sprint, nem burndown</b> — o item guarda a coluna, não a posição. Só remover uma coluna move os itens dela (para a anterior).</div>
     <div class="lbl">Colunas e limite de itens em andamento<span class="help-q" data-help="O limite (WIP) é quantos itens podem estar ao mesmo tempo naquela coluna; deixe 0 para não ter limite. O quadro avisa quando passa, mas não impede de mover." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div id="ab-cols"></div>
     <div class="btn-row" style="margin:6px 0 12px"><button class="btn btn-sm" id="ab-add" onclick="Agile.addCol()"><i class="ti ti-plus"></i>Nova coluna</button></div>
+    <div class="lbl">Raias (filtros do quadro)<span class="help-q" data-help="O quadro sempre mostra a raia Geral, com todos os itens. Aqui você cria raias abaixo dela, cada uma filtrando por tipo (ex.: só Bug), responsável ou estimativa. Um item pode aparecer na Geral e numa raia ao mesmo tempo; arrastar um cartão em qualquer raia muda a coluna dele. Cada raia pode ser recolhida no próprio quadro." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div id="ab-lanes"></div>
+    <div class="btn-row" style="margin:6px 0 12px"><button class="btn btn-sm" id="ab-lane-add" onclick="Agile.addLane()"><i class="ti ti-plus"></i>Nova raia</button></div>
     <div class="lbl">Como os itens entram no quadro<span class="help-q" data-help="Scrum (padrão): todo item nasce no Backlog, é estimado e priorizado, e só entra no quadro quando entra numa sprint (Planejar sprint). O quadro mostra apenas a sprint ativa. Kanban contínuo: sem sprints; os itens são criados e importados direto no quadro, e o limite de itens em andamento controla o fluxo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <select class="input" id="ab-entry" aria-label="Como os itens entram no quadro" style="margin-bottom:12px"><option value="scrum">Scrum — pelo Backlog e pela sprint (recomendado)</option><option value="kanban">Kanban contínuo — direto no quadro, sem sprints</option></select>
     <div class="lbl">Informações que aparecem no cartão<span class="help-q" data-help="Cartões mais enxutos deixam o quadro mais limpo; o título sempre aparece. Os dados continuam salvos no item mesmo escondidos." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
@@ -3974,7 +3989,7 @@ const Cloud = (() => {
   // Tabelas de dados do PROJETO (têm project_id e são apagadas por "Zerar base"/"Limpar projeto"). Fonte única:
   // clearProjectData e resetForNewUsers percorrem esta lista — tabela nova entra aqui, nunca em lista escrita à mão.
   // A ordem respeita chaves estrangeiras (filhas antes das mães). tests/run.js confere esta lista contra o schema.sql.
-  const PROJECT_DATA_TABLES = ['wbs_tasks','cost_actuals','budget_lines','wbs_modules','decisions','documents','scope_changes','risks','time_entries','baselines','raci_entries','backlog_items','sprints','sprint_rites','impediments','project_docs','person_reviews'];
+  const PROJECT_DATA_TABLES = ['wbs_tasks','cost_actuals','budget_lines','wbs_modules','decisions','documents','scope_changes','risks','time_entries','baselines','raci_entries','backlog_items','sprints','sprint_rites','impediments','project_docs','person_reviews', 'user_notices'];
   // Mapeadores local ⇄ nuvem das tabelas novas (um só lugar para push, pull e importação em lote)
   const ROW = {
     scope_changes: {
@@ -11469,6 +11484,32 @@ const AgileCalc = (() => {
     });
   }
   // Mover de coluna: a data de conclusão só existe enquanto o item está Concluído
+  // Raias do quadro: cada raia é um filtro por campos do cartão (tipo, responsável, estimativa). Dentro de um campo vale "ou", entre campos vale "e".
+  // A raia geral (sem filtro) não é guardada: o quadro sempre a mostra primeiro.
+  const NO_ASSIGNEE = '__sem';
+  function normLanes(raw) {
+    const list = Array.isArray(raw && raw.lanes) ? raw.lanes : [];
+    const strs = (v, n) => (Array.isArray(v) ? v : []).map(x => String(x == null ? '' : x).trim().slice(0, 80)).filter((x, i, a) => x && a.indexOf(x) === i).slice(0, n);
+    return list.slice(0, 6).map((l, i) => ({
+      id: String((l && l.id) || 'r' + (i + 1)).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 20) || 'r' + (i + 1),
+      name: String((l && l.name) || '').replace(/\s+/g, ' ').trim().slice(0, 40) || 'Raia ' + (i + 1),
+      kinds: strs(l && l.kinds, 10).filter(k => KINDS[k]),
+      assignees: strs(l && l.assignees, 30),
+      estimate: l && (l.estimate === 'sem' || l.estimate === 'com') ? l.estimate : ''
+    }));
+  }
+  const laneEmpty = l => !l.kinds.length && !l.assignees.length && !l.estimate;
+  function laneMatch(lane, item) {
+    if(lane.kinds.length && !lane.kinds.includes(item.kind)) return false;
+    if(lane.assignees.length) {
+      const who = String(item.assignee || '').trim();
+      if(!lane.assignees.some(a => a === NO_ASSIGNEE ? !who : a.toLowerCase() === who.toLowerCase())) return false;
+    }
+    const has = item.points !== '' && item.points != null;
+    if(lane.estimate === 'sem' && has) return false;
+    if(lane.estimate === 'com' && !has) return false;
+    return true;
+  }
   function moveTo(item, status, today) { item.status = status; item.doneOn = status === 'done' ? (item.doneOn || today) : ''; return item; }
   function neighbor(status, dir, cfg) { const list = cols(cfg), i = list.findIndex(c => c.key === status) + dir; return list[i] ? list[i].key : null; }
 
@@ -11604,7 +11645,7 @@ const AgileCalc = (() => {
     return advice;
   }
 
-  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, bugParentError, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, bugParentError, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
 })();
 </script>
 
@@ -12087,12 +12128,21 @@ const Agile = (() => {
     if(scrum && boardSprint === '__auto' && !act) emptyHint = '<div class="rk-empty" style="margin-bottom:10px">Este quadro mostra o que está <b>na sprint</b>. Crie e importe os itens no <b>Backlog</b>, use <b>Planejar sprint</b> para escolher o que cabe e depois inicie a sprint em <b>Sprints</b>. <button class="btn btn-sm" onclick="R.go(\'backlog\')">Ir ao Backlog</button></div>';
     else if(scrum && !list.length) emptyHint = '<div class="rk-empty" style="margin-bottom:10px">Nenhum item nesta sprint ainda. No <b>Backlog</b>, use <b>Planejar sprint</b> (ou escolha a sprint no próprio item) para trazer o que cabe. <button class="btn btn-sm" onclick="R.go(\'backlog\')">Ir ao Backlog</button></div>';
     else if(!scrum && !items.length) emptyHint = '<div class="rk-empty" style="margin-bottom:10px">Nenhum item ainda. Use <b>Novo item</b> para cadastrar a primeira história ou <b>Importar planilha</b> para trazer vários de uma vez — eles aparecem em “A fazer”.</div>';
-    root.innerHTML = emptyHint + `<div class="kb-board" style="--kb-cols:${columns.length};--kb-min:${columns.length > 4 ? 210 : 0}px">` + columns.map(col => {
-      const st = stats.find(s => s.key === col.key);
-      const cards = list.filter(i => i.status === col.key).map(i => card(i)).join('') || '<div style="font-size:11.5px;color:var(--t3);padding:6px 2px">Nenhum item</div>';
+    const grid = (rows, wipStats) => `<div class="kb-board" style="--kb-cols:${columns.length};--kb-min:${columns.length > 4 ? 210 : 0}px">` + columns.map(col => {
+      const mine = rows.filter(i => i.status === col.key), st = wipStats ? wipStats.find(x => x.key === col.key) : { count: mine.length, limit: 0, over: false };
+      const cards = mine.map(i => card(i)).join('') || '<div style="font-size:11.5px;color:var(--t3);padding:6px 2px">Nenhum item</div>';
       return `<div class="kb-col${st.over ? ' over-wip' : ''}" data-status="${esc(col.key)}" ondragover="Agile.dragOver(event)" ondragleave="this.classList.remove('drop')" ondrop="Agile.drop(event,'${esc(col.key)}')" role="group" aria-label="${esc(col.label)}: ${st.count} item(ns)">
         <div class="kb-hdr"><b>${esc(col.label)}</b><span class="kb-count">${st.count}${st.limit ? ' / ' + st.limit : ''}</span>${st.over ? '<span class="badge b-red">limite excedido</span>' : ''}</div>${cards}</div>`;
     }).join('') + '</div>';
+    // Raia geral (sempre, sem filtro) e, abaixo, as raias filtradas; todas recolhíveis (o estado fica salvo neste navegador)
+    const lanes = AgileCalc.normLanes(DB.get('boardLanes')).filter(l => !AgileCalc.laneEmpty(l));
+    const kindName = k => AgileCalc.KINDS[k] || k;
+    const desc = l => [l.kinds.length ? 'tipo: ' + l.kinds.map(kindName).join(', ') : '', l.assignees.length ? 'responsável: ' + l.assignees.map(a => a === AgileCalc.NO_ASSIGNEE ? 'sem responsável' : a).join(', ') : '', l.estimate ? (l.estimate === 'sem' ? 'sem estimativa' : 'com estimativa') : ''].filter(Boolean).join(' · ');
+    const laneHtml = (id, tint, name, meta, count, body) => `<div class="card kb-lane" data-sec="lane-${esc(id)}" data-tint="${tint}"><div class="lbl"><i class="ti ti-layout-rows"></i>${esc(name)} <span class="badge">${count}</span> <span class="kb-lane-meta">${esc(meta)}</span></div>${body}</div>`;
+    root.innerHTML = emptyHint + (lanes.length
+      ? laneHtml('geral', 1, 'Geral', 'todos os itens, sem filtro', list.length, grid(list, stats)) + lanes.map((l, n) => { const rows = list.filter(i => AgileCalc.laneMatch(l, i)); return laneHtml(l.id, (n % 3) + 2, l.name, desc(l), rows.length, grid(rows, null)); }).join('')
+      : grid(list, stats));
+    if(lanes.length && typeof Sec !== 'undefined') Sec.restore(root);
   }
   const impediments = () => DB.get('impediments') || [];
   function card(i) {
@@ -12149,7 +12199,7 @@ const Agile = (() => {
   function openBoardCfg() {
     if(!Auth.guard('manage_backlog')) return;
     load();
-    boardDraft = { columns: AgileCalc.cols(cfg).map(c => ({ key: c.key, label: c.label, wip: Number(cfg.wip[c.key]) || 0 })), card: { ...cfg.card }, entry: cfg.entry };
+    boardDraft = { columns: AgileCalc.cols(cfg).map(c => ({ key: c.key, label: c.label, wip: Number(cfg.wip[c.key]) || 0 })), card: { ...cfg.card }, entry: cfg.entry, lanes: JSON.parse(JSON.stringify(AgileCalc.normLanes(DB.get('boardLanes')))) };
     renderBoardCfg();
     document.getElementById('ab-entry').value = cfg.entry;
     document.getElementById('modal-agile-board').classList.remove('hidden');
@@ -12158,14 +12208,31 @@ const Agile = (() => {
     const d = boardDraft, last = d.columns.length - 1;
     document.getElementById('ab-cols').innerHTML = d.columns.map((c, i) => {
       const fixed = i === 0 || i === last;
-      return `<div class="ag-row"><input class="input" style="flex:1 1 160px;min-width:120px" maxlength="30" value="${esc(c.label)}" aria-label="Nome da coluna ${i + 1}" oninput="Agile.setColLabel(${i}, this.value)">
+      return `<div class="ag-row"${fixed ? '' : ` ondragover="Agile.colDragOver(event)" ondragleave="this.classList.remove('col-over')" ondrop="Agile.colDrop(event, ${i})"`}>${fixed ? '<span class="ag-grip" aria-hidden="true" style="visibility:hidden">⠿</span>' : `<span class="ag-grip" draggable="true" title="Arraste para mudar a ordem" aria-hidden="true" ondragstart="Agile.colDragStart(event, ${i})">⠿</span>`}<input class="input" style="flex:1 1 160px;min-width:120px" maxlength="30" value="${esc(c.label)}" aria-label="Nome da coluna ${i + 1}" oninput="Agile.setColLabel(${i}, this.value)">
         ${fixed ? '<span class="chip" title="Coluna fixa">fixa</span>' : `<label style="font-size:12px;color:var(--t2)">Limite <input class="input" type="number" min="0" max="99" value="${c.wip}" aria-label="Limite de itens na coluna ${esc(c.label)}" style="width:64px" oninput="Agile.setColWip(${i}, this.value)"></label>
         <button class="btn btn-sm" aria-label="Mover coluna ${esc(c.label)} para a esquerda" ${i <= 1 ? 'disabled' : ''} onclick="Agile.moveCol(${i}, -1)">◀</button><button class="btn btn-sm" aria-label="Mover coluna ${esc(c.label)} para a direita" ${i >= last - 1 ? 'disabled' : ''} onclick="Agile.moveCol(${i}, 1)">▶</button>
         <button class="btn btn-sm btn-red" aria-label="Remover coluna ${esc(c.label)}" onclick="Agile.removeCol(${i})"><i class="ti ti-trash"></i></button>`}</div>`;
     }).join('');
     document.getElementById('ab-add').disabled = d.columns.length >= 7;
+    renderLanesCfg();
     document.getElementById('ab-card').innerHTML = CARD_FIELDS.map(([k, l]) => `<label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" ${d.card[k] ? 'checked' : ''} onchange="Agile.setCardField('${k}', this.checked)"> ${l}</label>`).join('');
   }
+  // Raias: cada uma é um filtro por tipo, responsável e estimativa; a raia geral não precisa ser criada
+  function renderLanesCfg() {
+    const box = document.getElementById('ab-lanes'); if(!box) return;
+    const d = boardDraft, people = [...new Set([...(DB.get('team') || []).map(m => m.name), ...items.map(i => i.assignee)].map(x => String(x || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    box.innerHTML = (d.lanes.map((l, i) => `<div class="kb-lane-cfg"><div style="display:flex;gap:8px;align-items:center"><input class="input" style="flex:1" maxlength="40" value="${esc(l.name)}" aria-label="Nome da raia ${i + 1}" oninput="Agile.setLaneName(${i}, this.value)"><button class="btn btn-sm btn-red" aria-label="Remover a raia ${esc(l.name)}" onclick="Agile.removeLane(${i})"><i class="ti ti-trash"></i></button></div>
+      <div class="ln-row"><b>Tipo</b>${Object.keys(AgileCalc.KINDS).sort((a, b) => AgileCalc.KINDS[a].localeCompare(AgileCalc.KINDS[b], 'pt-BR')).map(k => `<label><input type="checkbox" ${l.kinds.includes(k) ? 'checked' : ''} onchange="Agile.toggleLane(${i}, 'kinds', '${k}', this.checked)"> ${esc(AgileCalc.KINDS[k])}</label>`).join('')}</div>
+      <div class="ln-row"><b>Responsável</b><label><input type="checkbox" ${l.assignees.includes(AgileCalc.NO_ASSIGNEE) ? 'checked' : ''} onchange="Agile.toggleLane(${i}, 'assignees', '${AgileCalc.NO_ASSIGNEE}', this.checked)"> Sem responsável</label>${people.map(p => `<label><input type="checkbox" ${l.assignees.some(a => a.toLowerCase() === p.toLowerCase()) ? 'checked' : ''} onchange="Agile.toggleLane(${i}, 'assignees', this.dataset.v, this.checked)" data-v="${esc(p)}"> ${esc(p)}</label>`).join('')}</div>
+      <div class="ln-row"><b>Estimativa</b><select class="input" style="width:auto" aria-label="Estimativa na raia ${esc(l.name)}" onchange="Agile.setLaneEstimate(${i}, this.value)"><option value=""${l.estimate === '' ? ' selected' : ''}>Qualquer</option><option value="com"${l.estimate === 'com' ? ' selected' : ''}>Só com pontos</option><option value="sem"${l.estimate === 'sem' ? ' selected' : ''}>Só sem pontos</option></select></div>
+      ${AgileCalc.laneEmpty(l) ? '<div class="set-sub" style="margin-top:6px">Sem nenhum filtro marcado esta raia não aparece (a raia geral já mostra tudo).</div>' : ''}</div>`).join('') || '<div class="set-sub" style="margin-bottom:8px">Nenhuma raia criada: o quadro mostra só a raia geral.</div>');
+    document.getElementById('ab-lane-add').disabled = d.lanes.length >= 6;
+  }
+  function addLane() { const d = boardDraft; if(d.lanes.length >= 6) return; const n = Math.max(0, ...d.lanes.map(l => /^r(\d+)$/.test(l.id) ? +l.id.slice(1) : 0)) + 1; d.lanes.push({ id: 'r' + n, name: 'Raia ' + (d.lanes.length + 1), kinds: [], assignees: [], estimate: '' }); renderLanesCfg(); }
+  const removeLane = i => { boardDraft.lanes.splice(i, 1); renderLanesCfg(); };
+  const setLaneName = (i, v) => { boardDraft.lanes[i].name = v; };
+  const setLaneEstimate = (i, v) => { boardDraft.lanes[i].estimate = v; renderLanesCfg(); };
+  function toggleLane(i, field, v, on) { const arr = boardDraft.lanes[i][field]; const k = arr.findIndex(x => String(x).toLowerCase() === String(v).toLowerCase()); if(on && k < 0) arr.push(v); if(!on && k >= 0) arr.splice(k, 1); renderLanesCfg(); }
   const setColLabel = (i, v) => { boardDraft.columns[i].label = v; };
   const setColWip = (i, v) => { boardDraft.columns[i].wip = Math.max(0, Math.min(99, parseInt(v, 10) || 0)); };
   const setCardField = (k, on) => { boardDraft.card[k] = !!on; };
@@ -12174,9 +12241,22 @@ const Agile = (() => {
     const n = Math.max(0, ...d.columns.map(c => /^x(\d+)$/.test(c.key) ? +c.key.slice(1) : 0)) + 1;
     d.columns.splice(d.columns.length - 1, 0, { key: 'x' + n, label: 'Nova coluna', wip: 0 }); renderBoardCfg();
   }
-  function removeCol(i) { boardDraft.columns.splice(i, 1); renderBoardCfg(); }
+  function removeCol(i) {
+    load(); const c = boardDraft.columns[i], n = items.filter(it => it.status === c.key).length, before = AgileCalc.cols(cfg), idx = before.findIndex(b => b.key === c.key);
+    if(n && !confirm('A coluna "' + c.label + '" tem ' + n + ' item(ns). Ao salvar, eles passam para "' + ((before[Math.max(0, idx - 1)] || {}).label || 'A fazer') + '". Remover mesmo assim?')) return;
+    boardDraft.columns.splice(i, 1); renderBoardCfg();
+  }
+  let colDragFrom = -1;
+  function colDragStart(e, i) { colDragFrom = i; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(i)); } catch(x) {} }
+  function colDragOver(e) { if(colDragFrom < 0) return; e.preventDefault(); e.currentTarget.classList.add('col-over'); }
+  function colDrop(e, to) {
+    e.preventDefault(); e.currentTarget.classList.remove('col-over');
+    const c = boardDraft.columns, from = colDragFrom; colDragFrom = -1;
+    if(from < 1 || from > c.length - 2 || to < 1 || to > c.length - 2 || from === to) return;
+    c.splice(to, 0, c.splice(from, 1)[0]); renderBoardCfg();
+  }
   function moveCol(i, dir) { const c = boardDraft.columns, j = i + dir; if(j < 1 || j > c.length - 2) return; [c[i], c[j]] = [c[j], c[i]]; renderBoardCfg(); }
-  function resetBoardCfg() { boardDraft = { columns: AgileCalc.COLS.map(c => ({ key: c.key, label: c.label, wip: Number((AgileCalc.DEFAULT_CFG.wip || {})[c.key]) || 0 })), card: { ...AgileCalc.DEFAULT_CARD } }; renderBoardCfg(); }
+  function resetBoardCfg() { const keepLanes = boardDraft ? boardDraft.lanes : []; boardDraft = { lanes: keepLanes, columns: AgileCalc.COLS.map(c => ({ key: c.key, label: c.label, wip: Number((AgileCalc.DEFAULT_CFG.wip || {})[c.key]) || 0 })), card: { ...AgileCalc.DEFAULT_CARD } }; renderBoardCfg(); }
   function closeBoardCfg() { document.getElementById('modal-agile-board').classList.add('hidden'); boardDraft = null; }
   function saveBoardCfg() {
     if(!Auth.guard('manage_backlog')) return;
@@ -12192,6 +12272,9 @@ const Agile = (() => {
     cfg = AgileCalc.cfgOf({ columns: after, wip, card: d.card, reservePct: cfg.reservePct, entry: document.getElementById('ab-entry').value });
     saveItems(); DB.set('agileConfig', cfg);
     if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'agileConfig', cfg);
+    const lanes = { lanes: AgileCalc.normLanes({ lanes: d.lanes }) };
+    DB.set('boardLanes', lanes);
+    if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'boardLanes', lanes);
     closeBoardCfg(); renderAll(); T.show('✅ Quadro personalizado.');
   }
 
@@ -12741,7 +12824,7 @@ const Agile = (() => {
   return { render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, rank, setSprintOf, setBacklogQuery, setShowDone,
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, renderDue, openDue, closeDue, dueChoose, runDue, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
-    aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, moveCol, setColLabel, setColWip, setCardField,
+    aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, toggleLane, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
     cfgNow: () => { load(); return cfg; }, kindChanged, kindPicked, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
 })();
 </script>
@@ -12871,7 +12954,7 @@ const Rites = (() => {
       <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm" onclick="R.go('kanban')"><i class="ti ti-layout-kanban"></i>Abrir o quadro</button></div></div>
       <div class="card"><div class="lbl"><i class="ti ti-alert-octagon"></i>Impedimentos<span class="help-q" data-help="Impedimento é tudo que trava o time e ele não resolve sozinho (uma decisão, um acesso, uma dependência). Registre aqui na reunião diária, dê um responsável e marque como resolvido quando acabar. Os abertos aparecem no Quadro." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
       <div class="rk-toolbar" data-perm="run_rites"><input class="input rk-q" id="rt-imp-title" maxlength="200" placeholder="O que está travando?" aria-label="Descrição do impedimento" onkeydown="if(event.key==='Enter'){Rites.addImp()}">
-        <input class="input" id="rt-imp-owner" list="rt-people" maxlength="80" placeholder="Quem resolve" aria-label="Responsável por resolver" style="max-width:200px"><datalist id="rt-people">${people.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+        <input class="input" id="rt-imp-owner" list="rt-people" autocomplete="off" maxlength="80" placeholder="Quem resolve" aria-label="Responsável por resolver" style="max-width:200px"><datalist id="rt-people">${people.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
         <button class="btn btn-sm btn-acc" onclick="Rites.addImp()"><i class="ti ti-plus"></i>Registrar</button></div>
       ${open.length ? open.map(i => `<div class="ag-row"><div class="ag-main"><div class="ag-title">${esc(i.title)}</div><div class="kb-meta" style="margin-top:3px"><span class="chip">${esc(i.id)}</span>${i.owner ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.owner)}</span>` : '<span class="chip c-wa">sem responsável</span>'}<span class="chip">aberto em ${fmt(i.createdOn)}</span></div></div>
         <span data-perm="run_rites" style="display:flex;gap:6px"><button class="btn btn-sm btn-grn" onclick="Rites.resolveImp('${esc(i.id)}')"><i class="ti ti-check"></i>Resolvido</button><button class="btn btn-sm" aria-label="Excluir ${esc(i.id)}" onclick="Rites.delImp('${esc(i.id)}')"><i class="ti ti-trash"></i></button></span></div>`).join('') : '<div class="rk-empty">Nenhum impedimento aberto. Se algo estiver travando alguém, registre aqui.</div>'}

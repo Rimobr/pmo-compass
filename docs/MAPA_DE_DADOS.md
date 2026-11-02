@@ -39,6 +39,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 |---|---|---|---|---|---|---|
 | `decisions` | Decisões e alertas gerados pela IA. | projeto | não | apaga | apaga | `id`, `severity`, `pct`, `title`, `body`, `sources`, `status`, `actions`, `created_at`, `resolved_at`, `project_id`, `origin` |
 | `board_decisions` | Decisões da diretoria sobre o projeto e o resultado depois. | projeto | não | apaga | apaga | `id`, `project_id`, `ai_suggestion`, `ai_reasoning`, `ai_generated_at`, `board_decision`, `board_comment`, `decided_by`, `decided_at`, `outcome_rating`, `outcome_comment`, `outcome_rated_at`, `updated_at` |
+| `user_notices` | Avisos na tela de cada pessoa (recados das automações do quadro e alertas de data); cada um lê só os seus. | projeto | sim | apaga | apaga | `id`, `project_id`, `user_id`, `title`, `detail`, `page`, `source`, `created_by`, `created_at`, `read_at` |
 
 ### Conhecimento
 
@@ -71,7 +72,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 | Tabela | Para que serve | Escopo | Dado pessoal | Apagar dados do projeto | Apagar toda a base | Campos |
 |---|---|---|---|---|---|---|
 | `project_snapshots` | Fotografias diárias da saúde do projeto (tendência). | projeto | não | apaga (só Administrador) | apaga | `id`, `project_id`, `captured_at`, `source`, `health_score`, `health_status`, `budget_bac`, `budget_ac`, `budget_ev`, `budget_cpi`, `budget_eac`, `budget_consumo_pct`, `priority_index`, `critical_decisions_pending`, `team_overallocated_count`, `dims`, `captured_by` |
-| `project_settings` | Configurações por projeto, uma linha por chave: `methodology` (método), `agileConfig` (quadro e entrada de itens), `workCalendar` (calendário de trabalho: feriados do projeto, exceções autorizadas pelo gerente com justificativa), priorização e perfil de PMO. | projeto | não | apaga | apaga | `project_id`, `key`, `value`, `updated_at`, `updated_by` |
+| `project_settings` | Configurações por projeto, uma linha por chave: `methodology` (método), `agileConfig` (quadro e entrada de itens), `boardLanes` (raias filtradas do quadro Kanban), `workCalendar` (calendário de trabalho: feriados do projeto, exceções autorizadas pelo gerente com justificativa), priorização e perfil de PMO. | projeto | não | apaga | apaga | `project_id`, `key`, `value`, `updated_at`, `updated_by` |
 | `projects` | Cadastro do projeto (nome, cliente, método, gerente responsável). | projeto | não | preserva | apaga | `id`, `name`, `client`, `icon`, `created_by`, `created_at`, `reference_date`, `area`, `methodology`, `manager_id` |
 | `project_access` | Quem pode abrir cada projeto. | projeto | não | preserva | apaga (cascata) | `project_id`, `user_id`, `granted_by`, `granted_at` |
 
