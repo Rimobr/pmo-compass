@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.47.1'
+  version: '2.47.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -3924,9 +3924,10 @@ const Auth = (() => {
     const configured = (typeof Cloud !== 'undefined') && Cloud.isConfigured();
     if(signedIn) {
       const email = (Cloud.getEmail && Cloud.getEmail()) || '';
-      badge.innerHTML = `<i class="ti ti-cloud-check" style="font-size:12px"></i> ${escapeHtml(email)}`;
+      const who = String(state.name || '').trim() || email; // mostra o nome da pessoa; o e-mail fica na dica
+      badge.innerHTML = `<i class="ti ti-cloud-check" style="font-size:12px"></i> ${escapeHtml(who)}`;
       badge.style.background = 'var(--gd)'; badge.style.color = 'var(--grn)';
-      badge.title = `Conectado como ${email} — clique para gerenciar sua conta`;
+      badge.title = `Conectado como ${who} (${email}) — clique para gerenciar sua conta`;
     } else if(configured) {
       badge.innerHTML = '<i class="ti ti-cloud" style="font-size:12px"></i>';
       badge.style.background = 'var(--amd)'; badge.style.color = 'var(--amb)';
