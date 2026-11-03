@@ -91,3 +91,16 @@ test('a tela: menu dentro de Indicadores, rota e módulos', () => {
   const i = html.indexOf('id="sbg-indicadores"');
   assert.ok(html.slice(i, i + 900).includes('data-p="myind"'));
 });
+
+test('total entre projetos: a função do banco e a tela (só o próprio usuário; anônimo barrado)', () => {
+  const mig = readFileSync(join(root, 'supabase', 'migrations', '20261103200000_my_workload.sql'), 'utf8');
+  for (const k of ['tm.user_id = auth.uid()', 'security definer set search_path = public', 'revoke all on function public.my_workload() from public, anon']) assert.ok(mig.includes(k), k);
+  for (const k of ["client.rpc('my_workload')", 'Total em todos os projetos', 'id="mi-proj-body"', 'function loadProjects']) assert.ok(html.includes(k), k);
+});
+test('links para telas fechadas ao perfil: o módulo esconde botões e desativa links, sem mexer em quem troca de projeto', () => {
+  for (const k of ['data-module="ui/profile-links"', "SKIP = /switchProject|doSignOut/", '.no-link{pointer-events:none', 'ProfileLinks.apply();']) assert.ok(html.includes(k), k);
+  const { ProfileLinks } = new Function(html.match(/<script data-module="ui\/profile-links">([\s\S]*?)<\/script>/)[1].replace("window.addEventListener('load', start);", '') + '\nreturn { ProfileLinks };')();
+  assert.equal(ProfileLinks.pageOf("R.go('ritos')"), 'ritos');
+  assert.equal(ProfileLinks.pageOf("DB.switchProject('x');R.go('dashboard')"), 'dashboard');
+  assert.equal(ProfileLinks.pageOf('alert(1)'), null);
+});

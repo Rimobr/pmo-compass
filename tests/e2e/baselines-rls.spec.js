@@ -1,4 +1,4 @@
-// Linha de base: o BANCO precisa garantir que ela é imutável e quem pode salvar/excluir. Dados de teste com prefixo "qa-bl-".
+// Linha de Base: o BANCO precisa garantir que ela é imutável e quem pode salvar/excluir. Dados de teste com prefixo "qa-bl-".
 const { test, expect } = require('@playwright/test');
 const { supabaseClientAs, requireEnv } = require('./fixtures');
 
@@ -7,7 +7,7 @@ const WITHOUT = () => requireEnv('TEST_PROJECT_WITHOUT_GRANT_ID');
 const id = 'qa-bl-' + Date.now().toString(36);
 const snap = { v: 1, wbs: [{ id: 'a', label: 'A', start: '2026-01-01', end: '2026-02-01', pct: 0, children: [] }], budget: [], approvedScope: [] };
 
-test.describe.serial('Linha de base — imutável, e com permissões por perfil', () => {
+test.describe.serial('Linha de Base — imutável, e com permissões por perfil', () => {
   test('consulta não consegue salvar linha de base', async () => {
     const c = await supabaseClientAs('consulta');
     const { error } = await c.from('baselines').insert({ project_id: WITH(), id: id + 'c', name: 'qa consulta', snapshot: snap });

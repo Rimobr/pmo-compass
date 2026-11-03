@@ -15,7 +15,7 @@ const PAGES = [
   { hash: '#baseline', name: 'Linha de Base' },
   { hash: '#pfkpi', name: 'Indicadores do Portfólio' },
   { hash: '#pmoview', name: 'Visão do PMO' },
-  { hash: '#statusmsg', name: 'Mensagem de status' },
+  { hash: '#statusmsg', name: 'Mensagem de Status' },
 ];
 
 test.describe('Acessibilidade WCAG 2.1 AA', () => {

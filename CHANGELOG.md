@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.50.0 — 2026-11-03
+- Meus Indicadores (em Indicadores): atrasadas, vencem nos proximos N dias, parado, velocidade de entrega, tempo ate concluir, horas, impedimentos e orientacao do dia; filtros; meus projetos
+
 ## 2.49.2 — 2026-11-03
 - Boas praticas: CI com lint, segredos, npm audit de producao, trava de versao e varredura de projeto vazio; ESLint nos erros graves (2 achados corrigidos); EditorConfig; CHANGELOG gerado do Git; npm run check:all
 

@@ -9,7 +9,7 @@ const html = readFileSync(join(root, 'PMO_Compass_v2.html'), 'utf8');
 
 test('fim da sprint: aviso nas telas da sprint e decisão com três caminhos (estender, transbordar, devolver)', () => {
   for (const k of ['const dueSprint = ', 'a.endOn <= todayIso()', 'id="modal-sprint-due"', 'value="ext"', 'value="carry"', 'value="back"', 'Estender por mais uma semana', 'Agile.openDue(', 'weekAfter']) assert.ok(html.includes(k), k);
-  assert.equal((html.match(/class="sprint-due-slot"/g) || []).length, 3, 'Kanban, Sprints e Sprint atual');
+  assert.equal((html.match(/class="sprint-due-slot"/g) || []).length, 3, 'Kanban, Sprints e Sprint Atual');
   assert.ok(html.includes('WorkCal.nextWorking(d)'), 'a nova data de fim respeita o calendário de trabalho');
 });
 

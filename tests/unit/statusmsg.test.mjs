@@ -1,4 +1,4 @@
-// Mensagem de status copiável (tela "Mensagem de status"): usa a MESMA lógica de fatos do servidor, copiada para o app por
+// Mensagem de Status copiável (tela "Mensagem de Status"): usa a MESMA lógica de fatos do servidor, copiada para o app por
 // scripts/sync-facts-client.mjs. Estes testes garantem que a cópia está em dia e que a mensagem respeita as regras de valores.
 import test from 'node:test';
 import assert from 'node:assert/strict';

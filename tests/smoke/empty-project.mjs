@@ -68,7 +68,7 @@ for (const id of pages.filter(p => !['settings', 'account', 'help', 'noproject']
 }
 ok(!semProjeto.length, 'sem projeto, toda tela de projeto leva ao convite "Nenhum projeto ainda"', semProjeto.join(' | '));
 const np = await pg.evaluate(() => ({ txt: document.getElementById('p-noproject').innerText, label: document.getElementById('proj-name') && document.getElementById('proj-name').textContent, areaHidden: getComputedStyle(document.querySelector('.sb-proj-area')).display === 'none' }));
-ok(/Nenhum projeto ainda/.test(np.txt) && /Criar o meu projeto/.test(np.txt), 'o convite oferece criar o primeiro projeto');
+ok(/Nenhum projeto ainda/.test(np.txt) && /Criar o Meu Projeto/.test(np.txt), 'o convite oferece criar o primeiro projeto');
 ok(np.label === 'Nenhum projeto' && np.areaHidden, 'o topo diz "Nenhum projeto" e o menu do projeto some');
 ok(!DEMO.test(np.txt), 'nenhum texto de demonstração');
 for (const id of ['settings', 'account', 'help']) { const on = await pg.evaluate(async id => { R.go(id); await new Promise(r => setTimeout(r, 150)); return document.getElementById('p-' + id).classList.contains('on'); }, id); ok(on, 'sem projeto, "' + id + '" continua abrindo'); }

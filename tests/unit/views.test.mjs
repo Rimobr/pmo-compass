@@ -26,7 +26,7 @@ test('o mapa de visões (docs) é o mesmo que o app usa', () => {
 test('Membro do time (Dev, QA): só o próprio trabalho — nada de diretoria, PMO, gestão, custos nem dados dos colegas', () => {
   const open = openPages('time');
   assert.deepEqual(open.sort(), ['account', 'backlog', 'help', 'hours', 'kanban', 'lessons', 'mywork', 'myind', 'noproject', 'raci', 'settings', 'sprintnow', 'wbs'].sort());
-  for (const p of ['sprints', 'ritos']) assert.ok(!open.includes(p), 'o time usa "Sprint atual"; ' + p + ' é de quem conduz');
+  for (const p of ['sprints', 'ritos']) assert.ok(!open.includes(p), 'o time usa "Sprint Atual"; ' + p + ' é de quem conduz');
   for (const p of ['board', 'execview', 'pmoview', 'pfkpi', 'portfolio', 'prioritization', 'dashboard', 'xray', 'decisions', 'risks', 'repository', 'chat', 'budget', 'burnout', 'resources', 'report', 'stakeholders']) assert.ok(!open.includes(p), 'time não deve abrir ' + p);
   assert.equal(AccessProfiles.homeFor(has('time')), 'mywork');
 });
@@ -62,11 +62,11 @@ test('risco de estourar o prazo: regra simples, com a explicação de cada conta
   assert.deepEqual(['ritmo', 'atrasada', 'entregue', 'estourando'].map(c => ({ code: c })).sort((a, b) => DeliveryRisk.rank(a) - DeliveryRisk.rank(b)).map(x => x.code), ['atrasada', 'estourando', 'ritmo', 'entregue']);
 });
 
-test('a conta tem uma única entrada (o avatar) e a página Minha conta existe', () => {
+test('a conta tem uma única entrada (o avatar) e a página Minha Conta existe', () => {
   assert.match(html, /id="tb-avatar"[^>]*onclick="Auth\.openAccount\(\)"/);
   assert.doesNotMatch(html, /id="tb-cloud-badge"[^>]*onclick/);
   assert.doesNotMatch(html, /id="tb-role-tag"[^>]*onclick/);
-  for (const k of ['id="p-account"', 'const Account = ', 'Alterar o meu cadastro', 'Retirar a autorização do WhatsApp']) assert.ok(html.includes(k), k);
+  for (const k of ['id="p-account"', 'const Account = ', 'Alterar o Meu Cadastro', 'Retirar a Autorização do WhatsApp']) assert.ok(html.includes(k), k);
 });
 
 test('o banco nega a leitura de gestão e de dados das pessoas a quem não tem a visão', () => {
@@ -90,20 +90,20 @@ test('incluir uma pessoa de execução no projeto cria o colaborador ligado à c
 
 test('base vazia de verdade: nenhum projeto de enchimento ("Meu projeto"); quem entra cria o primeiro', () => {
   assert.doesNotMatch(html, /name:'Meu projeto'/);
-  for (const k of ['isEmpty, NONE_ID', "DB.isEmpty() && !['settings', 'account', 'help', 'noproject'].includes(id)", 'Nenhum projeto ainda', 'Criar o meu projeto', 'body.no-project .sb-proj-area', "setItem(PROJECTS_KEY, '[]')"]) assert.ok(html.includes(k), k);
+  for (const k of ['isEmpty, NONE_ID', "DB.isEmpty() && !['settings', 'account', 'help', 'noproject'].includes(id)", 'Nenhum projeto ainda', 'Criar o Meu Projeto', 'body.no-project .sb-proj-area', "setItem(PROJECTS_KEY, '[]')"]) assert.ok(html.includes(k), k);
   assert.ok(html.includes('if(!Array.isArray(cloudList)) return;'), 'a nuvem manda, inclusive lista vazia (sem exigir ao menos um projeto)');
   assert.ok(!html.includes('!cloudList.length) return;'));
 });
 
-test('Sprint atual: a visão do time (meta, andamento, impedimentos, ações da retro) no lugar de Sprints e Ritos', () => {
-  for (const k of ['id="p-sprintnow"', 'const SprintNow = ', 'O que está travando', 'Ações combinadas na retrospectiva', 'data-p="sprintnow"', "sprints: 'manage_backlog', ritos: 'run_rites'"]) assert.ok(html.includes(k), k);
+test('Sprint Atual: a visão do time (meta, andamento, impedimentos, ações da retro) no lugar de Sprints e Ritos', () => {
+  for (const k of ['id="p-sprintnow"', 'const SprintNow = ', 'O Que Está Travando', 'Ações Combinadas na Retrospectiva', 'data-p="sprintnow"', "sprints: 'manage_backlog', ritos: 'run_rites'"]) assert.ok(html.includes(k), k);
 });
 
 test('"Ver como": só o Administrador, só na memória, sem gravar e sem permitir alterações', () => {
-  for (const k of ['id="tb-viewas"', 'function setPreview', 'if(previewRole) return; /* a visualização nunca é gravada */', 'Você está só visualizando', 'Voltar ao meu perfil', 'actor_role: (typeof Auth !== \'undefined\') ? Auth.realRole()']) assert.ok(html.includes(k), k);
+  for (const k of ['id="tb-viewas"', 'function setPreview', 'if(previewRole) return; /* a visualização nunca é gravada */', 'Você está só visualizando', 'Voltar ao Meu Perfil', 'actor_role: (typeof Auth !== \'undefined\') ? Auth.realRole()']) assert.ok(html.includes(k), k);
   assert.match(html, /function setPreview\(roleId\) \{\s*if\(realRole\(\) !== 'admin'\) return;/);
 });
 
-test('a Minha conta espera o login terminar e acompanha a mudança de estado', () => {
+test('a Minha Conta espera o login terminar e acompanha a mudança de estado', () => {
   for (const k of ['Confirmando a sua conta', 'isPending: () => pendingCloudConfirm', "if(typeof Account !== 'undefined') Account.render();\n  WBS.render();".replace(/\n/g, '\r\n')]) assert.ok(html.includes(k) || html.includes(k.replace(/\r\n/g, '\n')), k);
 });

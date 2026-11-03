@@ -193,7 +193,7 @@ test('Dimensão sem dado fica fora da média (os pesos se reajustam entre as que
 });
 
 // ── services/forecast → Forecast.analyze() ──────────────────────────────────
-section('Tendência e previsão — Forecast.analyze() (services/forecast)');
+section('Tendência e Previsão — Forecast.analyze() (services/forecast)');
 const Forecast = loadModule('services/forecast', 'Forecast');
 
 test('Menos de 2 pontos → "enough" é false, nunca inventa tendência', () => {

@@ -21,7 +21,7 @@ test('toda tabela do banco está no mapa (e o mapa não cita tabela que não exi
   for (const [n, m] of Object.entries(MAP.tables)) for (const k of ['domain', 'desc', 'scope', 'clearProject', 'resetAll']) assert.ok(m[k] !== undefined && m[k] !== '', `${n}.${k}`);
 });
 
-test('"Apagar dados do projeto" apaga exatamente as tabelas que o mapa marca, e todas filtram por project_id', () => {
+test('"Apagar Dados do projeto" apaga exatamente as tabelas que o mapa marca, e todas filtram por project_id', () => {
   const lists = [...PROJECT, ...EXTRA].sort();
   const marked = Object.entries(MAP.tables).filter(([, m]) => m.clearProject.startsWith('apaga')).map(([n]) => n).sort();
   assert.deepEqual(lists, marked, 'listas de limpeza x mapa');
@@ -46,7 +46,7 @@ test('toda chave do navegador (pmo_…) usada pelo app está no mapa, e vice-ver
   assert.deepEqual([...mapped].filter(k => !used.has(k)), [], 'chaves do mapa que o app não usa mais');
 });
 
-test('o que o mapa diz que "Sair da conta" apaga é exatamente o que a regra apaga', () => {
+test('o que o mapa diz que "Sair da Conta" apaga é exatamente o que a regra apaga', () => {
   const m = html.match(/const KEEP_ON_WIPE = [^\n]*\n\s*function localKeysToWipe\(keys, keepAuth\) \{[\s\S]*?\n  \}/);
   const localKeysToWipe = new Function(m[0] + '\nreturn localKeysToWipe;')();
   const keys = Object.keys(MAP.localKeys);

@@ -38,7 +38,7 @@ test('a gestão move o cartão de outra pessoa informando o motivo (caso excepci
   for (const k of ['function confirmBehalf', 'id="modal-agile-behalf"', 'Movido pela gestão em nome de', 'Agile.setPolicyBehalf(']) assert.ok(html.includes(k), k);
 });
 test('a tela: sem permissão não há clique, arrasto nem seta; o time abre o cartão em modo atividade', () => {
-  for (const k of ["const act = Auth.can('update_own')", 'canTouch(i, prev, true)', 'function applyItemMode', 'async function saveWork', 'id="ai-note"', 'id="ai-evid"', 'id="ab-move"', "'teamPolicy', pol", "DB.get('teamPolicy')", 'Autonomia do time']) assert.ok(html.includes(k), k);
+  for (const k of ["const act = Auth.can('update_own')", 'canTouch(i, prev, true)', 'function applyItemMode', 'async function saveWork', 'id="ai-note"', 'id="ai-evid"', 'id="ab-move"', "'teamPolicy', pol", "DB.get('teamPolicy')", 'Autonomia do Time']) assert.ok(html.includes(k), k);
   assert.ok(html.includes('max-height:92vh;overflow-y:auto" role="dialog" aria-modal="true" aria-labelledby="ai-title-h"'), 'a janela do cartão rola');
   assert.ok(/Sair \/ Trocar Usuário/.test(html));
 });
@@ -70,7 +70,7 @@ test('regra de passagem: sair da coluna exige todas as tarefas concluídas; sem 
   assert.deepEqual(P({ template: [' Executar  testes ', '', 'Anexar evidências'] }).template, ['Executar testes', 'Anexar evidências']);
 });
 test('a tela e o servidor das tarefas do cartão', () => {
-  for (const k of ['id="ai-check"', 'function applyChecklist', 'function guardMove', 'Agile.checkToggle(', 'Agile.addGate()', 'Tarefas padrão dos cartões novos', 'checklist:Array.isArray(x.checklist)', 'Mover com Tarefas Pendentes']) assert.ok(html.includes(k), k);
+  for (const k of ['id="ai-check"', 'function applyChecklist', 'function guardMove', 'Agile.checkToggle(', 'Agile.addGate()', 'Tarefas Padrão dos Cartões Novos', 'checklist:Array.isArray(x.checklist)', 'Mover com Tarefas Pendentes']) assert.ok(html.includes(k), k);
   const m2 = readFileSync(join(root, 'supabase/migrations', readdirSync(join(root, 'supabase/migrations')).find(f => f.includes('card_checklist'))), 'utf8');
   for (const k of ['add column if not exists checklist', "pol->'gates'", 'Conclua todas as tarefas do cartão', 'backlog_items_member_guard']) assert.ok(m2.includes(k), k);
 });

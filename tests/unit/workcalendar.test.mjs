@@ -60,7 +60,7 @@ test('próximo e anterior dia útil, e contagem de dias úteis (capacidade da sp
 });
 
 test('travas aplicadas onde as datas são atribuídas, e só o gerente autoriza exceção', () => {
-  for (const k of ["WorkCal.ensureAll([start, end], 'O início e o fim da sprint')", "WorkCal.ensureAll([start, end], 'O início e o fim planejados')", "WorkCal.ensure(value, 'A data planejada')", 'ctx.offReason', 'id="wc-card"', 'Calendário de trabalho', 'AgileCalc.setOffDay']) assert.ok(html.includes(k), k);
+  for (const k of ["WorkCal.ensureAll([start, end], 'O início e o fim da sprint')", "WorkCal.ensureAll([start, end], 'O início e o fim planejados')", "WorkCal.ensure(value, 'A data planejada')", 'ctx.offReason', 'id="wc-card"', 'Calendário de Trabalho', 'AgileCalc.setOffDay']) assert.ok(html.includes(k), k);
   assert.ok(m[1].includes("Auth.can('edit_plan')") && m[1].includes('Justificativa curta demais'), 'exceção: só edit_plan e com justificativa de 10 letras');
   assert.ok(m[1].includes("calendar_exception"), 'a exceção vai para a auditoria');
 });

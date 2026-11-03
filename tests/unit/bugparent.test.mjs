@@ -41,7 +41,7 @@ test('importação: bug sem item pai é recusado; com pai existente ou da própr
 test('o banco aplica a mesma regra e o app mostra o bug como filho', () => {
   const sql = readFileSync(join(root, 'supabase', 'migrations', '20261101170000_bug_parent.sql'), 'utf8');
   for (const k of ['guard_bug_parent', 'Todo bug precisa estar ligado', 'filho de outro bug', "old.kind = 'bug' and new.parent_id is not distinct from old.parent_id"]) assert.ok(sql.includes(k), k);
-  for (const k of ['Agile.openBugFor', 'ai-parent', 'parent_id:(x.kind', 'Abrir um bug neste item']) assert.ok(html.includes(k), k);
+  for (const k of ['Agile.openBugFor', 'ai-parent', 'parent_id:(x.kind', 'Abrir um Bug Neste Item']) assert.ok(html.includes(k), k);
 });
 
 test('sprints: história do que foi entregue e devolvido, e troca de sprint sem engessar', () => {
@@ -55,7 +55,7 @@ test('como os itens entram no quadro: Scrum por padrão, Kanban contínuo só qu
   assert.equal(AgileCalc.cfgOf({}).entry, 'scrum');
   assert.equal(AgileCalc.cfgOf({ entry: 'kanban' }).entry, 'kanban');
   assert.equal(AgileCalc.cfgOf({ entry: 'qualquer' }).entry, 'scrum');
-  for (const k of ['ab-entry', 'Item urgente na sprint', 'mudança de escopo', 'Ir ao Backlog', 'si-signout', 'Sair / Trocar Usuário']) assert.ok(html.includes(k), k);
+  for (const k of ['ab-entry', 'Item Urgente na Sprint', 'mudança de escopo', 'Ir ao Backlog', 'si-signout', 'Sair / Trocar Usuário']) assert.ok(html.includes(k), k);
 });
 
 test('relatar um bug: exige a entrega pai, monta a descrição estruturada e respeita o limite do banco', () => {
@@ -74,5 +74,5 @@ test('relatar um bug: exige a entrega pai, monta a descrição estruturada e res
   assert.match(BugReport.buildDescription({ ...ok, expected: '' }), /\(não informado\)/);
   const sql = readFileSync(join(root, 'supabase', 'migrations', '20261101190000_item_attachments.sql'), 'utf8');
   for (const k of ['attachments jsonb', "'item-files'", 'has_project_access', 'drop table if exists public.bug_reports']) assert.ok(sql.includes(k), k);
-  for (const k of ['Agile.createBug', 'Cloud.uploadItemFile', 'Relatar um bug']) assert.ok(html.includes(k), k);
+  for (const k of ['Agile.createBug', 'Cloud.uploadItemFile', 'Relatar um Bug']) assert.ok(html.includes(k), k);
 });
