@@ -34,6 +34,8 @@ jobs:
       - name: Aplicar migrações
         if: inputs.apply_migrations
         run: node scripts/db-apply.mjs
+      - name: Conferir o endurecimento do banco (RLS, search_path, acesso anônimo)
+        run: node scripts/check-db-hardening.mjs
       - name: Publicar funções
         if: inputs.deploy_functions
         run: node scripts/deploy-functions.mjs

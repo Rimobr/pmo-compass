@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.46.0'
+  version: '2.46.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -15101,7 +15101,7 @@ const Hours = (() => {
   // Com a nuvem, quem não vê as horas dos outros também vê o total do projeto (o servidor soma)
   async function loadSummary(force) {
     if(sumBusy) return sumCache;
-    if(!force && sumCache && Date.now() - sumCache.at < 30000 && sumCache.pid === DB.getActiveProjectId()) return sumCache;
+    if(!force && sumCache && Date.now() - sumCache.at < 8000 && sumCache.pid === DB.getActiveProjectId()) return sumCache;
     sumBusy = true;
     try {
       let data = null;
@@ -15119,14 +15119,14 @@ const Hours = (() => {
   }
   async function renderBudget() {
     const box = document.getElementById('hr-budget'); if(!box) return;
-    const c = await loadSummary(), r = rules();
-    if(!r.budget.on) { box.innerHTML = isMgr() ? '<div class="set-sub"><i class="ti ti-info-circle"></i> Defina o orçamento de horas do projeto em <b>Regras de lançamento</b> para acompanhar o consumo e receber os alertas.</div>' : ''; box.style.display = isMgr() ? '' : 'none'; return; }
+    const c = await loadSummary(true), r = rules();
+    if(!r.budget.on) { box.innerHTML = isMgr() ? '<div class="set-sub"><i class="ti ti-info-circle"></i> O orçamento de horas ainda não foi definido: sem ele não há medidor nem alertas de consumo. <button class="btn btn-sm" style="margin-left:6px" onclick="Hours.focusBudget()"><i class="ti ti-gauge"></i>Definir agora</button></div>' : ''; box.style.display = isMgr() ? '' : 'none'; return; }
     box.style.display = ''; box.innerHTML = meterHtml(budgetOf(c.data), c.data);
   }
   // Grupo "Horas do projeto" nos indicadores do Dashboard
   async function renderDash() {
     const body = document.getElementById('dash-hours-body'), stEl = document.getElementById('dash-hours-status'); if(!body) return;
-    const c = await loadSummary(), d = c.data, r = rules(), st = budgetOf(d), lv = LEVEL[st.level || 'none'];
+    const c = await loadSummary(true), d = c.data, r = rules(), st = budgetOf(d), lv = LEVEL[st.level || 'none'];
     if(stEl) stEl.innerHTML = `<span class="sdot ${lv[1]}"></span>${lv[0]}`;
     const weekly = d.last28 / 4, k = (dot, lbl, val, sub) => `<div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver as horas do projeto" onclick="R.go('hours')" onkeydown="R.goKey(event,'hours')"><div class="kpi-lbl"><span class="sdot ${dot}"></span>${lbl}</div><div class="kpi-val">${val}</div><div class="kpi-delta c-ne">${sub}</div></div>`;
     let end = '—', endSub = 'sem horas nas últimas 4 semanas';
@@ -15177,7 +15177,8 @@ const Hours = (() => {
       Cloud.pushRow('time_entries', e);
       (byPerson[e.person] = byPerson[e.person] || []).push(e);
     });
-    persist(); apprSel.clear();
+    persist(); apprSel.clear(); sumCache = null;
+    setTimeout(() => { sumCache = null; renderBudget(); renderDash(); }, 1500);
     if(typeof Trail !== 'undefined') Trail.log('Horas ' + ({ aprovado: 'aprovadas', reprovado: 'reprovadas', ajuste: 'com ajuste pedido' }[status]) + ': ' + Msg.n(picked.length, 'apontamento') + (note && status !== 'aprovado' ? ' — ' + note : ''), by, '', status === 'aprovado' ? 'b-grn' : 'b-amb');
     const wording = {
       aprovado: { title: 'Suas horas foram aprovadas', does: 'aprovou', tail: '', done: 'aprovado' },
