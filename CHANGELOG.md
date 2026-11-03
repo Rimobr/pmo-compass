@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.53.0 — 2026-11-03
+- Bussola de Negocios: botao na barra superior para os perfis escolhidos (permissao ask_compass); pergunta sobre todos os projetos (maior desvio com sugestoes para retomar, horas por pessoa, atrasos, riscos, decisoes, sobrecarga, orcamento); numeros vindos do banco com perfil respeitado; perguntas livres pela IA do usuario
+
 ## 2.52.0 — 2026-11-03
 - Maiusculas nos rotulos de botoes, menus e titulos; botoes e links para telas fechadas ao perfil somem; Meus Indicadores com o total entre projetos (funcao my_workload no banco)
 

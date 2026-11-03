@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.53.0'
+  version: '2.53.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -7519,11 +7519,14 @@ const Store = (() => {
     inp.setAttribute('placeholder', saved ? '••••••••••••••••••••  ✓ chave salva — cole outra para trocar' : inp.dataset.ph);
     inp.setAttribute('aria-label', (inp.dataset.lbl = inp.dataset.lbl || inp.getAttribute('aria-label') || '') + (saved ? ' — já há uma chave salva' : ''));
   }
+  // Logado: descobre quais chaves existem no servidor antes de escolher o provedor (a IA pode ser usada sem nunca abrir Configurações)
+  async function ensureKeys() { if(typeof Cloud !== 'undefined' && Cloud.isSignedIn() && !cloudKeys) await refreshCloudStatus(); }
   async function refreshCloudStatus() {
     if(typeof Cloud === 'undefined') return;
     const has = await Cloud.getAiKeyStatus();
     if(!has) return;
     cloudKeys = has;
+    reflectProvider();
     if(typeof Onboarding !== 'undefined' && Onboarding.refresh) Onboarding.refresh();
     PROVIDERS.forEach(p => {
       const statusEl = document.getElementById('prov-status-'+p);
@@ -7544,14 +7547,21 @@ const Store = (() => {
 
     if(typeof Cloud !== 'undefined' && Cloud.isSignedIn()) {
       const ok = await Cloud.saveAiKey(provider, value);
-      if(ok) { inp.value = ''; T.show('✅ Chave de ' + PROVIDER_LABEL[provider] + ' salva na sua conta.'); refreshCloudStatus(); }
+      if(ok) {
+        inp.value = ''; T.show('✅ Chave de ' + PROVIDER_LABEL[provider] + ' salva na sua conta.');
+        const eraAtivo = hasKeyOf(effective()); cloudKeys = { ...(cloudKeys || {}), [provider]: true };
+        if(!eraAtivo) { state.aiProvider = provider; save(); } // a primeira chave salva já vira o provedor ativo
+        reflectProvider(); refreshCloudStatus();
+      }
       return;
     }
 
     if(!state.apiKeys) state.apiKeys = { anthropic:'', openai:'', google:'' };
+    const eraAtivo = hasKeyOf(effective());
     state.apiKeys[provider] = value;
     if(provider === 'anthropic') state.apiKey = state.apiKeys.anthropic; // mantém compatibilidade retroativa
-    save();
+    if(!eraAtivo) state.aiProvider = provider; // a primeira chave salva já vira o provedor ativo
+    save(); reflectProvider();
     T.show('✅ Chave de ' + PROVIDER_LABEL[provider] + ' salva no navegador');
   }
 
@@ -7576,6 +7586,7 @@ const Store = (() => {
   function setProvider(provider) {
     if(!Auth.guard('settings')) return;
     if(!PROVIDERS.includes(provider)) return;
+    if(!hasKeyOrCloud(provider)) { T.show('⚠️ Salve a chave de ' + PROVIDER_LABEL[provider] + ' antes de torná-lo o provedor ativo.'); return; }
     state.aiProvider = provider;
     save();
     reflectProvider();
@@ -7583,22 +7594,30 @@ const Store = (() => {
   }
 
   function reflectProvider() {
+    const act = effective();
     PROVIDERS.forEach(p => {
       const radio = document.querySelector('#prov-'+p+' .prov-radio');
       const badge = document.getElementById('prov-badge-'+p);
-      if(radio) { radio.classList.toggle('sel', state.aiProvider===p); radio.setAttribute('aria-checked', state.aiProvider===p ? 'true' : 'false'); }
-      if(badge) badge.style.display = state.aiProvider===p ? 'inline-flex' : 'none';
+      if(radio) { radio.classList.toggle('sel', act===p); radio.setAttribute('aria-checked', act===p ? 'true' : 'false'); }
+      if(badge) badge.style.display = act===p ? 'inline-flex' : 'none';
     });
   }
 
+  // O provedor que de fato roda: o escolhido, se tem chave; senão o primeiro que tem chave (assim a tela e a chamada dizem a mesma coisa)
+  const hasKeyOf = p => (typeof Cloud !== 'undefined' && Cloud.isSignedIn()) ? !!(cloudKeys && cloudKeys[p]) : !!((state.apiKeys && state.apiKeys[p]) || (p === 'anthropic' && state.apiKey));
+  function effective() {
+    const chosen = PROVIDERS.includes(state.aiProvider) ? state.aiProvider : 'anthropic';
+    if(typeof Cloud !== 'undefined' && Cloud.isSignedIn() && !cloudKeys) return chosen; // o servidor ainda não disse quais chaves existem
+    return hasKeyOf(chosen) ? chosen : (PROVIDERS.find(hasKeyOf) || chosen);
+  }
   function getKey(provider) {
-    provider = provider || state.aiProvider || 'anthropic';
+    provider = provider || effective();
     if(state.apiKeys && state.apiKeys[provider]) return state.apiKeys[provider];
     if(provider === 'anthropic' && state.apiKey) return state.apiKey;
     return '';
   }
 
-  function getProvider() { return state.aiProvider || 'anthropic'; }
+  function getProvider() { return effective(); }
   function providerLabel(p) { return PROVIDER_LABEL[p || getProvider()] || p; }
 
   // Usado nas telas que só querem saber "dá pra chamar a IA agora?" antes de tentar — logado
@@ -7625,7 +7644,7 @@ const Store = (() => {
     state = { apiKey:'', aiProvider:'anthropic', apiKeys:{ anthropic:'', openai:'', google:'' } };
     T.show('Dados locais removidos.');
   }
-  return { load, saveKey, removeKey, getKey, hasKeyOrCloud, aiReady, getProvider, setProvider, providerLabel, clear, reflectCloudMode, get: () => state };
+  return { load, ensureKeys, saveKey, removeKey, getKey, hasKeyOrCloud, aiReady, getProvider, setProvider, providerLabel, clear, reflectCloudMode, get: () => state };
 })();
 </script>
 
@@ -8933,6 +8952,7 @@ Regras obrigatórias:
     return res;
   }
   async function sendInner(messages, opts) {
+    await Store.ensureKeys();
     const provider = (opts && opts.provider) || Store.getProvider();
     const cfg = CONFIG[provider] || CONFIG.anthropic;
 
