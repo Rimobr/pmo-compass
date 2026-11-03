@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.42.1'
+  version: '2.42.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -12850,7 +12850,10 @@ const Agile = (() => {
     document.getElementById('ai-points').value = it ? it.points : '';
     document.getElementById('ai-assignee').value = it ? it.assignee : '';
     document.getElementById('ai-desc').value = it ? it.description : '';
-    document.getElementById('ai-status').value = it ? it.status : 'todo';
+    // a lista de Situação é a do quadro (inclui as colunas criadas em Personalizar quadro); item numa coluna que não existe mais mostra a primeira
+    const stCols = AgileCalc.cols(cfg), stSel = document.getElementById('ai-status');
+    stSel.innerHTML = stCols.map(c => '<option value="' + esc(c.key) + '">' + esc(c.label) + '</option>').join('');
+    stSel.value = it && stCols.some(c => c.key === it.status) ? it.status : stCols[0].key;
     document.getElementById('ai-status-grp').style.display = it ? '' : 'none';
     document.getElementById('ai-del').style.display = it ? '' : 'none';
     document.getElementById('ai-people').innerHTML = [...new Set((DB.get('team') || []).map(m => m.name).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(n => `<option value="${esc(n)}">`).join('');
@@ -12933,7 +12936,7 @@ const Agile = (() => {
     const bad = AgileCalc.bugParentError({ ...f, id: itemCtx || '' }, items);
     if(bad) { T.show('⚠️ ' + bad); document.getElementById('ai-parent').focus(); return; }
     const was = it ? { status: it.status, assignee: it.assignee || '' } : null;
-    if(it) { Object.assign(it, f); AgileCalc.moveTo(it, val('ai-status'), todayIso()); }
+    if(it) { Object.assign(it, f); AgileCalc.moveTo(it, val('ai-status') || it.status, todayIso()); }
     else { it = { id: AgileCalc.nextId('US', items), status: 'todo', rank: (Math.max(0, ...items.map(x => x.rank || 0)) + 1), createdOn: todayIso(), doneOn: '', ...f }; items.push(it); }
     saveItems(); pushItem(it);
     if(!was) { fireRules({ type: 'created' }, it); if(it.assignee) fireRules({ type: 'assigned' }, it); }
