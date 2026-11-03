@@ -34,6 +34,7 @@ test('a gestão nunca é limitada; perfil sem a permissão não move', () => {
 });
 test('a tela: sem permissão não há clique, arrasto nem seta; o time abre o cartão em modo atividade', () => {
   for (const k of ["const act = Auth.can('update_own')", 'canTouch(i, prev, true)', 'function applyItemMode', 'async function saveWork', 'id="ai-note"', 'id="ai-evid"', 'id="ab-move"', "'teamPolicy', pol", "DB.get('teamPolicy')", 'Autonomia do time']) assert.ok(html.includes(k), k);
+  assert.ok(html.includes('max-height:92vh;overflow-y:auto" role="dialog" aria-modal="true" aria-labelledby="ai-title-h"'), 'a janela do cartão rola');
   assert.ok(/Sair \/ Trocar Usuário/.test(html));
 });
 test('o servidor impõe a mesma política (inserção que já existe, colunas travadas, anexos)', () => {

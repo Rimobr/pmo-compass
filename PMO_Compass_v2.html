@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.47.0'
+  version: '2.47.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2178,7 +2178,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
 </section>
 
 <div class="modal-ov hidden" id="modal-agile-item" onclick="if(event.target===this)Agile.closeItem()">
-  <div class="modal-box" style="width:520px;max-width:96vw" role="dialog" aria-modal="true" aria-labelledby="ai-title-h">
+  <div class="modal-box" style="width:560px;max-width:96vw;max-height:92vh;overflow-y:auto" role="dialog" aria-modal="true" aria-labelledby="ai-title-h">
     <div class="modal-title" id="ai-title-h">Novo item</div>
     <div class="field-group"><div class="field-label"><label for="ai-title">Título</label></div><input class="input" id="ai-title" maxlength="200" placeholder="Ex: Como cliente, quero consultar meu extrato"></div>
     <div class="field-group" id="ai-parent-grp" style="display:none"><div class="field-label"><label for="ai-parent">Item (entrega) em que o bug foi encontrado — obrigatório</label></div><select class="input" id="ai-parent"></select></div>
@@ -2193,8 +2193,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div class="field-group" id="ai-status-grp"><div class="field-label"><label for="ai-status">Situação</label></div><select class="input" id="ai-status"><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="review">Em revisão</option><option value="done">Concluído</option></select></div>
     <div class="field-group"><div class="field-label"><label for="ai-desc">Descrição e critérios de aceite</label></div><textarea class="input" id="ai-desc" rows="3" maxlength="2000" style="resize:vertical;font-family:inherit"></textarea></div>
     <div id="ai-work" style="display:none;margin-top:10px">
+      <div class="g2" style="gap:10px;align-items:start">
       <div class="field-group"><div class="field-label"><label for="ai-note">Comentário da atividade</label><span class="help-q" data-help="O que foi feito e o resultado (ex.: testei os 3 cenários, tudo aprovado). Fica no histórico do cartão com o seu nome e a data. Algumas colunas exigem o comentário para entrar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><textarea class="input" id="ai-note" rows="2" maxlength="500" placeholder="Ex.: Testei os 3 cenários; evidências anexadas. Aprovado." style="resize:vertical;font-family:inherit"></textarea></div>
       <div class="field-group"><div class="field-label"><label for="ai-evid">Evidências (prints, PDF, planilha; até 5 MB cada)</label></div><input class="input" id="ai-evid" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/csv,.xlsx"></div>
+      </div>
       <div class="set-sub" id="ai-work-hint"></div>
     </div>
     <div id="ai-children" style="display:none;margin-top:10px"></div>
