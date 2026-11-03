@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const html = readFileSync(join(root, 'PMO_Compass_v2.html'), 'utf8');
 // as permissões nascem na migração dos perfis e ganham novas chaves em migrações seguintes
-const sql = ['20261023101500_access_profiles.sql', '20261102100000_view_permissions.sql'].map(f => readFileSync(join(root, 'supabase', 'migrations', f), 'utf8')).join(' ');
+const sql = ['20261023101500_access_profiles.sql', '20261102100000_view_permissions.sql', '20261103210000_compass.sql'].map(f => readFileSync(join(root, 'supabase', 'migrations', f), 'utf8')).join(' ');
 const m = html.match(/<script data-module="services\/access-profiles">([\s\S]*?)<\/script>/);
 const { AccessProfiles } = new Function(`${m[1]}\nreturn { AccessProfiles };`)();
 

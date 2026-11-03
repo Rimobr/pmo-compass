@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.52.0 — 2026-11-03
+- Maiusculas nos rotulos de botoes, menus e titulos; botoes e links para telas fechadas ao perfil somem; Meus Indicadores com o total entre projetos (funcao my_workload no banco)
+
 ## 2.50.0 — 2026-11-03
 - Meus Indicadores (em Indicadores): atrasadas, vencem nos proximos N dias, parado, velocidade de entrega, tempo ate concluir, horas, impedimentos e orientacao do dia; filtros; meus projetos
 
