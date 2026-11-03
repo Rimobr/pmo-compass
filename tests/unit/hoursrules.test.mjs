@@ -72,3 +72,8 @@ test('cada um lança as próprias horas; o gerente só por outra pessoa com just
   const sql = readFileSync(join(root, 'supabase/migrations/20261103110000_hours_self.sql'), 'utf8');
   for (const k of ['Você só lança horas para você mesmo', 'exige a justificativa (mínimo 10 letras)', 'new.posted_by := coalesce(myname', 'add column if not exists behalf_reason']) assert.ok(sql.includes(k), k);
 });
+
+test('ler os bugs com uma IA está explícito na tela de Configurações e na Ajuda, com comando e instrução prontos', () => {
+  for (const k of ['id="bugs-ai-card"', 'Ler os bugs com uma IA (para corrigir outro sistema)', 'node scripts/read-bugs.mjs', "BugsAi.render()", 'Bugs e IA que corrige outro sistema', 'SettingsTabs.show(\'ia\')']) assert.ok(html.includes(k), k);
+  assert.ok(readFileSync(join(root, 'scripts/read-bugs.mjs'), 'utf8').includes('somente leitura') || readFileSync(join(root, 'scripts/read-bugs.mjs'), 'utf8').includes('só LEITURA'));
+});

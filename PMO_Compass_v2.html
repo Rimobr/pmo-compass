@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.44.0'
+  version: '2.44.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1640,6 +1640,19 @@ body.icons-failed i[data-fb]::before{
     <div class="set-row"><div><div class="set-lbl">Detecção de riscos em novos documentos</div><div class="set-sub">O Raio-X do Projeto inclui os riscos futuros que a IA identificar no documento</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Detecção de riscos em novos documentos" data-pref="autoRiskDetection" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
     <div class="set-row"><div><div class="set-lbl">Comparação com projetos históricos</div><div class="set-sub">Lições Aprendidas entram no contexto enviado à IA (Chat e Decisões)</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Comparação com projetos históricos" data-pref="useHistoricalContext" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
     <div class="set-row"><div><div class="set-lbl">Burnout Radar automático</div><div class="set-sub">Mostra no Dashboard quando algum colaborador atinge 80%+ de carga</div></div><div class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Burnout Radar automático" data-pref="autoBurnoutRadar" onclick="ToggleSwitch.flip(this)" onkeydown="ToggleSwitch.key(event,this)"></div></div>
+  </div>
+  <div class="card" data-sec="ler-bugs" data-tint="2" id="bugs-ai-card">
+    <div class="lbl"><i class="ti ti-bug"></i>Ler os bugs com uma IA (para corrigir outro sistema)<span class="help-q" data-help="Os relatos dos bugs (passo a passo, o que se esperava, o que aconteceu) e os prints anexados podem ser entregues a uma IA, como o Claude Code, que lê, reproduz e corrige o sistema testado. O PMO Compass só fornece a lista, em modo leitura." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin:0 0 10px"><b>É possível, e é só leitura.</b> Cada bug registrado no Backlog (com o passo a passo e as evidências anexadas) vira uma pasta que a IA do <b>outro sistema</b> lê direto. Assim quem testa registra aqui, e quem corrige não precisa copiar nada à mão. O projeto aberto agora é <b id="bugs-ai-proj">—</b>.</p>
+    <ol style="font-size:12.5px;color:var(--t1);line-height:1.7;margin:0 0 10px;padding-left:20px">
+      <li><b>Exporte os bugs.</b> No computador onde está a pasta do PMO Compass, abra o terminal nela e rode o comando abaixo. Ele cria <code>bugs-export/<span id="bugs-ai-slug">projeto</span>/bugs.md</code> e a subpasta <code>anexos</code> com os prints.</li>
+      <li><b>Abra a IA no sistema a corrigir</b> (por exemplo o Claude Code na pasta do ClãGuard Pro) e cole a instrução abaixo, já apontando para essa pasta.</li>
+      <li><b>Acompanhe aqui.</b> Quando a IA entregar a correção, marque o bug como concluído no Backlog (cada bug é filho de uma entrega, então o progresso da entrega acompanha).</li>
+    </ol>
+    <div class="field-group"><div class="field-label"><label for="bugs-ai-cmd">1 · Comando de exportação</label></div><div class="prov-inp-row"><input class="input" id="bugs-ai-cmd" readonly style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm" onclick="BugsAi.copy('cmd')"><i class="ti ti-copy"></i>Copiar</button></div></div>
+    <div class="field-group"><div class="field-label"><label for="bugs-ai-prompt">2 · Instrução para a IA</label></div><textarea class="input" id="bugs-ai-prompt" readonly rows="8" style="font-size:12px;line-height:1.5"></textarea><div class="btn-row" style="margin-top:6px"><button class="btn btn-sm" onclick="BugsAi.copy('prompt')"><i class="ti ti-copy"></i>Copiar instrução</button></div></div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer;margin:8px 0"><input type="checkbox" id="bugs-ai-all" onchange="BugsAi.render()"> Incluir também os bugs já concluídos (<code>--all</code>)</label>
+    <div class="set-sub"><i class="ti ti-shield-lock"></i> <b>Cuidados.</b> Precisa do Node instalado e do token de acesso do Supabase no arquivo <code>.env.deploy</code> (<code>SUPABASE_ACCESS_TOKEN</code>), que só o administrador tem. O comando <b>não grava nada</b> no banco; a chave de serviço só gera links de 5 minutos para baixar os prints. A pasta <code>bugs-export</code> não vai para o repositório nem para o ar, mas pode conter dados pessoais nos prints: não a compartilhe fora de quem corrige.</div>
   </div>
   </div><!-- /settings-panel-ia -->
 
@@ -3625,6 +3638,11 @@ const PmoView = (() => {
   <div class="card">
     <div class="lbl"><i class="ti ti-layout-dashboard"></i>Painel</div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Dashboard</strong> — cronograma (aderência, atrasos), decisões pendentes e documentos são calculados em tempo real a partir da WBS, Decisões e Repositório. <span style="color:var(--t3)">Orçamento e parte da saúde da equipe ainda são ilustrativos — ver "Em desenvolvimento" no fim da página.</span></div></div>
+  </div>
+
+  <div class="card">
+    <div class="lbl"><i class="ti ti-bug"></i>Bugs e IA que corrige outro sistema</div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Ler os bugs com uma IA</strong> — os bugs registrados no Backlog (passo a passo, o que se esperava, o que aconteceu e os prints anexados) podem ser exportados, somente leitura, para uma pasta que uma IA como o Claude Code lê para reproduzir e corrigir o sistema testado. O comando e a instrução já vêm prontos para copiar em <a href="#" onclick="R.go('settings');SettingsTabs.show('ia');return false" style="color:var(--acc)">Configurações → Inteligência artificial</a>.</div></div>
   </div>
 
   <div class="card">
@@ -7548,6 +7566,7 @@ const R = (() => {
     if(id === 'mywork' && typeof MyWork !== 'undefined') MyWork.render();
     if(id === 'account' && typeof Account !== 'undefined') Account.render();
     if(id === 'sprintnow' && typeof SprintNow !== 'undefined') SprintNow.render();
+    if(id === 'settings' && typeof BugsAi !== 'undefined') BugsAi.render();
     if(id === 'noproject' && typeof NoProject !== 'undefined') NoProject.render();
     if(id === 'settings' && typeof WorkCalUi !== 'undefined') WorkCalUi.render();
     if(id === 'settings' && typeof Sec !== 'undefined') Sec.restore();
@@ -14317,6 +14336,38 @@ const ColumnDrag = (() => {
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => enhance()); else enhance();
   window.InputClear = { enhance };
+})();
+</script>
+
+<!-- ■ MODULE: ui/bugs-ai ─ Como entregar os bugs (relatos e evidências) a uma IA que corrige outro sistema: comando e instrução prontos para copiar -->
+<script data-module="ui/bugs-ai">
+const BugsAi = (() => {
+  const $ = id => document.getElementById(id);
+  const slug = n => String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'projeto';
+  const name = () => { try { const p = DB.listProjects().find(x => x.id === DB.getActiveProjectId()); return (p && p.name ? p.name : '').replace(/\s+/g, ' ').trim(); } catch(e) { return ''; } };
+  const texts = () => {
+    const n = name() || 'NOME DO PROJETO', all = $('bugs-ai-all') && $('bugs-ai-all').checked, folder = 'bugs-export\\' + slug(n);
+    return {
+      n, folder,
+      cmd: 'node scripts/read-bugs.mjs "' + n.replace(/"/g, '') + '"' + (all ? ' --all' : ''),
+      prompt: 'Leia o arquivo ' + folder + '\\bugs.md (os prints estão na subpasta anexos). Cada bug traz o caminho no sistema, a gravidade, o passo a passo, o que se esperava, o que aconteceu e o contexto técnico.\n\n'
+        + 'Reproduza e corrija os bugs deste sistema, um por vez, começando pelos mais graves. Para cada um, explique a causa, o que mudou e como testar.\n\n'
+        + 'A pasta é somente leitura: não altere o PMO Compass. Ao terminar, devolva a lista dos bugs corrigidos com o código de cada um (ex.: US-018), para eu marcar como concluídos no Backlog.'
+    };
+  };
+  function render() {
+    if(!$('bugs-ai-cmd')) return;
+    const t = texts();
+    $('bugs-ai-proj').textContent = name() || '(nenhum projeto aberto)';
+    $('bugs-ai-slug').textContent = slug(t.n);
+    $('bugs-ai-cmd').value = t.cmd; $('bugs-ai-prompt').value = t.prompt;
+  }
+  async function copy(which) {
+    const t = texts()[which];
+    try { await navigator.clipboard.writeText(t); T.show('✅ Copiado.'); }
+    catch(e) { const el = $(which === 'cmd' ? 'bugs-ai-cmd' : 'bugs-ai-prompt'); el.select(); try { document.execCommand('copy'); T.show('✅ Copiado.'); } catch(x) { T.show('⚠️ Selecione o texto e copie com Ctrl+C.'); } }
+  }
+  return { render, copy, slug };
 })();
 </script>
 
