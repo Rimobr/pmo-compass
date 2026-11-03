@@ -14,7 +14,7 @@ const P = over => BoardRules.normPolicy(over);
 const ctx = o => ({ manager: false, member: true, mine: false, to: 'review', label: 'Em revisão', ...o });
 
 test('política: sem nada gravado vale "todo o time"; valores inválidos são descartados', () => {
-  assert.deepEqual(P(null), { move: 'team', lockedCols: [], noteCols: [] });
+  assert.deepEqual(P(null), { move: 'team', lockedCols: [], noteCols: [], behalfNote: true });
   assert.equal(P({ move: 'qualquer' }).move, 'team');
   assert.deepEqual(P({ lockedCols: ['done', 'done', '', 3] }).lockedCols, ['done', '3']);
 });
@@ -45,4 +45,9 @@ test('a tela: sem permissão não há clique, arrasto nem seta; o time abre o ca
 test('o servidor impõe a mesma política (inserção que já existe, colunas travadas, anexos)', () => {
   for (const k of ["key = 'teamPolicy'", 'team_can_touch_item', 'team_item_exists', 'backlog_items_member_guard', "locked ? new.status", '"item_files_insert"']) assert.ok(mig.includes(k), k);
   assert.ok(/security definer set search_path = public/.test(mig));
+});
+
+test('boas-vindas: aparece uma vez por conta (marca no servidor), não a cada atualização', () => {
+  for (const k of ['async function markOnboarded', 'onboarded_at', 'function markSeen', 'show(); markSeen();', 'maybeShow(n + 1)']) assert.ok(html.includes(k), k);
+  assert.ok(readdirSync(join(root, 'supabase/migrations')).some(f => f.includes('onboarded')));
 });

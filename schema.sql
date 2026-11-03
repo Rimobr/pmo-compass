@@ -1,6 +1,6 @@
 -- =========================================================================
 -- PMO Compass — esquema completo (GERADO por scripts/build-schema.mjs — não edite à mão)
--- Fonte: supabase/migrations/ (44 arquivos). Para instalação do zero, rode este arquivo inteiro
+-- Fonte: supabase/migrations/ (45 arquivos). Para instalação do zero, rode este arquivo inteiro
 -- no SQL Editor; para um banco que já existe, use `node scripts/db-apply.mjs` (aplica só o que falta).
 -- =========================================================================
 
@@ -2933,3 +2933,7 @@ grant execute on function public.team_policy(text), public.team_can_touch_item(t
 -- As funções da autonomia do time não são para quem não está logado (mesma regra do endurecimento do banco)
 revoke all on function public.team_policy(text), public.team_can_touch_item(text, text), public.team_item_exists(text, text), public.backlog_items_member_guard() from public, anon;
 grant execute on function public.team_policy(text), public.team_can_touch_item(text, text), public.team_item_exists(text, text) to authenticated, service_role;
+
+-- ▼▼▼ 20261103180000_onboarded.sql ▼▼▼
+-- A tela de boas-vindas aparece só na primeira vez de cada conta: a marca fica junto do cadastro da pessoa (a política "só o dono altera" já vale)
+alter table public.profile_details add column if not exists onboarded_at timestamptz;

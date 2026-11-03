@@ -20,7 +20,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 |---|---|---|---|---|---|---|
 | `profiles` | Uma linha por conta: nome, perfil de acesso, ativo/inativo. | pessoa | sim | não se aplica | preserva (as contas continuam) | `id`, `name`, `role`, `created_at`, `active`, `deactivated_at` |
 | `access_profiles` | Perfis de acesso (8 prontos + personalizados) e suas permissões. | sistema | não | não se aplica | preserva | `id`, `name`, `description`, `family`, `is_system`, `perms`, `created_at` |
-| `profile_details` | Cadastro complementar: departamento, conhecimentos e ferramentas com nível, WhatsApp com consentimento (LGPD). | pessoa | sim | não se aplica | preserva (acompanha a conta) | `user_id`, `department`, `phone`, `whatsapp_consent`, `whatsapp_consent_at`, `completed_at`, `updated_at`, `skills` |
+| `profile_details` | Cadastro complementar: departamento, conhecimentos e ferramentas com nível, WhatsApp com consentimento (LGPD) e a marca de que a pessoa já viu a tela de boas-vindas (onboarded_at). | pessoa | sim | não se aplica | preserva (acompanha a conta) | `user_id`, `department`, `phone`, `whatsapp_consent`, `whatsapp_consent_at`, `completed_at`, `updated_at`, `skills`, `onboarded_at` |
 
 ### Plano
 

@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.48.0'
+  version: '2.48.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -4515,6 +4515,13 @@ const Cloud = (() => {
     if(error) { console.warn('Supabase: falha ao ler o cadastro complementar', error); return undefined; }
     return data || null;
   }
+  // A tela de boas-vindas aparece só na primeira vez de cada conta (a marca fica no servidor, junto do cadastro da pessoa)
+  async function markOnboarded() {
+    if(!client || !session) return false;
+    const { error } = await client.from('profile_details').upsert({ user_id:session.user.id, onboarded_at:new Date().toISOString() });
+    if(error) { console.warn('Supabase: não consegui gravar que a boas-vindas foi vista', error); return false; }
+    return true;
+  }
   async function saveMyDetails(v) {
     if(!client || !session) return false;
     const row = { user_id:session.user.id, department:v.department, skills:v.skills, phone:v.phone, whatsapp_consent:v.consent };
@@ -5105,7 +5112,7 @@ const Cloud = (() => {
   }
 
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
-    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, hoursSummary, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
+    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, hoursSummary, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, markOnboarded, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument, pushRow, pushMany, deleteRow, msgTable, invokeFn,
@@ -7960,13 +7967,30 @@ const Onboarding = (() => {
     </div>`).join('');
   }
   function show() { render(); const m = document.getElementById('modal-onboarding'); if(m) m.classList.remove('hidden'); }
+  // Marca que já viu assim que a tela aparece: Esc, clique fora, atualizar a página, nada a faz voltar
+  function markSeen() {
+    try { localStorage.setItem(KEY, '1'); } catch(e) {}
+    if(typeof Cloud !== 'undefined' && Cloud.isSignedIn && Cloud.isSignedIn() && Cloud.markOnboarded) Cloud.markOnboarded();
+  }
   function dismiss() {
     const m = document.getElementById('modal-onboarding'); if(m) m.classList.add('hidden');
     try { localStorage.setItem(KEY, '1'); } catch(e){}
   }
   // Sem login não aparece o "Comece aqui" por cima da tela de entrada
-  function maybeShow() { if(shouldShow()) setTimeout(() => { if(!document.body.classList.contains('no-login')) show(); }, 600); }
-  return { maybeShow, show, dismiss, willShow: shouldShow, refresh: () => { try { render(); } catch(e) {} } };
+  // Com conta na nuvem vale a marca do servidor (vale em qualquer navegador e depois de sair e entrar); sem nuvem, a do navegador
+  function maybeShow(tries) {
+    const n = tries || 0, cloud = typeof Cloud !== 'undefined' && Cloud.isConfigured && Cloud.isConfigured();
+    setTimeout(async () => {
+      if(document.body.classList.contains('no-login')) return;
+      if(!cloud) { if(shouldShow()) { show(); markSeen(); } return; }
+      if(!Cloud.isSignedIn()) { if(n < 6) maybeShow(n + 1); return; } // a sessão ainda está sendo restaurada
+      const d = await Cloud.getMyDetails();
+      if(d === undefined) return; // falha de leitura: não incomoda
+      if(d && d.onboarded_at) return;
+      show(); markSeen();
+    }, n ? 1200 : 600);
+  }
+  return { maybeShow, show, dismiss, markSeen, willShow: shouldShow, refresh: () => { try { render(); } catch(e) {} } };
 })();
 </script>
 

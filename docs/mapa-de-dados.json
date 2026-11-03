@@ -222,7 +222,7 @@
     },
     "profile_details": {
       "domain": "Pessoas e acesso",
-      "desc": "Cadastro complementar: departamento, conhecimentos e ferramentas com nível, WhatsApp com consentimento (LGPD).",
+      "desc": "Cadastro complementar: departamento, conhecimentos e ferramentas com nível, WhatsApp com consentimento (LGPD) e a marca de que a pessoa já viu a tela de boas-vindas (onboarded_at).",
       "scope": "pessoa",
       "personal": true,
       "clearProject": "não se aplica",
