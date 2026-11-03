@@ -46,7 +46,7 @@
     },
     "project_settings": {
       "domain": "Projetos",
-      "desc": "Configurações por projeto, uma linha por chave: `methodology` (método), `agileConfig` (quadro e entrada de itens), `boardLanes` (raias filtradas do quadro Kanban), `boardRules` (automações do quadro: gatilho e ações), `teamPolicy` (autonomia do time no quadro: quem move os cartões, colunas só da gestão e colunas que exigem comentário), `hoursRules` (regras de lançamento de horas: horas normais, aprovação, prazos, períodos fechados e orçamento de horas com faixas de alerta), `hoursAlertState` (última faixa do orçamento de horas já avisada, escrita pelo servidor), `workCalendar` (calendário de trabalho: feriados do projeto, exceções autorizadas pelo gerente com justificativa), priorização e perfil de PMO.",
+      "desc": "Configurações por projeto, uma linha por chave: `methodology` (método), `agileConfig` (quadro e entrada de itens), `boardLanes` (raias filtradas do quadro Kanban), `boardRules` (automações do quadro: gatilho e ações), `teamPolicy` (autonomia do time e regras do quadro: quem move os cartões, colunas só da gestão, colunas que exigem comentário, regras de passagem por tarefas concluídas e tarefas padrão dos cartões novos), `hoursRules` (regras de lançamento de horas: horas normais, aprovação, prazos, períodos fechados e orçamento de horas com faixas de alerta), `hoursAlertState` (última faixa do orçamento de horas já avisada, escrita pelo servidor), `workCalendar` (calendário de trabalho: feriados do projeto, exceções autorizadas pelo gerente com justificativa), priorização e perfil de PMO.",
       "scope": "projeto",
       "personal": false,
       "clearProject": "apaga",
@@ -182,7 +182,7 @@
     },
     "backlog_items": {
       "domain": "Execução ágil",
-      "desc": "Itens do backlog e do quadro (história, tarefa, bug filho com anexos).",
+      "desc": "Itens do backlog e do quadro (história, tarefa, bug filho com anexos, lista de tarefas do cartão e histórico).",
       "scope": "projeto",
       "personal": false,
       "clearProject": "apaga",

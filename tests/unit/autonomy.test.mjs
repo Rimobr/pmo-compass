@@ -14,7 +14,7 @@ const P = over => BoardRules.normPolicy(over);
 const ctx = o => ({ manager: false, member: true, mine: false, to: 'review', label: 'Em revisão', ...o });
 
 test('política: sem nada gravado vale "todo o time"; valores inválidos são descartados', () => {
-  assert.deepEqual(P(null), { move: 'team', lockedCols: [], noteCols: [], behalfNote: true });
+  assert.deepEqual(P(null), { move: 'team', lockedCols: [], noteCols: [], behalfNote: true, gates: [], template: [] });
   assert.equal(P({ move: 'qualquer' }).move, 'team');
   assert.deepEqual(P({ lockedCols: ['done', 'done', '', 3] }).lockedCols, ['done', '3']);
 });
@@ -56,4 +56,21 @@ test('ao entrar, o quadro é refeito depois que as configurações do projeto ch
   const i = html.indexOf("settings.data.forEach(row => { if(row.key) DB.set(row.key, row.value || {}); });");
   assert.ok(i > 0);
   assert.ok(html.slice(i, i + 900).includes('Agile.resetCache(); Agile.render();'));
+});
+
+test('regra de passagem: sair da coluna exige todas as tarefas concluídas; sem tarefas ou sem regra não trava', () => {
+  const p = P({ gates: [{ from: 'x1', to: 'review' }, { from: 'doing', to: '' }, { from: 'a', to: 'a' }, { from: '' }] });
+  assert.equal(p.gates.length, 2);
+  const list = [{ text: 'A', done: true }, { text: 'B', done: false }];
+  assert.deepEqual(BoardRules.pendingFor(p, 'x1', 'review', list).map(x => x.text), ['B']);
+  assert.equal(BoardRules.pendingFor(p, 'x1', 'doing', list).length, 0);          // destino fora da regra
+  assert.equal(BoardRules.pendingFor(p, 'doing', 'done', list).length, 1);         // "qualquer coluna"
+  assert.equal(BoardRules.pendingFor(p, 'x1', 'review', []).length, 0);            // cartão sem tarefas não é travado
+  assert.equal(BoardRules.pendingFor(P(null), 'x1', 'review', list).length, 0);    // sem regra
+  assert.deepEqual(P({ template: [' Executar  testes ', '', 'Anexar evidências'] }).template, ['Executar testes', 'Anexar evidências']);
+});
+test('a tela e o servidor das tarefas do cartão', () => {
+  for (const k of ['id="ai-check"', 'function applyChecklist', 'function guardMove', 'Agile.checkToggle(', 'Agile.addGate()', 'Tarefas padrão dos cartões novos', 'checklist:Array.isArray(x.checklist)', 'Mover com Tarefas Pendentes']) assert.ok(html.includes(k), k);
+  const m2 = readFileSync(join(root, 'supabase/migrations', readdirSync(join(root, 'supabase/migrations')).find(f => f.includes('card_checklist'))), 'utf8');
+  for (const k of ['add column if not exists checklist', "pol->'gates'", 'Conclua todas as tarefas do cartão', 'backlog_items_member_guard']) assert.ok(m2.includes(k), k);
 });

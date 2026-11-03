@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.48.2'
+  version: '2.49.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2192,6 +2192,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     </div>
     <div class="field-group" id="ai-status-grp"><div class="field-label"><label for="ai-status">Situação</label></div><select class="input" id="ai-status"><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="review">Em revisão</option><option value="done">Concluído</option></select></div>
     <div class="field-group"><div class="field-label"><label for="ai-desc">Descrição e critérios de aceite</label></div><textarea class="input" id="ai-desc" rows="3" maxlength="2000" style="resize:vertical;font-family:inherit"></textarea></div>
+    <div id="ai-check" style="display:none;margin-top:10px"></div>
     <div id="ai-work" style="display:none;margin-top:10px">
       <div class="g2" style="gap:10px;align-items:start">
       <div class="field-group"><div class="field-label"><label for="ai-note">Comentário da atividade</label><span class="help-q" data-help="O que foi feito e o resultado (ex.: testei os 3 cenários, tudo aprovado). Fica no histórico do cartão com o seu nome e a data. Algumas colunas exigem o comentário para entrar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><textarea class="input" id="ai-note" rows="2" maxlength="500" placeholder="Ex.: Testei os 3 cenários; evidências anexadas. Aprovado." style="resize:vertical;font-family:inherit"></textarea></div>
@@ -4104,8 +4105,8 @@ const Cloud = (() => {
       local: 'baselines'
     },
     backlog_items: {
-      toDb: (x, pid) => ({ project_id:pid, id:x.id, title:x.title, description:x.description||null, kind:x.kind||'historia', status:x.status||'todo', points:(x.points===''||x.points==null)?null:x.points, assignee:x.assignee||null, sprint_id:x.sprintId||null, rank:x.rank||0, created_on:x.createdOn||null, done_on:x.doneOn||null, parent_id:(x.kind==='bug' && x.parentId)?x.parentId:null, attachments:Array.isArray(x.attachments)?x.attachments:[], history:Array.isArray(x.history)?x.history.slice(-300):[], updated_at:new Date().toISOString() }),
-      fromDb: r => ({ id:r.id, title:r.title, description:r.description||'', kind:r.kind, status:r.status, points:r.points==null?'':r.points, assignee:r.assignee||'', sprintId:r.sprint_id||'', rank:r.rank||0, createdOn:r.created_on||'', doneOn:r.done_on||'', parentId:r.parent_id||'', attachments:Array.isArray(r.attachments)?r.attachments:[], history:Array.isArray(r.history)?r.history:[] }),
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, title:x.title, description:x.description||null, kind:x.kind||'historia', status:x.status||'todo', points:(x.points===''||x.points==null)?null:x.points, assignee:x.assignee||null, sprint_id:x.sprintId||null, rank:x.rank||0, created_on:x.createdOn||null, done_on:x.doneOn||null, parent_id:(x.kind==='bug' && x.parentId)?x.parentId:null, attachments:Array.isArray(x.attachments)?x.attachments:[], history:Array.isArray(x.history)?x.history.slice(-300):[], checklist:Array.isArray(x.checklist)?x.checklist.slice(0,20).map(c=>({text:String(c&&c.text||'').slice(0,120),done:!!(c&&c.done)})):[], updated_at:new Date().toISOString() }),
+      fromDb: r => ({ id:r.id, title:r.title, description:r.description||'', kind:r.kind, status:r.status, points:r.points==null?'':r.points, assignee:r.assignee||'', sprintId:r.sprint_id||'', rank:r.rank||0, createdOn:r.created_on||'', doneOn:r.done_on||'', parentId:r.parent_id||'', attachments:Array.isArray(r.attachments)?r.attachments:[], history:Array.isArray(r.history)?r.history:[], checklist:Array.isArray(r.checklist)?r.checklist:[] }),
       local: 'backlog'
     },
     sprints: {
@@ -12390,7 +12391,9 @@ const BoardRules = (() => {
   const MOVE_MODES = { team: 'Todo o time move qualquer cartão do projeto', own: 'Cada pessoa move só os cartões em que é a responsável', managers: 'Só a gestão move os cartões' };
   function normPolicy(raw) {
     const cols = v => [...new Set((Array.isArray(v) ? v : []).map(x => clean(x, 30)).filter(Boolean))].slice(0, 10);
-    return { move: MOVE_MODES[raw && raw.move] ? raw.move : 'team', lockedCols: cols(raw && raw.lockedCols), noteCols: cols(raw && raw.noteCols), behalfNote: !(raw && raw.behalfNote === false) };
+    return { move: MOVE_MODES[raw && raw.move] ? raw.move : 'team', lockedCols: cols(raw && raw.lockedCols), noteCols: cols(raw && raw.noteCols), behalfNote: !(raw && raw.behalfNote === false),
+      gates: (Array.isArray(raw && raw.gates) ? raw.gates : []).map(g => ({ from: clean(g && g.from, 30), to: clean(g && g.to, 30) })).filter(g => g.from && g.from !== g.to).slice(0, 10),
+      template: (Array.isArray(raw && raw.template) ? raw.template : []).map(t => clean(t, 120)).filter(Boolean).slice(0, 10) };
   }
   // ctx: { manager (gere o backlog), member (atualiza as próprias atividades), mine (o cartão é dele), to (coluna), label }
   function canMove(p, ctx) {
@@ -12401,7 +12404,12 @@ const BoardRules = (() => {
     if(p.move === 'own' && !ctx.mine) return { ok: false, why: 'Neste projeto cada pessoa move só os cartões em que é a responsável.' };
     return { ok: true };
   }
-  return { TRIGGERS, TARGETS, FIELDS, KINDS, MOVE_MODES, norm, matches, fill, normPolicy, canMove };
+  // Regra de passagem: ao sair da coluna "from" (para "to", ou para qualquer) todas as tarefas do cartão precisam estar concluídas; devolve as pendentes
+  function pendingFor(p, from, to, list) {
+    if(!(p.gates || []).some(g => g.from === from && (!g.to || g.to === to))) return [];
+    return (Array.isArray(list) ? list : []).filter(x => !x.done);
+  }
+  return { TRIGGERS, TARGETS, FIELDS, KINDS, MOVE_MODES, norm, matches, fill, normPolicy, canMove, pendingFor };
 })();
 </script>
 
@@ -12538,7 +12546,8 @@ const Agile = (() => {
     const kidsAll = AgileCalc.bugsOf(items, i.id), kidsOpen = kidsAll.filter(k => k.status !== 'done');
     const rel = i.kind === 'bug' ? (i.parentId ? `<span class="chip" title="Este bug é filho do item ${esc(i.parentId)}"><i class="ti ti-corner-down-right"></i>de ${esc(i.parentId)}</span>` : '<span class="badge b-amb" title="Bug antigo, sem item pai: abra o cartão e escolha o item">sem item pai</span>') : (kidsAll.length ? `<span class="chip" title="Bugs ligados a este item"><i class="ti ti-bug"></i>${kidsOpen.length}/${kidsAll.length} bug(s)</span>` : '');
     const att = (Array.isArray(i.attachments) && i.attachments.length) ? `<span class="chip" title="Anexos do bug"><i class="ti ti-paperclip"></i>${i.attachments.length}</span>` : '';
-    const bottom = [rel, att, f.assignee && (i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'), f.sprint && sp && `<span class="chip">${esc(sp.name)}</span>`].filter(Boolean).join('');
+    const chk = Array.isArray(i.checklist) && i.checklist.length ? `<span class="chip" title="Tarefas concluídas do cartão"><i class="ti ti-checklist"></i>${i.checklist.filter(c => c.done).length}/${i.checklist.length}</span>` : '';
+    const bottom = [rel, att, chk, f.assignee && (i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'), f.sprint && sp && `<span class="chip">${esc(sp.name)}</span>`].filter(Boolean).join('');
     // O cartão é um grupo; só o título é o botão de abrir (botão dentro de botão não é acessível por leitor de tela)
     const act = Auth.can('update_own');
     return `<div class="kb-card"${act ? ` draggable="true" ondragstart="Agile.dragStart(event,'${esc(i.id)}')" ondragend="this.classList.remove('dragging')" onclick="Agile.openItem('${esc(i.id)}')"` : ''} role="group" data-id="${esc(i.id)}" aria-label="${esc(i.id)}: ${esc(i.title)}">
@@ -12575,9 +12584,14 @@ const Agile = (() => {
   // Caso excepcional: a gestão move o cartão de outra pessoa (ex.: quem está sem acesso à ferramenta) e informa o motivo, que fica no histórico do cartão
   let behalfCtx = null;
   const needBehalf = it => Auth.can('manage_backlog') && policy().behalfNote && String(it.assignee || '').trim() && !(typeof MyWork !== 'undefined' && MyWork.isMine(it.assignee));
-  function openBehalf(it, to) {
-    behalfCtx = { id: it.id, to };
-    document.getElementById('bh-text').textContent = it.id + ' é de ' + it.assignee + '. Você vai movê-lo de "' + AgileCalc.colLabel(cfg, it.status) + '" para "' + AgileCalc.colLabel(cfg, to) + '" em nome dessa pessoa.';
+  const pendNames = pend => pend.slice(0, 3).map(x => '"' + x.text + '"').join(', ') + (pend.length > 3 ? ' e mais ' + (pend.length - 3) : '');
+  function openBehalf(it, to, pend) {
+    pend = pend || [];
+    behalfCtx = { id: it.id, to, pend: pend.length };
+    document.getElementById('bh-title').textContent = pend.length ? 'Mover com Tarefas Pendentes' : 'Mover em Nome de Outra Pessoa';
+    document.getElementById('bh-text').textContent = pend.length
+      ? it.id + ' tem ' + pend.length + ' tarefa(s) pendente(s): ' + pendNames(pend) + '. Você pode movê-lo de "' + AgileCalc.colLabel(cfg, it.status) + '" para "' + AgileCalc.colLabel(cfg, to) + '" mesmo assim, informando o motivo.'
+      : it.id + ' é de ' + it.assignee + '. Você vai movê-lo de "' + AgileCalc.colLabel(cfg, it.status) + '" para "' + AgileCalc.colLabel(cfg, to) + '" em nome dessa pessoa.';
     document.getElementById('bh-reason').value = '';
     document.getElementById('modal-agile-behalf').classList.remove('hidden');
     document.getElementById('bh-reason').focus();
@@ -12589,14 +12603,22 @@ const Agile = (() => {
     if(reason.length < 5) { T.show('⚠️ Informe o motivo (mínimo 5 letras).'); document.getElementById('bh-reason').focus(); return; }
     load(); const it = items.find(x => x.id === behalfCtx.id), to = behalfCtx.to; if(!it) { closeBehalf(); return; }
     if(!Array.isArray(it.history)) it.history = [];
-    it.history.push({ at: new Date().toISOString(), by: Auth.getName() || 'Gestão', field: '', from: '', to: 'Movido pela gestão em nome de ' + it.assignee + ' — motivo: ' + reason.slice(0, 300) });
+    it.history.push({ at: new Date().toISOString(), by: Auth.getName() || 'Gestão', field: '', from: '', to: (behalfCtx.pend ? 'Movido com ' + behalfCtx.pend + ' tarefa(s) pendente(s) — motivo: ' : 'Movido pela gestão em nome de ' + it.assignee + ' — motivo: ') + reason.slice(0, 300) });
     closeBehalf(); setStatus(it, to); renderAll();
+  }
+  // Decide o movimento de um cartão: permissão, regra de passagem (tarefas), comentário exigido e motivo da gestão; devolve true se o movimento foi interrompido
+  function guardMove(it, to) {
+    if(!canTouch(it, to)) return true;
+    const pend = BoardRules.pendingFor(policy(), it.status, to, it.checklist), mgr = Auth.can('manage_backlog');
+    if(pend.length && !mgr) { T.show('☑️ Para sair de "' + AgileCalc.colLabel(cfg, it.status) + '", conclua as tarefas do cartão: ' + pendNames(pend) + '. Abra o cartão e marque o que foi feito.', 6500); return true; }
+    if(askNote(it, to)) return true;
+    if(pend.length || needBehalf(it)) { openBehalf(it, to, pend); return true; }
+    return false;
   }
   function move(id, dir) {
     load(); const it = items.find(x => x.id === id); if(!it) return;
     const to = AgileCalc.neighbor(it.status, dir, cfg); if(!to) return;
-    if(!canTouch(it, to) || askNote(it, to)) return;
-    if(needBehalf(it)) { openBehalf(it, to); return; }
+    if(guardMove(it, to)) return;
     setStatus(it, to); renderAll();
     const b = document.querySelector(`.kb-card[data-id="${CSS.escape(id)}"]`); if(b) b.focus();
   }
@@ -12605,8 +12627,7 @@ const Agile = (() => {
   function drop(e, status) {
     e.preventDefault(); e.currentTarget.classList.remove('drop');
     load(); const it = items.find(x => x.id === dragId); dragId = null; if(!it || it.status === status) return;
-    if(!canTouch(it, status) || askNote(it, status)) return;
-    if(needBehalf(it)) { openBehalf(it, status); return; }
+    if(guardMove(it, status)) return;
     setStatus(it, status); renderAll();
   }
   function setBoardSprint(v) { boardSprint = v; renderKanban(); }
@@ -12654,8 +12675,17 @@ const Agile = (() => {
       + '<label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" ' + (p.lockedCols.includes(c.key) ? 'checked' : '') + ' aria-label="Só a gestão move para ' + esc(c.label) + '" onchange="Agile.setPolicyCol(\'lockedCols\', ' + i + ', this.checked)"> Só a gestão move para cá</label>'
       + '<label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" ' + (p.noteCols.includes(c.key) ? 'checked' : '') + ' aria-label="Exigir comentário ao entrar em ' + esc(c.label) + '" onchange="Agile.setPolicyCol(\'noteCols\', ' + i + ', this.checked)"> Exige comentário</label></div>').join('')
       + '<label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer;margin-top:8px"><input type="checkbox" ' + (p.behalfNote ? 'checked' : '') + ' onchange="Agile.setPolicyBehalf(this.checked)"> Quando a gestão move o cartão de outra pessoa, pedir o motivo (fica no histórico)</label>'
+      + '<div class="lbl" style="margin-top:14px">Regras de passagem<span class="help-q" data-help="Para sair de uma coluna (ou ir para uma coluna específica), o cartão precisa ter todas as tarefas da lista concluídas. O time marca as tarefas no próprio cartão. A gestão pode mover mesmo assim, informando o motivo. Cartão sem tarefas não é travado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>'
+      + (p.gates.map((g, i) => '<div class="ag-row"><span style="font-size:12.5px">Para sair de</span><select class="input" style="flex:1 1 120px" aria-label="Coluna de origem da regra ' + (i + 1) + '" onchange="Agile.setGate(' + i + ', \'from\', this.value)">' + d.columns.map(c => '<option value="' + esc(c.key) + '"' + (g.from === c.key ? ' selected' : '') + '>' + esc(c.label) + '</option>').join('') + '</select><span style="font-size:12.5px">para</span><select class="input" style="flex:1 1 120px" aria-label="Coluna de destino da regra ' + (i + 1) + '" onchange="Agile.setGate(' + i + ', \'to\', this.value)"><option value="">Qualquer coluna</option>' + d.columns.map(c => '<option value="' + esc(c.key) + '"' + (g.to === c.key ? ' selected' : '') + '>' + esc(c.label) + '</option>').join('') + '</select><span style="font-size:12.5px">exige todas as tarefas concluídas</span><button class="btn btn-sm btn-red" aria-label="Remover a regra ' + (i + 1) + '" onclick="Agile.removeGate(' + i + ')"><i class="ti ti-trash"></i></button></div>').join('') || '<div class="set-sub">Nenhuma regra: os cartões passam livremente entre as colunas.</div>')
+      + '<div class="btn-row" style="margin:6px 0"><button class="btn btn-sm" ' + (p.gates.length >= 10 ? 'disabled ' : '') + 'onclick="Agile.addGate()"><i class="ti ti-plus"></i>Nova regra de passagem</button></div>'
+      + '<div class="lbl" style="margin-top:10px">Tarefas padrão dos cartões novos<span class="help-q" data-help="Uma tarefa por linha (até 10). Todo cartão novo já nasce com esta lista; a gestão pode ajustar no cartão. Deixe vazio para criar cartões sem tarefas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>'
+      + '<textarea class="input" rows="3" id="ab-template" aria-label="Tarefas padrão dos cartões novos" placeholder="Ex.:\nExecutar os cenários de teste\nAnexar as evidências\nRegistrar os bugs encontrados" oninput="Agile.setTemplate(this.value)" style="resize:vertical;font-family:inherit">' + esc(p.template.join('\n')) + '</textarea>'
       + '<div class="set-sub">Gerente, Scrum Master, PO e administrador sempre podem mover qualquer cartão, em qualquer modo: serve para os casos excepcionais, como a pessoa estar sem acesso à ferramenta.</div>';
   }
+  function addGate() { const p = boardDraft.policy; if(p.gates.length >= 10) return; const k = boardDraft.columns.map(c => c.key); p.gates.push({ from: k[Math.min(2, k.length - 2)] || k[0], to: '' }); renderPolicyCfg(); }
+  const removeGate = i => { boardDraft.policy.gates.splice(i, 1); renderPolicyCfg(); };
+  const setGate = (i, f, v) => { boardDraft.policy.gates[i][f] = v; };
+  const setTemplate = v => { boardDraft.policy.template = String(v || '').split('\n').map(t => t.replace(/\s+/g, ' ').trim().slice(0, 120)).filter(Boolean).slice(0, 10); };
   const setPolicyBehalf = on => { boardDraft.policy.behalfNote = !!on; };
   const setPolicyMove = v => { boardDraft.policy.move = BoardRules.MOVE_MODES[v] ? v : 'team'; };
   function setPolicyCol(field, i, on) {
@@ -12710,7 +12740,7 @@ const Agile = (() => {
     const lanes = { lanes: AgileCalc.normLanes({ lanes: d.lanes }) };
     DB.set('boardLanes', lanes);
     if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'boardLanes', lanes);
-    const keys = d.columns.map(c => c.key), pol = BoardRules.normPolicy({ move: d.policy.move, lockedCols: d.policy.lockedCols.filter(k => keys.includes(k)), noteCols: d.policy.noteCols.filter(k => keys.includes(k)), behalfNote: d.policy.behalfNote });
+    const keys = d.columns.map(c => c.key), pol = BoardRules.normPolicy({ move: d.policy.move, lockedCols: d.policy.lockedCols.filter(k => keys.includes(k)), noteCols: d.policy.noteCols.filter(k => keys.includes(k)), behalfNote: d.policy.behalfNote, gates: d.policy.gates.filter(g => keys.includes(g.from) && (!g.to || keys.includes(g.to))), template: d.policy.template });
     DB.set('teamPolicy', pol);
     if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'teamPolicy', pol);
     closeBoardCfg(); renderAll(); T.show('✅ Quadro personalizado.');
@@ -13110,8 +13140,38 @@ const Agile = (() => {
     document.getElementById('modal-agile-item').classList.remove('hidden');
     document.getElementById(full ? 'ai-title' : 'ai-note').focus();
   }
+  // ───────── Lista de tarefas do cartão ─────────
+  let checkDraft = [];
+  const checkNorm = () => checkDraft.map(x => ({ text: String(x.text).slice(0, 120), done: !!x.done }));
+  function addHist(it, text) { if(!Array.isArray(it.history)) it.history = []; it.history.push({ at: new Date().toISOString(), by: (typeof Auth !== 'undefined' && Auth.getName()) || 'Sistema', field: '', from: '', to: text }); }
+  function renderCheck() {
+    const box = document.getElementById('ai-check'); if(!box) return;
+    const full = Auth.can('manage_backlog'), n = checkDraft.length, d = checkDraft.filter(x => x.done).length;
+    box.style.display = (n || full) ? '' : 'none';
+    box.innerHTML = '<div class="field-label"><i class="ti ti-checklist"></i> Tarefas do cartão <span class="badge" id="ai-check-n">' + d + '/' + n + '</span></div>'
+      + checkDraft.map((x, i) => '<div class="ag-row" style="padding:4px 0"><label style="flex:1;display:flex;gap:8px;align-items:flex-start;cursor:pointer;font-size:13px"><input type="checkbox" ' + (x.done ? 'checked ' : '') + 'onchange="Agile.checkToggle(' + i + ', this.checked)"><span>' + esc(x.text) + '</span></label>'
+        + (full ? '<button class="btn btn-sm" aria-label="Remover a tarefa ' + esc(x.text) + '" onclick="Agile.checkDel(' + i + ')"><i class="ti ti-x"></i></button>' : '') + '</div>').join('')
+      + (full ? '<div class="prov-inp-row" style="margin-top:6px"><input class="input" id="ai-check-new" maxlength="120" placeholder="Nova tarefa (Enter para incluir)" aria-label="Nova tarefa do cartão" onkeydown="if(event.key===\'Enter\'){event.preventDefault();Agile.checkAdd()}"><button class="btn btn-sm" onclick="Agile.checkAdd()"><i class="ti ti-plus"></i>Incluir</button></div>' : '');
+  }
+  function checkToggle(i, on) { if(!checkDraft[i]) return; checkDraft[i].done = !!on; const n = document.getElementById('ai-check-n'); if(n) n.textContent = checkDraft.filter(x => x.done).length + '/' + checkDraft.length; }
+  function checkAdd() {
+    const el = document.getElementById('ai-check-new'), t = el ? el.value.replace(/\s+/g, ' ').trim() : ''; if(!t) return;
+    if(checkDraft.length >= 20) { T.show('⚠️ Cada cartão aceita até 20 tarefas.'); return; }
+    checkDraft.push({ text: t.slice(0, 120), done: false }); renderCheck(); const e2 = document.getElementById('ai-check-new'); if(e2) e2.focus();
+  }
+  function checkDel(i) { checkDraft.splice(i, 1); renderCheck(); const e2 = document.getElementById('ai-check-new'); if(e2) e2.focus(); }
+  // Grava a lista do rascunho no cartão e registra no histórico o que mudou (tarefa nova, concluída, reaberta, removida)
+  function applyChecklist(it) {
+    const old = Array.isArray(it.checklist) ? it.checklist : [], next = checkNorm();
+    next.forEach(x => { const o = old.find(y => y.text === x.text); if(!o) addHist(it, 'Tarefa incluída: ' + x.text); else if(!!o.done !== x.done) addHist(it, (x.done ? 'Tarefa concluída: ' : 'Tarefa reaberta: ') + x.text); });
+    old.forEach(o => { if(!next.some(x => x.text === o.text)) addHist(it, 'Tarefa removida: ' + o.text); });
+    it.checklist = next;
+  }
+  const checkDirty = it => JSON.stringify(checkNorm()) !== JSON.stringify((Array.isArray(it.checklist) ? it.checklist : []).map(x => ({ text: x.text, done: !!x.done })));
   // Quem não gere o backlog só muda a situação (nas colunas que pode), comenta e anexa evidências; o resto fica travado (o servidor confere igual)
   function applyItemMode(it, full) {
+    checkDraft = it ? (Array.isArray(it.checklist) ? it.checklist : []).map(x => ({ text: x.text, done: !!x.done })) : policy().template.map(t => ({ text: t, done: false }));
+    renderCheck();
     ['ai-title', 'ai-kind', 'ai-points', 'ai-assignee', 'ai-sprint', 'ai-parent', 'ai-desc'].forEach(x => { const e = document.getElementById(x); if(e) e.disabled = !full; });
     document.getElementById('ai-del').style.display = it && full ? '' : 'none';
     document.getElementById('ai-work').style.display = it ? '' : 'none';
@@ -13147,11 +13207,13 @@ const Agile = (() => {
     load(); let it = items.find(x => x.id === itemCtx); if(!it) return;
     const to = val('ai-status') || it.status, changed = to !== it.status, note = val('ai-note').trim(), hasFiles = !!(document.getElementById('ai-evid').files || []).length;
     if(changed && !canTouch(it, to)) return;
+    const pend = changed ? BoardRules.pendingFor(policy(), it.status, to, checkDraft) : [];
+    if(pend.length) { T.show('☑️ Para sair de "' + AgileCalc.colLabel(cfg, it.status) + '", conclua as tarefas do cartão: ' + pendNames(pend) + '.', 6500); return; }
     if(changed && policy().noteCols.includes(to) && note.length < 5) { T.show('⚠️ Para passar para "' + AgileCalc.colLabel(cfg, to) + '", escreva o comentário (mínimo 5 letras) e anexe as evidências, se houver.'); document.getElementById('ai-note').focus(); return; }
-    if(!changed && !note && !hasFiles) { closeItem(); return; }
+    if(!changed && !note && !hasFiles && !checkDirty(it)) { closeItem(); return; }
     const ev = await collectEvidence(); if(ev === false) return;
     load(); it = items.find(x => x.id === itemCtx) || it;
-    applyEvidence(it, ev);
+    applyEvidence(it, ev); applyChecklist(it);
     if(changed) setStatus(it, to); else { saveItems(); pushItem(it); }
     const id = it.id; closeItem(); renderAll(); T.show('✅ ' + id + (changed ? ' foi para "' + AgileCalc.colLabel(cfg, to) + '".' : ' atualizado.'));
   }
@@ -13226,12 +13288,16 @@ const Agile = (() => {
     if(urg) { f.sprintId = urg.sprintId; f.description = (f.description ? f.description + '\n\n' : '') + 'Incluído durante a sprint (mudança de escopo) — motivo: ' + urg.reason; }
     const bad = AgileCalc.bugParentError({ ...f, id: itemCtx || '' }, items);
     if(bad) { T.show('⚠️ ' + bad); document.getElementById('ai-parent').focus(); return; }
+    const cur0 = itemCtx ? items.find(x => x.id === itemCtx) : null, to0 = val('ai-status') || (cur0 && cur0.status);
+    const pend0 = cur0 && to0 !== cur0.status ? BoardRules.pendingFor(policy(), cur0.status, to0, checkDraft) : [], why0 = val('ai-note').trim();
+    if(pend0.length && why0.length < 5) { T.show('☑️ Há tarefas pendentes (' + pendNames(pend0) + '). Para mover mesmo assim, escreva o motivo em "Comentário da atividade".', 6500); document.getElementById('ai-note').focus(); return; }
     const ev = itemCtx ? await collectEvidence() : null; if(ev === false) return;
     load(); it = itemCtx ? items.find(x => x.id === itemCtx) : null;
-    if(it) applyEvidence(it, ev);
+    if(it) { applyEvidence(it, ev); applyChecklist(it); if(pend0.length) addHist(it, 'Movido com ' + pend0.length + ' tarefa(s) pendente(s) — motivo: ' + why0.slice(0, 300)); }
     const was = it ? { status: it.status, assignee: it.assignee || '' } : null;
     if(it) { Object.assign(it, f); AgileCalc.moveTo(it, val('ai-status') || it.status, todayIso()); }
     else { it = { id: AgileCalc.nextId('US', items), status: 'todo', rank: (Math.max(0, ...items.map(x => x.rank || 0)) + 1), createdOn: todayIso(), doneOn: '', ...f }; items.push(it); }
+    if(!was) it.checklist = checkNorm();
     saveItems(); pushItem(it);
     if(!was) { fireRules({ type: 'created' }, it); if(it.assignee) fireRules({ type: 'assigned' }, it); }
     else { if(it.status !== was.status) fireRules({ type: 'enter', column: it.status }, it); if(it.assignee && it.assignee !== was.assignee) fireRules({ type: 'assigned' }, it); }
@@ -13479,7 +13545,7 @@ const Agile = (() => {
   return { histFilter, render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, rank, setSprintOf, setBacklogQuery, setShowDone,
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, checkDates, openRules, closeRules, editRule, ruleField, ruleAct, ruleAddAct, ruleDelAct, ruleCancel, ruleSave, toggleRule, deleteRule, renderDue, openDue, closeDue, dueChoose, runDue, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
-    aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, setPolicyMove, setPolicyCol, setPolicyBehalf, openBehalf, closeBehalf, confirmBehalf, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
+    aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, setPolicyMove, setPolicyCol, setPolicyBehalf, addGate, removeGate, setGate, setTemplate, checkToggle, checkAdd, checkDel, openBehalf, closeBehalf, confirmBehalf, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
     cfgNow: () => { load(); return cfg; }, kindChanged, kindPicked, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
 })();
 </script>
