@@ -72,7 +72,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 | Tabela | Para que serve | Escopo | Dado pessoal | Apagar dados do projeto | Apagar toda a base | Campos |
 |---|---|---|---|---|---|---|
 | `project_snapshots` | Fotografias diárias da saúde do projeto (tendência). | projeto | não | apaga (só Administrador) | apaga | `id`, `project_id`, `captured_at`, `source`, `health_score`, `health_status`, `budget_bac`, `budget_ac`, `budget_ev`, `budget_cpi`, `budget_eac`, `budget_consumo_pct`, `priority_index`, `critical_decisions_pending`, `team_overallocated_count`, `dims`, `captured_by` |
-| `project_settings` | Configurações por projeto, uma linha por chave: `methodology` (método), `agileConfig` (quadro e entrada de itens), `boardLanes` (raias filtradas do quadro Kanban), `boardRules` (automações do quadro: gatilho e ações), `workCalendar` (calendário de trabalho: feriados do projeto, exceções autorizadas pelo gerente com justificativa), priorização e perfil de PMO. | projeto | não | apaga | apaga | `project_id`, `key`, `value`, `updated_at`, `updated_by` |
+| `project_settings` | Configurações por projeto, uma linha por chave: `methodology` (método), `agileConfig` (quadro e entrada de itens), `boardLanes` (raias filtradas do quadro Kanban), `boardRules` (automações do quadro: gatilho e ações), `hoursRules` (regras de lançamento de horas: horas normais, aprovação, prazos e períodos fechados), `workCalendar` (calendário de trabalho: feriados do projeto, exceções autorizadas pelo gerente com justificativa), priorização e perfil de PMO. | projeto | não | apaga | apaga | `project_id`, `key`, `value`, `updated_at`, `updated_by` |
 | `projects` | Cadastro do projeto (nome, cliente, método, gerente responsável). | projeto | não | preserva | apaga | `id`, `name`, `client`, `icon`, `created_by`, `created_at`, `reference_date`, `area`, `methodology`, `manager_id` |
 | `project_access` | Quem pode abrir cada projeto. | projeto | não | preserva | apaga (cascata) | `project_id`, `user_id`, `granted_by`, `granted_at` |
 
@@ -81,7 +81,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 | Tabela | Para que serve | Escopo | Dado pessoal | Apagar dados do projeto | Apagar toda a base | Campos |
 |---|---|---|---|---|---|---|
 | `team_members` | Colaboradores do projeto, carga, sinais de burnout e vínculo com a conta (a tabela inteira só é lida por quem tem "ver a carga e os sinais"; cada pessoa lê a própria linha; o time sem carga vem da função `project_team`). | projeto | sim | apaga | apaga | `id`, `project_id`, `name`, `role`, `allocation_pct`, `workload_pct`, `signals`, `recommendation`, `action_page`, `created_at`, `user_id` |
-| `time_entries` | Horas apontadas por pessoa e atividade. | projeto | sim | apaga | apaga | `project_id`, `id`, `person_name`, `member_id`, `work_date`, `hours`, `wbs_ref`, `note`, `created_by`, `updated_at` |
+| `time_entries` | Horas apontadas por pessoa e atividade. | projeto | sim | apaga | apaga | `project_id`, `id`, `person_name`, `member_id`, `work_date`, `hours`, `wbs_ref`, `note`, `created_by`, `updated_at`, `status`, `extra_hours`, `extra_reason`, `review_by`, `review_at`, `review_note` |
 | `person_reviews` | Autoavaliação e avaliação do gerente por pessoa e projeto. | projeto | sim | apaga | apaga | `project_id`, `person_id`, `kind`, `reviewer_id`, `scores`, `would_work_again`, `comment`, `created_at`, `updated_at` |
 
 ### Mensagens

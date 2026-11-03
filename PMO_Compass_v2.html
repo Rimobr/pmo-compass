@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.42.3'
+  version: '2.43.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1994,6 +1994,11 @@ body.icons-failed i[data-fb]::before{
 .notice-n{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--red);color:#fff;font-size:11px;font-weight:700;line-height:16px;text-align:center}
 .nt-item{border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;margin-bottom:8px}
 .nt-item.unread{border-color:var(--acc);background:var(--ad)}
+.inp-clr{position:relative;display:block}
+.inp-clr>.input{padding-right:54px}
+.inp-clr-b{position:absolute;right:30px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--t2);font-size:17px;line-height:1;cursor:pointer;padding:2px 5px;border-radius:4px}
+.inp-clr-b:hover{background:var(--s2);color:var(--t1)}
+.inp-clr>.input:placeholder-shown+.inp-clr-b{display:none}
 .kb-lane{margin:0 0 12px;padding:10px 12px}
 .kb-lane>.lbl{margin-bottom:8px;flex-wrap:wrap}
 .kb-lane.collapsed>.lbl{margin-bottom:0}
@@ -2334,8 +2339,12 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
       <option value="semana">Esta semana</option><option value="mes">Este mês</option><option value="passada">Semana passada</option><option value="tudo">Todo o período</option>
     </select>
     <select class="input" id="hr-f-person" aria-label="Pessoa" onchange="Hours.setFilter('person', this.value)"><option value="">Todas as pessoas</option></select>
+    <select class="input" id="hr-f-status" aria-label="Situação" onchange="Hours.setFilter('status', this.value)"><option value="">Todas as situações</option><option value="ajuste">Ajuste pedido</option><option value="pendente">Aguardando aprovação</option><option value="aprovado">Aprovadas</option><option value="reprovado">Reprovadas</option></select>
   </div>
   <div class="g4 rc-k" id="hr-kpis"></div>
+  <div class="card" data-sec="hrs-aprovar" data-tint="4" data-perm="edit_plan"><div class="lbl"><i class="ti ti-checklist"></i>Aprovação de horas <span id="hr-ap-n" class="badge">0</span><span class="help-q" data-help="Horas lançadas que aguardam o gerente: aprovar, reprovar ou pedir ajuste (a pessoa recebe o aviso e o comentário). Só o gerente do projeto vê e decide aqui." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div id="hr-appr-root"></div></div>
+  <div class="card" data-sec="hrs-regras" data-tint="3" data-collapsed="1" data-perm="edit_plan"><div class="lbl"><i class="ti ti-adjustments"></i>Regras de lançamento<span class="help-q" data-help="Parâmetros deste projeto: horas normais por dia, quem passa por aprovação, prazos para lançar e bloqueio de entrega encerrada." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div id="hr-rules-root"></div></div>
+  <div class="card" data-sec="hrs-fechar" data-tint="5" data-collapsed="1" data-perm="edit_plan"><div class="lbl"><i class="ti ti-lock"></i>Fechamento de período<span class="help-q" data-help="Depois de fechado, o mês não aceita mais lançamento, alteração nem exclusão de horas (nem pelo servidor). O gerente pode reabrir." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div id="hr-close-root"></div></div>
   <div class="hr-grid">
     <div class="card">
       <div class="lbl"><i class="ti ti-scale"></i>Carga medida × declarada (últimos 7 dias)<span class="help-q" data-help="Carga medida = horas apontadas nos últimos 7 dias ÷ (40 h × % de alocação da pessoa). Carga declarada = o que está no Burnout Radar. Diferença grande indica que um dos dois números está desatualizado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
@@ -4067,8 +4076,8 @@ const Cloud = (() => {
       local: 'raci'
     },
     time_entries: {
-      toDb: (x, pid) => ({ project_id:pid, id:x.id, person_name:x.person, member_id:x.memberId||null, work_date:x.date, hours:x.hours, wbs_ref:x.wbsRef||null, note:x.note||null, updated_at:new Date().toISOString() }),
-      fromDb: r => ({ id:r.id, person:r.person_name, memberId:r.member_id||'', date:r.work_date, hours:Number(r.hours), wbsRef:r.wbs_ref||'', note:r.note||'' }),
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, person_name:x.person, member_id:x.memberId||null, work_date:x.date, hours:x.hours, wbs_ref:x.wbsRef||null, note:x.note||null, status:x.status||'aprovado', extra_hours:x.extra||0, extra_reason:x.extraReason||null, review_by:x.reviewBy||null, review_at:x.reviewAt||null, review_note:x.reviewNote||null, updated_at:new Date().toISOString() }),
+      fromDb: r => ({ id:r.id, person:r.person_name, memberId:r.member_id||'', date:r.work_date, hours:Number(r.hours), wbsRef:r.wbs_ref||'', note:r.note||'', status:r.status||'aprovado', extra:Number(r.extra_hours)||0, extraReason:r.extra_reason||'', reviewBy:r.review_by||'', reviewAt:r.review_at||'', reviewNote:r.review_note||'' }),
       local: 'timeEntries'
     }
   };
@@ -14282,6 +14291,30 @@ const ColumnDrag = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: ui/input-clear ─ Campos com lista de sugestões ganham o botão × para limpar (a lista volta a mostrar todas as opções) e não oferecem o histórico do navegador -->
+<script data-module="ui/input-clear">
+(() => {
+  function enhance(root) {
+    (root || document).querySelectorAll('input[list]').forEach(inp => {
+      inp.setAttribute('autocomplete', 'off');
+      if(inp.dataset.clr || !inp.parentNode) return;
+      const disp = getComputedStyle(inp.parentNode).display;
+      if(disp === 'flex' || disp === 'inline-flex' || disp === 'grid') return; // em fileira com outros controles o botão atrapalharia o desenho
+      inp.dataset.clr = '1';
+      if(!inp.getAttribute('placeholder')) inp.setAttribute('placeholder', ' ');
+      const w = document.createElement('span'); w.className = 'inp-clr';
+      inp.parentNode.insertBefore(w, inp); w.appendChild(inp);
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'inp-clr-b'; b.title = 'Limpar'; b.setAttribute('aria-label', 'Limpar o campo');
+      b.textContent = '×';
+      b.addEventListener('click', () => { inp.value = ''; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); inp.focus(); });
+      w.appendChild(b);
+    });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => enhance()); else enhance();
+  window.InputClear = { enhance };
+})();
+</script>
+
 <!-- ■ MODULE: ui/update-check ─ Aviso de nova versão: o app confere sozinho (ao abrir, ao voltar para a aba e a cada 5 min) se o
      servidor publicou uma versão diferente da que está rodando e mostra uma faixa fixa com o botão "Atualizar agora". -->
 <style data-module="ui/update-check-css">
@@ -14517,12 +14550,85 @@ const ExecReport = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: services/hours-rules ─ Regras de lançamento de horas (parametrizáveis pelo gerente): hora extra, aprovação, prazos e período fechado. Lógica pura, sem DOM -->
+<script data-module="services/hours-rules">
+const HoursRules = (() => {
+  const STATUS = { pendente: 'Aguardando aprovação', aprovado: 'Aprovada', reprovado: 'Reprovada', ajuste: 'Ajuste pedido' };
+  const APPROVAL = { all: 'Todas as horas passam pelo gerente', extra: 'Só as horas extras passam pelo gerente', none: 'Nenhuma: o gerente só acompanha' };
+  const DEFAULTS = { dailyNormal: 8, requireDelivery: true, approval: 'all', daysAfter: { on: false, days: 3 }, monthCutoff: { on: false, bd: 5 }, closeOnDelivery: false, closedPeriods: [] };
+  const num = (v, min, max, dflt) => { const n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : dflt; };
+  function norm(raw) {
+    const r = raw && typeof raw === 'object' ? raw : {};
+    const seen = new Set();
+    const closed = (Array.isArray(r.closedPeriods) ? r.closedPeriods : []).filter(p => p && /^\d{4}-(0[1-9]|1[0-2])$/.test(String(p.period || '')) && !seen.has(p.period) && seen.add(p.period))
+      .slice(0, 120).map(p => ({ period: p.period, by: String(p.by || '').slice(0, 120), at: String(p.at || '').slice(0, 40) })).sort((a, b) => a.period.localeCompare(b.period));
+    return {
+      dailyNormal: Math.round(num(r.dailyNormal, 1, 24, DEFAULTS.dailyNormal) * 4) / 4,
+      requireDelivery: r.requireDelivery !== false,
+      approval: APPROVAL[r.approval] ? r.approval : DEFAULTS.approval,
+      daysAfter: { on: !!(r.daysAfter && r.daysAfter.on), days: Math.round(num(r.daysAfter && r.daysAfter.days, 0, 60, DEFAULTS.daysAfter.days)) },
+      monthCutoff: { on: !!(r.monthCutoff && r.monthCutoff.on), bd: Math.round(num(r.monthCutoff && r.monthCutoff.bd, 1, 20, DEFAULTS.monthCutoff.bd)) },
+      closeOnDelivery: !!r.closeOnDelivery,
+      closedPeriods: closed
+    };
+  }
+  const periodOf = date => String(date || '').slice(0, 7);
+  const isClosed = (rules, date) => rules.closedPeriods.some(p => p.period === periodOf(date));
+  const round2 = n => Math.round(n * 100) / 100;
+  // O que passa das horas normais do dia, somando os outros apontamentos da pessoa no mesmo dia (reprovados não contam)
+  const extraOf = (othersHours, hours, normal) => round2(Math.max(0, Math.min(hours, othersHours + hours - normal)));
+  // Situação inicial de um lançamento: o gerente aprova o que ele mesmo lança
+  function statusFor(rules, extra, isManager) {
+    if(isManager || rules.approval === 'none') return 'aprovado';
+    if(rules.approval === 'extra' && !(extra > 0)) return 'aprovado';
+    return 'pendente';
+  }
+  const parse = iso => { const [y, m, d] = String(iso).split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+  const fmt = d => d.toISOString().slice(0, 10);
+  const addDays = (iso, n) => { const d = parse(iso); d.setUTCDate(d.getUTCDate() + n); return fmt(d); };
+  // N-ésimo dia útil do mês (isOff diz se o dia é fim de semana ou feriado)
+  function nthWorkingDay(year, month, n, isOff) {
+    let d = fmt(new Date(Date.UTC(year, month - 1, 1))), c = 0, guard = 0;
+    while(guard++ < 62) { if(!isOff(d)) { c++; if(c >= n) return d; } d = addDays(d, 1); }
+    return d;
+  }
+  // Último dia para lançar o dia trabalhado: X dias úteis depois (o próprio dia trabalhado não conta)
+  function daysAfterDeadline(workDate, days, isOff) {
+    let d = workDate, c = 0, guard = 0;
+    while(c < days && guard++ < 200) { d = addDays(d, 1); if(!isOff(d)) c++; }
+    return d;
+  }
+  // Prazo do mês: até o N-ésimo dia útil do mês seguinte ao do dia trabalhado
+  function monthDeadline(workDate, bd, isOff) {
+    const y = +workDate.slice(0, 4), m = +workDate.slice(5, 7);
+    return nthWorkingDay(m === 12 ? y + 1 : y, m === 12 ? 1 : m + 1, bd, isOff);
+  }
+  // Pode lançar hoje as horas desse dia? O período fechado vale para todos; os prazos e a entrega fechada o gerente pode superar
+  function check(rules, o) {
+    const isOff = o.isOff || (() => false);
+    if(isClosed(rules, o.workDate)) return { ok: false, code: 'periodo', reason: 'O período ' + periodOf(o.workDate) + ' está fechado para lançamento. Peça ao gerente para reabri-lo.' };
+    if(o.isManager) return { ok: true };
+    if(rules.closeOnDelivery && o.deliveryClosed) return { ok: false, code: 'entrega', reason: 'A entrega escolhida já foi encerrada: não recebe mais horas. Escolha outra ou peça ao gerente.' };
+    if(rules.daysAfter.on) {
+      const lim = daysAfterDeadline(o.workDate, rules.daysAfter.days, isOff);
+      if(o.today > lim) return { ok: false, code: 'prazo', deadline: lim, reason: 'Prazo vencido: as horas de um dia podem ser lançadas até ' + rules.daysAfter.days + ' dia(s) útil(eis) depois dele (até ' + lim.split('-').reverse().join('/') + ').' };
+    }
+    if(rules.monthCutoff.on) {
+      const lim = monthDeadline(o.workDate, rules.monthCutoff.bd, isOff);
+      if(o.today > lim) return { ok: false, code: 'mes', deadline: lim, reason: 'Prazo vencido: as horas do mês podem ser lançadas até o ' + rules.monthCutoff.bd + 'º dia útil do mês seguinte (até ' + lim.split('-').reverse().join('/') + ').' };
+    }
+    return { ok: true };
+  }
+  return { STATUS, APPROVAL, DEFAULTS, norm, periodOf, isClosed, extraOf, statusFor, nthWorkingDay, daysAfterDeadline, monthDeadline, check, addDays };
+})();
+</script>
+
 <!-- ■ MODULE: pages/hours-js -->
 <script data-module="pages/hours-js">
 const Hours = (() => {
   let data = null;
   let modalCtx = { mode:null, id:null };
-  const filter = { period:'semana', person:'' };
+  const filter = { period:'semana', person:'', status:'' };
   const SHOW = 60;
   let showAll = false;
 
@@ -14551,7 +14657,7 @@ const Hours = (() => {
   function inRange(e, r) { return e.date >= r[0] && e.date <= r[1]; }
   function filtered() {
     const r = range(filter.period);
-    return ensureLoaded().filter(e => inRange(e, r) && (!filter.person || nameKey(e.person) === nameKey(filter.person)));
+    return ensureLoaded().filter(e => inRange(e, r) && (!filter.person || nameKey(e.person) === nameKey(filter.person)) && (!filter.status || (e.status || 'aprovado') === filter.status));
   }
 
   function peopleList() {
@@ -14568,11 +14674,12 @@ const Hours = (() => {
 
   function renderKpis(list) {
     const root = document.getElementById('hr-kpis'); if(!root) return;
-    const total = list.reduce((s, e) => s + e.hours, 0);
+    const valid = list.filter(e => e.status !== 'reprovado'), waiting = list.filter(e => e.status === 'pendente').length;
+    const total = valid.reduce((s, e) => s + e.hours, 0);
     const people = new Set(list.map(e => nameKey(e.person)));
     const days = new Set(list.map(e => e.date));
     const k = (l, v, sub) => `<div class="kpi"><div class="kpi-lbl">${l}</div><div class="kpi-val">${v}</div><div class="kpi-delta">${sub}</div></div>`;
-    root.innerHTML = k('Horas no período', fmtH(total), `${list.length} apontamento(s)`) + k('Pessoas', people.size, 'com horas no período') +
+    root.innerHTML = k('Horas no período', fmtH(total), `${valid.length} apontamento(s)` + (waiting ? ` · ${waiting} aguardando aprovação` : '')) + k('Pessoas', people.size, 'com horas no período') +
       k('Média por pessoa', people.size ? fmtH(total / people.size) : '—', 'no período') + k('Dias com apontamento', days.size, 'distintos');
   }
 
@@ -14581,7 +14688,7 @@ const Hours = (() => {
     const t = today(); const from = new Date(t); from.setDate(t.getDate() - 6);
     const r = [iso(from), iso(t)];
     const hoursBy = new Map();
-    ensureLoaded().filter(e => inRange(e, r)).forEach(e => hoursBy.set(nameKey(e.person), (hoursBy.get(nameKey(e.person)) || 0) + e.hours));
+    ensureLoaded().filter(e => inRange(e, r) && e.status !== 'reprovado').forEach(e => hoursBy.set(nameKey(e.person), (hoursBy.get(nameKey(e.person)) || 0) + e.hours));
     const team = DB.get('team') || [];
     const rows = team.map(m => {
       const h = hoursBy.get(nameKey(m.name)) || 0;
@@ -14620,7 +14727,7 @@ const Hours = (() => {
       if(e.date !== day) { day = e.date; html += `<div class="hr-day"><span>${fmtDay(day)}</span><span>${fmtH(dayTotal[day])}</span></div>`; }
       html += `<div class="hr-row" role="button" tabindex="0" data-id="${esc(e.id)}" onclick="Hours.openEditEl(this)" onkeydown="Hours.keyEl(event,this)" aria-label="Apontamento de ${esc(e.person)}, ${fmtH(e.hours)} em ${fmtDate(e.date)}. Abrir para editar">
         <div class="hr-h">${fmtH(e.hours)}</div>
-        <div style="min-width:0;flex:1"><div style="font-weight:600;overflow-wrap:anywhere">${esc(e.person)}${e.wbsRef ? ` <span class="chip">${esc(e.wbsRef)}</span>` : ''}</div>${e.note ? `<div style="font-size:12px;color:var(--t2);overflow-wrap:anywhere">${esc(e.note)}</div>` : ''}</div>
+        <div style="min-width:0;flex:1"><div style="font-weight:600;overflow-wrap:anywhere">${esc(e.person)}${e.wbsRef ? ` <span class="chip">${esc(e.wbsRef)}</span>` : ''}${statusChips(e)}</div>${e.note ? `<div style="font-size:12px;color:var(--t2);overflow-wrap:anywhere">${esc(e.note)}</div>` : ''}</div>
       </div>`;
     });
     if(!showAll && sorted.length > SHOW) html += `<button class="btn btn-sm" onclick="Hours.more()">Mostrar mais (${sorted.length - SHOW})</button>`;
@@ -14631,27 +14738,74 @@ const Hours = (() => {
     fillPersonFilter();
     const list = filtered();
     renderKpis(list); renderLoad(); renderList(list);
+    renderApproval(); renderRules(); renderClosing();
+    if(typeof Sec !== 'undefined') Sec.restore(document.getElementById('p-hours'));
   }
   function setFilter(k, v) { filter[k] = v; showAll = false; render(); }
   function more() { showAll = true; renderList(filtered()); }
   function keyEl(e, el) { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEditEl(el); } }
   function openEditEl(el) { openEdit(el.dataset.id); }
 
+  // ── regras do projeto, entregas e situação dos lançamentos ──
+  const rules = () => HoursRules.norm(DB.get('hoursRules'));
+  const isMgr = () => typeof Auth !== 'undefined' && !Auth.isPreview() && Auth.can('edit_plan');
+  const isOff = d => typeof WorkCal !== 'undefined' && !!WorkCal.reason(d, WorkCal.cfgNow());
+  const STATUS_BADGE = { pendente: 'b-amb', aprovado: 'b-grn', reprovado: 'b-red', ajuste: 'b-amb' };
+  // Entrega = módulo do cronograma (WBS) ou item do backlog; encerrada = módulo a 100% ou item concluído
+  function deliveries() {
+    const wbs = (DB.get('wbs') || []).map(m => ({ ref: m.label, group: 'Cronograma (WBS)', closed: (m.pct || 0) >= 100 }));
+    const back = (DB.get('backlog') || []).map(i => ({ ref: i.id + ' — ' + i.title, group: 'Backlog do projeto', closed: i.status === 'done' }));
+    return wbs.concat(back);
+  }
+  function statusChips(e) {
+    const st = e.status || 'aprovado';
+    return ` <span class="badge ${STATUS_BADGE[st] || 'b-neu'}">${esc(HoursRules.STATUS[st] || st)}</span>` + (e.extra > 0 ? ` <span class="badge b-amb" title="${esc(e.extraReason || '')}">${esc(fmtH(e.extra))} extra</span>` : '')
+      + (HoursRules.isClosed(rules(), e.date) ? ' <span class="chip" title="Período fechado para lançamento"><i class="ti ti-lock"></i>fechado</span>' : '')
+      + ((st === 'ajuste' || st === 'reprovado') && e.reviewNote ? `<div style="font-size:12px;color:var(--amb);overflow-wrap:anywhere"><i class="ti ti-message"></i> ${esc(e.reviewBy || 'Gerente')}: ${esc(e.reviewNote)}</div>` : '');
+  }
+
   // ── modal ──
   function fillModal(e) {
     document.getElementById('hr-person-list').innerHTML = peopleList().map(n => `<option value="${esc(n)}">`).join('');
-    const labels = [];
-    (DB.get('wbs') || []).forEach(m => { labels.push(m.label); });
-    document.getElementById('hr-f-wbs').innerHTML = '<option value="">— sem entrega específica —</option>' + labels.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('');
+    const dl = deliveries(), groups = [...new Set(dl.map(d => d.group))];
+    const sel = document.getElementById('hr-f-wbs');
+    sel.innerHTML = '<option value="">Escolha a entrega…</option>' + groups.map(g => `<optgroup label="${esc(g)}">${dl.filter(d => d.group === g).map(d => `<option value="${esc(d.ref)}"${d.closed ? ' data-closed="1"' : ''}>${esc(d.ref)}${d.closed ? ' (encerrada)' : ''}</option>`).join('')}</optgroup>`).join('');
     document.getElementById('hr-f-person-m').value = e ? e.person : '';
     document.getElementById('hr-f-date').value = e ? e.date : iso(today());
     document.getElementById('hr-f-hours').value = e ? e.hours : '';
-    document.getElementById('hr-f-wbs').value = e ? (e.wbsRef || '') : '';
-    if(e && e.wbsRef && document.getElementById('hr-f-wbs').value !== e.wbsRef) { // entrega antiga que não existe mais na WBS: mantém o texto
-      document.getElementById('hr-f-wbs').insertAdjacentHTML('beforeend', `<option value="${esc(e.wbsRef)}">${esc(e.wbsRef)}</option>`);
-      document.getElementById('hr-f-wbs').value = e.wbsRef;
+    sel.value = e ? (e.wbsRef || '') : '';
+    if(e && e.wbsRef && sel.value !== e.wbsRef) { // entrega antiga que não existe mais: mantém o texto
+      sel.insertAdjacentHTML('beforeend', `<option value="${esc(e.wbsRef)}">${esc(e.wbsRef)}</option>`);
+      sel.value = e.wbsRef;
     }
     document.getElementById('hr-f-note').value = e ? (e.note || '') : '';
+    document.getElementById('hr-f-extra').value = e ? (e.extraReason || '') : '';
+    preview();
+  }
+  // Situação do dia enquanto a pessoa preenche (não redesenha os campos: o foco fica onde está)
+  function dayInfo() {
+    const person = document.getElementById('hr-f-person-m').value.trim(), date = document.getElementById('hr-f-date').value;
+    const hours = parseFloat(String(document.getElementById('hr-f-hours').value).replace(',', '.')) || 0;
+    const r = rules();
+    const others = person && date ? ensureLoaded().filter(x => x.id !== modalCtx.id && nameKey(x.person) === nameKey(person) && x.date === date && x.status !== 'reprovado').reduce((s, x) => s + x.hours, 0) : 0;
+    return { person, date, hours, r, others, extra: hours > 0 ? HoursRules.extraOf(others, hours, r.dailyNormal) : 0 };
+  }
+  function windowCheck(info) {
+    const wbs = document.getElementById('hr-f-wbs'), opt = wbs.selectedOptions[0];
+    return HoursRules.check(info.r, { workDate: info.date, today: iso(today()), isOff, isManager: isMgr(), deliveryClosed: !!(opt && opt.dataset.closed) });
+  }
+  function preview() {
+    const box = document.getElementById('hr-hint'); if(!box) return;
+    const i = dayInfo(), lines = [];
+    if(i.person && /^\d{4}-\d{2}-\d{2}$/.test(i.date) && i.hours > 0) {
+      lines.push(`<span>Dia de ${esc(i.person)}: <b>${fmtH(i.others + i.hours)}</b> (normal: ${fmtH(i.r.dailyNormal)})</span>`);
+      const w = windowCheck(i);
+      if(!w.ok) lines.push(`<span style="color:var(--red)"><i class="ti ti-lock"></i> ${esc(w.reason)}</span>`);
+      else lines.push(`<span>${HoursRules.statusFor(i.r, i.extra, isMgr()) === 'aprovado' ? '<i class="ti ti-circle-check"></i> Entra como aprovada.' : '<i class="ti ti-hourglass"></i> Vai para a aprovação do gerente.'}</span>`);
+    }
+    box.innerHTML = lines.join('<br>');
+    const ex = document.getElementById('hr-extra-grp'); if(ex) ex.style.display = i.extra > 0 ? '' : 'none';
+    const exl = document.getElementById('hr-extra-lbl'); if(exl) exl.textContent = `Motivo da hora extra (${fmtH(i.extra)} acima das normais)`;
   }
   function openAdd() {
     if(!Auth.guard('log_hours')) return;
@@ -14665,6 +14819,7 @@ const Hours = (() => {
   function openEdit(id) {
     if(!Auth.guard('log_hours')) return;
     const e = ensureLoaded().find(x => x.id === id); if(!e) return;
+    if(HoursRules.isClosed(rules(), e.date)) { T.show('🔒 O período ' + HoursRules.periodOf(e.date) + ' está fechado. Peça ao gerente para reabri-lo.'); return; }
     modalCtx = { mode:'edit', id };
     document.getElementById('hr-modal-title').textContent = 'Editar apontamento';
     document.getElementById('hr-f-delete-btn').style.display = '';
@@ -14677,30 +14832,40 @@ const Hours = (() => {
   function saveFromModal() {
     if(!Auth.guard('log_hours')) return;
     ensureLoaded();
-    const person = document.getElementById('hr-f-person-m').value.trim();
-    const date = document.getElementById('hr-f-date').value;
-    const hours = parseFloat(String(document.getElementById('hr-f-hours').value).replace(',', '.'));
+    const i = dayInfo(), person = i.person, date = i.date, hours = i.hours, r = i.r, mgr = isMgr();
+    const wbsRef = document.getElementById('hr-f-wbs').value, extraReason = document.getElementById('hr-f-extra').value.trim();
     if(person.length < 2) { T.show('⚠️ Informe a pessoa.'); document.getElementById('hr-f-person-m').focus(); return; }
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) { T.show('⚠️ Informe a data.'); return; }
-    if(!(hours > 0 && hours <= 24)) { T.show('⚠️ As horas devem ficar entre 0,25 e 24.'); document.getElementById('hr-f-hours').focus(); return; }
-    // Soma do dia da pessoa não pode passar de 24 h (apontamento duplicado é o erro mais comum)
-    const others = data.filter(x => x.id !== modalCtx.id && nameKey(x.person) === nameKey(person) && x.date === date).reduce((s, x) => s + x.hours, 0);
-    if(others + hours > 24) { T.show(`⚠️ ${esc(person)} já tem ${fmtH(others)} em ${fmtDate(date)} — o total do dia passaria de 24 h.`); return; }
+    if(!(hours >= 0.25 && hours <= 24)) { T.show('⚠️ As horas devem ficar entre 0,25 e 24.'); document.getElementById('hr-f-hours').focus(); return; }
+    if(r.requireDelivery && !wbsRef) { T.show('⚠️ Escolha a entrega: toda hora precisa estar ligada a uma entrega.'); document.getElementById('hr-f-wbs').focus(); return; }
+    if(i.others + hours > 24) { T.show(`⚠️ ${person} já tem ${fmtH(i.others)} em ${fmtDate(date)} — o total do dia passaria de 24 h.`); return; }
+    const w = windowCheck(i);
+    if(!w.ok) { T.show('🔒 ' + w.reason, 7000); return; }
+    if(modalCtx.mode === 'edit') { const old = data.find(x => x.id === modalCtx.id); if(old && HoursRules.isClosed(r, old.date)) { T.show('🔒 O período ' + HoursRules.periodOf(old.date) + ' está fechado.'); return; } }
+    if(i.extra > 0 && !mgr && extraReason.length < 5) { T.show('⚠️ Hora extra precisa de liberação do gerente: escreva o motivo (mínimo 5 letras).'); document.getElementById('hr-f-extra').focus(); return; }
     const member = (DB.get('team') || []).find(m => nameKey(m.name) === nameKey(person));
-    const fields = { person, date, hours: Math.round(hours * 100) / 100, wbsRef: document.getElementById('hr-f-wbs').value, note: document.getElementById('hr-f-note').value.trim(), memberId: member ? member.id : '' };
+    const status = HoursRules.statusFor(r, i.extra, mgr);
+    const fields = { person, date, hours: Math.round(hours * 100) / 100, wbsRef, note: document.getElementById('hr-f-note').value.trim(), memberId: member ? member.id : '', extra: i.extra, extraReason: i.extra > 0 ? extraReason : '' };
     let item;
-    if(modalCtx.mode === 'add') { item = { id: genId(), ...fields }; data.unshift(item); }
-    else { item = data.find(x => x.id === modalCtx.id); if(!item) return; Object.assign(item, fields); }
+    if(modalCtx.mode === 'add') { item = { id: genId(), ...fields, status, reviewBy: mgr ? Auth.getName() : '', reviewAt: mgr ? new Date().toISOString() : '', reviewNote: '' }; data.unshift(item); }
+    else {
+      item = data.find(x => x.id === modalCtx.id); if(!item) return;
+      const changed = ['person', 'date', 'hours', 'wbsRef', 'note', 'extraReason'].some(k => String(item[k] == null ? '' : item[k]) !== String(fields[k] == null ? '' : fields[k]));
+      Object.assign(item, fields);
+      if(changed || !mgr) { item.status = status; item.reviewBy = mgr ? Auth.getName() : ''; item.reviewAt = mgr ? new Date().toISOString() : ''; item.reviewNote = ''; }
+    }
     persist();
     Cloud.pushRow('time_entries', item);
+    if(item.status === 'pendente' && typeof Cloud !== 'undefined' && Cloud.getUserId && Cloud.getUserId()) Cloud.notifyProject(DB.getActiveProjectId(), 'manager', '', 'Horas aguardando aprovação: ' + person, fmtH(fields.hours) + ' em ' + fmtDate(date) + (i.extra > 0 ? ' (inclui ' + fmtH(i.extra) + ' extra: ' + extraReason + ')' : ''), 'hours', 'Apontamento de horas');
     render();
     closeModal();
-    T.show(`✅ ${fmtH(fields.hours)} apontadas para ${esc(person)}`);
+    T.show(`✅ ${fmtH(fields.hours)} apontadas para ${person}` + (item.status === 'pendente' ? ' — aguardando a aprovação do gerente.' : '.'));
   }
   function deleteFromModal() {
     if(!Auth.guard('log_hours')) return;
     ensureLoaded();
     const e = data.find(x => x.id === modalCtx.id); if(!e) return;
+    if(HoursRules.isClosed(rules(), e.date)) { T.show('🔒 O período ' + HoursRules.periodOf(e.date) + ' está fechado.'); return; }
     if(!confirm('Excluir este apontamento?')) return;
     data = data.filter(x => x.id !== modalCtx.id);
     persist();
@@ -14710,12 +14875,129 @@ const Hours = (() => {
     T.show('🗑️ Apontamento excluído.');
   }
 
+  // ── Gerente: aprovação, regras de lançamento e fechamento de período ──
+  const apprSel = new Set();
+  const saveRules = v => { DB.set('hoursRules', v); if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'hoursRules', v); };
+  const periodLabel = p => { const [y, m] = p.split('-'); return ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][+m - 1] + ' de ' + y; };
+
+  function renderApproval() {
+    const root = document.getElementById('hr-appr-root'); if(!root) return;
+    const pend = ensureLoaded().filter(e => e.status === 'pendente').sort((a, b) => a.person.localeCompare(b.person, 'pt-BR') || a.date.localeCompare(b.date));
+    [...apprSel].forEach(id => { if(!pend.some(e => e.id === id)) apprSel.delete(id); });
+    const n = document.getElementById('hr-ap-n'); if(n) { n.textContent = pend.length; n.className = 'badge ' + (pend.length ? 'b-amb' : 'b-grn'); }
+    if(!pend.length) { root.innerHTML = '<div class="rk-empty">Nenhuma hora aguardando aprovação.</div>'; return; }
+    const shown = pend.slice(0, 80);
+    root.innerHTML = `<div class="btn-row" style="margin-bottom:8px;align-items:center;flex-wrap:wrap"><label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" aria-label="Marcar todas as horas da lista" onchange="Hours.apprAll(this.checked)" ${apprSel.size === shown.length ? 'checked' : ''}> Marcar todas</label><span style="font-size:12px;color:var(--t2)">${apprSel.size} marcada(s) de ${pend.length}</span></div>`
+      + shown.map(e => `<div class="hr-row" style="cursor:default"><input type="checkbox" aria-label="Marcar ${esc(e.person)} em ${fmtDate(e.date)}" ${apprSel.has(e.id) ? 'checked' : ''} onchange="Hours.apprToggle('${esc(e.id)}', this.checked)" style="margin-top:3px"><div class="hr-h">${fmtH(e.hours)}</div><div style="min-width:0;flex:1"><div style="font-weight:600;overflow-wrap:anywhere">${esc(e.person)} <span class="chip">${fmtDay(e.date)}</span>${e.extra > 0 ? ` <span class="badge b-amb">${fmtH(e.extra)} extra</span>` : ''}</div><div style="font-size:12px;color:var(--t2);overflow-wrap:anywhere">${esc(e.wbsRef || 'sem entrega')}${e.note ? ' · ' + esc(e.note) : ''}</div>${e.extra > 0 && e.extraReason ? `<div style="font-size:12px;color:var(--amb);overflow-wrap:anywhere"><i class="ti ti-clock-plus"></i> Motivo da hora extra: ${esc(e.extraReason)}</div>` : ''}</div></div>`).join('')
+      + (pend.length > shown.length ? `<div class="set-sub" style="margin:6px 0">Mostrando as ${shown.length} mais antigas; aprove e o restante aparece.</div>` : '')
+      + `<div class="field-group" style="margin-top:10px"><div class="field-label"><label for="hr-ap-note">Comentário (obrigatório para reprovar ou pedir ajuste)</label></div><input class="input" id="hr-ap-note" maxlength="300" placeholder="Ex.: separe as horas por entrega"></div>
+      <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm btn-acc" ${apprSel.size ? '' : 'disabled'} onclick="Hours.review('aprovado')"><i class="ti ti-check"></i>Aprovar</button><button class="btn btn-sm" ${apprSel.size ? '' : 'disabled'} onclick="Hours.review('ajuste')"><i class="ti ti-edit"></i>Pedir ajuste</button><button class="btn btn-sm btn-red" ${apprSel.size ? '' : 'disabled'} onclick="Hours.review('reprovado')"><i class="ti ti-x"></i>Reprovar</button></div>`;
+  }
+  function apprToggle(id, on) { if(on) apprSel.add(id); else apprSel.delete(id); renderApproval(); }
+  function apprAll(on) { apprSel.clear(); if(on) ensureLoaded().filter(e => e.status === 'pendente').slice(0, 80).forEach(e => apprSel.add(e.id)); renderApproval(); }
+  function review(status) {
+    if(!isMgr()) { T.show('🔒 Só o gerente do projeto aprova horas.'); return; }
+    const note = ((document.getElementById('hr-ap-note') || {}).value || '').trim();
+    if(status !== 'aprovado' && note.length < 5) { T.show('⚠️ Escreva o comentário (mínimo 5 letras) para reprovar ou pedir ajuste.'); const el = document.getElementById('hr-ap-note'); if(el) el.focus(); return; }
+    const picked = ensureLoaded().filter(e => apprSel.has(e.id) && e.status === 'pendente');
+    if(!picked.length) return;
+    const now = new Date().toISOString(), by = Auth.getName(), byPerson = {};
+    picked.forEach(e => {
+      e.status = status; e.reviewBy = by; e.reviewAt = now; e.reviewNote = status === 'aprovado' ? '' : note;
+      Cloud.pushRow('time_entries', e);
+      (byPerson[e.person] = byPerson[e.person] || []).push(e);
+    });
+    persist(); apprSel.clear();
+    const verb = { aprovado: 'aprovadas', reprovado: 'reprovadas', ajuste: 'com ajuste pedido' }[status];
+    if(typeof Cloud !== 'undefined' && Cloud.getUserId && Cloud.getUserId()) {
+      Object.keys(byPerson).forEach(p => Cloud.notifyProject(DB.getActiveProjectId(), 'member', p, 'Suas horas foram ' + verb, byPerson[p].length + ' apontamento(s), ' + fmtH(byPerson[p].reduce((s, x) => s + x.hours, 0)) + (note && status !== 'aprovado' ? '. Gerente: ' + note : ''), 'hours', 'Aprovação de horas'));
+      Cloud.pushAuditEvent('hours_review', picked.length + ' apontamento(s) ' + verb + ' por ' + by + (note ? ': ' + note.slice(0, 200) : ''), { status, count: picked.length, people: Object.keys(byPerson) });
+    }
+    render(); T.show('✅ ' + picked.length + ' apontamento(s) ' + verb + '.');
+  }
+
+  function renderRules() {
+    const root = document.getElementById('hr-rules-root'); if(!root) return;
+    const r = rules();
+    root.innerHTML = `<p class="set-sub" style="margin:0 0 10px">Valem para quem lança horas neste projeto. O gerente não é barrado pelos prazos (só pelo período fechado).</p>
+      <div class="ln-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 12px">
+        <div class="ln-f" style="display:flex;flex-direction:column;gap:3px"><label for="hr-r-normal" style="font-size:11.5px;color:var(--t2);font-weight:600">Horas normais por dia</label><input class="input" id="hr-r-normal" type="number" min="1" max="24" step="0.25" value="${r.dailyNormal}"></div>
+        <div class="ln-f" style="display:flex;flex-direction:column;gap:3px"><label for="hr-r-appr" style="font-size:11.5px;color:var(--t2);font-weight:600">Quem passa pela aprovação</label><select class="input" id="hr-r-appr">${Object.keys(HoursRules.APPROVAL).map(k => `<option value="${k}"${r.approval === k ? ' selected' : ''}>${esc(HoursRules.APPROVAL[k])}</option>`).join('')}</select></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin:12px 0;font-size:12.5px">
+        <label style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;cursor:pointer"><input type="checkbox" id="hr-r-deliv" ${r.requireDelivery ? 'checked' : ''}> Toda hora precisa estar ligada a uma entrega</label>
+        <label style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;cursor:pointer"><input type="checkbox" id="hr-r-da" ${r.daysAfter.on ? 'checked' : ''}> Lançar em até <input class="input" id="hr-r-da-n" type="number" min="0" max="60" style="width:76px" value="${r.daysAfter.days}" aria-label="Dias úteis após o dia trabalhado"> dia(s) útil(eis) depois do dia trabalhado</label>
+        <label style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;cursor:pointer"><input type="checkbox" id="hr-r-mc" ${r.monthCutoff.on ? 'checked' : ''}> Lançar as horas do mês até o <input class="input" id="hr-r-mc-n" type="number" min="1" max="20" style="width:76px" value="${r.monthCutoff.bd}" aria-label="Dia útil do mês seguinte"> º dia útil do mês seguinte</label>
+        <label style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;cursor:pointer"><input type="checkbox" id="hr-r-cd" ${r.closeOnDelivery ? 'checked' : ''}> Não aceitar horas em entrega já encerrada (cronograma a 100% ou item concluído)</label>
+      </div>
+      <div class="set-sub" style="margin-bottom:10px"><i class="ti ti-info-circle"></i> Hora extra = o que passa das horas normais do dia somando todos os apontamentos da pessoa. Quem lança precisa escrever o motivo, e a hora só vale depois da liberação do gerente (conforme a regra de aprovação acima). Quando mais de um prazo está ligado, vale o que vencer primeiro.</div>
+      <div class="btn-row"><button class="btn btn-sm btn-acc" onclick="Hours.saveRulesForm()"><i class="ti ti-device-floppy"></i>Salvar regras</button></div>`;
+  }
+  function saveRulesForm() {
+    if(!isMgr()) { T.show('🔒 Só o gerente do projeto altera as regras.'); return; }
+    const g = id => document.getElementById(id), cur = rules();
+    const next = HoursRules.norm({ ...cur, dailyNormal: g('hr-r-normal').value, approval: g('hr-r-appr').value, requireDelivery: g('hr-r-deliv').checked,
+      daysAfter: { on: g('hr-r-da').checked, days: g('hr-r-da-n').value }, monthCutoff: { on: g('hr-r-mc').checked, bd: g('hr-r-mc-n').value }, closeOnDelivery: g('hr-r-cd').checked });
+    saveRules(next);
+    if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('hours_rules', 'Regras de lançamento de horas alteradas', { dailyNormal: next.dailyNormal, approval: next.approval, requireDelivery: next.requireDelivery, daysAfter: next.daysAfter, monthCutoff: next.monthCutoff, closeOnDelivery: next.closeOnDelivery });
+    renderRules(); renderClosing(); T.show('✅ Regras de lançamento salvas.');
+  }
+
+  function periodsList() {
+    const r = rules(), set = new Set(ensureLoaded().map(e => HoursRules.periodOf(e.date)).concat(r.closedPeriods.map(p => p.period), [HoursRules.periodOf(iso(today()))]));
+    return [...set].filter(p => /^\d{4}-\d{2}$/.test(p)).sort().reverse().slice(0, 24);
+  }
+  function renderClosing() {
+    const root = document.getElementById('hr-close-root'); if(!root) return;
+    const r = rules(), t = iso(today()), list = periodsList();
+    root.innerHTML = '<p class="set-sub" style="margin:0 0 10px">Fechar o período impede qualquer lançamento, alteração ou exclusão de horas daquele mês (a trava vale também no servidor). Só dá para fechar sem horas aguardando aprovação ou ajuste.</p>'
+      + '<div style="overflow-x:auto"><table class="hr-tbl"><thead><tr><th scope="col">Período</th><th scope="col" class="num">Horas</th><th scope="col" class="num">Aguardando</th><th scope="col">Situação</th><th scope="col"></th></tr></thead><tbody>'
+      + list.map(p => {
+        const es = ensureLoaded().filter(e => HoursRules.periodOf(e.date) === p && e.status !== 'reprovado'), pend = ensureLoaded().filter(e => HoursRules.periodOf(e.date) === p && (e.status === 'pendente' || e.status === 'ajuste')).length;
+        const closed = r.closedPeriods.find(x => x.period === p);
+        let tip = '';
+        if(!closed && r.monthCutoff.on) { const lim = HoursRules.monthDeadline(p + '-01', r.monthCutoff.bd, isOff); if(t > lim && p < t.slice(0, 7)) tip = `<span class="chip" title="O prazo de lançamento deste mês terminou em ${fmtDate(lim)}">pode fechar</span>`; }
+        return `<tr><td>${esc(periodLabel(p))}</td><td class="num">${fmtH(es.reduce((s, e) => s + e.hours, 0))}</td><td class="num">${pend || '—'}</td><td>${closed ? `<span class="badge b-neu"><i class="ti ti-lock"></i> Fechado</span> <span style="font-size:11.5px;color:var(--t2)">${esc(closed.by)}${closed.at ? ' · ' + fmtDate(closed.at) : ''}</span>` : '<span class="badge b-grn">Aberto</span> ' + tip}</td><td>${closed ? `<button class="btn btn-sm" onclick="Hours.reopenPeriod('${p}')"><i class="ti ti-lock-open"></i>Reabrir</button>` : `<button class="btn btn-sm" onclick="Hours.closePeriod('${p}')"><i class="ti ti-lock"></i>Fechar</button>`}</td></tr>`;
+      }).join('') + '</tbody></table></div>';
+  }
+  function closePeriod(p) {
+    if(!isMgr()) { T.show('🔒 Só o gerente do projeto fecha o período.'); return; }
+    const pend = ensureLoaded().filter(e => HoursRules.periodOf(e.date) === p && (e.status === 'pendente' || e.status === 'ajuste')).length;
+    if(pend) { T.show(`⚠️ ${pend} apontamento(s) de ${periodLabel(p)} ainda aguardam aprovação ou ajuste. Aprove ou reprove antes de fechar.`, 6000); return; }
+    if(!confirm(`Fechar ${periodLabel(p)}? Ninguém poderá lançar, alterar ou excluir horas desse mês até você reabrir.`)) return;
+    const cur = rules(); cur.closedPeriods = cur.closedPeriods.concat([{ period: p, by: Auth.getName(), at: new Date().toISOString() }]);
+    saveRules(HoursRules.norm(cur));
+    if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('hours_period_close', 'Período de horas fechado: ' + periodLabel(p), { period: p });
+    render(); T.show('🔒 ' + periodLabel(p) + ' fechado para lançamento.');
+  }
+  function reopenPeriod(p) {
+    if(!isMgr()) { T.show('🔒 Só o gerente do projeto reabre o período.'); return; }
+    if(!confirm(`Reabrir ${periodLabel(p)} para lançamento?`)) return;
+    const cur = rules(); cur.closedPeriods = cur.closedPeriods.filter(x => x.period !== p);
+    saveRules(HoursRules.norm(cur));
+    if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('hours_period_reopen', 'Período de horas reaberto: ' + periodLabel(p), { period: p });
+    render(); T.show('🔓 ' + periodLabel(p) + ' reaberto.');
+  }
+
   function addMany(items) {
     ensureLoaded();
-    const created = items.map(x => { const m = (DB.get('team') || []).find(t => nameKey(t.name) === nameKey(x.person)); const item = { ...x, id: genId(), memberId: m ? m.id : '' }; data.unshift(item); return item; });
+    const r = rules(), mgr = isMgr(), t = iso(today()); let skipped = 0;
+    const created = [];
+    items.forEach(x => {
+      if(r.requireDelivery && !x.wbsRef) { skipped++; return; }
+      const w = HoursRules.check(r, { workDate: x.date, today: t, isOff, isManager: mgr, deliveryClosed: false });
+      if(!w.ok) { skipped++; return; }
+      const others = data.filter(e => nameKey(e.person) === nameKey(x.person) && e.date === x.date && e.status !== 'reprovado').reduce((s, e) => s + e.hours, 0);
+      const extra = HoursRules.extraOf(others, x.hours, r.dailyNormal);
+      if(extra > 0 && !mgr) { skipped++; return; }
+      const m = (DB.get('team') || []).find(tm => nameKey(tm.name) === nameKey(x.person));
+      const item = { ...x, id: genId(), memberId: m ? m.id : '', extra, extraReason: '', status: HoursRules.statusFor(r, extra, mgr), reviewBy: mgr ? Auth.getName() : '', reviewAt: mgr ? new Date().toISOString() : '', reviewNote: '' };
+      data.unshift(item); created.push(item);
+    });
     persist();
     Cloud.pushMany('time_entries', created);
     render();
+    if(skipped) T.show('⚠️ ' + skipped + ' linha(s) não entraram: sem entrega, período fechado, fora do prazo ou com hora extra (a hora extra se aponta pela tela, com o motivo).', 8000);
     return created.length;
   }
   // Mesma chave que SheetImport.build usa para detectar duplicados
@@ -14724,18 +15006,18 @@ const Hours = (() => {
   // CSV com proteção contra injeção de fórmula (=, +, -, @ no início viram texto)
   function exportCsv() {
     const q = v => { let s = String(v == null ? '' : v); if(/^[=+\-@\t\r]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
-    const rows = [['Pessoa','Data','Horas','Entrega','Observação'], ...filtered().sort((a, b) => a.date.localeCompare(b.date)).map(e => [e.person, e.date, String(e.hours).replace('.', ','), e.wbsRef, e.note])];
+    const rows = [['Pessoa','Data','Horas','Entrega','Observação','Situação','Hora extra'], ...filtered().sort((a, b) => a.date.localeCompare(b.date)).map(e => [e.person, e.date, String(e.hours).replace('.', ','), e.wbsRef, e.note, HoursRules.STATUS[e.status || 'aprovado'], String(e.extra || 0).replace('.', ',')])];
     const blob = new Blob(['﻿' + rows.map(r => r.map(q).join(';')).join('\r\n')], { type:'text/csv;charset=utf-8' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'horas-' + iso(today()) + '.csv';
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     T.show('📥 CSV de horas exportado.');
   }
   function exportXlsx() {
-    XlsxExport.download('horas-' + iso(today()) + '.xlsx', [{ name: 'Horas', rows: [['Pessoa','Data','Horas','Entrega','Observação'],
-      ...filtered().sort((a, b) => a.date.localeCompare(b.date)).map(e => [e.person, e.date, Number(e.hours), e.wbsRef, e.note])] }]);
+    XlsxExport.download('horas-' + iso(today()) + '.xlsx', [{ name: 'Horas', rows: [['Pessoa','Data','Horas','Entrega','Observação','Situação','Hora extra'],
+      ...filtered().sort((a, b) => a.date.localeCompare(b.date)).map(e => [e.person, e.date, Number(e.hours), e.wbsRef, e.note, HoursRules.STATUS[e.status || 'aprovado'], Number(e.extra || 0)])] }]);
   }
 
-  return { render, resetCache, openAdd, openEdit, openEditEl, keyEl, saveFromModal, deleteFromModal, closeModal, setFilter, more, addMany, keys, exportCsv, exportXlsx };
+  return { render, resetCache, openAdd, openEdit, openEditEl, keyEl, saveFromModal, deleteFromModal, closeModal, setFilter, more, addMany, keys, exportCsv, exportXlsx, preview, apprToggle, apprAll, review, saveRulesForm, closePeriod, reopenPeriod };
 })();
 </script>
 
@@ -18617,12 +18899,14 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     </div>
     <div class="modal-sub">Quem trabalhou, quando e em quê</div>
     <div style="display:flex;flex-direction:column;gap:12px">
-      <div><div class="field-label"><label for="hr-f-person-m">Pessoa</label><span class="help-q" data-help="Quem trabalhou. Escolha um colaborador da equipe ou digite o nome. O nome precisa ser igual ao da equipe para comparar com a carga declarada." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="hr-f-person-m" list="hr-person-list" maxlength="120" placeholder="Nome da pessoa"><datalist id="hr-person-list"></datalist></div>
+      <div><div class="field-label"><label for="hr-f-person-m">Pessoa</label><span class="help-q" data-help="Quem trabalhou. Escolha um colaborador da equipe ou digite o nome. O nome precisa ser igual ao da equipe para comparar com a carga declarada." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="hr-f-person-m" list="hr-person-list" autocomplete="off" oninput="Hours.preview()" maxlength="120" placeholder="Nome da pessoa"><datalist id="hr-person-list"></datalist></div>
       <div class="g2" style="gap:10px">
-        <div><div class="field-label"><label for="hr-f-date">Data</label><span class="help-q" data-help="Dia em que o trabalho foi feito (não o dia do lançamento)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" type="date" id="hr-f-date"></div>
-        <div><div class="field-label"><label for="hr-f-hours">Horas</label><span class="help-q" data-help="Horas trabalhadas nesse dia, de 0,25 (15 min) a 24. A soma de um colaborador no mesmo dia não pode passar de 24 h." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" type="number" id="hr-f-hours" min="0.25" max="24" step="0.25" placeholder="Ex: 7,5"></div>
+        <div><div class="field-label"><label for="hr-f-date">Data</label><span class="help-q" data-help="Dia em que o trabalho foi feito (não o dia do lançamento)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" type="date" id="hr-f-date" onchange="Hours.preview()"></div>
+        <div><div class="field-label"><label for="hr-f-hours">Horas</label><span class="help-q" data-help="Horas trabalhadas nesse dia, de 0,25 (15 min) a 24. A soma de um colaborador no mesmo dia não pode passar de 24 h." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" type="number" oninput="Hours.preview()" id="hr-f-hours" min="0.25" max="24" step="0.25" placeholder="Ex: 7,5"></div>
       </div>
-      <div><div class="field-label"><label for="hr-f-wbs">Entrega (opcional)</label><span class="help-q" data-help="Opcional. Em qual entrega do cronograma o esforço foi gasto, para ver para onde as horas estão indo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><select class="input" id="hr-f-wbs"></select></div>
+      <div><div class="field-label"><label for="hr-f-wbs">Entrega</label><span class="help-q" data-help="Obrigatória: toda hora fica ligada a uma entrega do cronograma (WBS) ou a um item do backlog, para o custo e o esforço seguirem a entrega." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><select class="input" id="hr-f-wbs" onchange="Hours.preview()"></select></div>
+      <div id="hr-extra-grp" style="display:none"><div class="field-label"><label for="hr-f-extra" id="hr-extra-lbl">Motivo da hora extra</label><span class="help-q" data-help="Passou das horas normais do dia: a hora extra só vale depois da liberação do gerente. Explique por que foi necessária." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="hr-f-extra" maxlength="300" placeholder="Ex.: virada de sistema no fim do mês"></div>
+      <div id="hr-hint" class="set-sub" role="status" aria-live="polite" style="min-height:18px"></div>
       <div><div class="field-label"><label for="hr-f-note">Observação (opcional)</label><span class="help-q" data-help="Opcional. O que foi feito, em uma frase." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="hr-f-note" maxlength="300" placeholder="O que foi feito"></div>
     </div>
     <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
