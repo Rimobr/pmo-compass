@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.44.1'
+  version: '2.44.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -325,6 +325,9 @@ body.no-login #login-gate{display:flex}
 .sb-ctx i{color:var(--acc);font-size:14px;flex-shrink:0}
 .sb-ctx span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .sb-bottom{margin-top:auto;padding-top:8px;border-top:2px solid var(--b2)}
+.si-out{width:100%;margin-top:8px;border:1px solid var(--rb);background:var(--rd);color:var(--red);font-weight:600}
+.si-out:hover{background:var(--red);color:#fff}
+.si-out i{color:inherit}
 .content{flex:1;overflow-y:auto}
 </style>
 
@@ -1049,9 +1052,9 @@ body.icons-failed i[data-fb]::before{
       <button class="si" data-p="settings" onclick="R.go('settings')"><i class="ti ti-settings"></i>Configurações</button>
       <button class="si" data-p="help" onclick="R.go('help')"><i class="ti ti-help-circle"></i>Ajuda</button>
       <button class="si" onclick="Privacy.open()"><i class="ti ti-shield-lock"></i>Privacidade &amp; dados</button>
-      <button class="si" id="si-signout" style="display:none" onclick="Auth.doSignOut()" title="Sai da conta; depois dá para entrar com outro usuário"><i class="ti ti-logout"></i>Sair / trocar de usuário</button>
     </div>
   </div>
+  <button class="si si-out" id="si-signout" style="display:none" onclick="Auth.doSignOut()" title="Sai da conta; depois dá para entrar com outro usuário"><i class="ti ti-logout"></i>Sair / trocar de usuário</button>
   </div>
 </aside>
 
