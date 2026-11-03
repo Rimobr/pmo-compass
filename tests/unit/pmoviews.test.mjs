@@ -9,7 +9,7 @@ const block = n => html.match(new RegExp(`<script data-module="${n}">([\\s\\S]*?
 const { PortfolioKpi, PmoViews } = new Function(`${block('services/shared-facts')}\n${block('services/portfolio-kpi')}\n${block('services/pmo-views')}\nreturn { PortfolioKpi, PmoViews };`)();
 
 const ev = (o = {}) => ({ prazo: true, custo: true, escopo: true, saudavel: true, farol: 'verde', atrasadas: 0, decisoesCriticas: 0, riscosCriticos: 0, consumoPct: 40, ...o });
-const row = (id, o = {}) => ({ id, name: id, area: 'TI', ev: ev(o.ev), days: 3, hasBaseline: true, finishVar: 0, risksNoOwner: 0, risksOverdue: 0, lessons: { total: 0, applied: 0 },
+const row = (id, o = {}) => ({ id, name: id, area: 'TI', days: 3, hasBaseline: true, finishVar: 0, risksNoOwner: 0, risksOverdue: 0, lessons: { total: 0, applied: 0 },
   docs: 0, pendingActions: 0, blocked: 0, doneLast28: 0, highLoad: 0, overallocated: 0, decisionsOpen: 0, scopeOpen: 0, ...o, ev: ev(o.ev) });
 
 test('os 6 tipos de PMO existem e cada um monta 6 indicadores com o foco explicado', () => {

@@ -10,14 +10,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # o histórico inteiro: comparar a versão e gerar o CHANGELOG
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Lint (erros graves no app, nos scripts e nos testes)
+        run: npm run lint
+      - name: Varredura de segredos nos arquivos versionados
+        run: npm run check:secrets
+      - name: Vulnerabilidades nas dependências que vão para produção
+        run: npm audit --omit=dev --audit-level=high
+      - name: Versão igual nos 4 lugares e maior quando o app muda
+        run: node scripts/check-version.mjs ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || 'HEAD~1' }}
       - name: Sintaxe das migrações (parser real do PostgreSQL)
         run: npm run check:sql
       - name: schema.sql em dia com as migrações
         run: npm run check:schema
       - name: Testes unitários (app + servidor + paridade)
         run: npm run test:unit
+      - name: Navegador para os testes de tela
+        run: npx playwright install --with-deps chromium
+      - name: Varredura de projeto vazio (todas as telas, sem dado de exemplo)
+        run: npm run test:smoke

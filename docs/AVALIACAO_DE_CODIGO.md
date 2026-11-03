@@ -66,3 +66,13 @@ Legenda: **Atende**, **Parcial**, **Não atende**.
 - A busca por falta de escape é uma heurística; o teste ponta a ponta de XSS do projeto é a prova mais forte e deve entrar no CI.
 - A contagem de tamanho de funções ignora algumas funções escritas em uma só linha (os guias do tour, por exemplo).
 - O ambiente atual é de teste/demonstração; o que está acima de P0 pesa mais ao ir para clientes.
+
+## Andamento do plano (03/11/2026)
+
+| Item | Situação |
+|---|---|
+| 1. Endurecimento do banco | **Feito** (2.46.1): caminho fixo nas funções, anônimo sem execução nem privilégios, verificador `npm run check:db` no deploy. |
+| 2. CI com verificações | **Feito** (2.49.2): lint, varredura de segredos, `npm audit` de produção, versão obrigatória quando o app muda, esquema, testes e varredura de projeto vazio. Falta o axe no CI (precisa de contas de teste). |
+| 3. Proteção da `main`, tags e CHANGELOG | **Parcial**: CHANGELOG gerado do Git (`npm run changelog`). Falta proteger a `main` (configuração do GitHub, a cargo do dono) e criar as tags. |
+| 4. EditorConfig e ESLint | **Feito**: `.editorconfig` e ESLint nos erros graves (achou e corrigiu 2 problemas). Novas regras entram aos poucos. |
+| 5 a 10 | Aguardam decisão (P1 e P2). |

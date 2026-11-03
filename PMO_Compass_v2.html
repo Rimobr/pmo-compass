@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.49.1'
+  version: '2.49.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -12209,7 +12209,7 @@ const ModelsCalc = (() => {
   // Linhas para exportar em Excel
   function excelRows(kind, doc) {
     const k = KINDS[kind], d = doc.data || {};
-    if(k.type === 'table') return [k.cols.map(c => c[1]), ...(d.rows || []).map(r => k.cols.map(([key, , t]) => t === 'status' ? (STATUS.find(s => s[0] === r[key]) || [, ''])[1] : r[key]))];
+    if(k.type === 'table') return [k.cols.map(c => c[1]), ...(d.rows || []).map(r => k.cols.map(([key, , t]) => t === 'status' ? (STATUS.find(s => s[0] === r[key]) || ['', ''])[1] : r[key]))];
     if(k.type === 'swot') { const n = Math.max(1, ...k.lists.map(([key]) => (d.lists[key] || []).length)); return [k.lists.map(l => l[1]), ...Array.from({ length: n }, (_, i) => k.lists.map(([key]) => (d.lists[key] || [])[i] || ''))]; }
     const rows = [['Seção', 'Item', 'Feito', 'Observação']];
     k.sections.forEach(([key, label]) => { const s = (d.sections || {})[key] || { items: [], note: '' }; (s.items || []).forEach((i, n) => rows.push([label, i.text, i.done ? 'Sim' : 'Não', n === 0 ? s.note : ''])); if(!(s.items || []).length && s.note) rows.push([label, '', '', s.note]); });

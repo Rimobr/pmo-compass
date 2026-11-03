@@ -1,0 +1,15 @@
+# Mesmas regras de escrita para qualquer editor
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+
+# O arquivo principal usa CRLF (editar por script que preserve as quebras de linha)
+[PMO_Compass_v2.html]
+end_of_line = crlf
+
+[*.{md,sql}]
+trim_trailing_whitespace = false

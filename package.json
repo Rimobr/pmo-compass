@@ -1,6 +1,6 @@
 {
   "name": "pmo-compass",
-  "version": "2.49.1",
+  "version": "2.49.2",
   "private": true,
   "scripts": {
     "test:unit": "node tests/run.js && node --test tests/unit/*.test.mjs",
@@ -11,7 +11,12 @@
     "check:db": "node scripts/check-db-hardening.mjs",
     "check:schema": "node scripts/build-schema.mjs --check",
     "check:facts": "node scripts/sync-facts-client.mjs --check",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "lint": "eslint .",
+    "check:version": "node scripts/check-version.mjs",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "changelog": "node scripts/build-changelog.mjs",
+    "check:all": "npm run lint && npm run check:version && npm run check:secrets && npm run check:sql && npm run check:schema && npm run test:unit && npm run test:smoke"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.1",
@@ -19,6 +24,8 @@
     "@playwright/test": "^1.48.0",
     "@supabase/supabase-js": "^2.46.1",
     "dotenv": "^16.4.5",
+    "eslint": "^9.39.5",
+    "eslint-plugin-html": "^8.2.1",
     "serve": "^14.2.0"
   }
 }
