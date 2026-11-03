@@ -10,6 +10,11 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - **Sem dado = "sem dados"**: nunca verde, vermelho ou 100. `HealthScore.calculate` ignora dimensões nulas e devolve `null` sem nenhuma.
 - Sair da conta apaga o navegador (só ficam `pmo_cloud_v1` e `pmo_theme_v1`); sem login a tela de entrada cobre o app.
 
+## Autonomia do time e telas que respeitam o perfil (regra do dono, 03/11/2026)
+- O time ágil responde pelas suas atividades: a gestão (gerente, Scrum Master, PO, administrador) parametriza em "Personalizar quadro → Autonomia do time" quem move os cartões, quais colunas são só da gestão e quais exigem comentário; o servidor impõe (migração `team_autonomy`, chave `teamPolicy`).
+- Se o perfil não pode, o link, botão, clique ou arrasto **não aparece**; a mensagem de recusa é só rede de segurança. Redirecionamento automático (entrada, troca de projeto) é silencioso.
+- Rótulos com duas ou mais palavras (botões, menus, abas, títulos): inicial maiúscula em cada palavra principal ("Sair / Trocar Usuário"); quando quebra em duas linhas, a linha maior fica em cima.
+
 ## Entrega
 - Versão em 4 lugares: `version.json`, `BRAND.version` (PMO_Compass_v2.html), `package.json`, `sw.js` (`CACHE_NAME`).
 - Testes: `node tests/run.js` e `npm run test:unit` (inclui `datamap`), `npm run test:smoke`; migrações: `node scripts/db-apply.mjs --dry-run` antes de aplicar, depois `node scripts/build-schema.mjs`.

@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.46.1'
+  version: '2.47.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -325,7 +325,7 @@ body.no-login #login-gate{display:flex}
 .sb-ctx i{color:var(--acc);font-size:14px;flex-shrink:0}
 .sb-ctx span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .sb-bottom{margin-top:auto;padding-top:8px;border-top:2px solid var(--b2)}
-.si-out{width:100%;margin-top:8px;border:1px solid var(--rb);background:var(--rd);color:var(--red);font-weight:600}
+.si-out{width:100%;margin-top:8px;line-height:1.25;text-align:left;border:1px solid var(--rb);background:var(--rd);color:var(--red);font-weight:600}
 .si-out:hover{background:var(--red);color:#fff}
 .si-out i{color:inherit}
 .content{flex:1;overflow-y:auto}
@@ -1054,7 +1054,7 @@ body.icons-failed i[data-fb]::before{
       <button class="si" onclick="Privacy.open()"><i class="ti ti-shield-lock"></i>Privacidade &amp; dados</button>
     </div>
   </div>
-  <button class="si si-out" id="si-signout" style="display:none" onclick="Auth.doSignOut()" title="Sai da conta; depois dá para entrar com outro usuário"><i class="ti ti-logout"></i>Sair / trocar de usuário</button>
+  <button class="si si-out" id="si-signout" style="display:none" onclick="Auth.doSignOut()" title="Sai da conta; depois dá para entrar com outro usuário"><i class="ti ti-logout"></i>Sair / Trocar Usuário</button>
   </div>
 </aside>
 
@@ -2192,6 +2192,11 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     </div>
     <div class="field-group" id="ai-status-grp"><div class="field-label"><label for="ai-status">Situação</label></div><select class="input" id="ai-status"><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="review">Em revisão</option><option value="done">Concluído</option></select></div>
     <div class="field-group"><div class="field-label"><label for="ai-desc">Descrição e critérios de aceite</label></div><textarea class="input" id="ai-desc" rows="3" maxlength="2000" style="resize:vertical;font-family:inherit"></textarea></div>
+    <div id="ai-work" style="display:none;margin-top:10px">
+      <div class="field-group"><div class="field-label"><label for="ai-note">Comentário da atividade</label><span class="help-q" data-help="O que foi feito e o resultado (ex.: testei os 3 cenários, tudo aprovado). Fica no histórico do cartão com o seu nome e a data. Algumas colunas exigem o comentário para entrar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><textarea class="input" id="ai-note" rows="2" maxlength="500" placeholder="Ex.: Testei os 3 cenários; evidências anexadas. Aprovado." style="resize:vertical;font-family:inherit"></textarea></div>
+      <div class="field-group"><div class="field-label"><label for="ai-evid">Evidências (prints, PDF, planilha; até 5 MB cada)</label></div><input class="input" id="ai-evid" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/csv,.xlsx"></div>
+      <div class="set-sub" id="ai-work-hint"></div>
+    </div>
     <div id="ai-children" style="display:none;margin-top:10px"></div>
     <div id="ai-files" style="display:none;margin-top:10px"></div>
     <details id="ai-hist" style="display:none;margin-top:10px">
@@ -2259,6 +2264,9 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div class="lbl">Raias (filtros do quadro)<span class="help-q" data-help="O quadro sempre mostra a raia Geral, com todos os itens. Aqui você cria raias abaixo dela, cada uma filtrando por tipo (ex.: só Bug), responsável ou estimativa. Um item pode aparecer na Geral e numa raia ao mesmo tempo; arrastar um cartão em qualquer raia muda a coluna dele. Cada raia pode ser recolhida no próprio quadro." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div id="ab-lanes"></div>
     <div class="btn-row" style="margin:6px 0 12px"><button class="btn btn-sm" id="ab-lane-add" onclick="Agile.addLane()"><i class="ti ti-plus"></i>Nova raia</button></div>
+    <div class="lbl">Autonomia do time<span class="help-q" data-help="O time ágil responde pelas suas atividades: ao terminar, registra o comentário e as evidências e passa o cartão para a próxima coluna. Aqui o gerente, o Scrum Master, o PO ou o administrador definem quem pode mover os cartões, quais colunas ficam só com a gestão (ex.: Concluído) e quais exigem comentário para entrar (ex.: Em revisão). Quem gere o backlog nunca é limitado. O servidor confere as mesmas regras." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <select class="input" id="ab-move" aria-label="Quem pode mover os cartões" onchange="Agile.setPolicyMove(this.value)" style="margin-bottom:8px"></select>
+    <div id="ab-policy" style="margin-bottom:12px"></div>
     <div class="lbl">Como os itens entram no quadro<span class="help-q" data-help="Scrum (padrão): todo item nasce no Backlog, é estimado e priorizado, e só entra no quadro quando entra numa sprint (Planejar sprint). O quadro mostra apenas a sprint ativa. Kanban contínuo: sem sprints; os itens são criados e importados direto no quadro, e o limite de itens em andamento controla o fluxo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <select class="input" id="ab-entry" aria-label="Como os itens entram no quadro" style="margin-bottom:12px"><option value="scrum">Scrum — pelo Backlog e pela sprint (recomendado)</option><option value="kanban">Kanban contínuo — direto no quadro, sem sprints</option></select>
     <div class="lbl">Informações que aparecem no cartão<span class="help-q" data-help="Cartões mais enxutos deixam o quadro mais limpo; o título sempre aparece. Os dados continuam salvos no item mesmo escondidos." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
@@ -7572,7 +7580,7 @@ const R = (() => {
   function go(id) {
     // Base nova (ou conta sem projeto): só configurações, conta e ajuda existem; o resto convida a criar o primeiro projeto
     if(typeof DB !== 'undefined' && DB.isEmpty() && !['settings', 'account', 'help', 'noproject'].includes(id)) id = 'noproject';
-    if(typeof Auth !== 'undefined' && !Auth.canOpen(id)) { T.show('🔒 Essa tela não faz parte do seu perfil.'); id = Auth.homePage(); }
+    if(typeof Auth !== 'undefined' && !Auth.canOpen(id)) { if(id !== 'dashboard') T.show('🔒 Essa tela não faz parte do seu perfil.'); id = Auth.homePage(); } // 'dashboard' é o destino padrão de entrada e de troca de projeto: ali ninguém escolheu a tela, então o redirecionamento é silencioso
     pages.forEach(p => {
       const el = document.getElementById('p-'+p);
       if(el) el.classList.toggle('on', p===id);
@@ -11817,7 +11825,7 @@ const AccessProfiles = (() => {
     ['approve_decisions', 'Aprovar decisões', 'Decide sobre as recomendações e as decisões da diretoria.', 'Plano'],
     ['manage_backlog', 'Gerir backlog e sprints', 'Cria, prioriza, estima e planeja itens; cria e conduz sprints.', 'Ágil'],
     ['run_rites', 'Conduzir ritos e modelos', 'Registra planejamento, revisão e retrospectiva; resolve impedimentos; edita os modelos de documentos.', 'Ágil'],
-    ['update_own', 'Atualizar as próprias atividades', 'Move e edita só os itens e tarefas em que é o responsável; registra impedimentos.', 'Time'],
+    ['update_own', 'Atualizar as próprias atividades', 'Move os cartões do quadro conforme a autonomia que a gestão definiu para o projeto (por padrão, todo o time), comenta, anexa evidências e registra impedimentos; nas tarefas da WBS, só as próprias.', 'Time'],
     ['log_hours', 'Apontar as próprias horas', 'Lança, corrige e apaga apenas as horas que ele mesmo lançou.', 'Time'],
     ['view_all_hours', 'Ver as horas de todos', 'Enxerga as horas lançadas por toda a equipe.', 'Time'],
     ['view_portfolio', 'Ver painéis de portfólio e diretoria', 'Painel da Diretoria, Visão Executiva, Visão do PMO, Indicadores, Portfólio e Priorização.', 'Visões'],
@@ -12340,7 +12348,22 @@ const BoardRules = (() => {
     return true;
   }
   const fill = (text, vars) => String(text || '').replace(/\{(id|titulo|coluna|responsavel|sprint|data)\}/g, (_, k) => (vars && vars[k] != null ? vars[k] : ''));
-  return { TRIGGERS, TARGETS, FIELDS, KINDS, norm, matches, fill };
+  // Autonomia do time no quadro (definida pela gestão, por projeto): quem move os cartões, colunas só da gestão e colunas que exigem comentário
+  const MOVE_MODES = { team: 'Todo o time move qualquer cartão do projeto', own: 'Cada pessoa move só os cartões em que é a responsável', managers: 'Só a gestão move os cartões' };
+  function normPolicy(raw) {
+    const cols = v => [...new Set((Array.isArray(v) ? v : []).map(x => clean(x, 30)).filter(Boolean))].slice(0, 10);
+    return { move: MOVE_MODES[raw && raw.move] ? raw.move : 'team', lockedCols: cols(raw && raw.lockedCols), noteCols: cols(raw && raw.noteCols) };
+  }
+  // ctx: { manager (gere o backlog), member (atualiza as próprias atividades), mine (o cartão é dele), to (coluna), label }
+  function canMove(p, ctx) {
+    if(ctx.manager) return { ok: true };
+    if(!ctx.member) return { ok: false, why: 'Seu perfil não atualiza as atividades do quadro.' };
+    if(p.lockedCols.includes(ctx.to)) return { ok: false, why: 'A coluna "' + (ctx.label || ctx.to) + '" é reservada à gestão do projeto (gerente, Scrum Master, PO).' };
+    if(p.move === 'managers') return { ok: false, why: 'Neste projeto só a gestão (gerente, Scrum Master, PO) move os cartões.' };
+    if(p.move === 'own' && !ctx.mine) return { ok: false, why: 'Neste projeto cada pessoa move só os cartões em que é a responsável.' };
+    return { ok: true };
+  }
+  return { TRIGGERS, TARGETS, FIELDS, KINDS, MOVE_MODES, norm, matches, fill, normPolicy, canMove };
 })();
 </script>
 
@@ -12479,11 +12502,12 @@ const Agile = (() => {
     const att = (Array.isArray(i.attachments) && i.attachments.length) ? `<span class="chip" title="Anexos do bug"><i class="ti ti-paperclip"></i>${i.attachments.length}</span>` : '';
     const bottom = [rel, att, f.assignee && (i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'), f.sprint && sp && `<span class="chip">${esc(sp.name)}</span>`].filter(Boolean).join('');
     // O cartão é um grupo; só o título é o botão de abrir (botão dentro de botão não é acessível por leitor de tela)
-    return `<div class="kb-card" draggable="true" role="group" data-id="${esc(i.id)}" ondragstart="Agile.dragStart(event,'${esc(i.id)}')" ondragend="this.classList.remove('dragging')" onclick="Agile.openItem('${esc(i.id)}')" aria-label="${esc(i.id)}: ${esc(i.title)}">
+    const act = Auth.can('update_own');
+    return `<div class="kb-card"${act ? ` draggable="true" ondragstart="Agile.dragStart(event,'${esc(i.id)}')" ondragend="this.classList.remove('dragging')" onclick="Agile.openItem('${esc(i.id)}')"` : ''} role="group" data-id="${esc(i.id)}" aria-label="${esc(i.id)}: ${esc(i.title)}">
       ${top ? `<div class="kb-meta">${top}</div>` : ''}
-      <button type="button" class="kb-title kb-open" aria-label="Abrir ${esc(i.id)}: ${esc(i.title)}" onclick="event.stopPropagation();Agile.openItem('${esc(i.id)}')">${esc(i.title)}</button>
+      ${act ? `<button type="button" class="kb-title kb-open" aria-label="Abrir ${esc(i.id)}: ${esc(i.title)}" onclick="event.stopPropagation();Agile.openItem('${esc(i.id)}')">${esc(i.title)}</button>` : `<span class="kb-title">${esc(i.title)}</span>`}
       ${bottom ? `<div class="kb-meta">${bottom}</div>` : ''}
-      <div class="kb-mv" data-perm="manage_backlog">${prev ? `<button class="btn btn-sm" aria-label="Mover ${esc(i.id)} para ${lbl(prev)}" onclick="event.stopPropagation();Agile.move('${esc(i.id)}',-1)">◀</button>` : ''}${next ? `<button class="btn btn-sm" aria-label="Mover ${esc(i.id)} para ${lbl(next)}" onclick="event.stopPropagation();Agile.move('${esc(i.id)}',1)">▶</button>` : ''}</div></div>`;
+      <div class="kb-mv" data-perm="update_own">${prev && canTouch(i, prev, true) ? `<button class="btn btn-sm" aria-label="Mover ${esc(i.id)} para ${lbl(prev)}" onclick="event.stopPropagation();Agile.move('${esc(i.id)}',-1)">◀</button>` : ''}${next && canTouch(i, next, true) ? `<button class="btn btn-sm" aria-label="Mover ${esc(i.id)} para ${lbl(next)}" onclick="event.stopPropagation();Agile.move('${esc(i.id)}',1)">▶</button>` : ''}</div></div>`;
   }
   function setStatus(it, status) {
     const was = it.status;
@@ -12495,17 +12519,25 @@ const Agile = (() => {
     if(was !== status) fireRules({ type: 'enter', column: status }, it);
     return was !== status;
   }
-  // Quem gere o backlog mexe em qualquer item; quem só atualiza o próprio trabalho mexe apenas nos itens em que é o responsável
-  function canTouch(it) {
-    if(Auth.can('manage_backlog')) return true;
-    if(Auth.can('update_own') && typeof MyWork !== 'undefined' && MyWork.isMine(it.assignee)) return true;
-    T.show('🔒 Você só pode mexer nos itens em que é o responsável.');
-    return false;
+  // Autonomia do time: a gestão define em "Personalizar quadro" quem move os cartões (o servidor impõe a mesma regra)
+  const policy = () => BoardRules.normPolicy(DB.get('teamPolicy'));
+  function canTouch(it, to, quiet) {
+    const r = BoardRules.canMove(policy(), { manager: Auth.can('manage_backlog'), member: Auth.can('update_own'), mine: typeof MyWork !== 'undefined' && MyWork.isMine(it.assignee), to, label: to ? AgileCalc.colLabel(cfg, to) : '' });
+    if(!r.ok && !quiet) T.show('🔒 ' + r.why, 5000);
+    return r.ok;
+  }
+  // Coluna que exige comentário: quem não gere o backlog abre o cartão para registrar o comentário e as evidências antes de passar
+  function askNote(it, to) {
+    if(Auth.can('manage_backlog') || !policy().noteCols.includes(to)) return false;
+    openItem(it.id); document.getElementById('ai-status').value = to;
+    T.show('📝 Para passar para "' + AgileCalc.colLabel(cfg, to) + '", escreva o comentário e anexe as evidências; depois salve.', 6000);
+    const n = document.getElementById('ai-note'); if(n) n.focus();
+    return true;
   }
   function move(id, dir) {
     load(); const it = items.find(x => x.id === id); if(!it) return;
-    if(!canTouch(it)) return;
     const to = AgileCalc.neighbor(it.status, dir, cfg); if(!to) return;
+    if(!canTouch(it, to) || askNote(it, to)) return;
     setStatus(it, to); renderAll();
     const b = document.querySelector(`.kb-card[data-id="${CSS.escape(id)}"]`); if(b) b.focus();
   }
@@ -12514,7 +12546,7 @@ const Agile = (() => {
   function drop(e, status) {
     e.preventDefault(); e.currentTarget.classList.remove('drop');
     load(); const it = items.find(x => x.id === dragId); dragId = null; if(!it || it.status === status) return;
-    if(!canTouch(it)) return;
+    if(!canTouch(it, status) || askNote(it, status)) return;
     setStatus(it, status); renderAll();
   }
   function setBoardSprint(v) { boardSprint = v; renderKanban(); }
@@ -12524,7 +12556,7 @@ const Agile = (() => {
   function openBoardCfg() {
     if(!Auth.guard('manage_backlog')) return;
     load();
-    boardDraft = { columns: AgileCalc.cols(cfg).map(c => ({ key: c.key, label: c.label, wip: Number(cfg.wip[c.key]) || 0 })), card: { ...cfg.card }, entry: cfg.entry, lanes: JSON.parse(JSON.stringify(AgileCalc.normLanes(DB.get('boardLanes')))) };
+    boardDraft = { policy: policy(), columns: AgileCalc.cols(cfg).map(c => ({ key: c.key, label: c.label, wip: Number(cfg.wip[c.key]) || 0 })), card: { ...cfg.card }, entry: cfg.entry, lanes: JSON.parse(JSON.stringify(AgileCalc.normLanes(DB.get('boardLanes')))) };
     renderBoardCfg();
     document.getElementById('ab-entry').value = cfg.entry;
     document.getElementById('modal-agile-board').classList.remove('hidden');
@@ -12539,7 +12571,7 @@ const Agile = (() => {
         <button class="btn btn-sm btn-red" aria-label="Remover coluna ${esc(c.label)}" onclick="Agile.removeCol(${i})"><i class="ti ti-trash"></i></button>`}</div>`;
     }).join('');
     document.getElementById('ab-add').disabled = d.columns.length >= 7;
-    renderLanesCfg();
+    renderLanesCfg(); renderPolicyCfg();
     document.getElementById('ab-card').innerHTML = CARD_FIELDS.map(([k, l]) => `<label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" ${d.card[k] ? 'checked' : ''} onchange="Agile.setCardField('${k}', this.checked)"> ${l}</label>`).join('');
   }
   // Raias: cada uma é um filtro por tipo, responsável e estimativa; a raia geral não precisa ser criada
@@ -12552,6 +12584,20 @@ const Agile = (() => {
       <div class="ln-f"><label>Estimativa</label><select class="input" aria-label="Estimativa na raia ${esc(l.name)}" onchange="Agile.setLaneEstimate(${i}, this.value)"><option value=""${l.estimate === '' ? ' selected' : ''}>Qualquer</option><option value="com"${l.estimate === 'com' ? ' selected' : ''}>Só com pontos</option><option value="sem"${l.estimate === 'sem' ? ' selected' : ''}>Só sem pontos</option></select></div></div>
       ${AgileCalc.laneEmpty(l) ? '<div class="set-sub" style="margin-top:6px">Sem nenhum filtro escolhido esta raia não aparece (a raia geral já mostra tudo).</div>' : ''}</div>`).join('') || '<div class="set-sub" style="margin-bottom:8px">Nenhuma raia criada: o quadro mostra só a raia geral.</div>');
     document.getElementById('ab-lane-add').disabled = d.lanes.length >= 6;
+  }
+  // Autonomia do time: quem move os cartões, colunas só da gestão e colunas que exigem comentário
+  function renderPolicyCfg() {
+    const box = document.getElementById('ab-policy'), sel = document.getElementById('ab-move'); if(!box || !sel) return;
+    const d = boardDraft, p = d.policy;
+    sel.innerHTML = Object.keys(BoardRules.MOVE_MODES).map(k => '<option value="' + k + '"' + (p.move === k ? ' selected' : '') + '>' + esc(BoardRules.MOVE_MODES[k]) + '</option>').join('');
+    box.innerHTML = d.columns.map((c, i) => '<div class="ag-row"><b style="flex:1 1 120px;min-width:100px">' + esc(c.label) + '</b>'
+      + '<label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" ' + (p.lockedCols.includes(c.key) ? 'checked' : '') + ' aria-label="Só a gestão move para ' + esc(c.label) + '" onchange="Agile.setPolicyCol(\'lockedCols\', ' + i + ', this.checked)"> Só a gestão move para cá</label>'
+      + '<label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" ' + (p.noteCols.includes(c.key) ? 'checked' : '') + ' aria-label="Exigir comentário ao entrar em ' + esc(c.label) + '" onchange="Agile.setPolicyCol(\'noteCols\', ' + i + ', this.checked)"> Exige comentário</label></div>').join('');
+  }
+  const setPolicyMove = v => { boardDraft.policy.move = BoardRules.MOVE_MODES[v] ? v : 'team'; };
+  function setPolicyCol(field, i, on) {
+    const arr = boardDraft.policy[field], k = boardDraft.columns[i].key, at = arr.indexOf(k);
+    if(on && at < 0) arr.push(k); if(!on && at >= 0) arr.splice(at, 1);
   }
   function addLane() { const d = boardDraft; if(d.lanes.length >= 6) return; const n = Math.max(0, ...d.lanes.map(l => /^r(\d+)$/.test(l.id) ? +l.id.slice(1) : 0)) + 1; d.lanes.push({ id: 'r' + n, name: 'Raia ' + (d.lanes.length + 1), kinds: [], assignees: [], estimate: '' }); renderLanesCfg(); }
   const removeLane = i => { boardDraft.lanes.splice(i, 1); renderLanesCfg(); };
@@ -12582,7 +12628,7 @@ const Agile = (() => {
     c.splice(to, 0, c.splice(from, 1)[0]); renderBoardCfg();
   }
   function moveCol(i, dir) { const c = boardDraft.columns, j = i + dir; if(j < 1 || j > c.length - 2) return; [c[i], c[j]] = [c[j], c[i]]; renderBoardCfg(); }
-  function resetBoardCfg() { const keepLanes = boardDraft ? boardDraft.lanes : []; boardDraft = { lanes: keepLanes, columns: AgileCalc.COLS.map(c => ({ key: c.key, label: c.label, wip: Number((AgileCalc.DEFAULT_CFG.wip || {})[c.key]) || 0 })), card: { ...AgileCalc.DEFAULT_CARD } }; renderBoardCfg(); }
+  function resetBoardCfg() { const keepLanes = boardDraft ? boardDraft.lanes : [], keepPolicy = boardDraft ? boardDraft.policy : BoardRules.normPolicy(null); boardDraft = { lanes: keepLanes, policy: keepPolicy, columns: AgileCalc.COLS.map(c => ({ key: c.key, label: c.label, wip: Number((AgileCalc.DEFAULT_CFG.wip || {})[c.key]) || 0 })), card: { ...AgileCalc.DEFAULT_CARD } }; renderBoardCfg(); }
   function closeBoardCfg() { document.getElementById('modal-agile-board').classList.add('hidden'); boardDraft = null; }
   function saveBoardCfg() {
     if(!Auth.guard('manage_backlog')) return;
@@ -12601,6 +12647,9 @@ const Agile = (() => {
     const lanes = { lanes: AgileCalc.normLanes({ lanes: d.lanes }) };
     DB.set('boardLanes', lanes);
     if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'boardLanes', lanes);
+    const keys = d.columns.map(c => c.key), pol = BoardRules.normPolicy({ move: d.policy.move, lockedCols: d.policy.lockedCols.filter(k => keys.includes(k)), noteCols: d.policy.noteCols.filter(k => keys.includes(k)) });
+    DB.set('teamPolicy', pol);
+    if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'teamPolicy', pol);
     closeBoardCfg(); renderAll(); T.show('✅ Quadro personalizado.');
   }
 
@@ -12974,9 +13023,10 @@ const Agile = (() => {
     document.getElementById('ai-sprint').innerHTML = '<option value="">Sem sprint</option>' + sprints.filter(s => s.state !== 'encerrada' || s.id === sel).map(s => `<option value="${esc(s.id)}"${s.id === sel ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
   }
   function openItem(id) {
-    if(!Auth.guard('manage_backlog')) return;
+    const full = Auth.can('manage_backlog');
+    if(!full && !(id && Auth.can('update_own'))) { Auth.guard('manage_backlog'); return; }
     load(); const it = id ? items.find(x => x.id === id) : null; itemCtx = it ? it.id : null;
-    document.getElementById('ai-title-h').textContent = it ? it.id + ' — editar item' : 'Novo item';
+    document.getElementById('ai-title-h').textContent = it ? it.id + (full ? ' — editar item' : ' — atualizar atividade') : 'Novo item';
     document.getElementById('ai-title').value = it ? it.title : '';
     document.getElementById('ai-kind').value = it ? it.kind : 'historia';
     document.getElementById('ai-points').value = it ? it.points : '';
@@ -12993,8 +13043,54 @@ const Agile = (() => {
     fillParent(it ? it.parentId : '', it ? it.id : '');
     kindChanged();
     renderChildren(it); renderFiles(it); renderHistory(it);
+    applyItemMode(it, full);
     document.getElementById('modal-agile-item').classList.remove('hidden');
-    document.getElementById('ai-title').focus();
+    document.getElementById(full ? 'ai-title' : 'ai-note').focus();
+  }
+  // Quem não gere o backlog só muda a situação (nas colunas que pode), comenta e anexa evidências; o resto fica travado (o servidor confere igual)
+  function applyItemMode(it, full) {
+    ['ai-title', 'ai-kind', 'ai-points', 'ai-assignee', 'ai-sprint', 'ai-parent', 'ai-desc'].forEach(x => { const e = document.getElementById(x); if(e) e.disabled = !full; });
+    document.getElementById('ai-del').style.display = it && full ? '' : 'none';
+    document.getElementById('ai-work').style.display = it ? '' : 'none';
+    document.getElementById('ai-note').value = ''; document.getElementById('ai-evid').value = '';
+    const p = policy(), hint = [];
+    if(!full && it) {
+      [...document.getElementById('ai-status').options].forEach(o => { o.disabled = o.value !== it.status && !canTouch(it, o.value, true); });
+      if(p.lockedCols.length) hint.push('Só a gestão move para: ' + p.lockedCols.map(k => AgileCalc.colLabel(cfg, k)).join(', ') + '.');
+    }
+    if(p.noteCols.length) hint.push('Exigem comentário ao entrar: ' + p.noteCols.map(k => AgileCalc.colLabel(cfg, k)).join(', ') + '.');
+    document.getElementById('ai-work-hint').textContent = hint.join(' ');
+  }
+  // Comentário e evidências do cartão: envia os arquivos antes de gravar (devolve false e avisa se algo impede)
+  async function collectEvidence() {
+    const note = val('ai-note').trim(), el = document.getElementById('ai-evid'), files = el && el.files ? [...el.files] : [];
+    const cur = items.find(x => x.id === itemCtx), have = cur && Array.isArray(cur.attachments) ? cur.attachments.length : 0;
+    if(have + files.length > 6) { T.show('⚠️ Cada cartão aceita até 6 anexos (este já tem ' + have + ').'); return false; }
+    const big = files.find(x => x.size > 5242880); if(big) { T.show('⚠️ "' + big.name + '" passa de 5 MB.'); return false; }
+    if(files.length && !(typeof Cloud !== 'undefined' && Cloud.getUserId && Cloud.getUserId())) { T.show('⚠️ Os anexos ficam na nuvem: entre com a sua conta.'); return false; }
+    const atts = [];
+    for(let i = 0; i < files.length; i++) { const a = await Cloud.uploadItemFile(DB.getActiveProjectId(), itemCtx, have + i + 1, files[i]); if(!a) return false; atts.push(a); }
+    return { note: note.slice(0, 500), atts };
+  }
+  function applyEvidence(it, ev) {
+    if(!ev || (!ev.note && !ev.atts.length)) return;
+    if(!Array.isArray(it.history)) it.history = [];
+    const at = new Date().toISOString(), by = (typeof Auth !== 'undefined' && Auth.getName()) || 'Sistema';
+    if(ev.note) it.history.push({ at, by, field: '', from: '', to: 'Comentário: ' + ev.note });
+    if(ev.atts.length) { it.attachments = [...(Array.isArray(it.attachments) ? it.attachments : []), ...ev.atts]; it.history.push({ at, by, field: '', from: '', to: 'Evidência anexada: ' + ev.atts.map(a => a.name).join(', ') }); }
+  }
+  // O time registra a atividade: situação (nas colunas que pode), comentário e evidências
+  async function saveWork() {
+    load(); let it = items.find(x => x.id === itemCtx); if(!it) return;
+    const to = val('ai-status') || it.status, changed = to !== it.status, note = val('ai-note').trim(), hasFiles = !!(document.getElementById('ai-evid').files || []).length;
+    if(changed && !canTouch(it, to)) return;
+    if(changed && policy().noteCols.includes(to) && note.length < 5) { T.show('⚠️ Para passar para "' + AgileCalc.colLabel(cfg, to) + '", escreva o comentário (mínimo 5 letras) e anexe as evidências, se houver.'); document.getElementById('ai-note').focus(); return; }
+    if(!changed && !note && !hasFiles) { closeItem(); return; }
+    const ev = await collectEvidence(); if(ev === false) return;
+    load(); it = items.find(x => x.id === itemCtx) || it;
+    applyEvidence(it, ev);
+    if(changed) setStatus(it, to); else { saveItems(); pushItem(it); }
+    const id = it.id; closeItem(); renderAll(); T.show('✅ ' + id + (changed ? ' foi para "' + AgileCalc.colLabel(cfg, to) + '".' : ' atualizado.'));
   }
   // Bug filho: o campo "item pai" só aparece (e é obrigatório) quando o tipo é Bug
   function fillParent(selected, selfId) {
@@ -13037,9 +13133,9 @@ const Agile = (() => {
   async function openFile(path) { const u = await Cloud.itemFileUrl(path); if(u) window.open(u, '_blank', 'noopener'); }
   function renderFiles(it) {
     const el = document.getElementById('ai-files'); if(!el) return;
-    const list = (it && it.kind === 'bug' && Array.isArray(it.attachments)) ? it.attachments : [];
+    const list = (it && Array.isArray(it.attachments)) ? it.attachments : [];
     el.style.display = list.length ? '' : 'none';
-    el.innerHTML = list.length ? '<div class="field-label"><i class="ti ti-paperclip"></i> Anexos do bug</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">' + list.map(a => '<button type="button" class="btn btn-sm" onclick="Agile.openFile(\'' + esc(a.path) + '\')"><i class="ti ti-' + (String(a.type).startsWith('image/') ? 'photo' : 'file') + '"></i>' + esc(a.name) + '</button>').join('') + '</div>' : '';
+    el.innerHTML = list.length ? '<div class="field-label"><i class="ti ti-paperclip"></i> Anexos e evidências</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">' + list.map(a => '<button type="button" class="btn btn-sm" onclick="Agile.openFile(\'' + esc(a.path) + '\')"><i class="ti ti-' + (String(a.type).startsWith('image/') ? 'photo' : 'file') + '"></i>' + esc(a.name) + '</button>').join('') + '</div>' : '';
   }
   // Mudança de escopo no meio da sprint: só na sprint ativa, com o motivo registrado na descrição e na trilha
   let urgent = null;
@@ -13054,8 +13150,8 @@ const Agile = (() => {
     document.getElementById('ai-title').focus();
   }
   function closeItem() { urgent = null; document.getElementById('modal-agile-item').classList.add('hidden'); }
-  function saveItem() {
-    if(!Auth.guard('manage_backlog')) return;
+  async function saveItem() {
+    if(!Auth.can('manage_backlog')) return saveWork();
     load();
     const title = val('ai-title').trim();
     if(title.length < 2) { T.show('⚠️ Dê um título ao item (mínimo 2 letras).'); document.getElementById('ai-title').focus(); return; }
@@ -13067,6 +13163,9 @@ const Agile = (() => {
     if(urg) { f.sprintId = urg.sprintId; f.description = (f.description ? f.description + '\n\n' : '') + 'Incluído durante a sprint (mudança de escopo) — motivo: ' + urg.reason; }
     const bad = AgileCalc.bugParentError({ ...f, id: itemCtx || '' }, items);
     if(bad) { T.show('⚠️ ' + bad); document.getElementById('ai-parent').focus(); return; }
+    const ev = itemCtx ? await collectEvidence() : null; if(ev === false) return;
+    load(); it = itemCtx ? items.find(x => x.id === itemCtx) : null;
+    if(it) applyEvidence(it, ev);
     const was = it ? { status: it.status, assignee: it.assignee || '' } : null;
     if(it) { Object.assign(it, f); AgileCalc.moveTo(it, val('ai-status') || it.status, todayIso()); }
     else { it = { id: AgileCalc.nextId('US', items), status: 'todo', rank: (Math.max(0, ...items.map(x => x.rank || 0)) + 1), createdOn: todayIso(), doneOn: '', ...f }; items.push(it); }
@@ -13317,7 +13416,7 @@ const Agile = (() => {
   return { histFilter, render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, rank, setSprintOf, setBacklogQuery, setShowDone,
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, checkDates, openRules, closeRules, editRule, ruleField, ruleAct, ruleAddAct, ruleDelAct, ruleCancel, ruleSave, toggleRule, deleteRule, renderDue, openDue, closeDue, dueChoose, runDue, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
-    aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
+    aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, setPolicyMove, setPolicyCol, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
     cfgNow: () => { load(); return cfg; }, kindChanged, kindPicked, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
 })();
 </script>

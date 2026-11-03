@@ -55,7 +55,7 @@ test('como os itens entram no quadro: Scrum por padrão, Kanban contínuo só qu
   assert.equal(AgileCalc.cfgOf({}).entry, 'scrum');
   assert.equal(AgileCalc.cfgOf({ entry: 'kanban' }).entry, 'kanban');
   assert.equal(AgileCalc.cfgOf({ entry: 'qualquer' }).entry, 'scrum');
-  for (const k of ['ab-entry', 'Item urgente na sprint', 'mudança de escopo', 'Ir ao Backlog', 'si-signout', 'Sair / trocar de usuário']) assert.ok(html.includes(k), k);
+  for (const k of ['ab-entry', 'Item urgente na sprint', 'mudança de escopo', 'Ir ao Backlog', 'si-signout', 'Sair / Trocar Usuário']) assert.ok(html.includes(k), k);
 });
 
 test('relatar um bug: exige a entrega pai, monta a descrição estruturada e respeita o limite do banco', () => {
