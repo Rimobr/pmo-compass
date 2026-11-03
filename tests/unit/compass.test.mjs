@@ -81,3 +81,14 @@ test('a permissão: o app, o perfil padrão e o banco', () => {
   assert.ok(html.includes("patrocinador: { name: 'Patrocinador / Diretoria', perms: { ask_compass: true"));
   for (const k of ["has_perm('ask_compass')", "'gerente', 'patrocinador'", 'security definer set search_path = public', 'revoke all on function public.compass_digest() from public, anon', "case when costs then", "case when allh then"]) assert.ok(mig.includes(k), k);
 });
+
+test('horas: projeto novo não dilui a média (semanas contadas desde a primeira hora), e quem não está na janela nem na equipe não vira "0 horas"', () => {
+  const people = [{ name: 'Ana', hours28: 100, hoursTotal: 100, projects: 1, since: '2026-11-03' }, { name: 'Beto', hours28: 100, hoursTotal: 100, projects: 1, since: '2026-10-08' }];
+  const a = CompassCore.answer({ kind: 'horas' }, digest([proj('a', 'A')], { people }));
+  assert.match(a.lines.find(l => /Ana/.test(l.t) && /^1\./.test(l.t)).t, /acima de 44 h/);        // 100 h em 2 dias = semana de 100 h
+  assert.ok(!/acima de 44/.test(a.lines.find(l => /^2\./.test(l.t)).t));                          // 100 h em 4 semanas = 25 h por semana
+  const txt = CompassCore.factsText(digest([proj('a', 'A')], { people: [{ name: 'Ana', hours28: 9, since: '2026-11-03' }, { name: 'Leandro', hours28: 0 }] }));
+  assert.match(txt, /JANELA DAS HORAS/); assert.match(txt, /Ana 9 h/); assert.match(txt, /sem horas na janela: Leandro/);
+  const mig2 = readFileSync(join(root, 'supabase', 'migrations', '20261103220000_compass_people.sql'), 'utf8');
+  for (const k of ["'since'", 'having coalesce(sum(h.hours)', 'team_members tm where lower(btrim(tm.name))']) assert.ok(mig2.includes(k), k);
+});

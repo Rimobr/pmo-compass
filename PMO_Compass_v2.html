@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.53.2'
+  version: '2.53.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -8124,6 +8124,8 @@ const CompassCore = (() => {
     const level = value == null ? 'sem_dado' : value >= 50 ? 'critico' : value >= 25 ? 'atencao' : 'ok';
     return { id: p.id, name: p.name, client: p.client || '', value, level, label: LEVEL[level], reasons: reasons.sort((a, b) => b.pts - a.pts), recs };
   }
+  // Semanas de lançamento na janela: de 28 dias, mas nunca mais que o tempo desde a primeira hora da pessoa (projeto novo não dilui a média)
+  const weeksOf = (x, today) => { const t = Date.parse(today + 'T00:00:00Z'), f = x.since ? Date.parse(String(x.since).slice(0, 10) + 'T00:00:00Z') : NaN; const days = isNaN(f) || isNaN(t) ? 28 : Math.min(28, Math.max(1, Math.round((t - f) / 86400000) + 1)); return Math.max(1, days / 7); };
   const rank = d => (d.projects || []).map(p => score(p, d.canSeeCosts)).sort((a, b) => (b.value == null ? -1 : b.value) - (a.value == null ? -1 : a.value) || String(a.name).localeCompare(String(b.name), 'pt-BR'));
 
   // O que a pergunta quer saber (palavras-chave simples e explicáveis); null = pergunta livre (vai para a IA)
@@ -8160,9 +8162,9 @@ const CompassCore = (() => {
       const p = d.people.filter(x => num(x.hours28) > 0 || it.asc).slice().sort((a, b) => it.asc ? num(a.hours28) - num(b.hours28) : num(b.hours28) - num(a.hours28)).slice(0, 5);
       if(!p.length) return A('Horas por pessoa', [{ t: 'Ninguém lançou horas nos últimos 28 dias.' }]);
       const lines = [{ t: (it.asc ? 'Quem lançou menos horas' : 'Quem mais trabalhou') + ' nos últimos 28 dias: «' + p[0].name + '» com ' + fmtH(p[0].hours28) + '.', strong: true }]
-        .concat(p.map((x, i) => ({ t: (i + 1) + '. ' + x.name + ' — ' + fmtH(x.hours28) + ' em 28 dias (total ' + fmtH(x.hoursTotal) + ', ' + pl(num(x.projects), 'projeto', 'projetos') + ')' + (num(x.hours28) / 4 > 44 ? ' ⚠ média acima de 44 h por semana' : '') })));
-      const heavy = p.filter(x => num(x.hours28) / 4 > 44);
-      return A('Horas por pessoa', lines, heavy.length ? [{ text: 'Converse com ' + heavy.map(x => x.name).join(', ') + ': a média passa de 44 h por semana. Redistribua tarefas ou revise prazos antes que vire esgotamento.', go: 'burnout' }] : [], { how: 'Soma das horas lançadas (sem as reprovadas) nos últimos 28 dias, em todos os projetos a que você tem acesso.' });
+        .concat(p.map((x, i) => ({ t: (i + 1) + '. ' + x.name + ' — ' + fmtH(x.hours28) + ' em 28 dias (total ' + fmtH(x.hoursTotal) + ', ' + pl(num(x.projects), 'projeto', 'projetos') + ')' + (num(x.hours28) / weeksOf(x, d.today) > 44 ? ' ⚠ média acima de 44 h por semana' : '') })));
+      const heavy = p.filter(x => num(x.hours28) / weeksOf(x, d.today) > 44);
+      return A('Horas por pessoa', lines, heavy.length ? [{ text: 'Converse com ' + heavy.map(x => x.name).join(', ') + ': a média passa de 44 h por semana. Redistribua tarefas ou revise prazos antes que vire esgotamento.', go: 'burnout' }] : [], { how: 'Soma das horas lançadas (sem as reprovadas) nos últimos 28 dias corridos até hoje, em todos os projetos a que você tem acesso; a média por semana conta só as semanas desde a primeira hora lançada na janela (projeto novo tem menos de 28 dias de dados).' });
     }
     if(it.kind === 'sobrecarga') {
       const o = d.overallocated || [];
@@ -8201,7 +8203,8 @@ const CompassCore = (() => {
   function factsText(d) {
     const out = ['Data de referência: ' + d.today + '.'];
     rank(d).forEach(r => { const p = d.projects.find(x => x.id === r.id), m = p.modules || {}; out.push('PROJETO «' + p.name + '»: ' + (r.value == null ? 'sem dados' : 'desvio ' + r.value + '/100 (' + r.label + ')') + '; avanço médio ' + num(m.avgPct) + '%; ' + num(m.lateCount) + ' entregas atrasadas; riscos críticos ' + num(p.risks && p.risks.critical) + '; decisões pendentes ' + num(p.decisions && p.decisions.pending) + '; impedimentos ' + num(p.impediments) + '; horas em 28 dias ' + fmtH(num(p.hours && p.hours.last28)) + '. Fatores: ' + (r.reasons.map(x => x.text).join('; ') || 'nenhum') + '.'); });
-    if(d.people) out.push('HORAS POR PESSOA (28 dias): ' + d.people.slice(0, 15).map(x => x.name + ' ' + fmtH(x.hours28)).join('; ') + '.');
+    out.push('JANELA DAS HORAS: os últimos 28 dias corridos até a data de referência (projeto mais novo tem menos dias de dados; não diga que alguém trabalhou "0 horas" sem dizer que é na janela).');
+    if(d.people) { const com = d.people.filter(x => num(x.hours28) > 0), sem = d.people.filter(x => !(num(x.hours28) > 0)); out.push('HORAS POR PESSOA (na janela): ' + (com.map(x => x.name + ' ' + fmtH(x.hours28)).join('; ') || 'ninguém lançou') + '.' + (sem.length ? ' Da equipe, sem horas na janela: ' + sem.map(x => x.name).join(', ') + '.' : '')); }
     if((d.overallocated || []).length) out.push('ACIMA DE 100% DE ALOCAÇÃO: ' + d.overallocated.map(x => x.name + ' ' + num(x.pct) + '%').join('; ') + '.');
     return out.join('\n');
   }
