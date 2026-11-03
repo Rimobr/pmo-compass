@@ -105,3 +105,13 @@ test('o calendário vale para qualquer ano (nacionais móveis calculados, "todo 
   assert.match(WorkCal.reason('2030-07-09', anual), /feriado \(Data do estado\)/);
   for (const k of ['Ano anterior', 'Próximo ano', 'y0 - 1 + k', 'Vale para qualquer ano', 'WorkCalUi.setYear(']) assert.ok(html.includes(k), k);
 });
+
+test('exceção: a auditoria leva a justificativa inteira e o dia da semana; a lista mostra o dia da semana', () => {
+  assert.equal(WorkCal.dayName('2026-11-14'), 'sábado');
+  assert.equal(WorkCal.dayName('2026-11-01'), 'domingo');
+  assert.equal((html.match(/calendar_exception', 'Exceção de calendário em/g) || []).length, 2);
+  assert.equal((html.match(/weekday: (WorkCal\.)?dayName\(/g) || []).length, 2, 'os dois caminhos de autorização gravam o dia da semana');
+  assert.ok(html.includes('reason: j.trim().slice(0, 300)') && html.includes('reason: j.slice(0, 300)'), 'justificativa completa nos metadados');
+  assert.ok(!html.includes("fmt(date) + ': ' + j.trim().slice(0, 120)"), 'sem o corte antigo de 120 letras');
+  assert.ok(html.includes('esc(WorkCal.dayName(x.date))'));
+});

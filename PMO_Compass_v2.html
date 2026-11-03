@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.42.2'
+  version: '2.42.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -6053,6 +6053,7 @@ const WorkCal = (() => {
   const toIso = d => iso(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
   const addDays = (s, n) => { const d = parse(s); d.setUTCDate(d.getUTCDate() + n); return toIso(d); };
   const weekday = s => parse(s).getUTCDay();
+  const dayName = s => WEEKDAY[weekday(s)];
   const fmt = s => String(s).slice(0, 10).split('-').reverse().join('/');
   // Páscoa (algoritmo gregoriano): base dos feriados móveis
   function easter(y) {
@@ -6132,7 +6133,7 @@ const WorkCal = (() => {
       if(j === null) return false;
       if(j.trim().length < 10) { T.show('⚠️ Justificativa curta demais (mínimo 10 letras). Nada foi alterado.'); return false; }
       save(addException(cfgNow(), { date: String(date).slice(0, 10), reason: j.trim().slice(0, 300), by: Auth.getName(), at: new Date().toISOString() }));
-      if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('calendar_exception', 'Exceção de calendário em ' + fmt(date) + ': ' + j.trim().slice(0, 120), { date: String(date).slice(0, 10) });
+      if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('calendar_exception', 'Exceção de calendário em ' + fmt(date) + ' (' + dayName(date) + '): ' + j.trim().slice(0, 300), { date: String(date).slice(0, 10), weekday: dayName(date), reason: j.trim().slice(0, 300) });
       T.show('✅ Exceção autorizada para ' + fmt(date) + ' (justificativa registrada).');
       return true;
     }
@@ -6142,7 +6143,7 @@ const WorkCal = (() => {
   // Várias datas de uma vez (início e fim): só segue se todas passarem
   const ensureAll = (dates, what) => dates.every(d => !d || ensure(d, what));
   if(typeof AgileCalc !== 'undefined' && AgileCalc.setOffDay) AgileCalc.setOffDay(d => isOff(d, cfgNow()));
-  return { monthView, yearSummary, holidayKey, national, reason, isOff, nextWorking, prevWorking, workingDays, easter, norm, addException, addHoliday, removeHoliday, removeException, cfgNow, save, ensure, ensureAll, fmt, WEEKDAY };
+  return { monthView, yearSummary, holidayKey, national, reason, isOff, nextWorking, prevWorking, workingDays, easter, norm, addException, addHoliday, removeHoliday, removeException, cfgNow, save, ensure, ensureAll, fmt, dayName, WEEKDAY };
 })();
 </script>
 
@@ -6211,7 +6212,7 @@ const WorkCalUi = (() => {
         + (h.key && ed ? '<button class="btn btn-sm" aria-label="Remover o feriado ' + esc(h.name) + '" onclick="WorkCalUi.removeHoliday(\'' + esc(h.key) + '\')"><i class="ti ti-trash"></i></button>' : '') + '</div>').join('') : '<div class="wc-empty">Nenhum feriado em ' + MONTHS[month - 1].toLowerCase() + '.</div>';
     const dayOpts = Array.from({ length: 31 }, (_, i) => '<option value="' + (i + 1) + '">' + (i + 1) + '</option>').join('');
     const add = ed ? '<div class="wc-add"><div class="field"><label for="wc-h-day">Dia</label><select class="input" id="wc-h-day" style="width:auto">' + dayOpts + '</select></div><div class="field" style="flex:1 1 180px"><label for="wc-h-name">Feriado de ' + MONTHS[month - 1].toLowerCase() + '</label><input class="input" id="wc-h-name" maxlength="60" placeholder="Ex.: Aniversário da cidade"></div><label class="wc-yr"><input type="checkbox" id="wc-h-annual" checked> repete todo ano</label><button class="btn btn-sm" onclick="WorkCalUi.addHoliday()"><i class="ti ti-plus"></i>Cadastrar</button></div>' : '';
-    const exc = cfg.exceptions.length ? cfg.exceptions.map(x => '<div class="wc-row"><span class="wc-day">' + fmt(x.date).slice(0, 5) + '</span><span class="wc-name">' + esc(x.reason) + '</span><span class="wc-tag">' + esc(x.by || '') + (x.at ? ' · ' + when(x.at) : '') + '</span>' + (ed ? '<button class="btn btn-sm" aria-label="Remover a exceção de ' + fmt(x.date) + '" onclick="WorkCalUi.removeException(\'' + x.date + '\')"><i class="ti ti-trash"></i></button>' : '') + '</div>').join('') : '<div class="wc-empty">Nenhuma exceção autorizada.</div>';
+    const exc = cfg.exceptions.length ? cfg.exceptions.map(x => '<div class="wc-row"><span class="wc-day">' + fmt(x.date).slice(0, 5) + '</span><span class="wc-name"><b>' + esc(WorkCal.dayName(x.date)) + '</b> — ' + esc(x.reason) + '</span><span class="wc-tag">' + esc(x.by || '') + (x.at ? ' · ' + when(x.at) : '') + '</span>' + (ed ? '<button class="btn btn-sm" aria-label="Remover a exceção de ' + fmt(x.date) + '" onclick="WorkCalUi.removeException(\'' + x.date + '\')"><i class="ti ti-trash"></i></button>' : '') + '</div>').join('') : '<div class="wc-empty">Nenhuma exceção autorizada.</div>';
     root.innerHTML = '<div class="wc-sum"><b>' + year + '</b>: ' + sum.total + ' feriados, <b>' + sum.onWeekdays + ' em dia útil</b>' + (sum.onWeekend ? ' (' + sum.onWeekend + ' caem no fim de semana)' : '') + ' · ' + mine + ' do projeto · ' + cfg.exceptions.length + ' exceção(ões)</div><div class="wc-hint">Vale para qualquer ano: os nacionais são calculados e os que "repetem todo ano" se aplicam sempre. Escolha o ano só para conferir.</div>'
       + '<div class="wc-bar"><button class="btn btn-sm" aria-label="Ano anterior" onclick="WorkCalUi.setYear(' + (year - 1) + ')"><i class="ti ti-chevron-left"></i></button><select class="input" id="wc-year" aria-label="Ano" style="width:auto" onchange="WorkCalUi.setYear(this.value)">' + yearOpts + '</select><button class="btn btn-sm" aria-label="Próximo ano" onclick="WorkCalUi.setYear(' + (year + 1) + ')"><i class="ti ti-chevron-right"></i></button><div class="wc-months" role="group" aria-label="Meses">' + chips + '</div></div>'
       + '<div class="wc-list" aria-live="polite">' + rows + '</div>' + add
@@ -6240,7 +6241,7 @@ const WorkCalUi = (() => {
     if(!d) { T.show('⚠️ Escolha a data.'); return; }
     if(j.length < 10) { T.show('⚠️ Escreva a justificativa (mínimo 10 letras).'); return; }
     WorkCal.save(WorkCal.addException(WorkCal.cfgNow(), { date: d, reason: j.slice(0, 300), by: Auth.getName(), at: new Date().toISOString() }));
-    if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('calendar_exception', 'Exceção de calendário em ' + fmt(d) + ': ' + j.slice(0, 120), { date: d });
+    if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('calendar_exception', 'Exceção de calendário em ' + fmt(d) + ' (' + WorkCal.dayName(d) + '): ' + j.slice(0, 300), { date: d, weekday: WorkCal.dayName(d), reason: j.slice(0, 300) });
     T.show('✅ Exceção autorizada.'); render();
     const ex = document.querySelector('#wc-root .wc-exc'); if(ex) ex.open = true;
   }
