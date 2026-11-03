@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.43.0'
+  version: '2.43.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -285,7 +285,7 @@ body.no-login #login-gate{display:flex}
 .proj-pick summary{cursor:pointer;list-style:none;width:auto;display:inline-flex;align-items:center;gap:6px;user-select:none}
 .proj-pick summary::-webkit-details-marker{display:none}
 .proj-pick summary::after{content:'▾';font-size:11px;color:var(--t3)}
-.proj-pick-list{position:absolute;z-index:20;margin-top:4px;min-width:260px;max-width:min(360px,86vw);max-height:280px;overflow:auto;background:var(--s1);border:1px solid var(--b2);border-radius:var(--r8);padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.proj-pick-list{position:absolute;z-index:20;margin-top:4px;min-width:300px;max-width:min(360px,86vw);max-height:280px;overflow:auto;background:var(--s1);border:1px solid var(--b2);border-radius:var(--r8);padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 .proj-pick-list label{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--t1);cursor:pointer}
 .proj-pick-list label:hover{background:var(--s2)}
 .kpi-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
@@ -301,7 +301,8 @@ body.no-login #login-gate{display:flex}
 .sd-opt small{display:block;color:var(--t2);margin-top:2px;font-size:11.5px;line-height:1.5}
 .sd-opt input{margin-top:3px;accent-color:var(--acc)}
 .proj-pick-foot{position:sticky;bottom:-6px;display:flex;align-items:center;gap:6px;margin:6px -6px -6px;padding:8px;background:var(--s2);border-top:1px solid var(--b1);font-size:12px;color:var(--t2)}
-.proj-pick-foot .pp-n{flex:1}
+.proj-pick-foot .pp-n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proj-pick-foot .btn{flex:none}
 .proj-pick-all{border-bottom:1px solid var(--b1);margin-bottom:4px;border-radius:6px 6px 0 0}
 .proj-pick-list input{width:16px;height:16px;accent-color:var(--acc)}
 .sb-divl-btn{position:relative;justify-content:center;background:none;border:0;width:calc(100% - 8px);cursor:pointer;font-family:inherit;border-radius:var(--r8);padding:4px 16px;letter-spacing:.02em}
@@ -5621,7 +5622,7 @@ const Users = (() => {
       const add = isAdmin ? '' : `<details class="proj-pick" data-uid="${p.id}"${openFor === p.id ? ' open' : ''} ontoggle="Users.pickToggle('${p.id}', this.open)"><summary class="input" aria-label="Escolher os projetos de ${nm}">Projetos (${nIn} de ${all.length})</summary><div class="proj-pick-list" role="group" aria-label="Projetos de ${nm}">
           <label class="proj-pick-all"><input type="checkbox"${allIn ? ' checked' : ''}${all.length ? '' : ' disabled'} onchange="Users.pickAll('${p.id}', this.checked, this)"> <b>Todos os projetos</b></label>
           ${all.map(x => `<label><input type="checkbox" data-pid="${escapeHtml(x.id)}"${has.has(x.id) ? ' checked' : ''} onchange="Users.pickChange('${p.id}','${x.id}', this.checked, this)"> ${escapeHtml(x.name || x.id)}</label>`).join('')}
-          <div class="proj-pick-foot"><span class="pp-n" aria-live="polite">Marque e salve de uma vez</span><button class="btn btn-sm" onclick="Users.pickCancel('${p.id}', this)">Cancelar</button><button class="btn btn-sm btn-acc pp-save" disabled onclick="Users.pickSave('${p.id}', this)"><i class="ti ti-device-floppy"></i>Salvar</button></div>
+          <div class="proj-pick-foot"><span class="pp-n" aria-live="polite">Sem alterações</span><button class="btn btn-sm" onclick="Users.pickCancel('${p.id}', this)">Cancelar</button><button class="btn btn-sm btn-acc pp-save" disabled onclick="Users.pickSave('${p.id}', this)"><i class="ti ti-device-floppy"></i>Salvar</button></div>
         </div></details>`;
       return `<div class="set-row" style="align-items:flex-start;flex-wrap:wrap;gap:10px">
         ${admin && !isMe ? `<input type="checkbox" aria-label="Marcar ${nm}" ${sel.has(p.id) ? 'checked' : ''} onchange="Users.toggleSel('${p.id}', this.checked)" style="margin-top:3px">` : (admin ? '<span style="width:13px"></span>' : '')}<div style="min-width:180px;flex:1 1 180px"><div class="set-lbl">${nm}${isMe ? ' <span class="badge b-acc">você</span>' : ''}${p.active === false ? ' <span class="badge b-red">Inativo</span>' : ''}</div><div class="set-sub" style="font-family:var(--font-mono);font-size:11px" title="Identificador da conta">${escapeHtml(p.id.slice(0, 8))}…</div></div>
@@ -5667,7 +5668,7 @@ const Users = (() => {
     det.querySelectorAll('input[data-pid]').forEach(i => { i.checked = now.has(i.dataset.pid); });
     const allBox = det.querySelector('.proj-pick-all input'); if(allBox) allBox.checked = all.length > 0 && all.every(p => now.has(p.id));
     const sm = det.querySelector('summary'); if(sm) sm.textContent = 'Projetos (' + all.filter(p => now.has(p.id)).length + ' de ' + all.length + ')' + (n ? ' •' : '');
-    const lab = det.querySelector('.pp-n'); if(lab) lab.textContent = n ? n + ' alteração(ões) por salvar' : 'Marque e salve de uma vez';
+    const lab = det.querySelector('.pp-n'); if(lab) lab.textContent = n ? n + ' por salvar' : 'Sem alterações';
     const sv = det.querySelector('.pp-save'); if(sv) sv.disabled = !n;
   }
   function pickChange(userId, pid, on, el) { const d = draftOf(userId); if(on) d.add(pid); else d.delete(pid); pickSync(el.closest('.proj-pick'), userId); }
