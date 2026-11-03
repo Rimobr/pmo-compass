@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.45.0'
+  version: '2.46.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1102,6 +1102,14 @@ body.icons-failed i[data-fb]::before{
     </div>
   </div>
 
+  <div class="kg" id="kg-hours">
+    <div class="kg-hdr" role="button" tabindex="0" aria-expanded="true" aria-label="Expandir/recolher Horas do projeto" onclick="KG.tog('kg-hours')" onkeydown="KG.key(event,'kg-hours')">
+      <div class="kg-l"><div class="kg-ico" style="background:var(--ad)"><i class="ti ti-clock-hour-4" style="color:var(--acc)"></i></div><span class="kg-title">Horas do projeto</span><span class="kg-n">4 KPIs</span></div>
+      <div class="kg-r"><span class="kg-st" id="dash-hours-status"><span class="sdot sdot-acc"></span>—</span><i class="ti ti-chevron-down kg-chev op"></i></div>
+    </div>
+    <div class="kg-body" id="dash-hours-body"></div>
+  </div>
+
   <div class="kg" id="kg-team">
     <div class="kg-hdr" role="button" tabindex="0" aria-expanded="false" aria-label="Expandir/recolher Saúde da equipe" onclick="KG.tog('kg-team')" onkeydown="KG.key(event,'kg-team')">
       <div class="kg-l"><div class="kg-ico" style="background:var(--rd)"><i class="ti ti-heartbeat" style="color:var(--red)"></i></div><span class="kg-title">Saúde da equipe</span><span class="kg-n">4 KPIs</span></div>
@@ -2011,6 +2019,12 @@ body.icons-failed i[data-fb]::before{
 .notice-n{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--red);color:#fff;font-size:11px;font-weight:700;line-height:16px;text-align:center}
 .nt-item{border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;margin-bottom:8px}
 .nt-item.unread{border-color:var(--acc);background:var(--ad)}
+.nt-item.sev-warning{border-left:4px solid var(--amb)}
+.nt-item.sev-critical{border-left:4px solid var(--red);background:var(--rd)}
+.nt-item.sev-urgent{border:2px solid var(--red);background:var(--rd)}
+.nt-item.sev-urgent b,.nt-item.sev-critical b{color:var(--red)}
+.ico-btn.urgent{border-color:var(--red);box-shadow:0 0 0 2px var(--rb)}
+.ico-btn.urgent i{color:var(--red)}
 .inp-clr{position:relative;display:block}
 .inp-clr>.input{padding-right:54px}
 .inp-clr-b{position:absolute;right:30px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--t2);font-size:17px;line-height:1;cursor:pointer;padding:2px 5px;border-radius:4px}
@@ -2360,6 +2374,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <select class="input" id="hr-f-status" aria-label="Situação" onchange="Hours.setFilter('status', this.value)"><option value="">Todas as situações</option><option value="ajuste">Ajuste pedido</option><option value="pendente">Aguardando aprovação</option><option value="aprovado">Aprovadas</option><option value="reprovado">Reprovadas</option></select>
   </div>
   <div class="g4 rc-k" id="hr-kpis"></div>
+  <div class="card" id="hr-budget" style="display:none"></div>
   <div class="card" data-sec="hrs-aprovar" data-tint="4" data-perm="edit_plan"><div class="lbl"><i class="ti ti-checklist"></i>Aprovação de horas <span id="hr-ap-n" class="badge">0</span><span class="help-q" data-help="Horas lançadas que aguardam o gerente: aprovar, reprovar ou pedir ajuste (a pessoa recebe o aviso e o comentário). Só o gerente do projeto vê e decide aqui." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div id="hr-appr-root"></div></div>
   <div class="card" data-sec="hrs-regras" data-tint="3" data-collapsed="1" data-perm="edit_plan"><div class="lbl"><i class="ti ti-adjustments"></i>Regras de lançamento<span class="help-q" data-help="Parâmetros deste projeto: horas normais por dia, quem passa por aprovação, prazos para lançar e bloqueio de entrega encerrada." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div id="hr-rules-root"></div></div>
   <div class="card" data-sec="hrs-fechar" data-tint="5" data-collapsed="1" data-perm="edit_plan"><div class="lbl"><i class="ti ti-lock"></i>Fechamento de período<span class="help-q" data-help="Depois de fechado, o mês não aceita mais lançamento, alteração nem exclusão de horas (nem pelo servidor). O gerente pode reabrir." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div id="hr-close-root"></div></div>
@@ -4533,6 +4548,12 @@ const Cloud = (() => {
     if(error) { console.warn('Supabase: falha ao ler os avisos', error); return []; }
     return data || [];
   }
+  async function hoursSummary(pid) {
+    if(!client || !session) return null;
+    const { data, error } = await client.rpc('hours_summary', { pid });
+    if(error) { console.warn('Supabase: falha ao somar as horas do projeto', error.message); return null; }
+    return data;
+  }
   async function markNoticesRead(ids) {
     if(!client || !session || !ids.length) return;
     const { error } = await client.from('user_notices').update({ read_at: new Date().toISOString() }).in('id', ids);
@@ -5064,7 +5085,7 @@ const Cloud = (() => {
   }
 
   return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
-    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
+    saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, hoursSummary, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument, pushRow, pushMany, deleteRow, msgTable, invokeFn,
@@ -6362,23 +6383,28 @@ const Notices = (() => {
   const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const $ = id => document.getElementById(id);
   let list = [], shown = false;
+  const seenUrgent = new Set();
+  const SEV = { urgent: [3, 'ti-alarm', 'URGENTE'], critical: [2, 'ti-alert-octagon', 'Crítico'], warning: [1, 'ti-alert-triangle', 'Atenção'], info: [0, '', ''] };
+  const sorted = () => list.slice().sort((a, b) => (!!a.read_at - !!b.read_at) || ((SEV[b.severity] || SEV.info)[0] - (SEV[a.severity] || SEV.info)[0]) || String(b.created_at).localeCompare(String(a.created_at)));
   const unread = () => list.filter(n => !n.read_at);
   const when = iso => { try { return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch(e) { return ''; } };
   function paint() {
     const b = $('tb-notices'), n = unread().length; if(!b) return;
     b.style.display = list.length ? '' : 'none';
     const c = $('tb-notices-n'); c.textContent = n > 9 ? '9+' : String(n); c.style.display = n ? '' : 'none';
+    b.classList.toggle('urgent', unread().some(x => x.severity === 'urgent'));
   }
   async function refresh() {
     if(typeof Cloud === 'undefined' || !Cloud.getUserId || !Cloud.getUserId()) { list = []; paint(); return; }
     list = await Cloud.listNotices(); paint();
-    if(!shown && unread().length) { shown = true; open(); }
+    const urg = unread().filter(x => x.severity === 'urgent' && !seenUrgent.has(x.id)); urg.forEach(x => seenUrgent.add(x.id));
+    if((!shown && unread().length) || urg.length) { shown = true; open(); }
     if(typeof Agile !== 'undefined') { try { Agile.checkDates(); } catch(e) { /* sem projeto aberto */ } }
   }
   function render() {
     const b = $('nt-body'); if(!b) return;
     const names = Object.fromEntries((DB.listProjects() || []).map(p => [p.id, p.name]));
-    b.innerHTML = list.length ? list.map(n => '<div class="nt-item' + (n.read_at ? '' : ' unread') + '"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b style="font-size:13px">' + esc(n.title) + '</b><span style="margin-left:auto;font-size:11.5px;color:var(--t2)">' + esc(when(n.created_at)) + '</span></div>'
+    b.innerHTML = list.length ? sorted().map(n => '<div class="nt-item' + (n.read_at ? '' : ' unread') + ' sev-' + (n.severity || 'info') + '"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b style="font-size:13px">' + ((SEV[n.severity] || SEV.info)[1] ? '<i class="ti ' + SEV[n.severity][1] + '"></i> ' : '') + esc(n.title) + '</b><span style="margin-left:auto;font-size:11.5px;color:var(--t2)">' + esc(when(n.created_at)) + '</span></div>'
       + (n.detail ? '<div style="font-size:12.5px;color:var(--t1);margin-top:3px">' + esc(n.detail) + '</div>' : '')
       + '<div style="font-size:11.5px;color:var(--t2);margin-top:4px">' + esc(names[n.project_id] || '') + (n.source ? ' · ' + esc(n.source) : '') + '</div>'
       + (target(n.page) ? '<button class="btn btn-sm" style="margin-top:6px" onclick="Notices.go(\'' + esc(n.project_id) + '\',\'' + esc(n.page) + '\')"><i class="ti ti-external-link"></i>' + esc(target(n.page).label) + '</button>' : '') + '</div>').join('') : '<div class="rk-empty">Nenhum aviso.</div>';
@@ -6387,14 +6413,14 @@ const Notices = (() => {
   async function readAll() { const ids = unread().map(n => n.id); if(!ids.length) return; await Cloud.markNoticesRead(ids); const now = new Date().toISOString(); list.forEach(n => { if(!n.read_at) n.read_at = now; }); paint(); render(); }
   function close() { $('modal-notices').classList.add('hidden'); readAll(); }
   // O aviso aponta para o registro (tipo:código). Sem registro, não há botão: levar a uma tela genérica não ajuda
-  const KINDS = { hours: 'Abrir o lançamento', hoursapr: 'Ver na aprovação', hoursf: 'Ver os lançamentos', item: 'Abrir o item' };
-  function target(page) { const m = String(page || '').match(/^(hours|hoursapr|hoursf|item):(.+)$/); return m && KINDS[m[1]] ? { kind: m[1], id: m[2], label: KINDS[m[1]] } : null; }
+  const KINDS = { hours: 'Abrir o lançamento', hoursapr: 'Ver na aprovação', hoursf: 'Ver os lançamentos', item: 'Abrir o item', hoursb: 'Ver o orçamento de horas' };
+  function target(page) { const m = String(page || '').match(/^(hours|hoursapr|hoursf|hoursb|item):(.+)$/); return m && KINDS[m[1]] ? { kind: m[1], id: m[2], label: KINDS[m[1]] } : null; }
   function go(pid, page) {
     const t = target(page); close(); if(!t) return;
     try { if(pid && DB.getActiveProjectId() !== pid) DB.switchProject(pid); } catch(e) { /* projeto indisponível */ }
     const later = fn => setTimeout(fn, 350);
     if(t.kind === 'item') { R.go('kanban'); later(() => { if(Auth.can('manage_backlog')) { Agile.openItem(t.id); return; } const c = document.querySelector('.kb-card[data-id="' + t.id.replace(/[^A-Za-z0-9_-]/g, '') + '"]'); if(c) { c.scrollIntoView({ block: 'center' }); c.focus(); c.style.outline = '2px solid var(--acc)'; setTimeout(() => { c.style.outline = ''; }, 3000); } else T.show('⚠️ O item não está no quadro desta sprint.'); }); }
-    else { R.go('hours'); later(() => { if(t.kind === 'hours') Hours.jump(t.id); else if(t.kind === 'hoursapr') Hours.focusApproval(t.id); else Hours.showStatus(t.id); }); }
+    else { R.go('hours'); later(() => { if(t.kind === 'hours') Hours.jump(t.id); else if(t.kind === 'hoursapr') Hours.focusApproval(t.id); else if(t.kind === 'hoursb') Hours.focusBudget(); else Hours.showStatus(t.id); }); }
   }
   setTimeout(refresh, 5000); setTimeout(refresh, 20000); setInterval(refresh, 90000);
   return { refresh, open, close, readAll, go };
@@ -10184,6 +10210,7 @@ const Dashboard = (() => {
     renderBudgetKpis();
     renderHealthScore();
     renderTeamHealth();
+    if(typeof Hours !== 'undefined' && Hours.renderDash) Hours.renderDash();
     renderLearning();
     renderAlerts();
     renderPriorityDecision();
@@ -14682,8 +14709,22 @@ const ExecReport = (() => {
 const HoursRules = (() => {
   const STATUS = { pendente: 'Aguardando aprovação', aprovado: 'Aprovada', reprovado: 'Reprovada', ajuste: 'Ajuste pedido' };
   const APPROVAL = { all: 'Todas as horas passam pelo gerente', extra: 'Só as horas extras passam pelo gerente', none: 'Nenhuma: o gerente só acompanha' };
-  const DEFAULTS = { dailyNormal: 8, requireDelivery: true, approval: 'all', daysAfter: { on: false, days: 3 }, monthCutoff: { on: false, bd: 5 }, closeOnDelivery: false, closedPeriods: [] };
+  const DEFAULTS = { dailyNormal: 8, requireDelivery: true, approval: 'all', daysAfter: { on: false, days: 3 }, monthCutoff: { on: false, bd: 5 }, closeOnDelivery: false, closedPeriods: [], budget: { on: false, total: 0, warnPct: 80, critPct: 95, blockAtFull: true } };
   const num = (v, min, max, dflt) => { const n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : dflt; };
+  // Orçamento de horas do projeto: total, faixa de aviso e faixa crítica (em %) e se bloqueia novos lançamentos ao chegar em 100%
+  function normBudget(b) {
+    const o = b && typeof b === 'object' ? b : {};
+    const total = Math.round(num(o.total, 0, 1000000, 0) * 100) / 100;
+    let warn = Math.round(num(o.warnPct, 1, 98, 80)), crit = Math.round(num(o.critPct, 2, 99, 95));
+    if(crit <= warn) { warn = Math.min(warn, 98); crit = Math.min(99, warn + 1); }
+    return { on: !!o.on && total > 0, total, warnPct: warn, critPct: crit, blockAtFull: o.blockAtFull !== false };
+  }
+  function budgetState(rules, consumed) {
+    const b = rules.budget;
+    if(!b || !b.on) return { on: false, level: 'none', consumed, pct: 0, remaining: 0, total: 0, block: false };
+    const pct = consumed / b.total * 100;
+    return { on: true, total: b.total, consumed, remaining: Math.max(0, Math.round((b.total - consumed) * 100) / 100), pct, block: b.blockAtFull, level: consumed >= b.total ? 'full' : pct >= b.critPct ? 'crit' : pct >= b.warnPct ? 'warn' : 'ok' };
+  }
   function norm(raw) {
     const r = raw && typeof raw === 'object' ? raw : {};
     const seen = new Set();
@@ -14696,7 +14737,8 @@ const HoursRules = (() => {
       daysAfter: { on: !!(r.daysAfter && r.daysAfter.on), days: Math.round(num(r.daysAfter && r.daysAfter.days, 0, 60, DEFAULTS.daysAfter.days)) },
       monthCutoff: { on: !!(r.monthCutoff && r.monthCutoff.on), bd: Math.round(num(r.monthCutoff && r.monthCutoff.bd, 1, 20, DEFAULTS.monthCutoff.bd)) },
       closeOnDelivery: !!r.closeOnDelivery,
-      closedPeriods: closed
+      closedPeriods: closed,
+      budget: normBudget(r.budget)
     };
   }
   const periodOf = date => String(date || '').slice(0, 7);
@@ -14746,7 +14788,7 @@ const HoursRules = (() => {
     }
     return { ok: true };
   }
-  return { STATUS, APPROVAL, DEFAULTS, norm, periodOf, isClosed, extraOf, statusFor, nthWorkingDay, daysAfterDeadline, monthDeadline, check, addDays };
+  return { STATUS, APPROVAL, DEFAULTS, norm, normBudget, budgetState, periodOf, isClosed, extraOf, statusFor, nthWorkingDay, daysAfterDeadline, monthDeadline, check, addDays };
 })();
 </script>
 
@@ -14761,7 +14803,7 @@ const Hours = (() => {
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const ensureLoaded = () => { if(!data) data = DB.get('timeEntries'); return data; };
-  const resetCache = () => { data = null; showAll = false; };
+  const resetCache = () => { data = null; showAll = false; sumCache = null; };
   const persist = () => DB.set('timeEntries', data);
   const iso = d => Clock.iso(d);
   const today = () => Clock.today();
@@ -14865,6 +14907,7 @@ const Hours = (() => {
     fillPersonFilter();
     const list = filtered();
     renderKpis(list); renderLoad(); renderList(list);
+    renderBudget();
     renderApproval(); renderRules(); renderClosing();
     if(typeof Sec !== 'undefined') Sec.restore(document.getElementById('p-hours'));
   }
@@ -14963,6 +15006,7 @@ const Hours = (() => {
     const i = dayInfo(), lines = [];
     if(i.person && /^\d{4}-\d{2}-\d{2}$/.test(i.date) && i.hours > 0) {
       lines.push(`<span>Dia de ${esc(i.person)}: <b>${fmtH(i.others + i.hours)}</b> (normal: ${fmtH(i.r.dailyNormal)})</span>`);
+      { const bs = budgetOf((sumCache && sumCache.data) || localSummary()); if(bs.on) lines.push(`<span style="${bs.level === 'ok' ? '' : 'color:var(--amb)'}"><i class="ti ti-gauge"></i> Orçamento de horas: ${fmtH(bs.consumed)} de ${fmtH(bs.total)} (${Math.round(bs.pct)}%), restam ${fmtH(bs.remaining)}.</span>`); }
       const w = windowCheck(i);
       if(!w.ok) lines.push(`<span style="color:var(--red)"><i class="ti ti-lock"></i> ${esc(w.reason)}</span>`);
       else lines.push(`<span>${HoursRules.statusFor(i.r, i.extra, isMgr()) === 'aprovado' ? '<i class="ti ti-circle-check"></i> Entra como aprovada.' : '<i class="ti ti-hourglass"></i> Vai para a aprovação do gerente.'}</span>`);
@@ -15009,6 +15053,8 @@ const Hours = (() => {
     if(i.others + hours > 24) { T.show(`⚠️ ${person} já tem ${fmtH(i.others)} em ${fmtDate(date)} — o total do dia passaria de 24 h.`); return; }
     const w = windowCheck(i);
     if(!w.ok) { T.show('🔒 ' + w.reason, 7000); return; }
+    { const bst = budgetOf((sumCache && sumCache.data) || localSummary()), was = modalCtx.mode === 'edit' ? ((data.find(x => x.id === modalCtx.id) || {}).hours || 0) : 0;
+      if(bst.on && bst.block && hours - was > 0 && bst.consumed + hours - was > bst.total) { T.show('🔒 ' + Msg.sentence('O orçamento de horas do projeto não comporta ' + fmtH(hours - was) + ': restam ' + fmtH(bst.remaining) + ' de ' + fmtH(bst.total) + '. Peça ao gerente para ampliar o orçamento'), 8000); return; } }
     if(modalCtx.mode === 'edit') { const old = data.find(x => x.id === modalCtx.id); if(old && HoursRules.isClosed(r, old.date)) { T.show('🔒 O período ' + HoursRules.periodOf(old.date) + ' está fechado.'); return; } }
     if(i.extra > 0 && !mgr && extraReason.length < 5) { T.show('⚠️ Hora extra precisa de liberação do gerente: escreva o motivo (mínimo 5 letras).'); document.getElementById('hr-f-extra').focus(); return; }
     const member = (DB.get('team') || []).find(m => nameKey(m.name) === nameKey(person));
@@ -15023,12 +15069,12 @@ const Hours = (() => {
       Object.assign(item, fields);
       if(changed || !mgr) { item.status = status; item.reviewBy = mgr ? Auth.getName() : ''; item.reviewAt = mgr ? new Date().toISOString() : ''; item.reviewNote = ''; }
     }
-    persist();
+    persist(); sumCache = null;
     Cloud.pushRow('time_entries', item);
     if(item.status === 'pendente' && typeof Cloud !== 'undefined' && Cloud.getUserId && Cloud.getUserId()) Cloud.notifyProject(DB.getActiveProjectId(), 'manager', '', person + ' lançou horas para aprovação', Msg.sentence(fmtH(fields.hours) + ' em ' + fmtDate(date) + ', na entrega ' + wbsRef) + (i.extra > 0 ? ' Inclui ' + fmtH(i.extra) + ' de hora extra. Motivo: ' + Msg.sentence(extraReason) : ''), 'hoursapr:' + item.id, 'Apontamento de horas');
     render();
     closeModal();
-    T.show(`✅ ${fmtH(fields.hours)} apontadas para ${person}` + (item.status === 'pendente' ? ' — aguardando a aprovação do gerente.' : '.'));
+    T.show(`✅ ${fmtH(fields.hours)} apontadas para ${person}` + (item.status === 'pendente' ? ' — aguardando a aprovação do gerente.' : (/[.!?]$/.test(person) ? '' : '.')));
   }
   function deleteFromModal() {
     if(!Auth.guard('log_hours')) return;
@@ -15042,6 +15088,60 @@ const Hours = (() => {
     render();
     closeModal();
     T.show('🗑️ Apontamento excluído.');
+  }
+
+  // ── Orçamento de horas do projeto: acompanhamento, faixas de alerta e bloqueio (os avisos e o bloqueio firme vêm do servidor) ──
+  let sumCache = null, sumBusy = false;
+  const LEVEL = { ok: ['Dentro do orçamento', 'sdot-grn', 'b-grn'], warn: ['Atenção', 'sdot-amb', 'b-amb'], crit: ['Crítico', 'sdot-red', 'b-red'], full: ['Esgotado', 'sdot-red', 'b-red'], none: ['Sem orçamento', 'sdot-acc', 'b-neu'] };
+  function localSummary() {
+    const t = iso(today()), from = HoursRules.addDays(t, -28), all = ensureLoaded().filter(e => e.status !== 'reprovado');
+    const sum = f => all.filter(f).reduce((s, e) => s + e.hours, 0);
+    return { consumed: sum(() => true), approved: sum(e => (e.status || 'aprovado') === 'aprovado'), pending: sum(e => e.status === 'pendente' || e.status === 'ajuste'), last28: sum(e => e.date >= from), entries: all.length };
+  }
+  // Com a nuvem, quem não vê as horas dos outros também vê o total do projeto (o servidor soma)
+  async function loadSummary(force) {
+    if(sumBusy) return sumCache;
+    if(!force && sumCache && Date.now() - sumCache.at < 30000 && sumCache.pid === DB.getActiveProjectId()) return sumCache;
+    sumBusy = true;
+    try {
+      let data = null;
+      if(typeof Cloud !== 'undefined' && Cloud.getUserId && Cloud.getUserId() && Cloud.hoursSummary) data = await Cloud.hoursSummary(DB.getActiveProjectId());
+      sumCache = { at: Date.now(), pid: DB.getActiveProjectId(), data: data || localSummary() };
+    } finally { sumBusy = false; }
+    return sumCache;
+  }
+  const budgetOf = d => HoursRules.budgetState(rules(), Number(d && d.consumed) || 0);
+  function meterHtml(st, d) {
+    const lv = LEVEL[st.level], pct = Math.min(100, st.pct);
+    return `<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><b style="font-size:13px">Orçamento de horas do projeto</b><span class="badge ${lv[2]}">${lv[0]}</span><span style="font-size:12.5px;color:var(--t2)">${fmtH(st.consumed)} de ${fmtH(st.total)} (${Math.round(st.pct)}%) · restam ${fmtH(st.remaining)}</span></div>
+      <div role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}" aria-label="Orçamento de horas consumido" style="position:relative;height:10px;border-radius:6px;background:var(--s2);margin:8px 0 4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(${st.level === 'ok' ? '--grn' : st.level === 'warn' ? '--amb' : '--red'})"></div><i style="position:absolute;top:0;bottom:0;left:${rules().budget.warnPct}%;width:2px;background:var(--amb)"></i><i style="position:absolute;top:0;bottom:0;left:${rules().budget.critPct}%;width:2px;background:var(--red)"></i></div>
+      <div class="set-sub">Aviso em ${rules().budget.warnPct}% · crítico em ${rules().budget.critPct}% · ${rules().budget.blockAtFull ? 'ao chegar em 100% novos lançamentos ficam bloqueados' : 'em 100% o gerente é avisado com urgência, sem bloquear'}${d && d.pending > 0 ? ` · ${fmtH(d.pending)} aguardando aprovação` : ''}</div>`;
+  }
+  async function renderBudget() {
+    const box = document.getElementById('hr-budget'); if(!box) return;
+    const c = await loadSummary(), r = rules();
+    if(!r.budget.on) { box.innerHTML = isMgr() ? '<div class="set-sub"><i class="ti ti-info-circle"></i> Defina o orçamento de horas do projeto em <b>Regras de lançamento</b> para acompanhar o consumo e receber os alertas.</div>' : ''; box.style.display = isMgr() ? '' : 'none'; return; }
+    box.style.display = ''; box.innerHTML = meterHtml(budgetOf(c.data), c.data);
+  }
+  // Grupo "Horas do projeto" nos indicadores do Dashboard
+  async function renderDash() {
+    const body = document.getElementById('dash-hours-body'), stEl = document.getElementById('dash-hours-status'); if(!body) return;
+    const c = await loadSummary(), d = c.data, r = rules(), st = budgetOf(d), lv = LEVEL[st.level || 'none'];
+    if(stEl) stEl.innerHTML = `<span class="sdot ${lv[1]}"></span>${lv[0]}`;
+    const weekly = d.last28 / 4, k = (dot, lbl, val, sub) => `<div class="kpi kpi-link" role="button" tabindex="0" aria-label="Ver as horas do projeto" onclick="R.go('hours')" onkeydown="R.goKey(event,'hours')"><div class="kpi-lbl"><span class="sdot ${dot}"></span>${lbl}</div><div class="kpi-val">${val}</div><div class="kpi-delta c-ne">${sub}</div></div>`;
+    let end = '—', endSub = 'sem horas nas últimas 4 semanas';
+    if(st.on && weekly > 0) { const wk = st.remaining / weekly; end = st.remaining <= 0 ? 'Agora' : fmtDate(HoursRules.addDays(iso(today()), Math.round(wk * 7))); endSub = st.remaining <= 0 ? 'o orçamento acabou' : 'previsão de esgotamento no ritmo atual'; }
+    else if(!st.on && weekly > 0) { end = fmtH(weekly); endSub = 'por semana (média de 4 semanas)'; }
+    body.innerHTML = k(lv[1], 'Horas consumidas', fmtH(d.consumed).replace(' h', '<span class="kpi-unit"> h</span>'), st.on ? `${Math.round(st.pct)}% de ${fmtH(st.total)}` : 'sem orçamento definido')
+      + k(st.on ? lv[1] : 'sdot-acc', 'Saldo do orçamento', st.on ? fmtH(st.remaining).replace(' h', '<span class="kpi-unit"> h</span>') : '—', st.on ? (st.level === 'full' ? 'esgotado' : 'restam até o limite') : 'defina em Horas → Regras')
+      + k(weekly > 0 ? 'sdot-grn' : 'sdot-acc', st.on ? 'Esgota em' : 'Ritmo semanal', end, endSub)
+      + k(d.pending > 0 ? 'sdot-amb' : 'sdot-grn', 'Aguardando aprovação', fmtH(d.pending).replace(' h', '<span class="kpi-unit"> h</span>'), d.pending > 0 ? 'esperam a decisão do gerente' : 'nada pendente');
+  }
+  // Atalho do aviso: abre o orçamento (o gerente cai nas regras; os demais veem o medidor)
+  function focusBudget() {
+    const card = document.querySelector('.card[data-sec="hrs-regras"]');
+    if(isMgr() && card) { if(card.classList.contains('collapsed') && typeof Sec !== 'undefined') Sec.toggle(card); card.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    else { const b = document.getElementById('hr-budget'); if(b) b.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   }
 
   // ── Gerente: aprovação, regras de lançamento e fechamento de período ──
@@ -15107,6 +15207,14 @@ const Hours = (() => {
         <label style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;cursor:pointer"><input type="checkbox" id="hr-r-mc" ${r.monthCutoff.on ? 'checked' : ''}> Lançar as horas do mês até o <input class="input" id="hr-r-mc-n" type="number" min="1" max="20" style="width:76px" value="${r.monthCutoff.bd}" aria-label="Dia útil do mês seguinte"> º dia útil do mês seguinte</label>
         <label style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;cursor:pointer"><input type="checkbox" id="hr-r-cd" ${r.closeOnDelivery ? 'checked' : ''}> Não aceitar horas em entrega já encerrada (cronograma a 100% ou item concluído)</label>
       </div>
+      <div class="lbl" style="margin-top:4px"><i class="ti ti-gauge"></i>Orçamento de horas do projeto<span class="help-q" data-help="Quantas horas o projeto pode consumir. Ao passar da faixa de aviso e da faixa crítica o gerente recebe uma mensagem; ao chegar em 100% ele recebe um aviso de urgência máxima e, se você escolher, os novos lançamentos ficam bloqueados. Conta tudo o que não foi reprovado (aprovadas, aguardando e com ajuste pedido)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+      <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer;margin-bottom:8px"><input type="checkbox" id="hr-r-bud" ${r.budget.on ? 'checked' : ''}> Controlar o orçamento de horas</label>
+      <div class="ln-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 12px;margin-bottom:8px">
+        <div class="ln-f" style="display:flex;flex-direction:column;gap:3px"><label for="hr-r-bud-t" style="font-size:11.5px;color:var(--t2);font-weight:600">Total de horas do projeto</label><input class="input" id="hr-r-bud-t" type="number" min="1" step="1" value="${r.budget.total || ''}" placeholder="Ex.: 800"></div>
+        <div class="ln-f" style="display:flex;flex-direction:column;gap:3px"><label for="hr-r-bud-w" style="font-size:11.5px;color:var(--t2);font-weight:600">Mensagem de aviso em (%)</label><input class="input" id="hr-r-bud-w" type="number" min="1" max="98" value="${r.budget.warnPct}"></div>
+        <div class="ln-f" style="display:flex;flex-direction:column;gap:3px"><label for="hr-r-bud-c" style="font-size:11.5px;color:var(--t2);font-weight:600">Mensagem crítica em (%)</label><input class="input" id="hr-r-bud-c" type="number" min="2" max="99" value="${r.budget.critPct}"></div>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer;margin-bottom:12px"><input type="checkbox" id="hr-r-bud-b" ${r.budget.blockAtFull ? 'checked' : ''}> Impedir novos lançamentos ao chegar em 100% (o gerente é avisado com urgência máxima de qualquer forma)</label>
       <div class="set-sub" style="margin-bottom:10px"><i class="ti ti-info-circle"></i> Hora extra = o que passa das horas normais do dia somando todos os apontamentos da pessoa. Quem lança precisa escrever o motivo, e a hora só vale depois da liberação do gerente (conforme a regra de aprovação acima). Quando mais de um prazo está ligado, vale o que vencer primeiro.</div>
       <div class="btn-row"><button class="btn btn-sm btn-acc" onclick="Hours.saveRulesForm()"><i class="ti ti-device-floppy"></i>Salvar regras</button></div>`;
   }
@@ -15114,11 +15222,14 @@ const Hours = (() => {
     if(!isMgr()) { T.show('🔒 Só o gerente do projeto altera as regras.'); return; }
     const g = id => document.getElementById(id), cur = rules();
     const next = HoursRules.norm({ ...cur, dailyNormal: g('hr-r-normal').value, approval: g('hr-r-appr').value, requireDelivery: g('hr-r-deliv').checked,
-      daysAfter: { on: g('hr-r-da').checked, days: g('hr-r-da-n').value }, monthCutoff: { on: g('hr-r-mc').checked, bd: g('hr-r-mc-n').value }, closeOnDelivery: g('hr-r-cd').checked });
-    saveRules(next);
+      daysAfter: { on: g('hr-r-da').checked, days: g('hr-r-da-n').value }, monthCutoff: { on: g('hr-r-mc').checked, bd: g('hr-r-mc-n').value }, closeOnDelivery: g('hr-r-cd').checked,
+      budget: { on: g('hr-r-bud').checked, total: g('hr-r-bud-t').value, warnPct: g('hr-r-bud-w').value, critPct: g('hr-r-bud-c').value, blockAtFull: g('hr-r-bud-b').checked } });
+    if(g('hr-r-bud').checked && !(next.budget.total > 0)) { T.show('⚠️ Informe o total de horas do projeto para controlar o orçamento.'); g('hr-r-bud-t').focus(); return; }
+    if(g('hr-r-bud').checked && Number(g('hr-r-bud-w').value) >= Number(g('hr-r-bud-c').value)) { T.show('⚠️ A faixa de aviso precisa ser menor que a crítica (ex.: 80% e 95%).'); g('hr-r-bud-w').focus(); return; }
+    saveRules(next); sumCache = null;
     if(typeof Trail !== 'undefined') Trail.log('Regras de lançamento de horas alteradas', Auth.getName(), '', 'b-acc');
-    if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('hours_rules', 'Regras de lançamento de horas alteradas', { dailyNormal: next.dailyNormal, approval: next.approval, requireDelivery: next.requireDelivery, daysAfter: next.daysAfter, monthCutoff: next.monthCutoff, closeOnDelivery: next.closeOnDelivery });
-    renderRules(); renderClosing(); T.show('✅ Regras de lançamento salvas.');
+    if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('hours_rules', 'Regras de lançamento de horas alteradas', { dailyNormal: next.dailyNormal, approval: next.approval, requireDelivery: next.requireDelivery, daysAfter: next.daysAfter, monthCutoff: next.monthCutoff, closeOnDelivery: next.closeOnDelivery, budget: next.budget });
+    renderRules(); renderClosing(); renderBudget(); T.show('✅ Regras de lançamento salvas.');
   }
 
   function periodsList() {
@@ -15199,7 +15310,7 @@ const Hours = (() => {
       ...filtered().sort((a, b) => a.date.localeCompare(b.date)).map(e => [e.person, e.date, Number(e.hours), e.wbsRef, e.note, HoursRules.STATUS[e.status || 'aprovado'], Number(e.extra || 0)])] }]);
   }
 
-  return { render, resetCache, openAdd, openEdit, openEditEl, keyEl, saveFromModal, deleteFromModal, closeModal, setFilter, more, addMany, keys, exportCsv, exportXlsx, preview, apprToggle, apprAll, review, saveRulesForm, closePeriod, reopenPeriod, behalfToggle, jump, focusApproval, showStatus };
+  return { render, resetCache, openAdd, openEdit, openEditEl, keyEl, saveFromModal, deleteFromModal, closeModal, setFilter, more, addMany, keys, exportCsv, exportXlsx, preview, apprToggle, apprAll, review, saveRulesForm, closePeriod, reopenPeriod, behalfToggle, jump, focusApproval, showStatus, renderDash, focusBudget };
 })();
 </script>
 

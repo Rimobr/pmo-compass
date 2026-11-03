@@ -46,7 +46,7 @@
     },
     "project_settings": {
       "domain": "Projetos",
-      "desc": "Configurações por projeto, uma linha por chave: `methodology` (método), `agileConfig` (quadro e entrada de itens), `boardLanes` (raias filtradas do quadro Kanban), `boardRules` (automações do quadro: gatilho e ações), `hoursRules` (regras de lançamento de horas: horas normais, aprovação, prazos e períodos fechados), `workCalendar` (calendário de trabalho: feriados do projeto, exceções autorizadas pelo gerente com justificativa), priorização e perfil de PMO.",
+      "desc": "Configurações por projeto, uma linha por chave: `methodology` (método), `agileConfig` (quadro e entrada de itens), `boardLanes` (raias filtradas do quadro Kanban), `boardRules` (automações do quadro: gatilho e ações), `hoursRules` (regras de lançamento de horas: horas normais, aprovação, prazos, períodos fechados e orçamento de horas com faixas de alerta), `hoursAlertState` (última faixa do orçamento de horas já avisada, escrita pelo servidor), `workCalendar` (calendário de trabalho: feriados do projeto, exceções autorizadas pelo gerente com justificativa), priorização e perfil de PMO.",
       "scope": "projeto",
       "personal": false,
       "clearProject": "apaga",

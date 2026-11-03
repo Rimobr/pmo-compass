@@ -103,3 +103,18 @@ test('o botão do aviso só existe quando leva ao registro, e o lançamento tem 
   for (const k of ['add column if not exists history jsonb', "'Lançado: '", "'Alterado: '", "' Situação: '", "h := h - 0"]) assert.ok(sql.includes(k), k);
   assert.ok(!html.includes('history:x.history'), 'o histórico não é enviado pela tela: só o servidor escreve');
 });
+
+test('orçamento de horas: faixas de aviso, crítico e esgotado; limites coerentes; bloqueio e alertas também no servidor', () => {
+  const r = HoursRules.norm({ budget: { on: true, total: 100, warnPct: 80, critPct: 95, blockAtFull: true } });
+  const lv = c => HoursRules.budgetState(r, c).level;
+  assert.deepEqual([lv(0), lv(79.9), lv(80), lv(94), lv(95), lv(99.99), lv(100), lv(130)], ['ok', 'ok', 'warn', 'warn', 'crit', 'crit', 'full', 'full']);
+  assert.equal(HoursRules.budgetState(r, 130).remaining, 0);
+  assert.equal(HoursRules.budgetState(r, 40).remaining, 60);
+  assert.equal(HoursRules.budgetState(HoursRules.norm({}), 999).level, 'none', 'sem orçamento definido: nada a avisar');
+  assert.equal(HoursRules.norm({ budget: { on: true, total: 0 } }).budget.on, false, 'ligado sem total não vale');
+  const odd = HoursRules.norm({ budget: { on: true, total: 50, warnPct: 90, critPct: 50 } }).budget;
+  assert.ok(odd.critPct > odd.warnPct, 'a faixa crítica sempre fica depois da de aviso');
+  const sql = readFileSync(join(root, 'supabase/migrations/20261103130000_hours_budget.sql'), 'utf8');
+  for (const k of ['hours_summary', 'time_entries_budget_block', 'O orçamento de horas do projeto está esgotado', '_hours_budget_alert', "'URGENTE: orçamento de horas esgotado'", "'urgent'", "'hoursb:orcamento'", 'hours_rules_changed']) assert.ok(sql.includes(k), k);
+  for (const k of ['id="hr-budget"', 'id="kg-hours"', 'Horas do projeto', 'Hours.renderDash', "client.rpc('hours_summary'", 'sev-urgent', "hoursb: 'Ver o orçamento de horas'", 'id="hr-r-bud-t"']) assert.ok(html.includes(k), k);
+});

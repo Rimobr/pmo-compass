@@ -1,6 +1,6 @@
 {
   "name": "pmo-compass",
-  "version": "2.45.0",
+  "version": "2.46.0",
   "private": true,
   "scripts": {
     "test:unit": "node tests/run.js && node --test tests/unit/*.test.mjs",
@@ -16,7 +16,7 @@
     "@axe-core/playwright": "^4.10.1",
     "@libpg-query/parser": "^17.6.10",
     "@playwright/test": "^1.48.0",
-    "@supabase/supabase-js": "^2.45.0",
+    "@supabase/supabase-js": "^2.46.0",
     "dotenv": "^16.4.5",
     "serve": "^14.2.0"
   }
