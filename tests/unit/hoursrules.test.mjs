@@ -66,3 +66,9 @@ test('ligações no app e no servidor', () => {
   const sql = readFileSync(join(root, 'supabase/migrations/20261103100000_hours_control.sql'), 'utf8');
   for (const k of ['time_entries_guard', 'Informe a entrega', 'Hora extra precisa do motivo', 'está fechado para lançamento', 'guard_hours_rules', "when mode = 'none' then 'aprovado'"]) assert.ok(sql.includes(k), k);
 });
+
+test('cada um lança as próprias horas; o gerente só por outra pessoa com justificativa registrada (tela e servidor)', () => {
+  for (const k of ['id="hr-f-behalf"', 'id="hr-f-behalf-why"', 'Hours.behalfToggle()', 'Você só lança horas para você mesmo', 'Lançar por outra pessoa exige a justificativa', 'postedBy: behalf ? me', 'Lançado por ${esc(e.postedBy)}', 'posted_by:x.postedBy||null', 'behalf_reason:x.behalfReason||null']) assert.ok(html.includes(k), k);
+  const sql = readFileSync(join(root, 'supabase/migrations/20261103110000_hours_self.sql'), 'utf8');
+  for (const k of ['Você só lança horas para você mesmo', 'exige a justificativa (mínimo 10 letras)', 'new.posted_by := coalesce(myname', 'add column if not exists behalf_reason']) assert.ok(sql.includes(k), k);
+});

@@ -81,7 +81,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 | Tabela | Para que serve | Escopo | Dado pessoal | Apagar dados do projeto | Apagar toda a base | Campos |
 |---|---|---|---|---|---|---|
 | `team_members` | Colaboradores do projeto, carga, sinais de burnout e vínculo com a conta (a tabela inteira só é lida por quem tem "ver a carga e os sinais"; cada pessoa lê a própria linha; o time sem carga vem da função `project_team`). | projeto | sim | apaga | apaga | `id`, `project_id`, `name`, `role`, `allocation_pct`, `workload_pct`, `signals`, `recommendation`, `action_page`, `created_at`, `user_id` |
-| `time_entries` | Horas apontadas por pessoa e atividade. | projeto | sim | apaga | apaga | `project_id`, `id`, `person_name`, `member_id`, `work_date`, `hours`, `wbs_ref`, `note`, `created_by`, `updated_at`, `status`, `extra_hours`, `extra_reason`, `review_by`, `review_at`, `review_note` |
+| `time_entries` | Horas apontadas por pessoa e atividade. | projeto | sim | apaga | apaga | `project_id`, `id`, `person_name`, `member_id`, `work_date`, `hours`, `wbs_ref`, `note`, `created_by`, `updated_at`, `status`, `extra_hours`, `extra_reason`, `review_by`, `review_at`, `review_note`, `posted_by`, `behalf_reason` |
 | `person_reviews` | Autoavaliação e avaliação do gerente por pessoa e projeto. | projeto | sim | apaga | apaga | `project_id`, `person_id`, `kind`, `reviewer_id`, `scores`, `would_work_again`, `comment`, `created_at`, `updated_at` |
 
 ### Mensagens

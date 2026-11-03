@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.43.2'
+  version: '2.44.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1999,7 +1999,8 @@ body.icons-failed i[data-fb]::before{
 .inp-clr>.input{padding-right:54px}
 .inp-clr-b{position:absolute;right:30px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--t2);font-size:17px;line-height:1;cursor:pointer;padding:2px 5px;border-radius:4px}
 .inp-clr-b:hover{background:var(--s2);color:var(--t1)}
-.inp-clr>.input:placeholder-shown+.inp-clr-b{display:none}
+.inp-clr>.input:placeholder-shown+.inp-clr-b,.inp-clr>.input[readonly]+.inp-clr-b{display:none}
+.input[readonly]{opacity:1;background:var(--s2);color:var(--t1);cursor:default}
 .kb-lane{margin:0 0 12px;padding:10px 12px}
 .kb-lane>.lbl{margin-bottom:8px;flex-wrap:wrap}
 .kb-lane.collapsed>.lbl{margin-bottom:0}
@@ -4077,8 +4078,8 @@ const Cloud = (() => {
       local: 'raci'
     },
     time_entries: {
-      toDb: (x, pid) => ({ project_id:pid, id:x.id, person_name:x.person, member_id:x.memberId||null, work_date:x.date, hours:x.hours, wbs_ref:x.wbsRef||null, note:x.note||null, status:x.status||'aprovado', extra_hours:x.extra||0, extra_reason:x.extraReason||null, review_by:x.reviewBy||null, review_at:x.reviewAt||null, review_note:x.reviewNote||null, updated_at:new Date().toISOString() }),
-      fromDb: r => ({ id:r.id, person:r.person_name, memberId:r.member_id||'', date:r.work_date, hours:Number(r.hours), wbsRef:r.wbs_ref||'', note:r.note||'', status:r.status||'aprovado', extra:Number(r.extra_hours)||0, extraReason:r.extra_reason||'', reviewBy:r.review_by||'', reviewAt:r.review_at||'', reviewNote:r.review_note||'' }),
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, person_name:x.person, member_id:x.memberId||null, work_date:x.date, hours:x.hours, wbs_ref:x.wbsRef||null, note:x.note||null, status:x.status||'aprovado', extra_hours:x.extra||0, extra_reason:x.extraReason||null, review_by:x.reviewBy||null, review_at:x.reviewAt||null, review_note:x.reviewNote||null, posted_by:x.postedBy||null, behalf_reason:x.behalfReason||null, updated_at:new Date().toISOString() }),
+      fromDb: r => ({ id:r.id, person:r.person_name, memberId:r.member_id||'', date:r.work_date, hours:Number(r.hours), wbsRef:r.wbs_ref||'', note:r.note||'', status:r.status||'aprovado', extra:Number(r.extra_hours)||0, extraReason:r.extra_reason||'', reviewBy:r.review_by||'', reviewAt:r.review_at||'', reviewNote:r.review_note||'', postedBy:r.posted_by||'', behalfReason:r.behalf_reason||'' }),
       local: 'timeEntries'
     }
   };
@@ -14765,6 +14766,7 @@ const Hours = (() => {
     const st = e.status || 'aprovado';
     return ` <span class="badge ${STATUS_BADGE[st] || 'b-neu'}">${esc(HoursRules.STATUS[st] || st)}</span>` + (e.extra > 0 ? ` <span class="badge b-amb" title="${esc(e.extraReason || '')}">${esc(fmtH(e.extra))} extra</span>` : '')
       + (HoursRules.isClosed(rules(), e.date) ? ' <span class="chip" title="Período fechado para lançamento"><i class="ti ti-lock"></i>fechado</span>' : '')
+      + (e.postedBy && nameKey(e.postedBy) !== nameKey(e.person) ? `<div style="font-size:12px;color:var(--t2);overflow-wrap:anywhere"><i class="ti ti-user-edit"></i> Lançado por ${esc(e.postedBy)}${e.behalfReason ? ': ' + esc(e.behalfReason) : ''}</div>` : '')
       + ((st === 'ajuste' || st === 'reprovado') && e.reviewNote ? `<div style="font-size:12px;color:var(--amb);overflow-wrap:anywhere"><i class="ti ti-message"></i> ${esc(e.reviewBy || 'Gerente')}: ${esc(e.reviewNote)}</div>` : '');
   }
 
@@ -14774,7 +14776,15 @@ const Hours = (() => {
     const dl = deliveries(), groups = [...new Set(dl.map(d => d.group))];
     const sel = document.getElementById('hr-f-wbs');
     sel.innerHTML = '<option value="">Escolha a entrega…</option>' + groups.map(g => `<optgroup label="${esc(g)}">${dl.filter(d => d.group === g).map(d => `<option value="${esc(d.ref)}"${d.closed ? ' data-closed="1"' : ''}>${esc(d.ref)}${d.closed ? ' (encerrada)' : ''}</option>`).join('')}</optgroup>`).join('');
-    document.getElementById('hr-f-person-m').value = e ? e.person : '';
+    // cada um lança as próprias horas; o gerente pode, em caso extremo, lançar por outra pessoa (com justificativa)
+    const me = Auth.getName() || '', pIn = document.getElementById('hr-f-person-m'), mgr = isMgr();
+    const other = !!(e && nameKey(e.person) !== nameKey(me));
+    pIn.value = e ? e.person : me;
+    document.getElementById('hr-behalf-grp').style.display = mgr ? '' : 'none';
+    document.getElementById('hr-f-behalf').checked = mgr && other;
+    document.getElementById('hr-f-behalf-why').value = e && other ? (e.behalfReason || '') : '';
+    document.getElementById('hr-behalf-why').style.display = mgr && other ? '' : 'none';
+    pIn.readOnly = !(mgr && other);
     document.getElementById('hr-f-date').value = e ? e.date : iso(today());
     document.getElementById('hr-f-hours').value = e ? e.hours : '';
     sel.value = e ? (e.wbsRef || '') : '';
@@ -14784,6 +14794,13 @@ const Hours = (() => {
     }
     document.getElementById('hr-f-note').value = e ? (e.note || '') : '';
     document.getElementById('hr-f-extra').value = e ? (e.extraReason || '') : '';
+    preview();
+  }
+  function behalfToggle() {
+    const on = document.getElementById('hr-f-behalf').checked, pIn = document.getElementById('hr-f-person-m');
+    document.getElementById('hr-behalf-why').style.display = on ? '' : 'none';
+    pIn.readOnly = !on;
+    if(on) { pIn.value = ''; pIn.focus(); } else pIn.value = Auth.getName() || '';
     preview();
   }
   // Situação do dia enquanto a pessoa preenche (não redesenha os campos: o foco fica onde está)
@@ -14839,6 +14856,9 @@ const Hours = (() => {
     const i = dayInfo(), person = i.person, date = i.date, hours = i.hours, r = i.r, mgr = isMgr();
     const wbsRef = document.getElementById('hr-f-wbs').value, extraReason = document.getElementById('hr-f-extra').value.trim();
     if(person.length < 2) { T.show('⚠️ Informe a pessoa.'); document.getElementById('hr-f-person-m').focus(); return; }
+    const me = Auth.getName() || '', behalf = mgr && document.getElementById('hr-f-behalf').checked && nameKey(person) !== nameKey(me), behalfWhy = document.getElementById('hr-f-behalf-why').value.trim();
+    if(!mgr && nameKey(person) !== nameKey(me)) { T.show('🔒 Você só lança horas para você mesmo. Peça ao gerente do projeto.'); return; }
+    if(behalf && behalfWhy.length < 10) { T.show('⚠️ Lançar por outra pessoa exige a justificativa (mínimo 10 letras).'); document.getElementById('hr-f-behalf-why').focus(); return; }
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) { T.show('⚠️ Informe a data.'); return; }
     if(!(hours >= 0.25 && hours <= 24)) { T.show('⚠️ As horas devem ficar entre 0,25 e 24.'); document.getElementById('hr-f-hours').focus(); return; }
     if(r.requireDelivery && !wbsRef) { T.show('⚠️ Escolha a entrega: toda hora precisa estar ligada a uma entrega.'); document.getElementById('hr-f-wbs').focus(); return; }
@@ -14849,12 +14869,12 @@ const Hours = (() => {
     if(i.extra > 0 && !mgr && extraReason.length < 5) { T.show('⚠️ Hora extra precisa de liberação do gerente: escreva o motivo (mínimo 5 letras).'); document.getElementById('hr-f-extra').focus(); return; }
     const member = (DB.get('team') || []).find(m => nameKey(m.name) === nameKey(person));
     const status = HoursRules.statusFor(r, i.extra, mgr);
-    const fields = { person, date, hours: Math.round(hours * 100) / 100, wbsRef, note: document.getElementById('hr-f-note').value.trim(), memberId: member ? member.id : '', extra: i.extra, extraReason: i.extra > 0 ? extraReason : '' };
+    const fields = { person, date, hours: Math.round(hours * 100) / 100, wbsRef, note: document.getElementById('hr-f-note').value.trim(), memberId: member ? member.id : '', extra: i.extra, extraReason: i.extra > 0 ? extraReason : '', postedBy: behalf ? me : '', behalfReason: behalf ? behalfWhy : '' };
     let item;
     if(modalCtx.mode === 'add') { item = { id: genId(), ...fields, status, reviewBy: mgr ? Auth.getName() : '', reviewAt: mgr ? new Date().toISOString() : '', reviewNote: '' }; data.unshift(item); }
     else {
       item = data.find(x => x.id === modalCtx.id); if(!item) return;
-      const changed = ['person', 'date', 'hours', 'wbsRef', 'note', 'extraReason'].some(k => String(item[k] == null ? '' : item[k]) !== String(fields[k] == null ? '' : fields[k]));
+      const changed = ['person', 'date', 'hours', 'wbsRef', 'note', 'extraReason', 'behalfReason'].some(k => String(item[k] == null ? '' : item[k]) !== String(fields[k] == null ? '' : fields[k]));
       Object.assign(item, fields);
       if(changed || !mgr) { item.status = status; item.reviewBy = mgr ? Auth.getName() : ''; item.reviewAt = mgr ? new Date().toISOString() : ''; item.reviewNote = ''; }
     }
@@ -14892,7 +14912,7 @@ const Hours = (() => {
     if(!pend.length) { root.innerHTML = '<div class="rk-empty">Nenhuma hora aguardando aprovação.</div>'; return; }
     const shown = pend.slice(0, 80);
     root.innerHTML = `<div class="btn-row" style="margin-bottom:8px;align-items:center;flex-wrap:wrap"><label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" aria-label="Marcar todas as horas da lista" onchange="Hours.apprAll(this.checked)" ${apprSel.size === shown.length ? 'checked' : ''}> Marcar todas</label><span style="font-size:12px;color:var(--t2)">${apprSel.size} marcada(s) de ${pend.length}</span></div>`
-      + shown.map(e => `<div class="hr-row" style="cursor:default"><input type="checkbox" aria-label="Marcar ${esc(e.person)} em ${fmtDate(e.date)}" ${apprSel.has(e.id) ? 'checked' : ''} onchange="Hours.apprToggle('${esc(e.id)}', this.checked)" style="margin-top:3px"><div class="hr-h">${fmtH(e.hours)}</div><div style="min-width:0;flex:1"><div style="font-weight:600;overflow-wrap:anywhere">${esc(e.person)} <span class="chip">${fmtDay(e.date)}</span>${e.extra > 0 ? ` <span class="badge b-amb">${fmtH(e.extra)} extra</span>` : ''}</div><div style="font-size:12px;color:var(--t2);overflow-wrap:anywhere">${esc(e.wbsRef || 'sem entrega')}${e.note ? ' · ' + esc(e.note) : ''}</div>${e.extra > 0 && e.extraReason ? `<div style="font-size:12px;color:var(--amb);overflow-wrap:anywhere"><i class="ti ti-clock-plus"></i> Motivo da hora extra: ${esc(e.extraReason)}</div>` : ''}</div></div>`).join('')
+      + shown.map(e => `<div class="hr-row" style="cursor:default"><input type="checkbox" aria-label="Marcar ${esc(e.person)} em ${fmtDate(e.date)}" ${apprSel.has(e.id) ? 'checked' : ''} onchange="Hours.apprToggle('${esc(e.id)}', this.checked)" style="margin-top:3px"><div class="hr-h">${fmtH(e.hours)}</div><div style="min-width:0;flex:1"><div style="font-weight:600;overflow-wrap:anywhere">${esc(e.person)} <span class="chip">${fmtDay(e.date)}</span>${e.extra > 0 ? ` <span class="badge b-amb">${fmtH(e.extra)} extra</span>` : ''}</div><div style="font-size:12px;color:var(--t2);overflow-wrap:anywhere">${esc(e.wbsRef || 'sem entrega')}${e.note ? ' · ' + esc(e.note) : ''}</div>${e.extra > 0 && e.extraReason ? `<div style="font-size:12px;color:var(--amb);overflow-wrap:anywhere"><i class="ti ti-clock-plus"></i> Motivo da hora extra: ${esc(e.extraReason)}</div>` : ''}${e.postedBy && nameKey(e.postedBy) !== nameKey(e.person) ? `<div style="font-size:12px;color:var(--t2);overflow-wrap:anywhere"><i class="ti ti-user-edit"></i> Lançado por ${esc(e.postedBy)}: ${esc(e.behalfReason || '')}</div>` : ''}</div></div>`).join('')
       + (pend.length > shown.length ? `<div class="set-sub" style="margin:6px 0">Mostrando as ${shown.length} mais antigas; aprove e o restante aparece.</div>` : '')
       + `<div class="field-group" style="margin-top:10px"><div class="field-label"><label for="hr-ap-note">Comentário (obrigatório para reprovar ou pedir ajuste)</label></div><input class="input" id="hr-ap-note" maxlength="300" placeholder="Ex.: separe as horas por entrega"></div>
       <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm btn-acc" ${apprSel.size ? '' : 'disabled'} onclick="Hours.review('aprovado')"><i class="ti ti-check"></i>Aprovar</button><button class="btn btn-sm" ${apprSel.size ? '' : 'disabled'} onclick="Hours.review('ajuste')"><i class="ti ti-edit"></i>Pedir ajuste</button><button class="btn btn-sm btn-red" ${apprSel.size ? '' : 'disabled'} onclick="Hours.review('reprovado')"><i class="ti ti-x"></i>Reprovar</button></div>`;
@@ -14987,7 +15007,9 @@ const Hours = (() => {
     ensureLoaded();
     const r = rules(), mgr = isMgr(), t = iso(today()); let skipped = 0;
     const created = [];
+    const me = Auth.getName() || '';
     items.forEach(x => {
+      if(!mgr && nameKey(x.person) !== nameKey(me)) { skipped++; return; }
       if(r.requireDelivery && !x.wbsRef) { skipped++; return; }
       const w = HoursRules.check(r, { workDate: x.date, today: t, isOff, isManager: mgr, deliveryClosed: false });
       if(!w.ok) { skipped++; return; }
@@ -14995,13 +15017,13 @@ const Hours = (() => {
       const extra = HoursRules.extraOf(others, x.hours, r.dailyNormal);
       if(extra > 0 && !mgr) { skipped++; return; }
       const m = (DB.get('team') || []).find(tm => nameKey(tm.name) === nameKey(x.person));
-      const item = { ...x, id: genId(), memberId: m ? m.id : '', extra, extraReason: '', status: HoursRules.statusFor(r, extra, mgr), reviewBy: mgr ? Auth.getName() : '', reviewAt: mgr ? new Date().toISOString() : '', reviewNote: '' };
+      const item = { ...x, id: genId(), memberId: m ? m.id : '', extra, extraReason: '', status: HoursRules.statusFor(r, extra, mgr), reviewBy: mgr ? Auth.getName() : '', reviewAt: mgr ? new Date().toISOString() : '', reviewNote: '', postedBy: mgr && nameKey(x.person) !== nameKey(me) ? me : '', behalfReason: mgr && nameKey(x.person) !== nameKey(me) ? 'Importação de planilha pelo gerente' : '' };
       data.unshift(item); created.push(item);
     });
     persist();
     Cloud.pushMany('time_entries', created);
     render();
-    if(skipped) T.show('⚠️ ' + skipped + ' linha(s) não entraram: sem entrega, período fechado, fora do prazo ou com hora extra (a hora extra se aponta pela tela, com o motivo).', 8000);
+    if(skipped) T.show('⚠️ ' + skipped + ' linha(s) não entraram: de outra pessoa (só o gerente importa por outros), sem entrega, período fechado, fora do prazo ou com hora extra (a hora extra se aponta pela tela, com o motivo).', 8000);
     return created.length;
   }
   // Mesma chave que SheetImport.build usa para detectar duplicados
@@ -15021,7 +15043,7 @@ const Hours = (() => {
       ...filtered().sort((a, b) => a.date.localeCompare(b.date)).map(e => [e.person, e.date, Number(e.hours), e.wbsRef, e.note, HoursRules.STATUS[e.status || 'aprovado'], Number(e.extra || 0)])] }]);
   }
 
-  return { render, resetCache, openAdd, openEdit, openEditEl, keyEl, saveFromModal, deleteFromModal, closeModal, setFilter, more, addMany, keys, exportCsv, exportXlsx, preview, apprToggle, apprAll, review, saveRulesForm, closePeriod, reopenPeriod };
+  return { render, resetCache, openAdd, openEdit, openEditEl, keyEl, saveFromModal, deleteFromModal, closeModal, setFilter, more, addMany, keys, exportCsv, exportXlsx, preview, apprToggle, apprAll, review, saveRulesForm, closePeriod, reopenPeriod, behalfToggle };
 })();
 </script>
 
@@ -18903,7 +18925,8 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     </div>
     <div class="modal-sub">Quem trabalhou, quando e em quê</div>
     <div style="display:flex;flex-direction:column;gap:12px">
-      <div><div class="field-label"><label for="hr-f-person-m">Pessoa</label><span class="help-q" data-help="Quem trabalhou. Escolha um colaborador da equipe ou digite o nome. O nome precisa ser igual ao da equipe para comparar com a carga declarada." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="hr-f-person-m" list="hr-person-list" autocomplete="off" oninput="Hours.preview()" maxlength="120" placeholder="Nome da pessoa"><datalist id="hr-person-list"></datalist></div>
+      <div><div class="field-label"><label for="hr-f-person-m">Pessoa</label><span class="help-q" data-help="Cada pessoa lança as próprias horas. Só o gerente do projeto pode, em caso de extrema necessidade, lançar em nome de outro colaborador, e a justificativa fica registrada." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="hr-f-person-m" list="hr-person-list" autocomplete="off" oninput="Hours.preview()" maxlength="120" placeholder="Nome da pessoa"><datalist id="hr-person-list"></datalist></div>
+      <div id="hr-behalf-grp" style="display:none"><label style="display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" id="hr-f-behalf" onchange="Hours.behalfToggle()"> Lançar em nome de outra pessoa <span style="color:var(--t2)">(só em caso de extrema necessidade)</span></label><div id="hr-behalf-why" style="display:none;margin-top:8px"><div class="field-label"><label for="hr-f-behalf-why">Justificativa (obrigatória)</label></div><input class="input" id="hr-f-behalf-why" maxlength="300" placeholder="Ex.: colaborador de férias, horas combinadas por e-mail"></div></div>
       <div class="g2" style="gap:10px">
         <div><div class="field-label"><label for="hr-f-date">Data</label><span class="help-q" data-help="Dia em que o trabalho foi feito (não o dia do lançamento)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" type="date" id="hr-f-date" onchange="Hours.preview()"></div>
         <div><div class="field-label"><label for="hr-f-hours">Horas</label><span class="help-q" data-help="Horas trabalhadas nesse dia, de 0,25 (15 min) a 24. A soma de um colaborador no mesmo dia não pode passar de 24 h." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" type="number" oninput="Hours.preview()" id="hr-f-hours" min="0.25" max="24" step="0.25" placeholder="Ex: 7,5"></div>
