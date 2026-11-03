@@ -77,3 +77,29 @@ test('ler os bugs com uma IA está explícito na tela de Configurações e na Aj
   for (const k of ['id="bugs-ai-card"', 'Ler os bugs com uma IA (para corrigir outro sistema)', 'node scripts/read-bugs.mjs', "BugsAi.render()", 'Bugs e IA que corrige outro sistema', 'SettingsTabs.show(\'ia\')']) assert.ok(html.includes(k), k);
   assert.ok(readFileSync(join(root, 'scripts/read-bugs.mjs'), 'utf8').includes('somente leitura') || readFileSync(join(root, 'scripts/read-bugs.mjs'), 'utf8').includes('só LEITURA'));
 });
+
+test('mensagens: contagem com singular e plural certos, frase completa e "(s)" corrigido pelo número que vem antes', () => {
+  const m = html.match(/<script data-module="services\/msg">([\s\S]*?)<\/script>/);
+  const { Msg } = new Function('document', 'MutationObserver', `${m[1]}\nreturn { Msg };`)(undefined, undefined);
+  assert.equal(Msg.n(1, 'apontamento'), '1 apontamento');
+  assert.equal(Msg.n(2, 'apontamento'), '2 apontamentos');
+  assert.equal(Msg.n(3, 'item'), '3 itens');
+  assert.equal(Msg.n(2, 'alteração'), '2 alterações');
+  assert.equal(Msg.n(0, 'dia útil'), '0 dias úteis');
+  assert.equal(Msg.agree(1, 'aprovado'), 'aprovado'); assert.equal(Msg.agree(3, 'aprovado'), 'aprovados');
+  assert.equal(Msg.fix('1 apontamento(s), 9 h.'), '1 apontamento, 9 h.');
+  assert.equal(Msg.fix('3 item(ns) não concluído(s)'), '3 itens não concluídos');
+  assert.equal(Msg.fix('1 item(ns) não concluído(s)'), '1 item não concluído');
+  assert.equal(Msg.fix('2 dia(s) útil(eis)'), '2 dias úteis');
+  assert.equal(Msg.fix('1 alteração(ões)'), '1 alteração');
+  assert.equal(Msg.fix('sem número (s)'), 'sem número (s)', 'sem número antes, não adivinha');
+  assert.equal(Msg.sentence('descrever qual tela foi validada'), 'Descrever qual tela foi validada.');
+  assert.equal(Msg.sentence('Já termina com ponto.'), 'Já termina com ponto.');
+});
+
+test('o botão do aviso só existe quando leva ao registro, e o lançamento tem histórico escrito pelo servidor', () => {
+  for (const k of ["hours: 'Abrir o lançamento'", "item: 'Abrir o item'", 'function target(page)', "'hours:' + byPerson[p][0].id", "'hoursapr:' + item.id", "vars.id ? 'item:' + vars.id : ''", 'Histórico do lançamento (']) assert.ok(html.includes(k), k);
+  const sql = readFileSync(join(root, 'supabase/migrations/20261103120000_hours_history.sql'), 'utf8');
+  for (const k of ['add column if not exists history jsonb', "'Lançado: '", "'Alterado: '", "' Situação: '", "h := h - 0"]) assert.ok(sql.includes(k), k);
+  assert.ok(!html.includes('history:x.history'), 'o histórico não é enviado pela tela: só o servidor escreve');
+});

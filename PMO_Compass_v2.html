@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.44.2'
+  version: '2.45.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -4100,7 +4100,7 @@ const Cloud = (() => {
     },
     time_entries: {
       toDb: (x, pid) => ({ project_id:pid, id:x.id, person_name:x.person, member_id:x.memberId||null, work_date:x.date, hours:x.hours, wbs_ref:x.wbsRef||null, note:x.note||null, status:x.status||'aprovado', extra_hours:x.extra||0, extra_reason:x.extraReason||null, review_by:x.reviewBy||null, review_at:x.reviewAt||null, review_note:x.reviewNote||null, posted_by:x.postedBy||null, behalf_reason:x.behalfReason||null, updated_at:new Date().toISOString() }),
-      fromDb: r => ({ id:r.id, person:r.person_name, memberId:r.member_id||'', date:r.work_date, hours:Number(r.hours), wbsRef:r.wbs_ref||'', note:r.note||'', status:r.status||'aprovado', extra:Number(r.extra_hours)||0, extraReason:r.extra_reason||'', reviewBy:r.review_by||'', reviewAt:r.review_at||'', reviewNote:r.review_note||'', postedBy:r.posted_by||'', behalfReason:r.behalf_reason||'' }),
+      fromDb: r => ({ id:r.id, person:r.person_name, memberId:r.member_id||'', date:r.work_date, hours:Number(r.hours), wbsRef:r.wbs_ref||'', note:r.note||'', status:r.status||'aprovado', extra:Number(r.extra_hours)||0, extraReason:r.extra_reason||'', reviewBy:r.review_by||'', reviewAt:r.review_at||'', reviewNote:r.review_note||'', postedBy:r.posted_by||'', behalfReason:r.behalf_reason||'', history:Array.isArray(r.history)?r.history:[] }),
       local: 'timeEntries'
     }
   };
@@ -4522,7 +4522,8 @@ const Cloud = (() => {
   // Avisos na tela: o servidor resolve os destinatários (confere o acesso ao projeto) e cada pessoa lê só os seus
   async function notifyProject(pid, target, who, title, detail, page, source) {
     if(!client || !session) return 0;
-    const { data, error } = await client.rpc('notify_project', { pid, target, who: who || '', p_title: title, p_detail: detail || '', p_page: page || '', p_source: source || '' });
+    const fx = typeof Msg !== 'undefined' ? Msg.fix : (x => x);
+    const { data, error } = await client.rpc('notify_project', { pid, target, who: who || '', p_title: fx(title), p_detail: fx(detail || ''), p_page: page || '', p_source: source || '' });
     if(error) { console.warn('Supabase: falha ao avisar', error); return 0; }
     return data || 0;
   }
@@ -6380,12 +6381,21 @@ const Notices = (() => {
     b.innerHTML = list.length ? list.map(n => '<div class="nt-item' + (n.read_at ? '' : ' unread') + '"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b style="font-size:13px">' + esc(n.title) + '</b><span style="margin-left:auto;font-size:11.5px;color:var(--t2)">' + esc(when(n.created_at)) + '</span></div>'
       + (n.detail ? '<div style="font-size:12.5px;color:var(--t1);margin-top:3px">' + esc(n.detail) + '</div>' : '')
       + '<div style="font-size:11.5px;color:var(--t2);margin-top:4px">' + esc(names[n.project_id] || '') + (n.source ? ' · ' + esc(n.source) : '') + '</div>'
-      + (n.page ? '<button class="btn btn-sm" style="margin-top:6px" onclick="Notices.go(\'' + esc(n.project_id) + '\',\'' + esc(n.page) + '\')">Abrir</button>' : '') + '</div>').join('') : '<div class="rk-empty">Nenhum aviso.</div>';
+      + (target(n.page) ? '<button class="btn btn-sm" style="margin-top:6px" onclick="Notices.go(\'' + esc(n.project_id) + '\',\'' + esc(n.page) + '\')"><i class="ti ti-external-link"></i>' + esc(target(n.page).label) + '</button>' : '') + '</div>').join('') : '<div class="rk-empty">Nenhum aviso.</div>';
   }
   function open() { render(); $('modal-notices').classList.remove('hidden'); }
   async function readAll() { const ids = unread().map(n => n.id); if(!ids.length) return; await Cloud.markNoticesRead(ids); const now = new Date().toISOString(); list.forEach(n => { if(!n.read_at) n.read_at = now; }); paint(); render(); }
   function close() { $('modal-notices').classList.add('hidden'); readAll(); }
-  function go(pid, page) { close(); try { if(pid && DB.getActiveProjectId() !== pid) DB.switchProject(pid); } catch(e) { /* projeto indisponível */ } R.go(page); }
+  // O aviso aponta para o registro (tipo:código). Sem registro, não há botão: levar a uma tela genérica não ajuda
+  const KINDS = { hours: 'Abrir o lançamento', hoursapr: 'Ver na aprovação', hoursf: 'Ver os lançamentos', item: 'Abrir o item' };
+  function target(page) { const m = String(page || '').match(/^(hours|hoursapr|hoursf|item):(.+)$/); return m && KINDS[m[1]] ? { kind: m[1], id: m[2], label: KINDS[m[1]] } : null; }
+  function go(pid, page) {
+    const t = target(page); close(); if(!t) return;
+    try { if(pid && DB.getActiveProjectId() !== pid) DB.switchProject(pid); } catch(e) { /* projeto indisponível */ }
+    const later = fn => setTimeout(fn, 350);
+    if(t.kind === 'item') { R.go('kanban'); later(() => { if(Auth.can('manage_backlog')) { Agile.openItem(t.id); return; } const c = document.querySelector('.kb-card[data-id="' + t.id.replace(/[^A-Za-z0-9_-]/g, '') + '"]'); if(c) { c.scrollIntoView({ block: 'center' }); c.focus(); c.style.outline = '2px solid var(--acc)'; setTimeout(() => { c.style.outline = ''; }, 3000); } else T.show('⚠️ O item não está no quadro desta sprint.'); }); }
+    else { R.go('hours'); later(() => { if(t.kind === 'hours') Hours.jump(t.id); else if(t.kind === 'hoursapr') Hours.focusApproval(t.id); else Hours.showStatus(t.id); }); }
+  }
   setTimeout(refresh, 5000); setTimeout(refresh, 20000); setInterval(refresh, 90000);
   return { refresh, open, close, readAll, go };
 })();
@@ -12189,6 +12199,64 @@ Cada item aparece em "estimativas" OU em "divisoes", nunca nos dois.`;
 })();
 </script>
 
+<!-- ■ MODULE: services/msg ─ Como montar mensagens: contagem com singular/plural certos, frase completa com ponto final e correção de "(s)" quando já existe um número antes -->
+<script data-module="services/msg">
+const Msg = (() => {
+  const IRREG = { 'item': 'itens', 'dia útil': 'dias úteis', 'mês': 'meses', 'hora extra': 'horas extras' };
+  const plural = w => {
+    if(IRREG[w]) return IRREG[w];
+    if(/ão$/.test(w)) return w.slice(0, -2) + 'ões';
+    if(/m$/.test(w)) return w.slice(0, -1) + 'ns';
+    if(/l$/.test(w)) return w.slice(0, -1) + 'is';
+    if(/[rz]$/.test(w)) return w + 'es';
+    return w + 's';
+  };
+  const fmtNum = n => Number(n).toLocaleString('pt-BR');
+  // 1 apontamento · 2 apontamentos · 0 apontamentos
+  const n = (count, singular, pl) => fmtNum(count) + ' ' + (Number(count) === 1 ? singular : (pl || plural(singular)));
+  // concordância de um adjetivo/particípio com a contagem: agree(2, 'aprovado') → aprovados
+  const agree = (count, word) => Number(count) === 1 ? word : word.replace(/o$/, 'os').replace(/a$/, 'as').replace(/([^s])$/, '$1s');
+  // frase com letra maiúscula no começo e ponto final (sem duplicar pontuação)
+  const sentence = t => { t = String(t || '').replace(/\s+/g, ' ').trim(); if(!t) return ''; t = t.charAt(0).toUpperCase() + t.slice(1); return /[.!?…]$/.test(t) ? t : t + '.'; };
+  const quote = t => '“' + String(t || '').replace(/\s+/g, ' ').trim().replace(/[.!?…]+$/, '') + '”';
+  // Texto escrito com "(s)", "(ns)", "(ões)", "(eis)" vira singular ou plural conforme o último número antes dele ("1 item(ns)" → "1 item"; "3 item(ns)" → "3 itens")
+  function fix(text) {
+    let last = null;
+    return String(text).replace(/(\d+(?:[.,]\d+)*)|(ão\(ões\)|m\(ns\)|il\(eis\)|\(es\)|\(s\))/g, (m, num, mark) => {
+      if(num) { last = /^\d{1,3}(\.\d{3})+$/.test(num) ? Number(num.replace(/\./g, '')) : Number(num.replace(',', '.')); return m; }
+      if(last == null) return m;
+      const one = last === 1;
+      return { 'ão(ões)': one ? 'ão' : 'ões', 'm(ns)': one ? 'm' : 'ns', 'il(eis)': one ? 'il' : 'eis', '(es)': one ? '' : 'es', '(s)': one ? '' : 's' }[mark];
+    });
+  }
+  const NEEDS = /\((?:s|es)\)|m\(ns\)|ão\(ões\)|il\(eis\)/;
+  const SKIP = /^(SCRIPT|STYLE|TEXTAREA|CODE|PRE|INPUT|OPTION)$/;
+  // Corrige o texto que aparece na tela (avisos, mensagens, listas), inclusive quando o número está num elemento ao lado ("<b>5</b> item(ns)")
+  function fixDom(root) {
+    if(!root || !document.createTreeWalker) return;
+    const base = root.nodeType === 3 ? root.parentNode : root;
+    if(!base) return;
+    const w = document.createTreeWalker(base, NodeFilter.SHOW_TEXT, { acceptNode: x => (NEEDS.test(x.nodeValue) && x.parentNode && !SKIP.test(x.parentNode.nodeName)) ? 1 : 3 });
+    const list = []; for(let x = w.nextNode(); x; x = w.nextNode()) list.push(x);
+    list.forEach(node => {
+      let ctx = '', p = node.previousSibling;
+      for(let i = 0; p && i < 3; i++, p = p.previousSibling) ctx = (p.textContent || '') + ctx;
+      const all = fix(ctx + node.nodeValue), tail = all.slice(fix(ctx).length);
+      if(tail !== node.nodeValue) node.nodeValue = tail;
+    });
+  }
+  function start() {
+    if(typeof MutationObserver === 'undefined' || typeof document === 'undefined') return;
+    let queued = false;
+    const run = () => { queued = false; fixDom(document.body); };
+    new MutationObserver(() => { if(!queued) { queued = true; setTimeout(run, 40); } }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    run();
+  }
+  if(typeof document !== 'undefined') { if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start(); }
+  return { n, plural, agree, sentence, quote, fix, fixDom };
+})();
+</script>
+
 <!-- ■ MODULE: services/board-rules ─ Automações do quadro: gatilho (coluna, criação, responsável, fim da sprint) → ações (atribuir, alterar dado, mover, avisar) -->
 <script data-module="services/board-rules">
 const BoardRules = (() => {
@@ -12720,7 +12788,7 @@ const Agile = (() => {
     const to = a.to === 'assignee' ? 'member' : a.to, who = a.to === 'assignee' ? assignee : a.who;
     if(a.to === 'assignee' && !who) return false;
     const title = BoardRules.fill(a.title, vars), detail = BoardRules.fill(a.detail, vars);
-    if(typeof Cloud !== 'undefined' && Cloud.getUserId && Cloud.getUserId()) { Cloud.notifyProject(DB.getActiveProjectId(), to, who || '', title, detail, 'kanban', 'Automação: ' + r.name); return true; }
+    if(typeof Cloud !== 'undefined' && Cloud.getUserId && Cloud.getUserId()) { Cloud.notifyProject(DB.getActiveProjectId(), to, who || '', title, detail, vars.id ? 'item:' + vars.id : '', 'Automação: ' + r.name); return true; }
     T.show('🔔 (demonstração) Aviso para ' + (who || BoardRules.TARGETS[a.to]) + ': ' + title, 5000); return true;
   }
   function fireRules(ev, it, seen) {
@@ -14805,6 +14873,26 @@ const Hours = (() => {
   function keyEl(e, el) { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEditEl(el); } }
   function openEditEl(el) { openEdit(el.dataset.id); }
 
+  // ── histórico do lançamento: com nuvem o servidor escreve; aqui só se mostra (e se anota no modo sem nuvem) ──
+  const histNum = t => String(t || '').replace(/(\d+)\.(\d+)/g, (m, a, b) => { const v = (a + '.' + b).replace(/0+$/, '').replace(/\.$/, ''); return v.replace('.', ','); });
+  const addHist = (item, text) => { item.history = (Array.isArray(item.history) ? item.history : []).concat([{ at: new Date().toISOString(), by: Auth.getName() || '', text }]).slice(-200); };
+  function renderHist(e) {
+    const box = document.getElementById('hr-hist'); if(!box) return;
+    const list = e && Array.isArray(e.history) ? e.history.slice().reverse() : [];
+    if(!list.length) { box.innerHTML = e ? '<div class="set-sub">Este lançamento ainda não tem histórico (foi feito antes do controle de horas).</div>' : ''; return; }
+    const when = iso => { try { return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch(x) { return ''; } };
+    box.innerHTML = `<details open><summary style="cursor:pointer;font-size:12.5px;font-weight:600"><i class="ti ti-history"></i> Histórico do lançamento (${list.length})</summary><div style="margin-top:6px;display:flex;flex-direction:column;gap:6px">${list.map(h => `<div class="nt-item" style="margin:0;padding:8px 10px"><div style="font-size:11.5px;color:var(--t2)">${esc(when(h.at))} · ${esc(h.by || 'sistema')}</div><div style="font-size:12.5px;overflow-wrap:anywhere">${esc(histNum(h.text))}</div></div>`).join('')}</div></details>`;
+  }
+  // Atalhos dos avisos: abrem o próprio registro
+  function jump(id) { if(!ensureLoaded().some(x => x.id === id)) { T.show('⚠️ Esse lançamento não existe mais ou ainda está carregando. Atualize a página e tente de novo.'); return false; } openEdit(id); return true; }
+  function focusApproval(id) {
+    const card = document.querySelector('.card[data-sec="hrs-aprovar"]');
+    if(card && card.classList.contains('collapsed') && typeof Sec !== 'undefined') Sec.toggle(card);
+    apprSel.clear(); if(ensureLoaded().some(x => x.id === id && x.status === 'pendente')) apprSel.add(id);
+    renderApproval(); if(card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function showStatus(st) { filter.status = st; showAll = false; const sel = document.getElementById('hr-f-status'); if(sel) sel.value = st; filter.period = 'tudo'; const per = document.getElementById('hr-f-period'); if(per) per.value = 'tudo'; render(); }
+
   // ── regras do projeto, entregas e situação dos lançamentos ──
   const rules = () => HoursRules.norm(DB.get('hoursRules'));
   const isMgr = () => typeof Auth !== 'undefined' && !Auth.isPreview() && Auth.can('edit_plan');
@@ -14848,6 +14936,7 @@ const Hours = (() => {
     }
     document.getElementById('hr-f-note').value = e ? (e.note || '') : '';
     document.getElementById('hr-f-extra').value = e ? (e.extraReason || '') : '';
+    renderHist(e);
     preview();
   }
   function behalfToggle() {
@@ -14912,7 +15001,8 @@ const Hours = (() => {
     if(person.length < 2) { T.show('⚠️ Informe a pessoa.'); document.getElementById('hr-f-person-m').focus(); return; }
     const me = Auth.getName() || '', behalf = mgr && document.getElementById('hr-f-behalf').checked && nameKey(person) !== nameKey(me), behalfWhy = document.getElementById('hr-f-behalf-why').value.trim();
     if(!mgr && nameKey(person) !== nameKey(me)) { T.show('🔒 Você só lança horas para você mesmo. Peça ao gerente do projeto.'); return; }
-    if(behalf && behalfWhy.length < 10) { T.show('⚠️ Lançar por outra pessoa exige a justificativa (mínimo 10 letras).'); document.getElementById('hr-f-behalf-why').focus(); return; }
+    const prev = modalCtx.mode === 'edit' ? data.find(x => x.id === modalCtx.id) : null, personChanged = !prev || nameKey(prev.person) !== nameKey(person);
+    if(behalf && personChanged && behalfWhy.length < 10) { T.show('⚠️ Lançar por outra pessoa exige a justificativa (mínimo 10 letras).'); document.getElementById('hr-f-behalf-why').focus(); return; }
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) { T.show('⚠️ Informe a data.'); return; }
     if(!(hours >= 0.25 && hours <= 24)) { T.show('⚠️ As horas devem ficar entre 0,25 e 24.'); document.getElementById('hr-f-hours').focus(); return; }
     if(r.requireDelivery && !wbsRef) { T.show('⚠️ Escolha a entrega: toda hora precisa estar ligada a uma entrega.'); document.getElementById('hr-f-wbs').focus(); return; }
@@ -14925,16 +15015,17 @@ const Hours = (() => {
     const status = HoursRules.statusFor(r, i.extra, mgr);
     const fields = { person, date, hours: Math.round(hours * 100) / 100, wbsRef, note: document.getElementById('hr-f-note').value.trim(), memberId: member ? member.id : '', extra: i.extra, extraReason: i.extra > 0 ? extraReason : '', postedBy: behalf ? me : '', behalfReason: behalf ? behalfWhy : '' };
     let item;
-    if(modalCtx.mode === 'add') { item = { id: genId(), ...fields, status, reviewBy: mgr ? Auth.getName() : '', reviewAt: mgr ? new Date().toISOString() : '', reviewNote: '' }; data.unshift(item); }
+    if(modalCtx.mode === 'add') { item = { id: genId(), ...fields, status, reviewBy: mgr ? Auth.getName() : '', reviewAt: mgr ? new Date().toISOString() : '', reviewNote: '', history: [] }; addHist(item, behalf ? 'Lançado em nome de ' + person + ': ' + fmtH(fields.hours) + ' em ' + fmtDate(date) + '. Justificativa: ' + behalfWhy : 'Lançado: ' + fmtH(fields.hours) + ' em ' + fmtDate(date) + (i.extra > 0 ? ' (inclui ' + fmtH(i.extra) + ' de hora extra: ' + extraReason + ')' : '')); data.unshift(item); }
     else {
       item = data.find(x => x.id === modalCtx.id); if(!item) return;
       const changed = ['person', 'date', 'hours', 'wbsRef', 'note', 'extraReason', 'behalfReason'].some(k => String(item[k] == null ? '' : item[k]) !== String(fields[k] == null ? '' : fields[k]));
+      if(changed) addHist(item, 'Alterado: ' + ['person', 'date', 'hours', 'wbsRef', 'note', 'extraReason'].filter(k => String(item[k] == null ? '' : item[k]) !== String(fields[k] == null ? '' : fields[k])).map(k => ({ person: 'pessoa', date: 'data', hours: 'horas', wbsRef: 'entrega', note: 'observação', extraReason: 'motivo da hora extra' }[k])).join(', ') + '.');
       Object.assign(item, fields);
       if(changed || !mgr) { item.status = status; item.reviewBy = mgr ? Auth.getName() : ''; item.reviewAt = mgr ? new Date().toISOString() : ''; item.reviewNote = ''; }
     }
     persist();
     Cloud.pushRow('time_entries', item);
-    if(item.status === 'pendente' && typeof Cloud !== 'undefined' && Cloud.getUserId && Cloud.getUserId()) Cloud.notifyProject(DB.getActiveProjectId(), 'manager', '', 'Horas aguardando aprovação: ' + person, fmtH(fields.hours) + ' em ' + fmtDate(date) + (i.extra > 0 ? ' (inclui ' + fmtH(i.extra) + ' extra: ' + extraReason + ')' : ''), 'hours', 'Apontamento de horas');
+    if(item.status === 'pendente' && typeof Cloud !== 'undefined' && Cloud.getUserId && Cloud.getUserId()) Cloud.notifyProject(DB.getActiveProjectId(), 'manager', '', person + ' lançou horas para aprovação', Msg.sentence(fmtH(fields.hours) + ' em ' + fmtDate(date) + ', na entrega ' + wbsRef) + (i.extra > 0 ? ' Inclui ' + fmtH(i.extra) + ' de hora extra. Motivo: ' + Msg.sentence(extraReason) : ''), 'hoursapr:' + item.id, 'Apontamento de horas');
     render();
     closeModal();
     T.show(`✅ ${fmtH(fields.hours)} apontadas para ${person}` + (item.status === 'pendente' ? ' — aguardando a aprovação do gerente.' : '.'));
@@ -14966,7 +15057,7 @@ const Hours = (() => {
     if(!pend.length) { root.innerHTML = '<div class="rk-empty">Nenhuma hora aguardando aprovação.</div>'; return; }
     const shown = pend.slice(0, 80);
     root.innerHTML = `<div class="btn-row" style="margin-bottom:8px;align-items:center;flex-wrap:wrap"><label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" aria-label="Marcar todas as horas da lista" onchange="Hours.apprAll(this.checked)" ${apprSel.size === shown.length ? 'checked' : ''}> Marcar todas</label><span style="font-size:12px;color:var(--t2)">${apprSel.size} marcada(s) de ${pend.length}</span></div>`
-      + shown.map(e => `<div class="hr-row" style="cursor:default"><input type="checkbox" aria-label="Marcar ${esc(e.person)} em ${fmtDate(e.date)}" ${apprSel.has(e.id) ? 'checked' : ''} onchange="Hours.apprToggle('${esc(e.id)}', this.checked)" style="margin-top:3px"><div class="hr-h">${fmtH(e.hours)}</div><div style="min-width:0;flex:1"><div style="font-weight:600;overflow-wrap:anywhere">${esc(e.person)} <span class="chip">${fmtDay(e.date)}</span>${e.extra > 0 ? ` <span class="badge b-amb">${fmtH(e.extra)} extra</span>` : ''}</div><div style="font-size:12px;color:var(--t2);overflow-wrap:anywhere">${esc(e.wbsRef || 'sem entrega')}${e.note ? ' · ' + esc(e.note) : ''}</div>${e.extra > 0 && e.extraReason ? `<div style="font-size:12px;color:var(--amb);overflow-wrap:anywhere"><i class="ti ti-clock-plus"></i> Motivo da hora extra: ${esc(e.extraReason)}</div>` : ''}${e.postedBy && nameKey(e.postedBy) !== nameKey(e.person) ? `<div style="font-size:12px;color:var(--t2);overflow-wrap:anywhere"><i class="ti ti-user-edit"></i> Lançado por ${esc(e.postedBy)}: ${esc(e.behalfReason || '')}</div>` : ''}</div></div>`).join('')
+      + shown.map(e => `<div class="hr-row" style="cursor:default"><input type="checkbox" aria-label="Marcar ${esc(e.person)} em ${fmtDate(e.date)}" ${apprSel.has(e.id) ? 'checked' : ''} onchange="Hours.apprToggle('${esc(e.id)}', this.checked)" style="margin-top:3px"><div class="hr-h">${fmtH(e.hours)}</div><div style="min-width:0;flex:1"><div style="font-weight:600;overflow-wrap:anywhere">${esc(e.person)} <span class="chip">${fmtDay(e.date)}</span>${e.extra > 0 ? ` <span class="badge b-amb">${fmtH(e.extra)} extra</span>` : ''}</div><div style="font-size:12px;color:var(--t2);overflow-wrap:anywhere">${esc(e.wbsRef || 'sem entrega')}${e.note ? ' · ' + esc(e.note) : ''}</div>${e.extra > 0 && e.extraReason ? `<div style="font-size:12px;color:var(--amb);overflow-wrap:anywhere"><i class="ti ti-clock-plus"></i> Motivo da hora extra: ${esc(e.extraReason)}</div>` : ''}${e.postedBy && nameKey(e.postedBy) !== nameKey(e.person) ? `<div style="font-size:12px;color:var(--t2);overflow-wrap:anywhere"><i class="ti ti-user-edit"></i> Lançado por ${esc(e.postedBy)}: ${esc(e.behalfReason || '')}</div>` : ''}<button class="link-a" style="padding:0;font-size:12px" onclick="Hours.openEdit('${esc(e.id)}')"><i class="ti ti-history"></i> Ver histórico</button></div></div>`).join('')
       + (pend.length > shown.length ? `<div class="set-sub" style="margin:6px 0">Mostrando as ${shown.length} mais antigas; aprove e o restante aparece.</div>` : '')
       + `<div class="field-group" style="margin-top:10px"><div class="field-label"><label for="hr-ap-note">Comentário (obrigatório para reprovar ou pedir ajuste)</label></div><input class="input" id="hr-ap-note" maxlength="300" placeholder="Ex.: separe as horas por entrega"></div>
       <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm btn-acc" ${apprSel.size ? '' : 'disabled'} onclick="Hours.review('aprovado')"><i class="ti ti-check"></i>Aprovar</button><button class="btn btn-sm" ${apprSel.size ? '' : 'disabled'} onclick="Hours.review('ajuste')"><i class="ti ti-edit"></i>Pedir ajuste</button><button class="btn btn-sm btn-red" ${apprSel.size ? '' : 'disabled'} onclick="Hours.review('reprovado')"><i class="ti ti-x"></i>Reprovar</button></div>`;
@@ -14982,16 +15073,24 @@ const Hours = (() => {
     const now = new Date().toISOString(), by = Auth.getName(), byPerson = {};
     picked.forEach(e => {
       e.status = status; e.reviewBy = by; e.reviewAt = now; e.reviewNote = status === 'aprovado' ? '' : note;
+      addHist(e, 'Situação: ' + ({ aprovado: 'aprovada', reprovado: 'reprovada', ajuste: 'ajuste pedido' }[status]) + (status === 'aprovado' || !note ? '.' : '. Comentário: ' + note));
       Cloud.pushRow('time_entries', e);
       (byPerson[e.person] = byPerson[e.person] || []).push(e);
     });
     persist(); apprSel.clear();
-    const verb = { aprovado: 'aprovadas', reprovado: 'reprovadas', ajuste: 'com ajuste pedido' }[status];
+    if(typeof Trail !== 'undefined') Trail.log('Horas ' + ({ aprovado: 'aprovadas', reprovado: 'reprovadas', ajuste: 'com ajuste pedido' }[status]) + ': ' + Msg.n(picked.length, 'apontamento') + (note && status !== 'aprovado' ? ' — ' + note : ''), by, '', status === 'aprovado' ? 'b-grn' : 'b-amb');
+    const wording = {
+      aprovado: { title: 'Suas horas foram aprovadas', does: 'aprovou', tail: '', done: 'aprovado' },
+      reprovado: { title: 'Suas horas foram reprovadas', does: 'reprovou', tail: ' Motivo: ', done: 'reprovado' },
+      ajuste: { title: 'O gerente pediu ajuste nas suas horas', does: 'pediu ajuste em', tail: ' O que ajustar: ', done: 'com ajuste pedido' }
+    }[status];
+    const what = (list) => Msg.n(list.length, 'apontamento') + (list.length === 1 ? ' de ' + fmtDate(list[0].date) : '') + ' (' + fmtH(list.reduce((s, x) => s + x.hours, 0)) + ')';
     if(typeof Cloud !== 'undefined' && Cloud.getUserId && Cloud.getUserId()) {
-      Object.keys(byPerson).forEach(p => Cloud.notifyProject(DB.getActiveProjectId(), 'member', p, 'Suas horas foram ' + verb, byPerson[p].length + ' apontamento(s), ' + fmtH(byPerson[p].reduce((s, x) => s + x.hours, 0)) + (note && status !== 'aprovado' ? '. Gerente: ' + note : ''), 'hours', 'Aprovação de horas'));
-      Cloud.pushAuditEvent('hours_review', picked.length + ' apontamento(s) ' + verb + ' por ' + by + (note ? ': ' + note.slice(0, 200) : ''), { status, count: picked.length, people: Object.keys(byPerson) });
+      Object.keys(byPerson).forEach(p => Cloud.notifyProject(DB.getActiveProjectId(), 'member', p, wording.title,
+        Msg.sentence('O gerente ' + wording.does + ' ' + what(byPerson[p])) + (note && status !== 'aprovado' ? wording.tail + Msg.sentence(note) : '') + (status === 'ajuste' ? ' Corrija e salve de novo para reenviar.' : ''), byPerson[p].length === 1 ? 'hours:' + byPerson[p][0].id : 'hoursf:' + status, 'Aprovação de horas'));
+      Cloud.pushAuditEvent('hours_review', Msg.n(picked.length, 'apontamento') + ' ' + (status === 'ajuste' ? 'com ajuste pedido' : Msg.agree(picked.length, wording.done)) + ' por ' + by + (note ? ': ' + note.slice(0, 200) : ''), { status, count: picked.length, people: Object.keys(byPerson) });
     }
-    render(); T.show('✅ ' + picked.length + ' apontamento(s) ' + verb + '.');
+    render(); T.show('✅ ' + Msg.n(picked.length, 'apontamento') + ' ' + (status === 'ajuste' ? 'com ajuste pedido' : Msg.agree(picked.length, wording.done)) + '.');
   }
 
   function renderRules() {
@@ -15017,6 +15116,7 @@ const Hours = (() => {
     const next = HoursRules.norm({ ...cur, dailyNormal: g('hr-r-normal').value, approval: g('hr-r-appr').value, requireDelivery: g('hr-r-deliv').checked,
       daysAfter: { on: g('hr-r-da').checked, days: g('hr-r-da-n').value }, monthCutoff: { on: g('hr-r-mc').checked, bd: g('hr-r-mc-n').value }, closeOnDelivery: g('hr-r-cd').checked });
     saveRules(next);
+    if(typeof Trail !== 'undefined') Trail.log('Regras de lançamento de horas alteradas', Auth.getName(), '', 'b-acc');
     if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('hours_rules', 'Regras de lançamento de horas alteradas', { dailyNormal: next.dailyNormal, approval: next.approval, requireDelivery: next.requireDelivery, daysAfter: next.daysAfter, monthCutoff: next.monthCutoff, closeOnDelivery: next.closeOnDelivery });
     renderRules(); renderClosing(); T.show('✅ Regras de lançamento salvas.');
   }
@@ -15045,6 +15145,7 @@ const Hours = (() => {
     if(!confirm(`Fechar ${periodLabel(p)}? Ninguém poderá lançar, alterar ou excluir horas desse mês até você reabrir.`)) return;
     const cur = rules(); cur.closedPeriods = cur.closedPeriods.concat([{ period: p, by: Auth.getName(), at: new Date().toISOString() }]);
     saveRules(HoursRules.norm(cur));
+    if(typeof Trail !== 'undefined') Trail.log('Período de horas fechado: ' + periodLabel(p), Auth.getName(), '', 'b-neu');
     if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('hours_period_close', 'Período de horas fechado: ' + periodLabel(p), { period: p });
     render(); T.show('🔒 ' + periodLabel(p) + ' fechado para lançamento.');
   }
@@ -15053,6 +15154,7 @@ const Hours = (() => {
     if(!confirm(`Reabrir ${periodLabel(p)} para lançamento?`)) return;
     const cur = rules(); cur.closedPeriods = cur.closedPeriods.filter(x => x.period !== p);
     saveRules(HoursRules.norm(cur));
+    if(typeof Trail !== 'undefined') Trail.log('Período de horas reaberto: ' + periodLabel(p), Auth.getName(), '', 'b-amb');
     if(typeof Cloud !== 'undefined') Cloud.pushAuditEvent('hours_period_reopen', 'Período de horas reaberto: ' + periodLabel(p), { period: p });
     render(); T.show('🔓 ' + periodLabel(p) + ' reaberto.');
   }
@@ -15097,7 +15199,7 @@ const Hours = (() => {
       ...filtered().sort((a, b) => a.date.localeCompare(b.date)).map(e => [e.person, e.date, Number(e.hours), e.wbsRef, e.note, HoursRules.STATUS[e.status || 'aprovado'], Number(e.extra || 0)])] }]);
   }
 
-  return { render, resetCache, openAdd, openEdit, openEditEl, keyEl, saveFromModal, deleteFromModal, closeModal, setFilter, more, addMany, keys, exportCsv, exportXlsx, preview, apprToggle, apprAll, review, saveRulesForm, closePeriod, reopenPeriod, behalfToggle };
+  return { render, resetCache, openAdd, openEdit, openEditEl, keyEl, saveFromModal, deleteFromModal, closeModal, setFilter, more, addMany, keys, exportCsv, exportXlsx, preview, apprToggle, apprAll, review, saveRulesForm, closePeriod, reopenPeriod, behalfToggle, jump, focusApproval, showStatus };
 })();
 </script>
 
@@ -18988,6 +19090,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
       <div><div class="field-label"><label for="hr-f-wbs">Entrega</label><span class="help-q" data-help="Obrigatória: toda hora fica ligada a uma entrega do cronograma (WBS) ou a um item do backlog, para o custo e o esforço seguirem a entrega." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><select class="input" id="hr-f-wbs" onchange="Hours.preview()"></select></div>
       <div id="hr-extra-grp" style="display:none"><div class="field-label"><label for="hr-f-extra" id="hr-extra-lbl">Motivo da hora extra</label><span class="help-q" data-help="Passou das horas normais do dia: a hora extra só vale depois da liberação do gerente. Explique por que foi necessária." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="hr-f-extra" maxlength="300" placeholder="Ex.: virada de sistema no fim do mês"></div>
       <div id="hr-hint" class="set-sub" role="status" aria-live="polite" style="min-height:18px"></div>
+      <div id="hr-hist"></div>
       <div><div class="field-label"><label for="hr-f-note">Observação (opcional)</label><span class="help-q" data-help="Opcional. O que foi feito, em uma frase." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="hr-f-note" maxlength="300" placeholder="O que foi feito"></div>
     </div>
     <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
