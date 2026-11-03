@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.49.0'
+  version: '2.49.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2220,6 +2220,15 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div class="modal-sub" id="bh-text"></div>
     <div class="field-group"><div class="field-label"><label for="bh-reason">Motivo (fica no histórico do cartão)</label></div><textarea class="input" id="bh-reason" rows="3" maxlength="300" placeholder="Ex.: Profissional sem acesso à ferramenta nesta semana; atividade concluída conforme conversa de hoje." style="resize:vertical;font-family:inherit"></textarea></div>
     <div class="btn-row" style="margin-top:14px;justify-content:flex-end"><button class="btn btn-sm" onclick="Agile.closeBehalf()">Cancelar</button><button class="btn btn-sm btn-acc" onclick="Agile.confirmBehalf()"><i class="ti ti-check"></i>Mover</button></div>
+  </div>
+</div>
+
+<div class="modal-ov hidden" id="modal-agile-imp" onclick="if(event.target===this)Agile.closeImpediments()">
+  <div class="modal-box" style="width:560px;max-width:96vw;max-height:92vh;overflow-y:auto" role="dialog" aria-modal="true" aria-labelledby="im-title">
+    <div class="modal-title" id="im-title">Impedimentos Abertos</div>
+    <div class="modal-sub">O que está travando o time e precisa de alguém para resolver. Quem conduz os ritos marca como resolvido; o time registra novos na tela Sprint atual.</div>
+    <div id="im-list"></div>
+    <div class="btn-row" style="margin-top:14px;justify-content:flex-end"><button class="btn btn-sm" onclick="Agile.closeImpediments();R.go('sprintnow')"><i class="ti ti-plus"></i>Registrar na Sprint atual</button><button class="btn btn-sm" id="im-rites" onclick="Agile.closeImpediments();R.go('ritos');Rites.select('daily')"><i class="ti ti-calendar-event"></i>Abrir nos ritos</button><button class="btn btn-sm btn-acc" onclick="Agile.closeImpediments()">Fechar</button></div>
   </div>
 </div>
 
@@ -12511,7 +12520,7 @@ const Agile = (() => {
     const list = boardItems().map(i => (keys.includes(i.status) ? i : { ...i, status: keyOf(i) })).sort(sortByRank), stats = AgileCalc.wip(list, cfg);
     const open = impediments().filter(x => x.status === 'aberto').length;
     const imp = document.getElementById('kb-imp');
-    if(imp) imp.innerHTML = open ? `<button class="btn btn-sm" onclick="R.go('ritos')"><i class="ti ti-alert-octagon"></i>${open} impedimento(s) aberto(s)</button>` : '';
+    if(imp) imp.innerHTML = open ? `<button class="btn btn-sm" onclick="Agile.openImpediments()"><i class="ti ti-alert-octagon"></i>${open} impedimento(s) aberto(s)</button>` : '';
     // Sem nenhum item o quadro continua com todas as colunas (para dar para ver o desenho e arrastar depois), com um aviso do que fazer
     const scrum = cfg.entry !== 'kanban', actions = document.getElementById('kb-actions');
     if(actions) actions.innerHTML = scrum
@@ -12538,6 +12547,23 @@ const Agile = (() => {
     if(lanes.length && typeof Sec !== 'undefined') Sec.restore(root);
   }
   const impediments = () => DB.get('impediments') || [];
+  // Os impedimentos abertos aparecem aqui mesmo, no quadro; quem pode, resolve ou vai ao rito; o time registra novos na Sprint atual
+  function openImpediments() {
+    const list = impediments().filter(x => x.status === 'aberto'), box = document.getElementById('im-list');
+    box.innerHTML = list.length ? list.map(i => '<div class="ag-row"><div class="ag-main"><div class="ag-title">' + esc(i.title) + '</div><div class="kb-meta" style="margin-top:3px"><span class="chip">' + esc(i.id) + '</span>'
+      + (i.owner ? '<span class="chip"><i class="ti ti-user"></i>' + esc(i.owner) + '</span>' : '<span class="chip c-wa">sem responsável</span>') + '<span class="chip">aberto em ' + esc(String(i.createdOn || '').slice(0, 10).split('-').reverse().join('/')) + '</span></div>'
+      + (i.note ? '<div class="set-sub" style="margin-top:4px">' + esc(i.note) + '</div>' : '') + '</div>'
+      + '<span data-perm="run_rites"><button class="btn btn-sm btn-grn" onclick="Agile.resolveImpediment(\'' + esc(i.id) + '\')"><i class="ti ti-check"></i>Resolvido</button></span></div>').join('') : '<div class="rk-empty">Nenhum impedimento aberto.</div>';
+    document.getElementById('im-rites').style.display = Auth.canOpen('ritos') ? '' : 'none';
+    document.getElementById('modal-agile-imp').classList.remove('hidden');
+    if(typeof Auth.applyViews === 'function') Auth.applyViews();
+  }
+  function closeImpediments() { document.getElementById('modal-agile-imp').classList.add('hidden'); }
+  function resolveImpediment(id) {
+    if(typeof Rites === 'undefined') return;
+    Rites.resolveImp(id);
+    if(impediments().some(x => x.status === 'aberto')) openImpediments(); else closeImpediments();
+  }
   function card(i) {
     const sp = sprints.find(s => s.id === i.sprintId);
     const prev = AgileCalc.neighbor(i.status, -1, cfg), next = AgileCalc.neighbor(i.status, 1, cfg);
@@ -13545,7 +13571,7 @@ const Agile = (() => {
   return { histFilter, render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, rank, setSprintOf, setBacklogQuery, setShowDone,
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, checkDates, openRules, closeRules, editRule, ruleField, ruleAct, ruleAddAct, ruleDelAct, ruleCancel, ruleSave, toggleRule, deleteRule, renderDue, openDue, closeDue, dueChoose, runDue, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
-    aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, setPolicyMove, setPolicyCol, setPolicyBehalf, addGate, removeGate, setGate, setTemplate, checkToggle, checkAdd, checkDel, openBehalf, closeBehalf, confirmBehalf, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
+    aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, setPolicyMove, setPolicyCol, openImpediments, closeImpediments, resolveImpediment, setPolicyBehalf, addGate, removeGate, setGate, setTemplate, checkToggle, checkAdd, checkDel, openBehalf, closeBehalf, confirmBehalf, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
     cfgNow: () => { load(); return cfg; }, kindChanged, kindPicked, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
 })();
 </script>

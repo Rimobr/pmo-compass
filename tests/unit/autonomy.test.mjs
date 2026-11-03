@@ -74,3 +74,9 @@ test('a tela e o servidor das tarefas do cartão', () => {
   const m2 = readFileSync(join(root, 'supabase/migrations', readdirSync(join(root, 'supabase/migrations')).find(f => f.includes('card_checklist'))), 'utf8');
   for (const k of ['add column if not exists checklist', "pol->'gates'", 'Conclua todas as tarefas do cartão', 'backlog_items_member_guard']) assert.ok(m2.includes(k), k);
 });
+
+test('o botão "impedimento aberto" do quadro abre a lista dos impedimentos, não leva a outra tela', () => {
+  assert.ok(html.includes('onclick="Agile.openImpediments()"'));
+  assert.ok(!html.includes("onclick=\"R.go('ritos')\"><i class=\"ti ti-alert-octagon\"></i>${open}"));
+  for (const k of ['id="modal-agile-imp"', 'function resolveImpediment', "Auth.canOpen('ritos')"]) assert.ok(html.includes(k), k);
+});
