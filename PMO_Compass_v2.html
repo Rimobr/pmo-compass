@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.53.3'
+  version: '2.53.4'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -212,7 +212,7 @@ body.no-project .sb-proj-area{display:none}
 body.no-login #login-gate{display:flex}
 .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:999;backdrop-filter:blur(4px)}
 .modal-ov.hidden{display:none}
-.modal-box{background:var(--s1);border:1px solid var(--b2);border-radius:var(--r12);padding:24px;width:480px;max-width:95vw;box-shadow:var(--shadow-md)}
+.modal-box{background:var(--s1);border:1px solid var(--b2);border-radius:var(--r12);padding:24px;width:480px;max-width:95vw;box-shadow:var(--shadow-md);max-height:92vh;max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain} /* nenhuma janela passa da tela: o que não cabe rola dentro dela (regra de todas as janelas; a janela com altura própria continua valendo) */
 .modal-title{font-size:16px;font-weight:600;color:var(--t1);margin-bottom:4px}
 .modal-sub{font-size:12px;color:var(--t2);margin-bottom:20px}
 @media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}}

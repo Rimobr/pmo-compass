@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.53.3 — 2026-11-03
+- Bussola: horas por pessoa so de quem lancou na janela ou esta numa equipe; media por semana conta so as semanas desde a primeira hora (projeto novo); aviso da janela de 28 dias para a IA
+
 ## 2.53.2 — 2026-11-03
 - Icone da Bussola em ambar de destaque (token do tema, contraste nos tres temas)
 
