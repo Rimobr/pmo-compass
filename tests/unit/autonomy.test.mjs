@@ -51,3 +51,9 @@ test('boas-vindas: aparece uma vez por conta (marca no servidor), não a cada at
   for (const k of ['async function markOnboarded', 'onboarded_at', 'function markSeen', 'show(); markSeen();', 'maybeShow(n + 1)']) assert.ok(html.includes(k), k);
   assert.ok(readdirSync(join(root, 'supabase/migrations')).some(f => f.includes('onboarded')));
 });
+
+test('ao entrar, o quadro é refeito depois que as configurações do projeto chegam (colunas criadas pela gestão não somem)', () => {
+  const i = html.indexOf("settings.data.forEach(row => { if(row.key) DB.set(row.key, row.value || {}); });");
+  assert.ok(i > 0);
+  assert.ok(html.slice(i, i + 900).includes('Agile.resetCache(); Agile.render();'));
+});

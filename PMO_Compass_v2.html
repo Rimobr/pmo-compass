@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.48.1'
+  version: '2.48.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -4820,6 +4820,8 @@ const Cloud = (() => {
         if(typeof Prioritization !== 'undefined') Prioritization.render();
         if(typeof PmoProfiles !== 'undefined') PmoProfiles.render();
         if(typeof Methodology !== 'undefined') { Methodology.apply(); Methodology.render(); }
+        // O quadro foi desenhado antes das configurações chegarem (colunas, raias, política do time): refaz com as do projeto
+        if(typeof Agile !== 'undefined') { Agile.resetCache(); Agile.render(); }
       }
       if(team.data) {
         DB.set('team', team.data.map(x => ({ id:x.id, name:x.name, role:x.role||'', allocationPct:x.allocation_pct, workloadPct:x.workload_pct, signals:x.signals||[], recommendation:x.recommendation||'', actionPage:x.action_page||'', userId:x.user_id||'' })));
