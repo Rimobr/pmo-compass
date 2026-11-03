@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.43.1'
+  version: '2.43.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -4324,6 +4324,9 @@ const Cloud = (() => {
     if(!client || !session) return null;
     const { data, error } = await client.rpc('ensure_team_member', { pid: projectId, uid: userId });
     if(error) { console.warn('Supabase: não consegui ligar a conta à equipe', error.message); return null; }
+    // a equipe mudou no servidor: relê para a tela mostrar na hora (sem precisar recarregar a página)
+    await syncAllTeamMembers();
+    try { if(typeof Burnout !== 'undefined') Burnout.render(); if(typeof Resources !== 'undefined') Resources.render(); } catch(e) { /* tela fechada */ }
     return data;
   }
   async function setProjectAccess(userId, projectId, granted) {
