@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.53.1 — 2026-11-03
+- IA: o provedor que roda e o que a tela mostra passam a ser o mesmo (so a chave do Gemini salva ja ativa o Gemini); consulta as chaves do servidor antes de escolher; nao ativa provedor sem chave
+
 ## 2.53.0 — 2026-11-03
 - Bussola de Negocios: botao na barra superior para os perfis escolhidos (permissao ask_compass); pergunta sobre todos os projetos (maior desvio com sugestoes para retomar, horas por pessoa, atrasos, riscos, decisoes, sobrecarga, orcamento); numeros vindos do banco com perfil respeitado; perguntas livres pela IA do usuario
 

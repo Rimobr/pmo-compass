@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.53.1'
+  version: '2.53.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -936,7 +936,7 @@ body.icons-failed i[data-fb]::before{
   <div class="tb-actions">
     <button class="ico-btn" onclick="Theme.set(Theme.get()==='dark'?'light':(Theme.get()==='light'?'gray':'dark'))" title="Trocar tema (Escuro/Claro/Cinza)"><i class="ti ti-contrast-2"></i></button>
     <button class="ico-btn" onclick="CmdK.open()" title="Busca rápida (Ctrl/Cmd+K)"><i class="ti ti-search"></i></button>
-    <button class="ico-btn" data-perm="ask_compass" onclick="Compass.open()" title="Bússola de Negócios: pergunte sobre os projetos" aria-label="Bússola de Negócios: pergunte sobre os projetos"><i class="ti ti-compass"></i></button>
+    <button class="ico-btn compass" data-perm="ask_compass" onclick="Compass.open()" title="Bússola de Negócios: pergunte sobre os projetos" aria-label="Bússola de Negócios: pergunte sobre os projetos"><i class="ti ti-compass"></i></button>
     <button class="ico-btn" onclick="R.go('decisions')" title="Notificações"><i class="ti ti-bell"></i><span class="bdot"></span></button>
     <button class="ico-btn" id="tb-notices" style="display:none;position:relative" onclick="Notices.open()" title="Avisos para você" aria-label="Avisos para você"><i class="ti ti-bell-ringing"></i><span id="tb-notices-n" class="notice-n" style="display:none"></span></button>
     <button class="ico-btn" data-perm="business" onclick="Wizard.open()" title="Novo projeto"><i class="ti ti-plus"></i></button>
@@ -2028,6 +2028,10 @@ body.icons-failed i[data-fb]::before{
 .nt-item.sev-urgent{border:2px solid var(--red);background:var(--rd)}
 .nt-item.sev-urgent b,.nt-item.sev-critical b{color:var(--red)}
 .ico-btn.urgent{border-color:var(--red);box-shadow:0 0 0 2px var(--rb)}
+/* Bússola de Negócios: âmbar de destaque (token do tema, contraste nos três temas) para a função ser vista de longe */
+.ico-btn.compass{border-color:var(--amb);background:var(--amd);box-shadow:0 0 0 2px var(--ambb)}
+.ico-btn.compass i{color:var(--amb);font-size:17px}
+.ico-btn.compass:hover{background:var(--ambb);border-color:var(--amb)}
 .ico-btn.urgent i{color:var(--red)}
 .inp-clr{position:relative;display:block}
 .inp-clr>.input{padding-right:54px}
