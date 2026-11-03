@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.53.4 — 2026-11-03
+- Todas as janelas do sistema rolam por dentro quando nao cabem na tela (regra global do modal-box; 30 das 44 janelas nao tinham altura maxima)
+
 ## 2.53.3 — 2026-11-03
 - Bussola: horas por pessoa so de quem lancou na janela ou esta numa equipe; media por semana conta so as semanas desde a primeira hora (projeto novo); aviso da janela de 28 dias para a IA
 

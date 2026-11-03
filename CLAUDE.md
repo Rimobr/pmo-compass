@@ -19,6 +19,10 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - Botão na barra superior (ícone de bússola), só para perfis com a permissão `ask_compass` (padrão: Administrador, Gerente de Projeto e Patrocinador; o administrador escolhe em Perfis de acesso). Pergunta sobre todos os projetos liberados: maior desvio com sugestões para retomar, horas por pessoa, atrasos, riscos, decisões, sobrecarga, orçamento e panorama.
 - Os números vêm da função `compass_digest()` do banco (recusa quem não tem a permissão; custos só com `view_costs`; horas das pessoas só com `view_all_hours`). Perguntas conhecidas são respondidas por regras explicadas na tela; perguntas livres vão para a IA do próprio usuário só com os fatos (sem R$). Nada novo é gravado, só o evento `compass_question` no log de auditoria.
 
+## Rascunho dos modelos de documentos pela IA (pedido do dono, 03/11/2026)
+- Em Modelos de Documentos: "Criar com Rascunho da IA" e, em cada documento, "Rascunho com a IA". A IA recebe só os fatos do projeto (equipe, entregas, riscos, decisões, escopo, impedimentos, partes interessadas), **nunca valores em R$**, e devolve um JSON validado pelo modelo; nada vem como feito; responsável só de quem está na equipe ou nas partes interessadas.
+- A pessoa revê numa janela e só então "Adicionar ao Documento": o rascunho entra no fim, sem repetir nem apagar o que já foi escrito. Nada é gravado antes disso.
+
 ## Entrega
 - Versão em 4 lugares: `version.json`, `BRAND.version` (PMO_Compass_v2.html), `package.json`, `sw.js` (`CACHE_NAME`).
 - Testes: `node tests/run.js` e `npm run test:unit` (inclui `datamap`), `npm run test:smoke`; migrações: `node scripts/db-apply.mjs --dry-run` antes de aplicar, depois `node scripts/build-schema.mjs`.
