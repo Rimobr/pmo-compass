@@ -227,7 +227,7 @@ O menu esconde, a abertura direta pelo endereço é barrada e o banco nega a lei
 | Sprints | `manage_backlog` |
 | Ritos da sprint | `run_rites` |
 
-Telas abertas a quem tem acesso ao projeto: `mywork`, `kanban`, `backlog`, `wbs`, `hours`, `raci`, `lessons`, `help`, `settings`, `account`, `sprintnow`, `noproject`.
+Telas abertas a quem tem acesso ao projeto: `mywork`, `myind`, `kanban`, `backlog`, `wbs`, `hours`, `raci`, `lessons`, `help`, `settings`, `account`, `sprintnow`, `noproject`.
 
 | Perfil pronto | Vê |
 |---|---|

@@ -25,7 +25,7 @@ test('o mapa de visões (docs) é o mesmo que o app usa', () => {
 
 test('Membro do time (Dev, QA): só o próprio trabalho — nada de diretoria, PMO, gestão, custos nem dados dos colegas', () => {
   const open = openPages('time');
-  assert.deepEqual(open.sort(), ['account', 'backlog', 'help', 'hours', 'kanban', 'lessons', 'mywork', 'noproject', 'raci', 'settings', 'sprintnow', 'wbs'].sort());
+  assert.deepEqual(open.sort(), ['account', 'backlog', 'help', 'hours', 'kanban', 'lessons', 'mywork', 'myind', 'noproject', 'raci', 'settings', 'sprintnow', 'wbs'].sort());
   for (const p of ['sprints', 'ritos']) assert.ok(!open.includes(p), 'o time usa "Sprint atual"; ' + p + ' é de quem conduz');
   for (const p of ['board', 'execview', 'pmoview', 'pfkpi', 'portfolio', 'prioritization', 'dashboard', 'xray', 'decisions', 'risks', 'repository', 'chat', 'budget', 'burnout', 'resources', 'report', 'stakeholders']) assert.ok(!open.includes(p), 'time não deve abrir ' + p);
   assert.equal(AccessProfiles.homeFor(has('time')), 'mywork');

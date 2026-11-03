@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.49.2'
+  version: '2.50.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -964,6 +964,7 @@ body.icons-failed i[data-fb]::before{
   <div class="sb-group" id="sbg-indicadores">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-indicadores')"><i class="ti ti-chart-donut-3 sb-gico"></i>Indicadores<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
+      <button class="si" data-p="myind" onclick="R.go('myind')" title="Os seus números: atrasos, vencimentos, velocidade, horas e orientação do dia"><i class="ti ti-chart-dots"></i>Meus Indicadores</button>
       <button class="si" data-p="pfkpi" onclick="R.go('pfkpi')"><i class="ti ti-chart-donut-3"></i>Indicadores</button>
       <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
       <button class="si" data-p="prioritization" onclick="R.go('prioritization')"><i class="ti ti-sort-descending-2"></i>Priorização</button>
@@ -2157,6 +2158,14 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
   </div>
   <div id="mw-root"></div>
   <div id="mw-review"></div>
+</section>
+
+<section class="page" id="p-myind" data-module="pages/myind">
+  <div class="pg-hdr">
+    <div><h1 class="pg-title">Meus Indicadores<span class="help-q" data-help="Os seus números neste projeto: o que está atrasado, o que vence nos próximos dias, o que está parado, a sua velocidade de entrega, as horas e uma orientação do que fazer primeiro. Só mostra o que é seu." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></h1><div class="pg-sub">O que é seu, o que vence, o que atrasou e como está o seu ritmo, com a orientação do que fazer primeiro.</div></div>
+    <div class="btn-row"><button class="btn btn-sm" onclick="R.go('mywork')"><i class="ti ti-user-check"></i>Meu Trabalho</button><button class="btn btn-sm" onclick="R.go('hours')"><i class="ti ti-clock-plus"></i>Apontar Horas</button></div>
+  </div>
+  <div id="mi-root"></div>
 </section>
 
 <section class="page" id="p-ritos" data-module="pages/ritos">
@@ -7607,7 +7616,7 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','raci','kanban','backlog','sprints','ritos','modelos','mywork','help','xray','account','sprintnow','noproject'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','raci','kanban','backlog','sprints','ritos','modelos','mywork','myind','help','xray','account','sprintnow','noproject'];
   function go(id) {
     // Base nova (ou conta sem projeto): só configurações, conta e ajuda existem; o resto convida a criar o primeiro projeto
     if(typeof DB !== 'undefined' && DB.isEmpty() && !['settings', 'account', 'help', 'noproject'].includes(id)) id = 'noproject';
@@ -7642,6 +7651,7 @@ const R = (() => {
     if(id === 'ritos' && typeof Rites !== 'undefined') Rites.render();
     if(id === 'modelos' && typeof Models !== 'undefined') Models.render();
     if(id === 'mywork' && typeof MyWork !== 'undefined') MyWork.render();
+    if(id === 'myind' && typeof MyIndPage !== 'undefined') MyIndPage.render();
     if(id === 'account' && typeof Account !== 'undefined') Account.render();
     if(id === 'sprintnow' && typeof SprintNow !== 'undefined') SprintNow.render();
     if(id === 'settings' && typeof BugsAi !== 'undefined') BugsAi.render();
@@ -7786,7 +7796,7 @@ const Nav = (() => {
   const SECTION_OF = { xray:'Painéis', board:'Painéis', execview:'Painéis', pmoview:'Painéis', dashboard:'Projeto' };
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
-    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores', pmoview:'Visão do PMO', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint', modelos:'Modelos', mywork:'Meu trabalho',
+    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores', pmoview:'Visão do PMO', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint', modelos:'Modelos', mywork:'Meu trabalho', myind:'Meus Indicadores',
     burnout:'Burnout Radar', resources:'Colaboradores', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
     portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', account:'Minha conta', sprintnow:'Sprint atual', help:'Ajuda', xray:'Raio-X do Projeto'
@@ -7853,6 +7863,7 @@ const CmdK = (() => {
   const PAGES = [
     { label:'Raio-X do Projeto', page:'xray', icon:'report-medical', group:'Painéis' },
     { label:'Dashboard do projeto', page:'dashboard', icon:'layout-dashboard', group:'Projeto' },
+    { label:'Meus Indicadores', page:'myind', icon:'chart-dots', group:'Indicadores' },
     { label:'Decisões IA', page:'decisions', icon:'brain', group:'Decisões' },
     { label:'Loop de Ação', page:'loop', icon:'refresh-alert', group:'Decisões' },
     { label:'Trilha', page:'trail', icon:'git-branch', group:'Decisões' },
@@ -12052,7 +12063,226 @@ const MyWork = (() => {
     const t = await teamHtml(); const el = document.getElementById('mw-team'); if(el) el.innerHTML = t;
   }
   const isMine = name => !!name && myNames().names.some(n => key(n) === key(name));
-  return { render, isMine, deliveries };
+  return { render, isMine, deliveries, names: myNames };
+})();
+</script>
+
+<!-- ■ MODULE: services/my-indicators ─ Indicadores individuais: o que é meu, o que vence, o que atrasou, velocidade de entrega e orientação do dia — regras puras, sem DOM -->
+<script data-module="services/my-indicators">
+const MyInd = (() => {
+  const DAY = 86400000;
+  const key = s => String(s || '').trim().toLowerCase();
+  const diff = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / DAY);
+  const addDays = (iso, n) => new Date(Date.parse(iso + 'T00:00:00Z') + n * DAY).toISOString().slice(0, 10);
+  const monday = iso => addDays(iso, -((new Date(iso + 'T00:00:00Z').getUTCDay() + 6) % 7));
+  const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
+  const round1 = n => Math.round(n * 10) / 10;
+  const WINDOWS = [3, 7, 14, 30];
+  const MODES = { abertas: 'Todas as abertas', atrasadas: 'Atrasadas', vencem: 'Vencem nos próximos dias', sem_prazo: 'Sem prazo definido', concluidas: 'Concluídas nos últimos 28 dias' };
+  const STALL_DAYS = 3, WIP_MAX = 3;
+
+  // Quando o cartão mudou de coluna pela última vez (o histórico guarda "Situação"); sem histórico vale a criação
+  function lastMove(it) {
+    const h = (Array.isArray(it.history) ? it.history : []).filter(x => x && x.field === 'Situação');
+    const at = h.length ? String(h[h.length - 1].at || '').slice(0, 10) : '';
+    return at || String(it.createdOn || '').slice(0, 10);
+  }
+  function stateOf(done, due, today) {
+    if(done) return 'concluida';
+    if(!due) return 'sem_prazo';
+    return diff(today, due) < 0 ? 'atrasada' : 'no_prazo';
+  }
+
+  // Todas as minhas atividades: itens do quadro (prazo = fim da sprint) e tarefas/entregas do cronograma (prazo = término)
+  function rows(inp) {
+    const set = new Set((inp.names || []).map(key)), today = inp.today, out = [];
+    const colLabel = k => { const c = (inp.cols || []).find(x => x.key === k); return c ? c.label : (k === 'done' ? 'Concluído' : k === 'todo' ? 'A fazer' : k); };
+    (inp.items || []).filter(i => set.has(key(i.assignee))).forEach(i => {
+      const sp = (inp.sprints || []).find(s => s.id === i.sprintId), done = i.status === 'done', due = (sp && sp.endOn) || '';
+      const chk = Array.isArray(i.checklist) ? i.checklist : [];
+      const moved = lastMove(i);
+      out.push({ kind: 'Item', ref: i.id, label: i.title, parent: sp ? sp.name : 'sem sprint', status: colLabel(i.status), statusKey: i.status, due,
+        daysLeft: due ? diff(today, due) : null, state: stateOf(done, due, today), done, doneOn: i.doneOn || '', points: i.points === '' || i.points == null ? null : Number(i.points),
+        stalled: !done && i.status !== 'todo' && moved ? Math.max(0, diff(moved, today)) : 0, checkDone: chk.filter(c => c.done).length, checkTotal: chk.length, bug: i.kind === 'bug' });
+    });
+    (inp.wbs || []).forEach(m => {
+      const add = (x, kind, parent) => {
+        if(!set.has(key(x.responsavel))) return;
+        const done = x.status === 'grn' || Number(x.pct) >= 100, due = x.end || '';
+        out.push({ kind, ref: '', label: x.label, parent, status: done ? 'Concluída' : (x.pct ? x.pct + '%' : 'Não iniciada'), statusKey: done ? 'done' : 'open', due, daysLeft: due ? diff(today, due) : null,
+          state: stateOf(done, due, today), done, doneOn: '', points: null, stalled: 0, checkDone: 0, checkTotal: 0, bug: false });
+      };
+      add(m, 'Entrega', '');
+      (m.children || []).forEach(t => add(t, 'Tarefa', m.label));
+    });
+    return out;
+  }
+  // Mais urgente primeiro: atrasadas (mais antigas antes), depois as que vencem logo, depois as sem prazo
+  const order = r => ({ atrasada: 0, no_prazo: 1, sem_prazo: 2, concluida: 3 }[r.state]);
+  const sortRows = list => list.slice().sort((a, b) => order(a) - order(b) || (a.daysLeft == null ? 9e6 : a.daysLeft) - (b.daysLeft == null ? 9e6 : b.daysLeft) || String(a.label).localeCompare(String(b.label), 'pt-BR'));
+  function filterRows(list, mode, win, today) {
+    const open = list.filter(r => !r.done);
+    let out;
+    if(mode === 'atrasadas') out = open.filter(r => r.state === 'atrasada');
+    else if(mode === 'vencem') out = open.filter(r => r.daysLeft != null && r.daysLeft >= 0 && r.daysLeft <= win);
+    else if(mode === 'sem_prazo') out = open.filter(r => r.state === 'sem_prazo');
+    else if(mode === 'concluidas') out = list.filter(r => r.done && r.doneOn && diff(r.doneOn, today) <= 27);
+    else out = open;
+    return sortRows(out);
+  }
+
+  // Velocidade: pontos (ou itens, se nada tem ponto) concluídos por semana, nas últimas 6 semanas (a última é a semana corrente)
+  function weekly(inp) {
+    const set = new Set((inp.names || []).map(key)), today = inp.today, m0 = monday(today);
+    const done = (inp.items || []).filter(i => i.status === 'done' && i.doneOn && set.has(key(i.assignee)));
+    const weeks = [];
+    for(let w = 5; w >= 0; w--) {
+      const from = addDays(m0, -7 * w), to = addDays(from, 6), mine = done.filter(i => i.doneOn >= from && i.doneOn <= to);
+      weeks.push({ from, to, count: mine.length, points: mine.reduce((s, i) => s + (Number(i.points) || 0), 0) });
+    }
+    const unit = weeks.some(x => x.points > 0) ? 'pts' : 'itens', val = x => unit === 'pts' ? x.points : x.count;
+    weeks.forEach(x => { x.value = val(x); });
+    const base = avg(weeks.slice(1, 5).map(val)), recent = avg(weeks.slice(3, 5).map(val)), before = avg(weeks.slice(1, 3).map(val));
+    const trend = before === 0 && recent === 0 ? 'sem_dado' : recent > before * 1.25 ? 'subindo' : recent < before * 0.75 ? 'caindo' : 'estavel';
+    return { weeks, unit, avg: round1(base), current: weeks[5].value, trend };
+  }
+
+  // Tempo médio entre criar e concluir (dias) dos meus itens concluídos nas últimas 8 semanas
+  function leadTime(inp) {
+    const set = new Set((inp.names || []).map(key));
+    const ds = (inp.items || []).filter(i => i.status === 'done' && i.doneOn && i.createdOn && set.has(key(i.assignee)) && diff(i.doneOn, inp.today) <= 55).map(i => Math.max(0, diff(i.createdOn, i.doneOn)));
+    return ds.length ? { days: round1(avg(ds)), n: ds.length } : null;
+  }
+  function hours(inp) {
+    const set = new Set((inp.names || []).map(key)), m0 = monday(inp.today), m1 = addDays(m0, 6);
+    const mine = (inp.hours || []).filter(e => set.has(key(e.person)) && e.status !== 'reprovado');
+    return { week: mine.filter(e => e.date >= m0 && e.date <= m1).reduce((s, e) => s + (Number(e.hours) || 0), 0), pending: mine.filter(e => e.status === 'pendente' || e.status === 'ajuste').reduce((s, e) => s + (Number(e.hours) || 0), 0) };
+  }
+
+  const pl = (n, um, varios) => n + ' ' + (n === 1 ? um : varios);
+  const q = t => '«' + t + '»';
+  // Orientação do dia: o que fazer primeiro, em ordem de importância (cada frase explica o porquê)
+  function advice(inp, list, k, wk, hr, extra) {
+    const out = [], open = list.filter(r => !r.done), win = inp.win || 7;
+    const late = sortRows(open.filter(r => r.state === 'atrasada')).sort((a, b) => a.daysLeft - b.daysLeft);
+    if(late.length) out.push({ level: 'red', text: 'Você tem ' + pl(late.length, 'atividade atrasada', 'atividades atrasadas') + '. Comece por ' + q(late[0].label) + ', atrasada há ' + pl(-late[0].daysLeft, 'dia', 'dias') + '.', go: late[0].ref ? { item: late[0].ref } : { page: 'wbs' } });
+    const soon = sortRows(open.filter(r => r.daysLeft != null && r.daysLeft >= 0 && r.daysLeft <= win));
+    if(soon.length) out.push({ level: 'amber', text: pl(soon.length, 'atividade vence', 'atividades vencem') + ' nos próximos ' + pl(win, 'dia', 'dias') + '. A primeira é ' + q(soon[0].label) + ', ' + (soon[0].daysLeft === 0 ? 'hoje' : 'em ' + pl(soon[0].daysLeft, 'dia', 'dias')) + '.', go: soon[0].ref ? { item: soon[0].ref } : { page: 'wbs' } });
+    const stalled = open.filter(r => r.stalled >= STALL_DAYS).sort((a, b) => b.stalled - a.stalled);
+    if(stalled.length) out.push({ level: 'amber', text: q(stalled[0].label) + ' está há ' + pl(stalled[0].stalled, 'dia', 'dias') + ' em "' + stalled[0].status + '" sem andar. Falta algo para destravar? Se sim, registre um impedimento.', go: { item: stalled[0].ref } });
+    if(k.doing > WIP_MAX) out.push({ level: 'amber', text: 'Você está com ' + k.doing + ' itens em andamento ao mesmo tempo. Termine um antes de puxar outro: terminar rende mais do que começar.', go: null });
+    const withChecks = open.filter(r => r.checkTotal > r.checkDone && r.statusKey !== 'todo');
+    if(withChecks.length) out.push({ level: 'info', text: q(withChecks[0].label) + ' ainda tem ' + pl(withChecks[0].checkTotal - withChecks[0].checkDone, 'tarefa pendente', 'tarefas pendentes') + ' na lista do cartão. Marque o que já fez.', go: { item: withChecks[0].ref } });
+    if(extra.impediments) out.push({ level: 'amber', text: 'Você é o responsável por ' + pl(extra.impediments, 'impedimento aberto', 'impedimentos abertos') + '. Resolva ou peça ajuda no quadro.', go: { page: 'kanban' } });
+    const dow = new Date(inp.today + 'T00:00:00Z').getUTCDay();
+    if(hr.week === 0 && dow >= 3 && dow <= 5) out.push({ level: 'info', text: 'Você ainda não apontou horas esta semana. Lance agora, enquanto lembra do que fez.', go: { page: 'hours' } });
+    if(hr.pending > 0) out.push({ level: 'info', text: pl(Math.round(hr.pending * 10) / 10, 'hora aguarda', 'horas aguardam') + ' a decisão do gerente. Se vier um pedido de ajuste, corrija em Horas.', go: { page: 'hours' } });
+    const unest = open.filter(r => r.kind === 'Item' && r.points == null && !r.bug).length;
+    if(unest) out.push({ level: 'info', text: pl(unest, 'item seu está sem estimativa', 'itens seus estão sem estimativa') + '. Estimar ajuda o time a planejar a próxima sprint.', go: null });
+    if(wk.trend === 'caindo') out.push({ level: 'info', text: 'Sua velocidade caiu nas últimas semanas (' + wk.weeks.slice(3, 5).map(x => x.value).join(' e ') + ' ' + wk.unit + ', antes ' + wk.weeks.slice(1, 3).map(x => x.value).join(' e ') + '). Algo está atrapalhando? Vale levar à reunião diária.', go: null });
+    if(!open.length) out.unshift({ level: 'ok', text: 'Você não tem atividades abertas neste projeto. Puxe o próximo item do topo do backlog com o seu Scrum Master ou gerente.', go: null });
+    if(!out.length) out.push({ level: 'ok', text: open.length ? 'Tudo em dia: nada atrasado e nada vencendo nos próximos ' + pl(win, 'dia', 'dias') + '. Siga com ' + q(sortRows(open)[0].label) + '.' : 'Você não tem atividades abertas neste projeto. Puxe o próximo item do topo do backlog com o seu Scrum Master ou gerente.', go: null });
+    return out;
+  }
+
+  // Tudo junto: indicadores, lista, velocidade e orientação
+  function compute(inp) {
+    const list = rows(inp), open = list.filter(r => !r.done), win = WINDOWS.includes(inp.win) ? inp.win : 7, today = inp.today;
+    const wk = weekly(inp), hr = hours(inp), lead = leadTime(inp);
+    const set = new Set((inp.names || []).map(key));
+    const impediments = (inp.imps || []).filter(i => i.status === 'aberto' && set.has(key(i.owner))).length;
+    const risks = (inp.risks || []).filter(r => r.status !== 'fechado' && r.status !== 'encerrado' && set.has(key(r.owner))).length;
+    const doing = open.filter(r => r.kind === 'Item' && r.statusKey !== 'todo').length;
+    const k = {
+      open: open.length, done28: list.filter(r => r.done && r.doneOn && diff(r.doneOn, today) <= 27).length,
+      late: open.filter(r => r.state === 'atrasada').length, soon: open.filter(r => r.daysLeft != null && r.daysLeft >= 0 && r.daysLeft <= win).length,
+      noDue: open.filter(r => r.state === 'sem_prazo').length, doing, impediments, risks, win,
+      pointsOpen: open.reduce((s, r) => s + (r.points || 0), 0), stalled: open.filter(r => r.stalled >= STALL_DAYS).length
+    };
+    return { rows: list, kpis: k, weekly: wk, hours: hr, lead, advice: advice({ ...inp, win }, list, k, wk, hr, { impediments }) };
+  }
+  return { WINDOWS, MODES, STALL_DAYS, WIP_MAX, compute, rows, filterRows, sortRows, weekly, leadTime, hours, lastMove, monday, addDays, diff };
+})();
+</script>
+
+<!-- ■ MODULE: pages/myind ─ "Meus Indicadores": a tela individual (atividades, prazos, velocidade, horas e orientação do dia) -->
+<script data-module="pages/myind">
+const MyIndPage = (() => {
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmtD = d => d ? String(d).slice(0, 10).split('-').reverse().join('/') : '—';
+  let mode = 'abertas', win = 7;
+  const kpi = (l, v, sub, dot, go) => '<div class="kpi' + (go ? ' kpi-link' : '') + '"' + (go ? ' role="button" tabindex="0" onclick="MyIndPage.pick(\'' + go + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();MyIndPage.pick(\'' + go + '\')}"' : '') + '><div class="kpi-lbl">' + (dot ? '<span class="sdot ' + dot + '"></span>' : '') + l + '</div><div class="kpi-val">' + v + '</div><div class="kpi-delta">' + sub + '</div></div>';
+  const fmtH = n => (Math.round(n * 10) / 10).toString().replace('.', ',') + ' h';
+  const input = () => {
+    const me = MyWork.names();
+    const cfg = AgileCalc.cfgOf(DB.get('agileConfig'));
+    return { names: me.names, today: Clock.iso(Clock.today()), items: DB.get('backlog') || [], wbs: DB.get('wbs') || [], sprints: DB.get('sprints') || [], cols: AgileCalc.cols(cfg),
+      hours: DB.get('timeEntries') || [], imps: DB.get('impediments') || [], risks: DB.get('risks') || [], win };
+  };
+  const when = r => r.state === 'concluida' ? 'concluída' : r.daysLeft == null ? 'sem prazo' : r.daysLeft < 0 ? 'atrasada há ' + (-r.daysLeft) + (r.daysLeft === -1 ? ' dia' : ' dias') : r.daysLeft === 0 ? 'vence hoje' : 'vence em ' + r.daysLeft + (r.daysLeft === 1 ? ' dia' : ' dias');
+  const badge = r => r.state === 'atrasada' ? 'b-red' : (r.state === 'no_prazo' && r.daysLeft <= win) ? 'b-amb' : r.state === 'concluida' ? 'b-grn' : 'b-neu';
+  const action = r => r.ref && Auth.can('update_own') ? '<button class="btn btn-sm" onclick="Agile.openItem(\'' + esc(r.ref) + '\')" aria-label="Abrir ' + esc(r.ref) + '"><i class="ti ti-arrow-right"></i>Abrir</button>'
+    : (!r.ref && Auth.canOpen('wbs') ? '<button class="btn btn-sm" onclick="R.go(\'wbs\')"><i class="ti ti-arrow-right"></i>Ver na WBS</button>' : '');
+  const goBtn = g => !g ? '' : g.item ? (Auth.can('update_own') ? '<button class="btn btn-sm" onclick="Agile.openItem(\'' + esc(g.item) + '\')">Abrir o cartão</button>' : '')
+    : (Auth.canOpen(g.page) ? '<button class="btn btn-sm" onclick="R.go(\'' + g.page + '\')">Abrir</button>' : '');
+
+  function bars(wk) {
+    const max = Math.max(1, ...wk.weeks.map(x => x.value)), trend = { subindo: ['b-grn', 'subindo'], caindo: ['b-amb', 'caindo'], estavel: ['b-neu', 'estável'], sem_dado: ['b-neu', 'sem entregas ainda'] }[wk.trend];
+    return '<div class="lbl"><i class="ti ti-chart-bar"></i>Velocidade de entrega <span class="badge ' + trend[0] + '">' + trend[1] + '</span><span class="help-q" data-help="Quanto você concluiu por semana nas últimas 6 semanas (a última é a semana atual, ainda em andamento). Conta pontos dos seus itens concluídos; se nenhum item tem ponto, conta itens. A média é das 4 semanas completas anteriores. \'Subindo\' ou \'caindo\' compara as 2 últimas semanas completas com as 2 anteriores (variação de 25% ou mais)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>'
+      + '<div role="img" aria-label="Velocidade das últimas 6 semanas: ' + wk.weeks.map(x => fmtD(x.from) + ' ' + x.value + ' ' + wk.unit).join('; ') + '" style="display:flex;align-items:flex-end;gap:8px;height:110px;margin:8px 0 4px">'
+      + wk.weeks.map((x, i) => '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0"><span style="font-size:11.5px;color:var(--t1);font-weight:600">' + x.value + '</span><div style="width:100%;max-width:38px;height:' + Math.max(3, Math.round(x.value / max * 78)) + 'px;border-radius:4px 4px 0 0;background:' + (i === 5 ? 'var(--acc)' : 'var(--t3)') + '"></div><span style="font-size:11px;color:var(--t3);margin-top:3px">' + fmtD(x.from).slice(0, 5) + '</span></div>').join('') + '</div>'
+      + '<div class="set-sub">Média das 4 semanas completas: <b>' + wk.avg + ' ' + wk.unit + '</b> por semana · esta semana: <b>' + wk.current + ' ' + wk.unit + '</b>' + (wk.unit === 'itens' ? ' · seus itens ainda não têm pontos, então contamos itens' : '') + '</div>';
+  }
+  const levelDot = { red: 'sdot-red', amber: 'sdot-amb', info: 'sdot-acc', ok: 'sdot-grn' };
+
+  function render() {
+    const root = document.getElementById('mi-root'); if(!root) return;
+    const me = MyWork.names(), proj = DB.listProjects().find(p => p.id === DB.getActiveProjectId()) || {};
+    if(!me.names.length) {
+      root.innerHTML = '<div class="card"><div class="rk-empty">Não encontrei você na equipe de <b>' + esc(proj.name || 'este projeto') + '</b>. Peça ao administrador ou ao gerente para ligar a sua conta ao seu nome em <b>Colaboradores → Editar → Conta de login vinculada</b>; depois os seus indicadores aparecem aqui.</div></div>' + projects();
+      return;
+    }
+    const inp = input(), r = MyInd.compute(inp), k = r.kpis, list = MyInd.filterRows(r.rows, mode, win, inp.today);
+    const pl = (n, a, b) => n + ' ' + (n === 1 ? a : b);
+    const kp = '<div class="kpi-row" style="margin-bottom:12px">'
+      + kpi('Atrasadas', k.late, k.late ? 'passaram do prazo' : 'nenhuma atrasada', k.late ? 'sdot-red' : 'sdot-grn', 'atrasadas')
+      + kpi('Vencem em ' + win + (win === 1 ? ' dia' : ' dias'), k.soon, k.soon ? 'pedem atenção' : 'nada vencendo', k.soon ? 'sdot-amb' : 'sdot-grn', 'vencem')
+      + kpi('Em andamento', k.doing, k.doing > MyInd.WIP_MAX ? 'acima do ideal (' + MyInd.WIP_MAX + ')' : 'itens ao mesmo tempo', k.doing > MyInd.WIP_MAX ? 'sdot-amb' : '')
+      + kpi('Concluídas em 28 dias', k.done28, 'o que você entregou', '', 'concluidas')
+      + kpi('Velocidade', r.weekly.avg + '<span class="kpi-unit"> ' + r.weekly.unit + '/sem</span>', 'média das 4 últimas semanas')
+      + kpi('Tempo até concluir', r.lead ? r.lead.days + '<span class="kpi-unit"> dias</span>' : '—', r.lead ? 'em média, de ' + pl(r.lead.n, 'item', 'itens') : 'sem itens concluídos')
+      + kpi('Horas na semana', fmtH(r.hours.week), r.hours.pending ? fmtH(r.hours.pending) + ' aguardam aprovação' : 'apontadas por você')
+      + kpi('Impedimentos e riscos', k.impediments + ' · ' + k.risks, 'seus impedimentos · seus riscos', k.impediments ? 'sdot-amb' : '')
+      + '</div>';
+    const adv = '<div class="card"><div class="lbl"><i class="ti ti-compass"></i>Orientação para Hoje<span class="help-q" data-help="O sistema olha as suas atividades, os prazos, as horas e a sua velocidade e diz o que fazer primeiro, em ordem de importância. Cada frase explica o motivo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>'
+      + r.advice.map(a => '<div class="set-row" style="gap:10px;align-items:flex-start"><div style="display:flex;gap:8px;align-items:flex-start;flex:1;min-width:0"><span class="sdot ' + levelDot[a.level] + '" style="margin-top:5px;flex:0 0 auto"></span><span style="font-size:13px;line-height:1.5">' + esc(a.text) + '</span></div>' + goBtn(a.go) + '</div>').join('') + '</div>';
+    const filt = '<div class="rk-toolbar" style="margin-bottom:8px"><label for="mi-mode" style="font-size:12px;color:var(--t2)">Mostrar</label><select class="input" id="mi-mode" style="max-width:300px" onchange="MyIndPage.setMode(this.value)">'
+      + Object.keys(MyInd.MODES).map(m => '<option value="' + m + '"' + (m === mode ? ' selected' : '') + '>' + esc(MyInd.MODES[m]) + '</option>').join('') + '</select>'
+      + '<label for="mi-win" style="font-size:12px;color:var(--t2)">Vencimento em até</label><select class="input" id="mi-win" style="max-width:130px" aria-label="Vencem nos próximos dias" onchange="MyIndPage.setWin(this.value)">'
+      + MyInd.WINDOWS.map(w => '<option value="' + w + '"' + (w === win ? ' selected' : '') + '>' + w + ' dias</option>').join('') + '</select></div>';
+    const tbl = list.length ? '<div style="overflow-x:auto" tabindex="0" role="region" aria-label="Minhas atividades (role para os lados se precisar)"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:620px"><thead><tr style="text-align:left;color:var(--t2)"><th scope="col" style="padding:6px 8px">Atividade</th><th scope="col" style="padding:6px 8px">Situação</th><th scope="col" style="padding:6px 8px">Prazo</th><th scope="col" style="padding:6px 8px">Quando</th><th scope="col" style="padding:6px 8px">Ação</th></tr></thead><tbody>'
+      + list.map(x => '<tr style="border-top:1px solid var(--b1)"><td style="padding:6px 8px"><div style="color:var(--t1);font-weight:600;overflow-wrap:anywhere">' + (x.ref ? '<span class="chip">' + esc(x.ref) + '</span> ' : '') + esc(x.label) + '</div><div style="color:var(--t3);font-size:11px">' + esc(x.kind) + (x.bug ? ' · bug' : '') + (x.parent ? ' · ' + esc(x.parent) : '') + (x.checkTotal ? ' · tarefas ' + x.checkDone + '/' + x.checkTotal : '') + (x.points != null ? ' · ' + esc(x.points) + ' pts' : '') + '</div></td>'
+        + '<td style="padding:6px 8px">' + esc(x.status) + (x.stalled >= MyInd.STALL_DAYS ? '<div style="color:var(--amb);font-size:11px">parado há ' + x.stalled + ' dias</div>' : '') + '</td><td style="padding:6px 8px;white-space:nowrap">' + fmtD(x.due) + '</td><td style="padding:6px 8px"><span class="badge ' + badge(x) + '">' + esc(when(x)) + '</span></td><td style="padding:6px 8px;text-align:right">' + action(x) + '</td></tr>').join('')
+      + '</tbody></table></div>' : '<div class="rk-empty">' + (mode === 'atrasadas' ? 'Nenhuma atividade atrasada. Bom trabalho.' : mode === 'vencem' ? 'Nada vence nos próximos ' + win + ' dias.' : mode === 'concluidas' ? 'Você ainda não concluiu nada nos últimos 28 dias neste projeto.' : mode === 'sem_prazo' ? 'Todas as suas atividades abertas têm prazo.' : 'Você não tem atividades abertas neste projeto.') + '</div>';
+    const how = '<div style="font-size:11px;color:var(--t3);margin-top:8px;line-height:1.55"><i class="ti ti-info-circle"></i> <b>Como calculamos:</b> o prazo de um item do quadro é o fim da sprint dele; o de uma tarefa da WBS é o término do cronograma. "Parado" é o item fora de "A fazer" e de "Concluído" que não muda de coluna há ' + MyInd.STALL_DAYS + ' dias ou mais. Itens sem sprint e tarefas sem término ficam em "Sem prazo definido". Os números são do projeto aberto agora e só trazem o que é seu.</div>';
+    root.innerHTML = '<div class="set-sub" style="margin-bottom:10px"><i class="ti ti-user"></i> ' + esc(me.names[0]) + ' · ' + esc(me.roles[0] || Auth.label()) + ' · projeto <b>' + esc(proj.name || '—') + '</b></div>' + kp
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin-bottom:12px">' + adv + '<div class="card">' + bars(r.weekly) + '</div></div>'
+      + '<div class="card"><div class="lbl"><i class="ti ti-target-arrow"></i>Minhas Atividades <span class="badge">' + list.length + '</span></div>' + filt + tbl + how + '</div>' + projects();
+  }
+  // Os projetos em que a pessoa atua: abrir um deles recarrega os indicadores com os dados dele
+  function projects() {
+    const list = DB.listProjects(), act = DB.getActiveProjectId();
+    if(!list.length) return '';
+    return '<div class="card" style="margin-top:12px"><div class="lbl"><i class="ti ti-briefcase"></i>Meus Projetos <span class="badge">' + list.length + '</span><span class="help-q" data-help="Os projetos a que você tem acesso. Os indicadores acima são do projeto aberto agora; escolha outro para ver os seus números nele." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>'
+      + list.map(p => '<div class="set-row" style="gap:8px;flex-wrap:wrap"><div style="min-width:0"><div class="set-lbl" style="overflow-wrap:anywhere">' + esc(p.name) + (p.id === act ? ' <span class="badge b-grn">aberto agora</span>' : '') + '</div><div class="set-sub">' + esc(p.client || '—') + '</div></div>'
+        + (p.id === act ? '' : '<button class="btn btn-sm" onclick="MyIndPage.open(\'' + esc(p.id) + '\')"><i class="ti ti-arrow-right"></i>Ver meus indicadores aqui</button>') + '</div>').join('') + '</div>';
+  }
+  const setMode = v => { mode = MyInd.MODES[v] ? v : 'abertas'; render(); const e = document.getElementById('mi-mode'); if(e) e.focus(); };
+  const setWin = v => { win = MyInd.WINDOWS.includes(Number(v)) ? Number(v) : 7; if(mode === 'vencem' || true) render(); const e = document.getElementById('mi-win'); if(e) e.focus(); };
+  // Clicar num indicador filtra a lista pelo que ele mostra
+  function pick(m) { mode = MyInd.MODES[m] ? m : 'abertas'; render(); const e = document.getElementById('mi-mode'); if(e) e.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  function open(pid) { DB.switchProject(pid); R.go('myind'); }
+  return { render, setMode, setWin, pick, open };
 })();
 </script>
 
