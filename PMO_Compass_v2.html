@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.47.2'
+  version: '2.48.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2210,6 +2210,15 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
       <button class="btn btn-sm btn-red" id="ai-del" onclick="Agile.deleteItem()"><i class="ti ti-trash"></i>Excluir</button>
       <span style="display:flex;gap:8px"><button class="btn btn-sm" onclick="Agile.closeItem()">Cancelar</button><button class="btn btn-sm btn-acc" onclick="Agile.saveItem()"><i class="ti ti-check"></i>Salvar</button></span>
     </div>
+  </div>
+</div>
+
+<div class="modal-ov hidden" id="modal-agile-behalf" onclick="if(event.target===this)Agile.closeBehalf()">
+  <div class="modal-box" style="width:460px;max-width:96vw" role="dialog" aria-modal="true" aria-labelledby="bh-title">
+    <div class="modal-title" id="bh-title">Mover em Nome de Outra Pessoa</div>
+    <div class="modal-sub" id="bh-text"></div>
+    <div class="field-group"><div class="field-label"><label for="bh-reason">Motivo (fica no histórico do cartão)</label></div><textarea class="input" id="bh-reason" rows="3" maxlength="300" placeholder="Ex.: Profissional sem acesso à ferramenta nesta semana; atividade concluída conforme conversa de hoje." style="resize:vertical;font-family:inherit"></textarea></div>
+    <div class="btn-row" style="margin-top:14px;justify-content:flex-end"><button class="btn btn-sm" onclick="Agile.closeBehalf()">Cancelar</button><button class="btn btn-sm btn-acc" onclick="Agile.confirmBehalf()"><i class="ti ti-check"></i>Mover</button></div>
   </div>
 </div>
 
@@ -12355,7 +12364,7 @@ const BoardRules = (() => {
   const MOVE_MODES = { team: 'Todo o time move qualquer cartão do projeto', own: 'Cada pessoa move só os cartões em que é a responsável', managers: 'Só a gestão move os cartões' };
   function normPolicy(raw) {
     const cols = v => [...new Set((Array.isArray(v) ? v : []).map(x => clean(x, 30)).filter(Boolean))].slice(0, 10);
-    return { move: MOVE_MODES[raw && raw.move] ? raw.move : 'team', lockedCols: cols(raw && raw.lockedCols), noteCols: cols(raw && raw.noteCols) };
+    return { move: MOVE_MODES[raw && raw.move] ? raw.move : 'team', lockedCols: cols(raw && raw.lockedCols), noteCols: cols(raw && raw.noteCols), behalfNote: !(raw && raw.behalfNote === false) };
   }
   // ctx: { manager (gere o backlog), member (atualiza as próprias atividades), mine (o cartão é dele), to (coluna), label }
   function canMove(p, ctx) {
@@ -12537,10 +12546,31 @@ const Agile = (() => {
     const n = document.getElementById('ai-note'); if(n) n.focus();
     return true;
   }
+  // Caso excepcional: a gestão move o cartão de outra pessoa (ex.: quem está sem acesso à ferramenta) e informa o motivo, que fica no histórico do cartão
+  let behalfCtx = null;
+  const needBehalf = it => Auth.can('manage_backlog') && policy().behalfNote && String(it.assignee || '').trim() && !(typeof MyWork !== 'undefined' && MyWork.isMine(it.assignee));
+  function openBehalf(it, to) {
+    behalfCtx = { id: it.id, to };
+    document.getElementById('bh-text').textContent = it.id + ' é de ' + it.assignee + '. Você vai movê-lo de "' + AgileCalc.colLabel(cfg, it.status) + '" para "' + AgileCalc.colLabel(cfg, to) + '" em nome dessa pessoa.';
+    document.getElementById('bh-reason').value = '';
+    document.getElementById('modal-agile-behalf').classList.remove('hidden');
+    document.getElementById('bh-reason').focus();
+  }
+  function closeBehalf() { behalfCtx = null; document.getElementById('modal-agile-behalf').classList.add('hidden'); }
+  function confirmBehalf() {
+    if(!behalfCtx) return;
+    const reason = document.getElementById('bh-reason').value.trim();
+    if(reason.length < 5) { T.show('⚠️ Informe o motivo (mínimo 5 letras).'); document.getElementById('bh-reason').focus(); return; }
+    load(); const it = items.find(x => x.id === behalfCtx.id), to = behalfCtx.to; if(!it) { closeBehalf(); return; }
+    if(!Array.isArray(it.history)) it.history = [];
+    it.history.push({ at: new Date().toISOString(), by: Auth.getName() || 'Gestão', field: '', from: '', to: 'Movido pela gestão em nome de ' + it.assignee + ' — motivo: ' + reason.slice(0, 300) });
+    closeBehalf(); setStatus(it, to); renderAll();
+  }
   function move(id, dir) {
     load(); const it = items.find(x => x.id === id); if(!it) return;
     const to = AgileCalc.neighbor(it.status, dir, cfg); if(!to) return;
     if(!canTouch(it, to) || askNote(it, to)) return;
+    if(needBehalf(it)) { openBehalf(it, to); return; }
     setStatus(it, to); renderAll();
     const b = document.querySelector(`.kb-card[data-id="${CSS.escape(id)}"]`); if(b) b.focus();
   }
@@ -12550,6 +12580,7 @@ const Agile = (() => {
     e.preventDefault(); e.currentTarget.classList.remove('drop');
     load(); const it = items.find(x => x.id === dragId); dragId = null; if(!it || it.status === status) return;
     if(!canTouch(it, status) || askNote(it, status)) return;
+    if(needBehalf(it)) { openBehalf(it, status); return; }
     setStatus(it, status); renderAll();
   }
   function setBoardSprint(v) { boardSprint = v; renderKanban(); }
@@ -12595,8 +12626,11 @@ const Agile = (() => {
     sel.innerHTML = Object.keys(BoardRules.MOVE_MODES).map(k => '<option value="' + k + '"' + (p.move === k ? ' selected' : '') + '>' + esc(BoardRules.MOVE_MODES[k]) + '</option>').join('');
     box.innerHTML = d.columns.map((c, i) => '<div class="ag-row"><b style="flex:1 1 120px;min-width:100px">' + esc(c.label) + '</b>'
       + '<label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" ' + (p.lockedCols.includes(c.key) ? 'checked' : '') + ' aria-label="Só a gestão move para ' + esc(c.label) + '" onchange="Agile.setPolicyCol(\'lockedCols\', ' + i + ', this.checked)"> Só a gestão move para cá</label>'
-      + '<label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" ' + (p.noteCols.includes(c.key) ? 'checked' : '') + ' aria-label="Exigir comentário ao entrar em ' + esc(c.label) + '" onchange="Agile.setPolicyCol(\'noteCols\', ' + i + ', this.checked)"> Exige comentário</label></div>').join('');
+      + '<label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" ' + (p.noteCols.includes(c.key) ? 'checked' : '') + ' aria-label="Exigir comentário ao entrar em ' + esc(c.label) + '" onchange="Agile.setPolicyCol(\'noteCols\', ' + i + ', this.checked)"> Exige comentário</label></div>').join('')
+      + '<label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer;margin-top:8px"><input type="checkbox" ' + (p.behalfNote ? 'checked' : '') + ' onchange="Agile.setPolicyBehalf(this.checked)"> Quando a gestão move o cartão de outra pessoa, pedir o motivo (fica no histórico)</label>'
+      + '<div class="set-sub">Gerente, Scrum Master, PO e administrador sempre podem mover qualquer cartão, em qualquer modo: serve para os casos excepcionais, como a pessoa estar sem acesso à ferramenta.</div>';
   }
+  const setPolicyBehalf = on => { boardDraft.policy.behalfNote = !!on; };
   const setPolicyMove = v => { boardDraft.policy.move = BoardRules.MOVE_MODES[v] ? v : 'team'; };
   function setPolicyCol(field, i, on) {
     const arr = boardDraft.policy[field], k = boardDraft.columns[i].key, at = arr.indexOf(k);
@@ -12650,7 +12684,7 @@ const Agile = (() => {
     const lanes = { lanes: AgileCalc.normLanes({ lanes: d.lanes }) };
     DB.set('boardLanes', lanes);
     if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'boardLanes', lanes);
-    const keys = d.columns.map(c => c.key), pol = BoardRules.normPolicy({ move: d.policy.move, lockedCols: d.policy.lockedCols.filter(k => keys.includes(k)), noteCols: d.policy.noteCols.filter(k => keys.includes(k)) });
+    const keys = d.columns.map(c => c.key), pol = BoardRules.normPolicy({ move: d.policy.move, lockedCols: d.policy.lockedCols.filter(k => keys.includes(k)), noteCols: d.policy.noteCols.filter(k => keys.includes(k)), behalfNote: d.policy.behalfNote });
     DB.set('teamPolicy', pol);
     if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'teamPolicy', pol);
     closeBoardCfg(); renderAll(); T.show('✅ Quadro personalizado.');
@@ -13419,7 +13453,7 @@ const Agile = (() => {
   return { histFilter, render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, rank, setSprintOf, setBacklogQuery, setShowDone,
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, checkDates, openRules, closeRules, editRule, ruleField, ruleAct, ruleAddAct, ruleDelAct, ruleCancel, ruleSave, toggleRule, deleteRule, renderDue, openDue, closeDue, dueChoose, runDue, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
-    aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, setPolicyMove, setPolicyCol, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
+    aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, setPolicyMove, setPolicyCol, setPolicyBehalf, openBehalf, closeBehalf, confirmBehalf, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
     cfgNow: () => { load(); return cfg; }, kindChanged, kindPicked, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
 })();
 </script>

@@ -32,6 +32,11 @@ test('a gestão nunca é limitada; perfil sem a permissão não move', () => {
   assert.equal(BoardRules.canMove(P({ move: 'managers', lockedCols: ['done'] }), ctx({ manager: true, to: 'done' })).ok, true);
   assert.equal(BoardRules.canMove(P(null), ctx({ member: false })).ok, false);
 });
+test('a gestão move o cartão de outra pessoa informando o motivo (caso excepcional); dá para desligar', () => {
+  assert.equal(P(null).behalfNote, true);
+  assert.equal(P({ behalfNote: false }).behalfNote, false);
+  for (const k of ['function confirmBehalf', 'id="modal-agile-behalf"', 'Movido pela gestão em nome de', 'Agile.setPolicyBehalf(']) assert.ok(html.includes(k), k);
+});
 test('a tela: sem permissão não há clique, arrasto nem seta; o time abre o cartão em modo atividade', () => {
   for (const k of ["const act = Auth.can('update_own')", 'canTouch(i, prev, true)', 'function applyItemMode', 'async function saveWork', 'id="ai-note"', 'id="ai-evid"', 'id="ab-move"', "'teamPolicy', pol", "DB.get('teamPolicy')", 'Autonomia do time']) assert.ok(html.includes(k), k);
   assert.ok(html.includes('max-height:92vh;overflow-y:auto" role="dialog" aria-modal="true" aria-labelledby="ai-title-h"'), 'a janela do cartão rola');
