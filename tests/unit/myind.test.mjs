@@ -86,10 +86,11 @@ test('orientação: itens demais em andamento, impedimento meu, horas esquecidas
   assert.match(t, /4 itens em andamento/); assert.match(t, /1 impedimento aberto/); assert.match(t, /1 tarefa pendente/); assert.match(t, /não apontou horas/);
   assert.equal(r.kpis.doing, 4); assert.equal(r.kpis.impediments, 1);
 });
-test('a tela: menu dentro de Indicadores, rota e módulos', () => {
+test('a tela: menu em Meu Dia, rota e módulos', () => {
   for (const k of ['data-p="myind"', 'id="p-myind"', 'id="mi-root"', "id === 'myind'", "myind:'Meus Indicadores'", 'MyIndPage.setMode(', 'names: myNames']) assert.ok(html.includes(k), k);
-  const i = html.indexOf('id="sbg-indicadores"');
-  assert.ok(html.slice(i, i + 900).includes('data-p="myind"'));
+  // Meus Indicadores mora em "Meu Dia" (topo do menu), antes dos painéis de Visão Geral
+  const i = html.indexOf('>Meu Dia</div>'), j = html.indexOf('id="sbg-visao"');
+  assert.ok(i > 0 && j > i && html.slice(i, j).includes('data-p="myind"') && html.slice(i, j).includes('data-p="mywork"'));
 });
 
 test('total entre projetos: a função do banco e a tela (só o próprio usuário; anônimo barrado)', () => {
@@ -115,4 +116,11 @@ test('botões que levam ao registro: alertas do Dashboard e atividades da WBS ab
 test('janela aberta não fecha ao soltar o mouse fora dela (clique só fecha se começou e terminou no fundo)', () => {
   assert.ok(html.includes('data-module="ui/modal-safe-close"'));
   assert.ok(html.includes("downOn !== t) { e.stopImmediatePropagation()"));
+});
+
+test('menu em três níveis: Meu Dia, Visão Geral, Este Projeto com itens do dia a dia e "Mais Telas"', () => {
+  for (const k of ['id="sbg-visao"', 'id="sb-more-btn"', 'Nav.toggleMore()', 'const FLAT = ', '.sb-proj-area:not(.more) .sb-more-group{display:none}']) assert.ok(html.includes(k), k);
+  const a = html.indexOf('id="sb-more-btn"');
+  for (const p of ['dashboard', 'kanban', 'backlog', 'wbs', 'risks', 'decisions', 'resources']) assert.ok(html.indexOf('data-p="' + p + '"', html.indexOf('id="sb-proj-area"')) < a, p + ' fica à vista, antes de Mais Telas');
+  for (const g of ['sbg-agil', 'sbg-planejamento', 'sbg-decisao', 'sbg-equipe', 'sbg-conhecimento']) assert.ok(html.includes('class="sb-group sb-more-group" id="' + g + '"'), g);
 });

@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.59.0'
+  version: '2.60.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -208,6 +208,11 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .no-link{pointer-events:none;color:inherit!important;text-decoration:none!important;cursor:default}
 body.no-project .sb-proj-area{display:none}
 body.is-board .sb-proj-area{display:none}
+/* telas menos usadas do projeto ficam recolhidas em "Mais Telas" (abrem sozinhas se a tela aberta é uma delas) */
+.sb-proj-area:not(.more) .sb-more-group{display:none}
+.sb-more-btn{color:var(--t2)}
+.sb-more-chev{margin-left:auto;font-size:12px;transition:transform .16s ease}
+.sb-proj-area.more .sb-more-chev{transform:rotate(180deg)}
 .sb-board-menu{display:none;margin-left:8px;border-left:2px solid color-mix(in srgb,var(--acc) 45%,transparent)}
 body.is-board .sb-board-menu{display:block}
 .preview-bar{display:flex;background:var(--amd);color:var(--t1);border-bottom:1px solid var(--ambb);padding:6px 14px;font-size:12.5px;align-items:center;gap:10px;flex-wrap:wrap}.preview-bar[hidden]{display:none}
@@ -971,16 +976,23 @@ body.icons-failed i[data-fb]::before{
 <div class="sb-backdrop" onclick="Nav.closeDrawer()"></div>
 <!-- ■ MODULE: ui/sidebar -->
 <aside class="sidebar" id="sidebar" data-module="ui/sidebar">
-  <div class="sb-sec">Painéis</div>
-  <button class="sb-xray-btn" data-p="xray" onclick="R.go('xray')"><i class="ti ti-report-medical"></i>Raio-X do Projeto</button>
-  <button class="sb-board-btn" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button>
-  <button class="sb-exec-btn" data-p="execview" onclick="R.go('execview')"><i class="ti ti-chart-infographic"></i>Visão Executiva</button>
-  <button class="sb-pmo-btn" data-p="pmoview" onclick="R.go('pmoview')"><i class="ti ti-binoculars"></i>Visão do PMO</button>
+  <div class="sb-sec" title="O que vale para você em qualquer projeto">Meu Dia</div>
+  <button class="si" data-p="mywork" onclick="R.go('mywork')" title="O que está com você neste projeto: itens, tarefas e horas"><i class="ti ti-user-check"></i>Meu Trabalho</button>
+  <button class="si" data-p="myind" onclick="R.go('myind')" title="Os seus números: atrasos, vencimentos, velocidade, horas e orientação do dia"><i class="ti ti-chart-dots"></i>Meus Indicadores</button>
+
+  <div class="sb-group" id="sbg-visao">
+    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-visao')" title="Painéis que juntam todos os projetos"><i class="ti ti-layout-grid sb-gico"></i>Visão Geral<i class="ti ti-chevron-right sb-gchev"></i></button>
+    <div class="sb-group-body">
+      <button class="si" data-p="xray" onclick="R.go('xray')"><i class="ti ti-report-medical"></i>Raio-X do Projeto</button>
+      <button class="si" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button>
+      <button class="si" data-p="execview" onclick="R.go('execview')"><i class="ti ti-chart-infographic"></i>Visão Executiva</button>
+      <button class="si" data-p="pmoview" onclick="R.go('pmoview')"><i class="ti ti-binoculars"></i>Visão do PMO</button>
+    </div>
+  </div>
 
   <div class="sb-group" id="sbg-indicadores">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-indicadores')"><i class="ti ti-chart-donut-3 sb-gico"></i>Indicadores<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
-      <button class="si" data-p="myind" onclick="R.go('myind')" title="Os seus números: atrasos, vencimentos, velocidade, horas e orientação do dia"><i class="ti ti-chart-dots"></i>Meus Indicadores</button>
       <button class="si" data-p="pfkpi" onclick="R.go('pfkpi')"><i class="ti ti-chart-donut-3"></i>Indicadores</button>
       <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
       <button class="si" data-p="prioritization" onclick="R.go('prioritization')"><i class="ti ti-sort-descending-2"></i>Priorização</button>
@@ -993,11 +1005,7 @@ body.icons-failed i[data-fb]::before{
     <div class="sb-group-body">
       <div id="sb-boards-root"></div>
       <div class="sb-board-menu" id="sb-board-menu">
-        <button class="si" data-p="kanban" onclick="R.go('kanban')"><i class="ti ti-layout-kanban"></i>Quadro Kanban</button>
-        <button class="si" data-p="backlog" onclick="R.go('backlog')"><i class="ti ti-list-details"></i>Backlog</button>
-        <button class="si" data-p="mywork" onclick="R.go('mywork')"><i class="ti ti-user-check"></i>Meu Trabalho</button>
         <button class="si" data-p="repository" onclick="R.go('repository')"><i class="ti ti-folder"></i>Arquivos</button>
-        <button class="si" data-p="resources" onclick="R.go('resources')"><i class="ti ti-users"></i>Colaboradores</button>
       </div>
       <button class="si" data-perm="business" onclick="Wizard.open('quadro')" title="Cria um quadro de tarefas que não depende de projeto"><i class="ti ti-plus"></i>Novo Quadro</button>
     </div>
@@ -1019,9 +1027,15 @@ body.icons-failed i[data-fb]::before{
 
   <div class="sb-sec" id="sb-art-title" title="Tudo abaixo vale para o projeto escolhido acima">Artefatos do Projeto<b class="sb-art-name"><span id="sb-art-name"></span> <span class="sb-art-meth" id="sb-art-meth"></span></b></div>
   <button class="si on" data-p="dashboard" onclick="R.go('dashboard')" title="Visão geral do projeto escolhido: prazo ou ritmo, custo, equipe, riscos e alertas"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
-  <button class="si" data-p="mywork" onclick="R.go('mywork')" title="O que está com você neste projeto: itens, tarefas e horas"><i class="ti ti-user-check"></i>Meu Trabalho</button>
+  <button class="si" data-p="kanban" onclick="R.go('kanban')"><i class="ti ti-layout-kanban"></i>Quadro Kanban</button>
+  <button class="si" data-p="backlog" onclick="R.go('backlog')"><i class="ti ti-list-details"></i>Backlog</button>
+  <button class="si" data-p="wbs" onclick="R.go('wbs')"><i class="ti ti-sitemap"></i>WBS</button>
+  <button class="si" data-p="risks" onclick="R.go('risks')"><i class="ti ti-shield-exclamation"></i>Riscos</button>
+  <button class="si" data-p="decisions" onclick="R.go('decisions')"><i class="ti ti-brain"></i>Decisões IA<span class="sb-b" id="sb-decisions-count">4</span></button>
+  <button class="si" data-p="resources" onclick="R.go('resources')"><i class="ti ti-users"></i>Colaboradores</button>
+  <button class="si sb-more-btn" id="sb-more-btn" aria-expanded="false" aria-controls="sb-proj-area" title="Mostra ou esconde as demais telas do projeto (planejamento, equipe, conhecimento...)" onclick="Nav.toggleMore()"><i class="ti ti-dots"></i><span>Mais Telas</span><i class="ti ti-chevron-down sb-more-chev" aria-hidden="true"></i></button>
 
-  <div class="sb-group" id="sbg-agil">
+  <div class="sb-group sb-more-group" id="sbg-agil">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-agil')"><i class="ti ti-layout-kanban sb-gico"></i>Execução Ágil<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
             <button class="si" data-p="sprintnow" onclick="R.go('sprintnow')"><i class="ti ti-rocket"></i>Sprint Atual</button>
@@ -1032,30 +1046,27 @@ body.icons-failed i[data-fb]::before{
     </div>
   </div>
 
-  <div class="sb-group" id="sbg-planejamento">
+  <div class="sb-group sb-more-group" id="sbg-planejamento">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-planejamento')"><i class="ti ti-sitemap sb-gico"></i>Planejamento<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
-      <button class="si" data-p="wbs" onclick="R.go('wbs')"><i class="ti ti-sitemap"></i>WBS</button>
       <button class="si" data-p="baseline" onclick="R.go('baseline')"><i class="ti ti-camera"></i>Linha de Base</button>
       <button class="si" data-perm="view_costs" data-p="budget" onclick="R.go('budget')"><i class="ti ti-wallet"></i>Orçamento e Custos</button>
-      <button class="si" data-p="risks" onclick="R.go('risks')"><i class="ti ti-shield-exclamation"></i>Riscos</button>
       <button class="si" data-p="scope" onclick="R.go('scope')"><i class="ti ti-git-diff"></i>Scope Changes</button>
       <button class="si" data-p="estimates" onclick="R.go('estimates')"><i class="ti ti-ruler"></i>Estimativas IA</button>
       <button class="si" data-p="whatif" onclick="R.go('whatif')"><i class="ti ti-arrows-split"></i>What-If</button>
     </div>
   </div>
 
-  <div class="sb-group" id="sbg-decisao">
+  <div class="sb-group sb-more-group" id="sbg-decisao">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-decisao')"><i class="ti ti-brain sb-gico"></i>Decisões<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
-      <button class="si" data-p="decisions" onclick="R.go('decisions')"><i class="ti ti-brain"></i>Decisões IA<span class="sb-b" id="sb-decisions-count">4</span></button>
       <button class="si" data-p="loop" onclick="R.go('loop')"><i class="ti ti-refresh-alert"></i>Loop de Ação</button>
       <button class="si" data-p="trail" onclick="R.go('trail')"><i class="ti ti-git-branch"></i>Trilha</button>
       <button class="si" data-p="statusmsg" onclick="R.go('statusmsg')"><i class="ti ti-brand-whatsapp"></i>Mensagem de Status</button>
     </div>
   </div>
 
-  <div class="sb-group" id="sbg-equipe">
+  <div class="sb-group sb-more-group" id="sbg-equipe">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-equipe')"><i class="ti ti-users-group sb-gico"></i>Equipe<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
       <button class="si" data-p="burnout" onclick="R.go('burnout')"><i class="ti ti-heartbeat"></i>Burnout Radar</button>
@@ -1066,7 +1077,7 @@ body.icons-failed i[data-fb]::before{
     </div>
   </div>
 
-  <div class="sb-group" id="sbg-conhecimento">
+  <div class="sb-group sb-more-group" id="sbg-conhecimento">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-conhecimento')"><i class="ti ti-books sb-gico"></i>Conhecimento<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
       <button class="si" data-p="lessons" onclick="R.go('lessons')"><i class="ti ti-books"></i>Lições Aprendidas</button>
@@ -7775,8 +7786,11 @@ const Nav = (() => {
     wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento', risks:'sbg-planejamento', baseline:'sbg-planejamento',
     burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe', hours:'sbg-equipe', raci:'sbg-equipe',
     lessons:'sbg-conhecimento', meetings:'sbg-conhecimento', repository:'sbg-conhecimento', chat:'sbg-conhecimento',
+    xray:'sbg-visao', board:'sbg-visao', execview:'sbg-visao', pmoview:'sbg-visao'
     // projetos: a lista de projetos do menu (sem página própria)
   };
+  // Itens do dia a dia que ficam soltos no menu do projeto (não abrem grupo nem a área "Mais Telas")
+  const FLAT = ['kanban', 'backlog', 'wbs', 'risks', 'decisions', 'resources'];
 
   // Comportamento sanfona: só um menu fica aberto por vez — todo menu sem
   // subopção selecionada permanece fechado para não poluir a visão do app.
@@ -7802,12 +7816,20 @@ const Nav = (() => {
   function revealArea(pageId) { const btn = document.querySelector('.sb-proj-area .si[data-p="' + pageId + '"]'); if(btn) setArea(true, false); }
   function initArea() { let v = null; try { v = localStorage.getItem(AREA_KEY); } catch(e){} setArea(v !== 'closed', false); }
   function expandGroupFor(pageId) {
-    const groupId = GROUP_OF[pageId];
+    const groupId = FLAT.includes(pageId) ? '' : GROUP_OF[pageId];
+    const tg = groupId && document.getElementById(groupId), area = document.getElementById('sb-proj-area');
+    if(tg && tg.classList.contains('sb-more-group') && area) { area.classList.add('more'); const mb = document.getElementById('sb-more-btn'); if(mb) mb.setAttribute('aria-expanded', 'true'); }
     document.querySelectorAll('.sb-group').forEach(g => {
       const isTarget = g.id === groupId;
       g.classList.toggle('has-active', isTarget);
       g.classList.toggle('open', isTarget);
     });
+  }
+
+  function toggleMore() {
+    const area = document.getElementById('sb-proj-area'); if(!area) return;
+    const on = area.classList.toggle('more');
+    const mb = document.getElementById('sb-more-btn'); if(mb) mb.setAttribute('aria-expanded', on ? 'true' : 'false');
   }
 
   // Todos os grupos começam fechados a cada novo login/sessão (sem lembrar estado anterior)
@@ -7881,7 +7903,7 @@ const Nav = (() => {
   });
 
   const GROUP_LABEL = {
-    sbg_indicadores: 'Indicadores', sbg_sistema: 'Sistema',
+    sbg_indicadores: 'Indicadores', sbg_visao: 'Visão Geral', sbg_sistema: 'Sistema',
     sbg_decisao: 'Decisões', sbg_agil: 'Execução ágil', sbg_planejamento: 'Planejamento',
     sbg_equipe: 'Equipe', sbg_conhecimento: 'Conhecimento', sbg_projetos: 'Projetos'
   };
@@ -7924,7 +7946,7 @@ const Nav = (() => {
   const closeDrawer = () => setDrawer(false);
   document.addEventListener('keydown', e => { if(e.key === 'Escape' && document.body.classList.contains('sb-open')) { closeDrawer(); const b = document.getElementById('tb-burger'); if(b) b.focus(); } });
 
-  return { toggleGroup, toggleArea, revealArea, initArea, expandGroupFor, collapseAll, renderProjects, toggleProjDropdown, closeProjDropdown, renderBreadcrumb, toggleDrawer, closeDrawer };
+  return { toggleGroup, toggleMore, toggleArea, revealArea, initArea, expandGroupFor, collapseAll, renderProjects, toggleProjDropdown, closeProjDropdown, renderBreadcrumb, toggleDrawer, closeDrawer };
 })();
 
 const SettingsTabs = (() => {

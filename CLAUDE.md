@@ -28,6 +28,11 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - Tecnicamente é um projeto do tipo `quadro` (`projects.methodology = 'quadro'`, migração `20261104200000`): reaproveita permissões, equipe, autonomia do time e limpezas. Fica fora de `Methodology.ORDER` (comparações) e o menu mostra só Quadro Kanban, Backlog, Meu Trabalho, Arquivos e Colaboradores (`Methodology.BOARD_OK`); nasce em modo Kanban (sem sprints).
 - A lista "Selecione o Projeto" não mostra quadros; "Quadros" não mostra projetos.
 
+## Menu em três níveis (pedido do dono, 04/11/2026)
+- Topo: "Meu Dia" (Meu Trabalho, Meus Indicadores); "Visão Geral" (grupo com Raio-X, Painel da Diretoria, Visão Executiva, Visão do PMO); "Indicadores"; "Quadros / Kanban"; "Gestão do Projeto"; "Sistema".
+- Um só seletor de projeto e de quadro: o chip do topo (com Novo Projeto, Novo Quadro e Mudar Metodologia). O seletor do menu lateral está oculto.
+- Em "Artefatos do Projeto" ficam à vista só os itens do dia a dia (`FLAT`: Dashboard, Quadro Kanban, Backlog, WBS, Riscos, Decisões, Colaboradores — a metodologia esconde o que não vale); o resto está em "Mais Telas" (`.sb-more-group`), que abre sozinho se a tela aberta é uma delas. Tela nova do projeto: decidir se é do dia a dia (solta) ou "Mais Telas".
+
 ## Entrega
 - Versão em 4 lugares: `version.json`, `BRAND.version` (PMO_Compass_v2.html), `package.json`, `sw.js` (`CACHE_NAME`).
 - Testes: `node tests/run.js` e `npm run test:unit` (inclui `datamap`), `npm run test:smoke`; migrações: `node scripts/db-apply.mjs --dry-run` antes de aplicar, depois `node scripts/build-schema.mjs`.
