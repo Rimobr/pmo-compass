@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.56.3'
+  version: '2.57.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -269,6 +269,10 @@ body.no-login #login-gate{display:flex}
 .sidebar{width:var(--sbw,192px);flex-shrink:0;background:var(--s1);border-right:1px solid var(--b1);padding:12px 8px;display:flex;flex-direction:column;gap:1px;overflow-y:auto}
 .sb-sec{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);padding:8px 10px 4px;margin-top:6px}
 .sb-sec:first-child{margin-top:0}
+.sb-sec.sb-sub{padding:8px 10px 2px;margin-top:2px;text-transform:none;letter-spacing:.02em;font-size:11px}
+/* uma linha separa cada item do menu (leitura mais fácil) */
+.sidebar .si,.sidebar .sb-group-hdr{border-bottom:1px solid var(--b1);border-radius:0}
+.sidebar .sb-group-body .si:last-child{border-bottom:none}
 .si{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:var(--r6);font-size:12.5px;color:var(--t2);cursor:pointer;border:none;background:transparent;width:100%;text-align:left}
 .si i{font-size:14px;flex-shrink:0}
 .si.on{background:var(--s3);color:var(--t1);font-weight:600;box-shadow:inset 2px 0 0 var(--acc)}
@@ -980,7 +984,9 @@ body.icons-failed i[data-fb]::before{
   <div class="sb-group" id="sbg-projetos">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-projetos')"><i class="ti ti-layout-grid sb-gico"></i><span class="sb-hdr-txt"><small class="sb-hdr-kicker">Projeto · <span id="sb-method-tag">Híbrido</span></small><b id="sb-proj-name">—</b></span><i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body" id="sbg-projetos-list">
+      <div class="sb-sec sb-sub">Selecione o Projeto</div>
       <div id="sb-projects-root"></div>
+      <div class="sb-sec sb-sub">Metodologias Disponíveis</div>
       <div id="sb-method-legend"></div>
       <button class="si" data-perm="business" onclick="R.go('settings');SettingsTabs.show('pmo')" title="Muda quais telas aparecem para este projeto (Ágil, Cascata ou Híbrido)"><i class="ti ti-route"></i>Mudar Metodologia do Projeto</button>
       <button class="si" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo Projeto</button>
@@ -989,7 +995,7 @@ body.icons-failed i[data-fb]::before{
 
   <button class="si on" data-p="dashboard" onclick="R.go('dashboard')" title="Visão geral do projeto escolhido: prazo ou ritmo, custo, equipe, riscos e alertas"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
   <button class="si" data-p="mywork" onclick="R.go('mywork')" title="O que está com você neste projeto: itens, tarefas e horas"><i class="ti ti-user-check"></i>Meu Trabalho</button>
-  <div class="sb-sec" title="As ações abaixo valem para o projeto escolhido acima">Ações do projeto</div>
+  <div class="sb-sec" title="Tudo abaixo vale para o projeto escolhido acima">Artefatos do Projeto</div>
 
   <div class="sb-group" id="sbg-agil">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-agil')"><i class="ti ti-layout-kanban sb-gico"></i>Execução Ágil<i class="ti ti-chevron-right sb-gchev"></i></button>
@@ -7804,7 +7810,7 @@ const Nav = (() => {
     const tag = document.getElementById('proj-name');
     const active = projects.find(x=>x.id===activeId);
     if(tag) tag.textContent = active ? active.name : 'Nenhum projeto';
-    // O menu mostra QUAL projeto está escolhido: as "Ações do projeto" valem para ele
+    // O menu mostra QUAL projeto está escolhido: as "Artefatos do Projeto" valem para ele
     const nm = document.getElementById('sb-proj-name'), cx = document.getElementById('sb-ctx-name');
     if(active) { if(nm) nm.textContent = active.name; if(cx) cx.textContent = active.name; }
     renderProjDropdown();
@@ -8067,6 +8073,20 @@ const Onboarding = (() => {
     }, n ? 1200 : 600);
   }
   return { maybeShow, show, dismiss, markSeen, willShow: shouldShow, refresh: () => { try { render(); } catch(e) {} } };
+})();
+</script>
+
+<!-- ■ MODULE: ui/modal-safe-close ─ Janela aberta não fecha sozinha: só o clique que COMEÇA e TERMINA no fundo escuro fecha (arrastar para selecionar texto e soltar fora não fecha) -->
+<script data-module="ui/modal-safe-close">
+const ModalSafeClose = (() => {
+  let downOn = null;
+  // fase de captura: roda antes do onclick do fundo de cada janela
+  document.addEventListener('mousedown', e => { downOn = e.target; }, true);
+  document.addEventListener('click', e => {
+    const t = e.target;
+    if (t && t.classList && t.classList.contains('modal-ov') && downOn !== t) { e.stopImmediatePropagation(); e.preventDefault(); }
+  }, true);
+  return { _lastDown: () => downOn };
 })();
 </script>
 

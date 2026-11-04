@@ -111,3 +111,8 @@ test('botões que levam ao registro: alertas do Dashboard e atividades da WBS ab
   const rs = MyInd.rows(inp({ wbs }));
   assert.deepEqual(rs.map(x => x.wbs), [{ id: 'w1', parent: '' }, { id: 't1', parent: 'w1' }]);
 });
+
+test('janela aberta não fecha ao soltar o mouse fora dela (clique só fecha se começou e terminou no fundo)', () => {
+  assert.ok(html.includes('data-module="ui/modal-safe-close"'));
+  assert.ok(html.includes("downOn !== t) { e.stopImmediatePropagation()"));
+});
