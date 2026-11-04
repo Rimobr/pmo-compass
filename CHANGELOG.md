@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.55.0 — 2026-11-04
+- Metodologia monta o menu: WBS sai do projeto agil (aparece sozinha se ja houver entregas cadastradas); primeiros passos do projeto agil falam de Backlog
+
 ## 2.54.1 — 2026-11-03
 - Modelos de documentos: Criar com Rascunho da IA e Rascunho com a IA em cada documento; a IA recebe so fatos do projeto (sem dinheiro), a pessoa revê antes de adicionar; responsavel so de quem esta na equipe; nada vem como feito
 

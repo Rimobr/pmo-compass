@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.55.0'
+  version: '2.56.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1874,9 +1874,9 @@ body.icons-failed i[data-fb]::before{
 
   <div class="g4">
     <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="bud-kpi-consumo-dot"></span>Consumo</div><div class="kpi-val" id="bud-kpi-consumo">—</div><div class="kpi-delta" id="bud-kpi-consumo-sub"></div></div>
-    <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="bud-kpi-cpi-dot"></span>CPI<span class="help-q" data-help="Índice de Desempenho de Custo. Compara o valor do trabalho já entregue com o quanto foi gasto pra entregar. Acima de 1,0 = gastando menos do que o planejado; abaixo de 1,0 = gastando mais." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="kpi-val" id="bud-kpi-cpi">—</div><div class="kpi-delta" id="bud-kpi-cpi-sub"></div></div>
+    <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="bud-kpi-cpi-dot"></span><span id="bud-cpi-lbl">CPI</span><span id="bud-cpi-help" class="help-q" data-help="Índice de Desempenho de Custo. Compara o valor do trabalho já entregue com o quanto foi gasto pra entregar. Acima de 1,0 = gastando menos do que o planejado; abaixo de 1,0 = gastando mais." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="kpi-val" id="bud-kpi-cpi">—</div><div class="kpi-delta" id="bud-kpi-cpi-sub"></div></div>
     <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="bud-kpi-reserva-dot"></span>Reserva<span class="help-q" data-help="Valor separado pra cobrir riscos já conhecidos do projeto, fora do orçamento normal — um 'colchão' pra imprevistos que já foram identificados." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="kpi-val" style="font-size:17px" id="bud-kpi-reserva">—</div><div class="kpi-delta" id="bud-kpi-reserva-sub"></div></div>
-    <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="bud-kpi-eac-dot"></span>EAC<span class="help-q" data-help="Estimativa no Término — previsão de quanto o projeto vai custar no final, se o ritmo de gasto de agora continuar do jeito que está." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="kpi-val" style="font-size:17px" id="bud-kpi-eac">—</div><div class="kpi-delta" id="bud-kpi-eac-sub"></div></div>
+    <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="bud-kpi-eac-dot"></span><span id="bud-eac-lbl">EAC</span><span id="bud-eac-help" class="help-q" data-help="Estimativa no Término — previsão de quanto o projeto vai custar no final, se o ritmo de gasto de agora continuar do jeito que está." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="kpi-val" style="font-size:17px" id="bud-kpi-eac">—</div><div class="kpi-delta" id="bud-kpi-eac-sub"></div></div>
   </div>
   <div id="bud-note-root" style="font-size:11.5px;color:var(--t3);margin:8px 0 14px"></div>
 
@@ -14327,6 +14327,35 @@ const Rites = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: services/agile-cost ─ Custo no projeto ágil: o valor entregue vem dos pontos concluídos do backlog (não da WBS) — regras puras, sem DOM -->
+<script data-module="services/agile-cost">
+const AgileCost = (() => {
+  const num = v => Number(v) || 0;
+  // Avanço do escopo: pontos concluídos ÷ pontos de todos os itens; se nenhum item tem ponto, conta itens
+  function progress(items) {
+    const list = Array.isArray(items) ? items : [], usePts = list.some(i => num(i.points) > 0);
+    const val = i => usePts ? num(i.points) : 1;
+    const total = list.reduce((s, i) => s + val(i), 0), done = list.filter(i => i.status === 'done').reduce((s, i) => s + val(i), 0);
+    return { unit: usePts ? 'pts' : 'itens', total, done, remaining: total - done, pct: total > 0 ? Math.round(done / total * 100) : null };
+  }
+  // inp: { bac, ac, items, sprints, velAvg }. Nada é inventado: sem pontos concluídos ou sem gasto, o indicador fica nulo ("sem dado")
+  function compute(inp) {
+    const bac = num(inp.bac), ac = num(inp.ac), p = progress(inp.items);
+    const costPerUnit = p.done > 0 && ac > 0 ? ac / p.done : null;
+    const plannedPerUnit = p.total > 0 && bac > 0 ? bac / p.total : null;
+    const ratio = costPerUnit != null && plannedPerUnit != null ? costPerUnit / plannedPerUnit : null; // 1,0 = gastando o previsto por unidade; acima = mais caro
+    const level = ratio == null ? 'sem_dado' : ratio <= 1 ? 'ok' : ratio <= 1.15 ? 'atencao' : 'critico';
+    const eac = costPerUnit != null ? ac + p.remaining * costPerUnit : null;
+    const used = (inp.sprints || []).filter(s => s.state === 'ativa' || s.state === 'encerrada').length;
+    const costPerSprint = used > 0 && ac > 0 ? ac / used : null;
+    const vel = num(inp.velAvg), sprintsLeft = vel > 0 && p.remaining > 0 && p.unit === 'pts' ? Math.ceil(p.remaining / vel) : null;
+    const etcBySprint = costPerSprint != null && sprintsLeft != null ? costPerSprint * sprintsLeft : null;
+    return { progress: p, costPerUnit, plannedPerUnit, ratio, level, eac, eacDelta: eac != null && bac > 0 ? eac - bac : null, costPerSprint, sprintsUsed: used, sprintsLeft, etcBySprint, ev: p.pct != null ? bac * p.pct / 100 : null };
+  }
+  return { progress, compute };
+})();
+</script>
+
 <!-- ■ MODULE: services/models-ai ─ Rascunho dos modelos de documentos pela IA: o que a IA recebe (fatos do projeto, sem dinheiro), o formato que devolve, a validação e a mistura com o que já está no documento — regras puras -->
 <script data-module="services/models-ai">
 const ModelsAi = (() => {
@@ -16548,6 +16577,27 @@ const Budget = (() => {
     renderActuals();
   }
 
+  // Projeto ágil: o custo se mede pelos pontos concluídos do backlog (a WBS não manda), não por CPI/SPI de entregas
+  const isAgile = () => { try { return typeof Methodology !== 'undefined' && Methodology.type() === 'agil'; } catch(e) { return false; } };
+  const CPI_HELP = "Índice de Desempenho de Custo. Compara o valor do trabalho já entregue com o quanto foi gasto pra entregar. Acima de 1,0 = gastando menos que o previsto; abaixo de 1,0 = gastando mais.";
+  const EAC_HELP = "Estimativa no Término — previsão de quanto o projeto vai custar no final, se o ritmo de gasto de agora continuar do jeito que está.";
+  function renderKpisAgile(m) {
+    const setText = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+    const setDot = (id, cls) => { const el = document.getElementById(id); if(el) el.className = 'sdot ' + cls; };
+    const setHelp = (id, t) => { const el = document.getElementById(id); if(el) el.setAttribute('data-help', t); };
+    const sprints = DB.get('sprints') || [], items = DB.get('backlog') || [], vel = AgileCalc.velocity(sprints, items).avg;
+    const a = AgileCost.compute({ bac: m.BAC, ac: m.AC, items, sprints, velAvg: vel }), u = a.progress.unit === 'pts' ? 'pts' : 'item(ns)';
+    setText('bud-cpi-lbl', 'Custo por ' + (a.progress.unit === 'pts' ? 'Ponto' : 'Item')); setText('bud-eac-lbl', 'Previsão no Término');
+    setHelp('bud-cpi-help', 'No projeto ágil o valor entregue é medido pelos ' + (a.progress.unit === 'pts' ? 'pontos' : 'itens') + ' concluídos do backlog. Custo por unidade = gasto real ÷ concluído. Compara com o previsto (orçamento ÷ total do backlog): até 100% do previsto é verde, até 115% é atenção, acima disso é crítico.');
+    setHelp('bud-eac-help', 'Gasto até agora + o que falta no backlog × o custo por unidade atual. Se houver sprints encerradas, mostra também em quantas sprints o backlog acaba no ritmo da equipe.');
+    if(a.costPerUnit == null) { setText('bud-kpi-cpi', '—'); setDot('bud-kpi-cpi-dot', 'sdot-acc'); setText('bud-kpi-cpi-sub', a.progress.total ? (m.AC > 0 ? 'Nada concluído no backlog ainda' : 'Sem custo real lançado ainda') : 'Sem itens no backlog para medir'); }
+    else { setText('bud-kpi-cpi', fmtMoney(a.costPerUnit)); setDot('bud-kpi-cpi-dot', a.level === 'ok' ? 'sdot-grn' : a.level === 'atencao' ? 'sdot-amb' : 'sdot-red'); setText('bud-kpi-cpi-sub', a.progress.done + ' de ' + a.progress.total + ' ' + u + ' · previsto ' + fmtMoney(a.plannedPerUnit)); }
+    if(a.eac == null) { setText('bud-kpi-eac', '—'); setDot('bud-kpi-eac-dot', 'sdot-acc'); setText('bud-kpi-eac-sub', 'Precisa de custo lançado e itens concluídos'); }
+    else { setText('bud-kpi-eac', fmtMoneyK(a.eac)); setDot('bud-kpi-eac-dot', a.eac > m.BAC * 1.05 ? 'sdot-red' : (a.eac > m.BAC ? 'sdot-amb' : 'sdot-grn')); setText('bud-kpi-eac-sub', (a.eacDelta > 0 ? '+' : '') + fmtMoneyK(a.eacDelta) + ' vs base' + (a.sprintsLeft ? ' · faltam ~' + a.sprintsLeft + ' sprint(s)' : '')); }
+    const note = document.getElementById('bud-note-root');
+    if(note) note.innerHTML = '<i class="ti ti-info-circle"></i> Projeto ágil: o avanço vem dos ' + (a.progress.unit === 'pts' ? 'pontos' : 'itens') + ' concluídos do backlog' + (a.progress.pct != null ? ' (' + a.progress.pct + '% do escopo)' : '') + '; as linhas de orçamento não precisam de entrega da WBS.'
+      + (a.costPerSprint != null ? ' Custo médio por sprint: ' + fmtMoney(a.costPerSprint) + (a.etcBySprint != null ? '; no ritmo atual, mais ' + fmtMoney(a.etcBySprint) + ' até o fim do backlog.' : '.') : '');
+  }
   function renderKpis() {
     const m = computeMetrics();
     const setText = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
@@ -16564,6 +16614,14 @@ const Budget = (() => {
     setText('bud-kpi-consumo', m.consumoPct + '%');
     setDot('bud-kpi-consumo-dot', m.consumoPct > 100 ? 'sdot-red' : (m.consumoPct > 85 ? 'sdot-amb' : 'sdot-grn'));
     setText('bud-kpi-consumo-sub', fmtMoney(m.AC) + ' de ' + fmtMoney(m.BAC));
+    if(isAgile()) {
+      renderKpisAgile(m);
+      setText('bud-kpi-reserva', fmtMoneyK(m.reserveRemaining)); setText('bud-kpi-reserva-sub', m.reserveConsumed > 0 ? '-' + fmtMoney(m.reserveConsumed) + ' consumida' : 'Intacta');
+      setDot('bud-kpi-reserva-dot', m.reserveRemaining < 0 ? 'sdot-red' : (m.reserveConsumed > 0 ? 'sdot-amb' : 'sdot-grn'));
+      return;
+    }
+    setText('bud-cpi-lbl', 'CPI'); setText('bud-eac-lbl', 'EAC');
+    const hc = document.getElementById('bud-cpi-help'), he = document.getElementById('bud-eac-help'); if(hc) hc.setAttribute('data-help', CPI_HELP); if(he) he.setAttribute('data-help', EAC_HELP);
 
     if(m.CPI == null) {
       setText('bud-kpi-cpi', '—');
@@ -16603,7 +16661,7 @@ const Budget = (() => {
       return `<div class="set-row">
         <div>
           <div class="set-lbl">${escapeHtml(l.label)}${l.isReserve ? ' <span class="badge b-neu">Reserva</span>' : ''}${l.origin==='ia' ? ' <span class="badge" style="background:var(--s2);color:var(--t3)" title="Criado a partir de um documento pelo Raio-X do Projeto"><i class="ti ti-sparkles"></i> IA</span>' : ''}</div>
-          <div class="set-sub">${fmtMoney(l.plannedValue)}${wbsLabel ? ' · ' + escapeHtml(wbsLabel) : (l.isReserve ? '' : ' · sem entrega vinculada')}</div>
+          <div class="set-sub">${fmtMoney(l.plannedValue)}${wbsLabel ? ' · ' + escapeHtml(wbsLabel) : (l.isReserve || isAgile() ? '' : ' · sem entrega vinculada')}</div>
         </div>
         <button class="wbs-ic-btn" data-perm="edit_costs" title="Editar" onclick="Budget.openEditLine('${l.id}')"><i class="ti ti-edit"></i></button>
       </div>`;
@@ -16639,9 +16697,10 @@ const Budget = (() => {
     sel.innerHTML = '<option value="">Nenhuma</option>' + wbs.map(m => `<option value="${escapeHtml(m.id)}"${m.id===selectedId?' selected':''}>${escapeHtml(m.label)}</option>`).join('');
   }
 
+  const hideWbsField = () => { const f = document.getElementById('bud-line-f-wbs'); if(f && f.parentElement) f.parentElement.style.display = isAgile() ? 'none' : ''; };
   function openAddLine() {
     if(!Auth.guard('edit_costs')) return;
-    ensureLoaded();
+    ensureLoaded(); hideWbsField();
     lineModalCtx = { mode:'add', id:null };
     document.getElementById('bud-line-modal-title').textContent = 'Nova linha de orçamento';
     document.getElementById('bud-line-f-delete-btn').style.display = 'none';
@@ -16654,7 +16713,7 @@ const Budget = (() => {
 
   function openEditLine(id) {
     if(!Auth.guard('edit_costs')) return;
-    ensureLoaded();
+    ensureLoaded(); hideWbsField();
     const l = lines.find(x => x.id === id);
     if(!l) return;
     lineModalCtx = { mode:'edit', id };
