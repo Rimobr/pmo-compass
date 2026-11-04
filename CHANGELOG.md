@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.54.1 — 2026-11-03
+- Modelos de documentos: Criar com Rascunho da IA e Rascunho com a IA em cada documento; a IA recebe so fatos do projeto (sem dinheiro), a pessoa revê antes de adicionar; responsavel so de quem esta na equipe; nada vem como feito
+
 ## 2.53.4 — 2026-11-03
 - Todas as janelas do sistema rolam por dentro quando nao cabem na tela (regra global do modal-box; 30 das 44 janelas nao tinham altura maxima)
 

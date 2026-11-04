@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.54.1'
+  version: '2.55.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -4847,6 +4847,7 @@ const Cloud = (() => {
         }));
         DB.set('wbs', wbs);
         if(typeof WBS !== 'undefined') WBS.render();
+        if(typeof Methodology !== 'undefined') Methodology.apply(); // projeto ágil com entregas na WBS: a tela aparece no menu
       }
       if(decs.data) {
         DB.set('decisions', decs.data.map(d => ({ id:d.id, severity:d.severity, pct:d.pct, title:d.title, body:d.body, sources:d.sources||[], status:d.status, actions:d.actions||['accept'], resolvedAt:d.resolved_at, origin:d.origin||undefined, createdAt:d.created_at })));
@@ -8025,9 +8026,11 @@ const Onboarding = (() => {
   function steps() {
     const has = (k) => { try { return (DB.get(k) || []).length > 0; } catch(e) { return false; } };
     let ai = false; try { ai = Store.aiReady(); } catch(e) {}
+    let agil = false; try { agil = typeof Methodology !== 'undefined' && Methodology.type() === 'agil'; } catch(e) {}
     return [
       { done: ai, title: 'Conecte um provedor de IA', why: 'Sem isso, os recursos de IA ficam desligados.', go: 'settings', label: 'Configurar' },
-      { done: has('wbs'), title: 'Monte as entregas (WBS) do projeto', why: 'Tudo — prazo, custo, riscos e relatórios — parte das entregas.', go: 'wbs', label: 'Abrir a WBS' },
+      agil ? { done: has('backlog'), title: 'Cadastre os itens no Backlog', why: 'O quadro, as sprints e os indicadores partem dos itens do backlog.', go: 'backlog', label: 'Abrir o Backlog' }
+      : { done: has('wbs'), title: 'Monte as entregas (WBS) do projeto', why: 'Tudo — prazo, custo, riscos e relatórios — parte das entregas.', go: 'wbs', label: 'Abrir a WBS' },
       { done: has('team'), title: 'Cadastre os colaboradores', why: 'Eles aparecem como responsáveis, na matriz RACI e nas horas.', go: 'resources', label: 'Cadastrar' }
     ];
   }
@@ -14608,7 +14611,7 @@ const OrgSettings = (() => {
 const Methodology = (() => {
   const TYPES = {
     agil:    { label:'Ágil (Scrum ou Kanban)', short:'Ágil', icon:'refresh',
-      resumo:'Entrega em ciclos curtos e prioridade ajustada o tempo todo. Esconde as telas de plano rígido.',
+      resumo:'Entrega em ciclos curtos e prioridade ajustada o tempo todo. Esconde as telas de plano rígido (WBS, linha de base, mudanças de escopo, RACI) e monta o menu em torno do Quadro, do Backlog e da Sprint atual.',
       guidance:'Este projeto é ÁGIL: fale em entrega incremental, impedimentos, prioridade do backlog e ritmo da equipe; evite exigir linha de base, caminho crítico ou controle formal de mudanças.' },
     cascata: { label:'Cascata (preditivo)', short:'Cascata', icon:'timeline',
       resumo:'Plano completo antes de executar: entregas na WBS, linha de base, controle formal de mudanças e orçamento por CPI/SPI.',
@@ -14619,12 +14622,16 @@ const Methodology = (() => {
   };
   const ORDER = ['agil', 'cascata', 'hibrido'];
   // Telas que só fazem sentido em alguns métodos. O que não está aqui aparece em todos.
-  // Obs.: a WBS continua em todos até existir o quadro Kanban — um projeto ágil não pode ficar sem onde acompanhar as entregas.
+  // A WBS é plano preditivo (entregas com prazo e % de avanço): no projeto ágil quem acompanha as entregas é o Quadro, o Backlog e a Sprint atual.
+  // Esconder nunca apaga dado: se o projeto ágil já tem entregas na WBS, ela aparece sozinha (ver KEEP_IF_DATA).
   const ONLY = {
-    baseline: ['cascata', 'hibrido'], scope: ['cascata', 'hibrido'], estimates: ['cascata', 'hibrido'],
+    wbs: ['cascata', 'hibrido'], baseline: ['cascata', 'hibrido'], scope: ['cascata', 'hibrido'], estimates: ['cascata', 'hibrido'],
     whatif: ['cascata', 'hibrido'], raci: ['cascata', 'hibrido'],
     kanban: ['agil', 'hibrido'], backlog: ['agil', 'hibrido'], sprints: ['agil', 'hibrido'], ritos: ['agil', 'hibrido'], sprintnow: ['agil', 'hibrido']
   };
+  // Tela de plano que continua no menu quando o projeto já tem dado nela, mesmo fora da metodologia
+  const KEEP_IF_DATA = { wbs: () => (DB.get('wbs') || []).length > 0 };
+  const keepByData = pageId => { try { return !!(KEEP_IF_DATA[pageId] && KEEP_IF_DATA[pageId]()); } catch(e) { return false; } };
   const SHOW_ALL_KEY = 'pmo_show_all_screens';
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -14655,7 +14662,7 @@ const Methodology = (() => {
   }
   function showAll() { try { return localStorage.getItem(SHOW_ALL_KEY) === '1'; } catch(e) { return false; } }
   function visibleFor(pageId, t) { return !ONLY[pageId] || ONLY[pageId].includes(t); }
-  function visible(pageId) { return showAll() || visibleFor(pageId, type()); }
+  function visible(pageId) { return showAll() || visibleFor(pageId, type()) || keepByData(pageId); }
   const methodsOf = pageId => (ONLY[pageId] || []).map(m => TYPES[m].short);
 
   function apply() {
@@ -14710,7 +14717,7 @@ const Methodology = (() => {
     const root = document.getElementById('method-root'); if(!root) return;
     const cur = type(), all = showAll();
     const hiddenFor = t => Object.keys(ONLY).filter(p => !visibleFor(p, t));
-    const label = { baseline:'Linha de base', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint' };
+    const label = { wbs:'WBS (aparece sozinha se já houver entregas cadastradas)', baseline:'Linha de base', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint' };
     root.innerHTML = ORDER.map(t => {
       const hid = hiddenFor(t);
       return `<button type="button" class="m-opt" role="radio" aria-checked="${t === cur}" data-perm="business" onclick="Methodology.set('${t}')">

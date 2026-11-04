@@ -15,14 +15,14 @@ test('sem escolha (projetos antigos) vale Híbrido: nenhuma tela some', () => {
 });
 
 test('Ágil esconde as telas de plano rígido; Cascata e Híbrido mostram todas', () => {
-  for (const page of ['baseline', 'scope', 'estimates', 'whatif', 'raci']) {
+  for (const page of ['wbs', 'baseline', 'scope', 'estimates', 'whatif', 'raci']) {
     assert.equal(Methodology.visibleFor(page, 'agil'), false, page);
     assert.equal(Methodology.visibleFor(page, 'cascata'), true, page);
   }
 });
 
-test('telas do núcleo aparecem em todas as metodologias (incluindo WBS enquanto não existir o Kanban)', () => {
-  for (const page of ['dashboard', 'wbs', 'risks', 'decisions', 'hours', 'chat', 'report']) {
+test('telas do núcleo aparecem em todas as metodologias (a WBS é plano preditivo: fora do Ágil)', () => {
+  for (const page of ['dashboard', 'risks', 'decisions', 'hours', 'chat', 'report', 'mywork', 'myind', 'lessons']) {
     for (const t of Methodology.ORDER) assert.equal(Methodology.visibleFor(page, t), true, page + ' / ' + t);
   }
 });
@@ -40,4 +40,22 @@ test('Quadro, Backlog e Sprints aparecem só em Ágil e Híbrido', () => {
     assert.equal(Methodology.visibleFor(page, 'hibrido'), true, page);
     assert.equal(Methodology.visibleFor(page, 'cascata'), false, page);
   }
+});
+
+test('projeto ágil monta o menu em torno do Quadro: WBS fora, mas aparece sozinha se já houver entregas (nada fica órfão)', () => {
+  assert.equal(Methodology.visibleFor('wbs', 'agil'), false);
+  assert.equal(Methodology.visibleFor('wbs', 'cascata'), true);
+  assert.equal(Methodology.visibleFor('wbs', 'hibrido'), true);
+  // com dado na WBS a tela volta, mesmo no Ágil (o módulo lê DB e a metodologia do projeto aberto)
+  const calls = { wbs: [], type: 'agil' };
+  const env = { DB: { get: k => (k === 'wbs' ? calls.wbs : null), getActiveProjectId: () => 'p', listProjects: () => [{ id: 'p', methodology: calls.type }], getForProject: () => null }, localStorage: { getItem: () => null, setItem() {} }, document: { querySelectorAll: () => [], getElementById: () => null }, Auth: {}, T: {}, Nav: undefined };
+  const M = new Function(...Object.keys(env), m[1] + '\nreturn Methodology;')(...Object.values(env));
+  assert.equal(M.visible('wbs'), false);
+  calls.wbs = [{ label: 'Entrega 1' }];
+  assert.equal(M.visible('wbs'), true);
+  assert.equal(M.visible('baseline'), false);   // só a WBS tem a proteção: o resto do plano rígido continua fora
+});
+test('primeiros passos do projeto ágil falam de Backlog, não de WBS', () => {
+  assert.ok(html.includes("title: 'Cadastre os itens no Backlog'"));
+  assert.ok(html.includes("agil ? { done: has('backlog')"));
 });
