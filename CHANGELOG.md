@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.58.2 — 2026-11-04
+- Novo Quadro: janela propria (titulo, sem passos e sem cliente, datas, orcamento e objetivo); so o nome do quadro
+
 ## 2.58.1 — 2026-11-04
 - Menu em arvore: Artefatos do Projeto recuados com linha ligando ao projeto escolhido (nome em destaque); Quadro nao cai no Dashboard e abre direto no Quadro
 

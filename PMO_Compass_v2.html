@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.58.2'
+  version: '2.58.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -984,7 +984,7 @@ body.icons-failed i[data-fb]::before{
   </div>
 
   <div class="sb-group" id="sbg-quadros">
-    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-quadros')" title="Tarefas avulsas da equipe, fora de qualquer projeto"><i class="ti ti-layout-kanban sb-gico"></i>Quadros<i class="ti ti-chevron-right sb-gchev"></i></button>
+    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-quadros')" title="Tarefas avulsas da equipe, fora de qualquer projeto"><i class="ti ti-layout-kanban sb-gico"></i>Quadros / Kanban<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
       <div id="sb-boards-root"></div>
       <button class="si" data-perm="business" onclick="Wizard.open('quadro')" title="Cria um quadro de tarefas que não depende de projeto"><i class="ti ti-plus"></i>Novo Quadro</button>
@@ -19690,7 +19690,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
       <div class="field-group">
         <div class="field-label" id="wz-name-lbl">Nome do projeto *</div>
         <input class="input" id="wz-name" type="text" placeholder="Ex: Portal Nexus 2.0 — Módulo Financeiro" oninput="this.classList.remove('input-error');document.getElementById('wz-name-err').style.display='none'">
-        <div class="input-error-msg" id="wz-name-err" style="display:none"><i class="ti ti-alert-circle"></i>Informe o nome do projeto pra continuar</div>
+        <div class="input-error-msg" id="wz-name-err" style="display:none"><i class="ti ti-alert-circle" aria-hidden="true"></i><span id="wz-name-errtxt">Informe o nome do projeto pra continuar</span></div>
       </div>
       <div class="field-group wz-proj-only">
         <div class="field-label">Cliente / empresa</div>
@@ -20931,6 +20931,7 @@ const Wizard = (() => {
   let step = 1;
   const total = 3;
   const subtitles = ['Configure os dados básicos do projeto','Adicione os colaboradores da equipe','Configure o contexto inicial da IA'];
+  const setTxt = (id, t) => { const e = document.getElementById(id); if(e) e.textContent = t; };
   let board = false; // Quadro: só o nome (um passo), sem equipe nem contexto da IA
 
   function open(kind) {
@@ -20959,7 +20960,6 @@ const Wizard = (() => {
       ? '<i class="ti ti-arrow-right"></i>Próximo'
       : '<i class="ti ti-check"></i>' + (board ? 'Criar Quadro' : 'Criar projeto');
     // Quadro: sem passos, sem cliente, datas, orçamento nem objetivo (só o nome)
-    const setTxt = (id, t) => { const e = document.getElementById(id); if(e) e.textContent = t; };
     setTxt('wz-title', board ? 'Novo Quadro' : 'Novo Projeto'); setTxt('wz-name-lbl', board ? 'Nome do quadro *' : 'Nome do projeto *');
     const nm = document.getElementById('wz-name'); if(nm) nm.placeholder = board ? 'Ex: Bugs da Barbearia, Tarefas da equipe' : 'Ex: Portal Nexus 2.0 — Módulo Financeiro';
     const st = document.getElementById('wz-steps'); if(st) st.style.display = board ? 'none' : '';
@@ -20974,7 +20974,8 @@ const Wizard = (() => {
         nameEl?.classList.add('input-error');
         if(errEl) errEl.style.display = '';
         nameEl?.focus();
-        T.show('⚠️ Por favor, informe o nome do projeto');
+        T.show(board ? '⚠️ Por favor, informe o nome do quadro' : '⚠️ Por favor, informe o nome do projeto');
+        setTxt('wz-name-errtxt', board ? 'Informe o nome do quadro pra continuar' : 'Informe o nome do projeto pra continuar');
         return;
       }
     }

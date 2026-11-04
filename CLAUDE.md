@@ -24,7 +24,7 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - A pessoa revê numa janela e só então "Adicionar ao Documento": o rascunho entra no fim, sem repetir nem apagar o que já foi escrito. Nada é gravado antes disso.
 
 ## Quadros — tarefas sem projeto (pedido do dono, 04/11/2026)
-- "Quadros" é um grupo próprio do menu, acima de "Gestão do projeto": quadro de tarefas avulsas (como Jira, Trello, Monday), fora de qualquer projeto. "Novo Quadro" pede só o nome.
+- "Quadros / Kanban" é um grupo próprio do menu, acima de "Gestão do projeto": quadro de tarefas avulsas (como Jira, Trello, Monday), fora de qualquer projeto. "Novo Quadro" pede só o nome.
 - Tecnicamente é um projeto do tipo `quadro` (`projects.methodology = 'quadro'`, migração `20261104200000`): reaproveita permissões, equipe, autonomia do time e limpezas. Fica fora de `Methodology.ORDER` (comparações) e o menu mostra só Quadro Kanban, Backlog, Meu Trabalho, Arquivos e Colaboradores (`Methodology.BOARD_OK`); nasce em modo Kanban (sem sprints).
 - A lista "Selecione o Projeto" não mostra quadros; "Quadros" não mostra projetos.
 
