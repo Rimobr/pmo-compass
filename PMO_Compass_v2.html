@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.58.0'
+  version: '2.58.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -269,6 +269,10 @@ body.no-login #login-gate{display:flex}
 .sidebar{width:var(--sbw,192px);flex-shrink:0;background:var(--s1);border-right:1px solid var(--b1);padding:12px 8px;display:flex;flex-direction:column;gap:1px;overflow-y:auto}
 .sb-sec{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);padding:8px 10px 4px;margin-top:6px}
 .sb-sec:first-child{margin-top:0}
+/* árvore: os artefatos ficam recuados, com uma linha ligando-os ao projeto escolhido */
+#sb-art-title ~ .si,#sb-art-title ~ .sb-group{margin-left:8px;border-left:2px solid color-mix(in srgb,var(--acc) 45%,transparent)}
+.sb-art-name{display:block;font-size:12.5px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--t1);overflow-wrap:anywhere;margin-top:1px}
+.sidebar.collapsed #sb-art-title ~ .si,.sidebar.collapsed #sb-art-title ~ .sb-group{margin-left:0;border-left:none}
 .sb-sec.sb-sub{padding:8px 10px 2px;margin-top:2px;text-transform:none;letter-spacing:.02em;font-size:11px}
 /* uma linha separa cada item do menu (leitura mais fácil) */
 .sidebar .si,.sidebar .sb-group-hdr{border-bottom:1px solid var(--b1);border-radius:0}
@@ -1001,9 +1005,9 @@ body.icons-failed i[data-fb]::before{
     </div>
   </div>
 
+  <div class="sb-sec" id="sb-art-title" title="Tudo abaixo vale para o projeto escolhido acima">Artefatos do Projeto<b class="sb-art-name" id="sb-art-name"></b></div>
   <button class="si on" data-p="dashboard" onclick="R.go('dashboard')" title="Visão geral do projeto escolhido: prazo ou ritmo, custo, equipe, riscos e alertas"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
   <button class="si" data-p="mywork" onclick="R.go('mywork')" title="O que está com você neste projeto: itens, tarefas e horas"><i class="ti ti-user-check"></i>Meu Trabalho</button>
-  <div class="sb-sec" title="Tudo abaixo vale para o projeto escolhido acima">Artefatos do Projeto</div>
 
   <div class="sb-group" id="sbg-agil">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-agil')"><i class="ti ti-layout-kanban sb-gico"></i>Execução Ágil<i class="ti ti-chevron-right sb-gchev"></i></button>
@@ -7825,6 +7829,7 @@ const Nav = (() => {
     // O menu mostra QUAL projeto está escolhido: as "Artefatos do Projeto" valem para ele
     const nm = document.getElementById('sb-proj-name'), cx = document.getElementById('sb-ctx-name');
     if(active) { if(nm) nm.textContent = active.name; if(cx) cx.textContent = active.name; }
+    const an = document.getElementById('sb-art-name'); if(an) an.textContent = active ? active.name : '';
     renderProjDropdown();
     if(typeof Methodology !== 'undefined') Methodology.apply(); // cada projeto tem o seu menu
   }
@@ -14749,6 +14754,8 @@ const Methodology = (() => {
     const ag = document.getElementById('kg-agile'); if(ag) ag.classList.toggle('m-hidden', !visible('kanban'));
     const sch = document.getElementById('kg-sch'); if(sch) sch.classList.toggle('m-hidden', type() === 'agil' && !showAll());
     if(typeof Agile !== 'undefined') Agile.renderDashboard();
+    // Quadro não tem Dashboard de projeto: quem cai nele (recarregar, trocar) vai direto ao Quadro, em silêncio
+    if(type() === 'quadro' && !showAll()) { const on = document.querySelector('.page.on'); if(on && on.id === 'p-dashboard' && typeof R !== 'undefined') R.go('kanban'); }
   }
 
   // Quem abre uma tela escondida (link, busca, favorito) vê a tela e um aviso claro — nada é bloqueado nem perdido

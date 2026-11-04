@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.58.0 — 2026-11-04
+- Quadros: quadro de tarefas sem projeto (grupo proprio no menu, Novo Quadro so com o nome, modo Kanban, menu enxuto); migracao libera o tipo quadro
+
 ## 2.57.1 — 2026-11-04
 - Menu lateral com titulos (Selecione o Projeto, Metodologias Disponiveis, Artefatos do Projeto) e linha entre os itens; janela aberta nao fecha mais ao soltar o mouse fora dela
 
