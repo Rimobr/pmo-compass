@@ -420,6 +420,12 @@
       "logout": "apaga",
       "deleteProject": "nao"
     },
+    "pmo_menu_v2_seen": {
+      "desc": "Dica do menu reorganizado já mostrada (aparece uma vez).",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
     "pmo_show_all_screens": {
       "desc": "Mostrar todas as telas, mesmo as que o método esconde.",
       "kind": "preferência",

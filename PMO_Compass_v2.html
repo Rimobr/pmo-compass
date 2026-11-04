@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.60.0'
+  version: '2.60.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -991,7 +991,7 @@ body.icons-failed i[data-fb]::before{
   </div>
 
   <div class="sb-group" id="sbg-indicadores">
-    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-indicadores')"><i class="ti ti-chart-donut-3 sb-gico"></i>Indicadores<i class="ti ti-chevron-right sb-gchev"></i></button>
+    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-indicadores')"><i class="ti ti-chart-donut-3 sb-gico"></i>Portfólio e Relatórios<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
       <button class="si" data-p="pfkpi" onclick="R.go('pfkpi')"><i class="ti ti-chart-donut-3"></i>Indicadores</button>
       <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
@@ -1033,7 +1033,7 @@ body.icons-failed i[data-fb]::before{
   <button class="si" data-p="risks" onclick="R.go('risks')"><i class="ti ti-shield-exclamation"></i>Riscos</button>
   <button class="si" data-p="decisions" onclick="R.go('decisions')"><i class="ti ti-brain"></i>Decisões IA<span class="sb-b" id="sb-decisions-count">4</span></button>
   <button class="si" data-p="resources" onclick="R.go('resources')"><i class="ti ti-users"></i>Colaboradores</button>
-  <button class="si sb-more-btn" id="sb-more-btn" aria-expanded="false" aria-controls="sb-proj-area" title="Mostra ou esconde as demais telas do projeto (planejamento, equipe, conhecimento...)" onclick="Nav.toggleMore()"><i class="ti ti-dots"></i><span>Mais Telas</span><i class="ti ti-chevron-down sb-more-chev" aria-hidden="true"></i></button>
+  <button class="si sb-more-btn" id="sb-more-btn" aria-expanded="false" aria-controls="sb-proj-area" title="Mostra ou esconde as demais telas do projeto (planejamento, equipe, conhecimento...)" onclick="Nav.toggleMore()"><i class="ti ti-dots"></i><span id="sb-more-txt">Mais Telas</span><i class="ti ti-chevron-down sb-more-chev" aria-hidden="true"></i></button>
 
   <div class="sb-group sb-more-group" id="sbg-agil">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-agil')"><i class="ti ti-layout-kanban sb-gico"></i>Execução Ágil<i class="ti ti-chevron-right sb-gchev"></i></button>
@@ -7818,7 +7818,7 @@ const Nav = (() => {
   function expandGroupFor(pageId) {
     const groupId = FLAT.includes(pageId) ? '' : GROUP_OF[pageId];
     const tg = groupId && document.getElementById(groupId), area = document.getElementById('sb-proj-area');
-    if(tg && tg.classList.contains('sb-more-group') && area) { area.classList.add('more'); const mb = document.getElementById('sb-more-btn'); if(mb) mb.setAttribute('aria-expanded', 'true'); }
+    if(tg && tg.classList.contains('sb-more-group') && area) { area.classList.add('more'); syncMore(); }
     document.querySelectorAll('.sb-group').forEach(g => {
       const isTarget = g.id === groupId;
       g.classList.toggle('has-active', isTarget);
@@ -7826,10 +7826,16 @@ const Nav = (() => {
     });
   }
 
+  // O botão diz o que fará: "Mais Telas" (recolhido) ou "Menos Telas" (aberto)
+  function syncMore() {
+    const area = document.getElementById('sb-proj-area'); if(!area) return;
+    const on = area.classList.contains('more');
+    const mb = document.getElementById('sb-more-btn'); if(mb) mb.setAttribute('aria-expanded', on ? 'true' : 'false');
+    const tx = document.getElementById('sb-more-txt'); if(tx) tx.textContent = on ? 'Menos Telas' : 'Mais Telas';
+  }
   function toggleMore() {
     const area = document.getElementById('sb-proj-area'); if(!area) return;
-    const on = area.classList.toggle('more');
-    const mb = document.getElementById('sb-more-btn'); if(mb) mb.setAttribute('aria-expanded', on ? 'true' : 'false');
+    area.classList.toggle('more'); syncMore();
   }
 
   // Todos os grupos começam fechados a cada novo login/sessão (sem lembrar estado anterior)
@@ -7868,6 +7874,7 @@ const Nav = (() => {
     const an = document.getElementById('sb-art-name'); if(an) an.textContent = active ? active.name : '';
     const am = document.getElementById('sb-art-meth'); if(am && typeof Methodology !== 'undefined') am.textContent = active ? '· ' + Methodology.TYPES[Methodology.typeFor(active.id)].short : '';
     renderProjDropdown();
+    try { if(!document.body.classList.contains('no-login') && all.length && !localStorage.getItem('pmo_menu_v2_seen')) { localStorage.setItem('pmo_menu_v2_seen', '1'); setTimeout(() => { try { T.show('🧭 Menu: o que você usa todo dia está à vista; as demais telas do projeto ficam em "Mais Telas".', 9000); } catch(e) {} }, 800); } } catch(e) {}
     if(typeof Methodology !== 'undefined') Methodology.apply(); // cada projeto tem o seu menu
   }
 
@@ -7903,7 +7910,7 @@ const Nav = (() => {
   });
 
   const GROUP_LABEL = {
-    sbg_indicadores: 'Indicadores', sbg_visao: 'Visão Geral', sbg_sistema: 'Sistema',
+    sbg_indicadores: 'Portfólio e Relatórios', sbg_visao: 'Visão Geral', sbg_sistema: 'Sistema',
     sbg_decisao: 'Decisões', sbg_agil: 'Execução ágil', sbg_planejamento: 'Planejamento',
     sbg_equipe: 'Equipe', sbg_conhecimento: 'Conhecimento', sbg_projetos: 'Projetos'
   };
