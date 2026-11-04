@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.58.3'
+  version: '2.58.4'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -207,6 +207,9 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .no-view{display:none!important}
 .no-link{pointer-events:none;color:inherit!important;text-decoration:none!important;cursor:default}
 body.no-project .sb-proj-area{display:none}
+body.is-board .sb-proj-area{display:none}
+.sb-board-menu{display:none;margin-left:8px;border-left:2px solid color-mix(in srgb,var(--acc) 45%,transparent)}
+body.is-board .sb-board-menu{display:block}
 .preview-bar{display:flex;background:var(--amd);color:var(--t1);border-bottom:1px solid var(--ambb);padding:6px 14px;font-size:12.5px;align-items:center;gap:10px;flex-wrap:wrap}.preview-bar[hidden]{display:none}
 #login-gate{display:none;position:fixed;inset:0;z-index:900;background:var(--bg);align-items:center;justify-content:center;padding:16px}
 body.no-login #login-gate{display:flex}
@@ -987,6 +990,13 @@ body.icons-failed i[data-fb]::before{
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-quadros')" title="Tarefas avulsas da equipe, fora de qualquer projeto"><i class="ti ti-layout-kanban sb-gico"></i>Quadros / Kanban<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
       <div id="sb-boards-root"></div>
+      <div class="sb-board-menu" id="sb-board-menu">
+        <button class="si" data-p="kanban" onclick="R.go('kanban')"><i class="ti ti-layout-kanban"></i>Quadro Kanban</button>
+        <button class="si" data-p="backlog" onclick="R.go('backlog')"><i class="ti ti-list-details"></i>Backlog</button>
+        <button class="si" data-p="mywork" onclick="R.go('mywork')"><i class="ti ti-user-check"></i>Meu Trabalho</button>
+        <button class="si" data-p="repository" onclick="R.go('repository')"><i class="ti ti-folder"></i>Arquivos</button>
+        <button class="si" data-p="resources" onclick="R.go('resources')"><i class="ti ti-users"></i>Colaboradores</button>
+      </div>
       <button class="si" data-perm="business" onclick="Wizard.open('quadro')" title="Cria um quadro de tarefas que não depende de projeto"><i class="ti ti-plus"></i>Novo Quadro</button>
     </div>
   </div>
@@ -7815,6 +7825,8 @@ const Nav = (() => {
     const isB = p => typeof Methodology !== 'undefined' && Methodology.isBoard(p.id);
     const projects = all.filter(p => !isB(p)), boards = all.filter(isB);
     const activeId = DB.getActiveProjectId();
+    document.body.classList.toggle('is-board', boards.some(p => p.id === activeId));
+    const bg = document.getElementById('sbg-quadros'); if(bg && boards.some(p => p.id === activeId)) { document.querySelectorAll('.sb-group').forEach(g => g.classList.remove('open')); bg.classList.add('open'); }
     const broot = document.getElementById('sb-boards-root');
     if(broot) broot.innerHTML = boards.length ? boards.map(p => `<button class="si${p.id===activeId?' proj-active':''}" style="padding-left:22px" onclick="DB.switchProject('${p.id}');R.go('kanban')"><i class="ti ti-layout-kanban"></i>${escapeHtml(p.name)}</button>`).join('') : '<div class="set-sub" style="padding:6px 22px">Nenhum quadro ainda</div>';
     // O ícone antes do nome é o da METODOLOGIA do projeto (legenda logo abaixo da lista)
@@ -14797,7 +14809,8 @@ const Methodology = (() => {
     const cur = type(), all = showAll();
     const hiddenFor = t => (t === 'quadro' ? PROJECT_PAGES : Object.keys(ONLY)).filter(p => !visibleFor(p, t));
     const label = { dashboard:'Dashboard', mywork:'Meu Trabalho', sprintnow:'Sprint atual', decisions:'Decisões', loop:'Loop de decisões', trail:'Trilha', statusmsg:'Mensagem de status', burnout:'Burnout', hours:'Horas', resources:'Colaboradores', stakeholders:'Partes interessadas', lessons:'Lições aprendidas', meetings:'Reuniões', repository:'Arquivos', chat:'Chat', modelos:'Modelos de documentos', risks:'Riscos', budget:'Orçamento e Custos', wbs:'WBS (aparece sozinha se já houver entregas cadastradas)', baseline:'Linha de base', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint' };
-    root.innerHTML = [...ORDER, 'quadro'].map(t => {
+    const noteBoard = cur === 'quadro' ? '<div class="m-notice" role="status"><i class="ti ti-info-circle"></i><span>Este é um <b>Quadro</b> de tarefas, não um projeto. Escolher uma metodologia abaixo o transforma em projeto (nada é apagado).</span></div>' : '';
+    root.innerHTML = noteBoard + ORDER.map(t => {
       const hid = hiddenFor(t);
       return `<button type="button" class="m-opt" role="radio" aria-checked="${t === cur}" data-perm="business" onclick="Methodology.set('${t}')">
         <i class="ti ti-${TYPES[t].icon}"></i><span><b>${esc(TYPES[t].label)}</b><span class="m-sub">${esc(TYPES[t].resumo)}</span>
