@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.58.4'
+  version: '2.59.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -274,12 +274,12 @@ body.no-login #login-gate{display:flex}
 .sb-sec:first-child{margin-top:0}
 /* árvore: os artefatos ficam recuados, com uma linha ligando-os ao projeto escolhido */
 #sb-art-title ~ .si,#sb-art-title ~ .sb-group{margin-left:8px;border-left:2px solid color-mix(in srgb,var(--acc) 45%,transparent)}
+.sb-art-meth{font-weight:400;color:var(--t2);font-size:11.5px}
 .sb-art-name{display:block;font-size:12.5px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--t1);overflow-wrap:anywhere;margin-top:1px}
 .sidebar.collapsed #sb-art-title ~ .si,.sidebar.collapsed #sb-art-title ~ .sb-group{margin-left:0;border-left:none}
 .sb-sec.sb-sub{padding:8px 10px 2px;margin-top:2px;text-transform:none;letter-spacing:.02em;font-size:11px}
-/* uma linha separa cada item do menu (leitura mais fácil) */
-.sidebar .si,.sidebar .sb-group-hdr{border-bottom:1px solid var(--b1);border-radius:0}
-.sidebar .sb-group-body .si:last-child{border-bottom:none}
+/* uma linha separa cada bloco do menu (entre cada item seria ruído) */
+.sidebar .sb-group-hdr{border-bottom:1px solid var(--b1);border-radius:0}
 .si{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:var(--r6);font-size:12.5px;color:var(--t2);cursor:pointer;border:none;background:transparent;width:100%;text-align:left}
 .si i{font-size:14px;flex-shrink:0}
 .si.on{background:var(--s3);color:var(--t1);font-weight:600;box-shadow:inset 2px 0 0 var(--acc)}
@@ -916,6 +916,8 @@ body.icons-failed i[data-fb]::before{
       <div id="tb-proj-dd-list"></div>
       <div class="tb-proj-dd-div"></div>
       <button class="tb-proj-dd-item" data-perm="business" onclick="Nav.closeProjDropdown();Wizard.open()"><i class="ti ti-plus"></i>Novo Projeto</button>
+      <button class="tb-proj-dd-item" data-perm="business" onclick="Nav.closeProjDropdown();Wizard.open('quadro')"><i class="ti ti-plus"></i>Novo Quadro</button>
+      <button class="tb-proj-dd-item" data-perm="business" onclick="Nav.closeProjDropdown();R.go('settings');SettingsTabs.show('pmo')" title="Muda quais telas aparecem para o projeto escolhido (Ágil, Cascata ou Híbrido)"><i class="ti ti-route"></i>Mudar Metodologia</button>
       <button class="tb-proj-dd-item" onclick="Nav.closeProjDropdown();R.go('portfolio')"><i class="ti ti-layout-grid"></i>Ver portfólio completo</button>
     </div>
   </div>
@@ -1003,7 +1005,7 @@ body.icons-failed i[data-fb]::before{
 
   <div class="sb-proj-area" id="sb-proj-area">
   <button class="sb-divl sb-divl-btn" id="sb-area-btn" aria-expanded="true" aria-controls="sb-proj-area" title="Recolher ou abrir a área de gestão do projeto (área do gerente de projeto e da equipe)" onclick="Nav.toggleArea()"><span>Gestão do projeto</span><i class="ti ti-chevron-down sb-divl-chev" aria-hidden="true"></i></button>
-  <div class="sb-group" id="sbg-projetos">
+  <div class="sb-group" id="sbg-projetos" hidden><!-- o seletor de projeto é só o do topo (um lugar só); o bloco fica para os dados que o menu ainda preenche -->
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-projetos')"><i class="ti ti-layout-grid sb-gico"></i><span class="sb-hdr-txt"><small class="sb-hdr-kicker">Projeto · <span id="sb-method-tag">Híbrido</span></small><b id="sb-proj-name">—</b></span><i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body" id="sbg-projetos-list">
       <div class="sb-sec sb-sub">Selecione o Projeto</div>
@@ -1015,7 +1017,7 @@ body.icons-failed i[data-fb]::before{
     </div>
   </div>
 
-  <div class="sb-sec" id="sb-art-title" title="Tudo abaixo vale para o projeto escolhido acima">Artefatos do Projeto<b class="sb-art-name" id="sb-art-name"></b></div>
+  <div class="sb-sec" id="sb-art-title" title="Tudo abaixo vale para o projeto escolhido acima">Artefatos do Projeto<b class="sb-art-name"><span id="sb-art-name"></span> <span class="sb-art-meth" id="sb-art-meth"></span></b></div>
   <button class="si on" data-p="dashboard" onclick="R.go('dashboard')" title="Visão geral do projeto escolhido: prazo ou ritmo, custo, equipe, riscos e alertas"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
   <button class="si" data-p="mywork" onclick="R.go('mywork')" title="O que está com você neste projeto: itens, tarefas e horas"><i class="ti ti-user-check"></i>Meu Trabalho</button>
 
@@ -7842,6 +7844,7 @@ const Nav = (() => {
     const nm = document.getElementById('sb-proj-name'), cx = document.getElementById('sb-ctx-name');
     if(active) { if(nm) nm.textContent = active.name; if(cx) cx.textContent = active.name; }
     const an = document.getElementById('sb-art-name'); if(an) an.textContent = active ? active.name : '';
+    const am = document.getElementById('sb-art-meth'); if(am && typeof Methodology !== 'undefined') am.textContent = active ? '· ' + Methodology.TYPES[Methodology.typeFor(active.id)].short : '';
     renderProjDropdown();
     if(typeof Methodology !== 'undefined') Methodology.apply(); // cada projeto tem o seu menu
   }
@@ -7852,7 +7855,11 @@ const Nav = (() => {
     const projects = DB.listProjects();
     const activeId = DB.getActiveProjectId();
     if(!projects.length) { list.innerHTML = '<div class="set-sub" style="padding:8px 12px">Nenhum projeto ainda</div>'; return; }
-    list.innerHTML = projects.map(p => `<button class="tb-proj-dd-item${p.id===activeId?' active':''}" onclick="Nav.closeProjDropdown();DB.switchProject('${p.id}')">${typeof Methodology !== 'undefined' ? Methodology.iconFor(p.id) : `<i class="ti ti-${escapeHtml(p.icon||'compass')}"></i>`}${escapeHtml(p.name)}${p.id===activeId?'<i class="ti ti-check tb-proj-check"></i>':''}</button>`).join('') + (typeof Methodology !== 'undefined' ? Methodology.legend() : '');
+    const isB = p => typeof Methodology !== 'undefined' && Methodology.isBoard(p.id);
+    const part = projects.filter(p => !isB(p)), boards = projects.filter(isB);
+    const head = t => `<div class="set-sub" style="padding:6px 12px 2px;font-weight:600">${t}</div>`;
+    const row = p => `<button class="tb-proj-dd-item${p.id===activeId?' active':''}" onclick="Nav.closeProjDropdown();DB.switchProject('${p.id}')${isB(p)?";R.go('kanban')":''}">${typeof Methodology !== 'undefined' ? Methodology.iconFor(p.id) : `<i class="ti ti-${escapeHtml(p.icon||'compass')}"></i>`}${escapeHtml(p.name)}${p.id===activeId?'<i class="ti ti-check tb-proj-check"></i>':''}</button>`;
+    list.innerHTML = (part.length ? head('Projetos') + part.map(row).join('') : '') + (boards.length ? head('Quadros / Kanban') + boards.map(row).join('') : '') + (typeof Methodology !== 'undefined' ? Methodology.legend() : '');
   }
 
   function toggleProjDropdown(e) {

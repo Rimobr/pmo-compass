@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.58.4 — 2026-11-04
+- Quadro separado do projeto: com um quadro ativo a Gestao do projeto some e o menu do quadro aparece sob Quadros / Kanban; projeto nao vira quadro pela Metodologia
+
 ## 2.58.3 — 2026-11-04
 - Menu: grupo Quadros / Kanban; erro de nome fala em quadro ou projeto
 
