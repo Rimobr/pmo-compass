@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.56.0 — 2026-11-04
+- Orcamento e Custos adaptado ao projeto agil: custo por ponto entregue, previsao no termino pelo backlog e sprints, linha de orcamento sem vinculo com a WBS; Cascata e Hibrido continuam com CPI/EAC
+
 ## 2.55.0 — 2026-11-04
 - Metodologia monta o menu: WBS sai do projeto agil (aparece sozinha se ja houver entregas cadastradas); primeiros passos do projeto agil falam de Backlog
 

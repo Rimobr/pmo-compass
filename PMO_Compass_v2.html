@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.56.0'
+  version: '2.56.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -8866,7 +8866,7 @@ const ContextBuilder = (() => {
       : '(nenhuma decisão pendente)';
 
     const teamLines = team.length
-      ? team.map(m => `- ${m.name} (${m.role}): ${m.workloadPct}% de carga${(m.signals&&m.signals.length) ? ' — ' + m.signals.join('; ') : ''}`).join('\n')
+      ? team.map(m => `- ${m.name} (${m.role}): ${m.workloadPct === null || m.workloadPct === undefined || m.workloadPct === '' ? 'carga não informada' : m.workloadPct + '% de carga'}${(m.signals&&m.signals.length) ? ' — ' + m.signals.join('; ') : ''}`).join('\n')
       : '(nenhum colaborador cadastrado)';
 
     const scopeLines = scope.length
@@ -10720,7 +10720,8 @@ const Dashboard = (() => {
       return;
     }
     const emRisco = team.filter(m => (m.workloadPct||0) >= 80);
-    const mediaCarga = Math.round(team.reduce((s,m) => s + (m.workloadPct||0), 0) / team.length);
+    const comCarga = team.filter(m => m.workloadPct !== null && m.workloadPct !== undefined && m.workloadPct !== '' && isFinite(Number(m.workloadPct)));
+    const mediaCarga = comCarga.length ? Math.round(comCarga.reduce((s,m) => s + Number(m.workloadPct), 0) / comCarga.length) : null; // sem carga informada = sem dados, não 0%
     const teamNames = new Set(team.map(m => (m.name||'').trim().toLowerCase()).filter(Boolean));
     const conflitos = DB.computePortfolioAllocation().filter(p => p.overallocated && teamNames.has(p.name.trim().toLowerCase())).length;
     const today = Clock.today();
@@ -10731,7 +10732,7 @@ const Dashboard = (() => {
     const kl = (page, label) => `class="kpi kpi-link" role="button" tabindex="0" aria-label="${label}" onclick="R.go('${page}')" onkeydown="R.goKey(event,'${page}')"`;
     bodyEl.innerHTML = `
       <div ${kl('burnout','Ver Burnout Radar')}><div class="kpi-lbl"><span class="sdot ${emRisco.length?'sdot-red':'sdot-grn'}"></span>Risco burnout</div><div class="kpi-val">${emRisco.length}</div><div class="kpi-delta ${emRisco.length?'c-dn':'c-ne'}">${emRisco.length ? emRisco.map(m=>m.name+' — '+m.workloadPct+'%').join(', ') : 'Nenhum'}</div></div>
-      <div ${kl('burnout','Ver Burnout Radar')}><div class="kpi-lbl"><span class="sdot ${mediaCarga>=70?'sdot-amb':'sdot-grn'}"></span>Sobrecarga média</div><div class="kpi-val">${mediaCarga}<span class="kpi-unit">%</span></div><div class="kpi-delta c-ne">Meta: 70%</div></div>
+      <div ${kl('burnout','Ver Burnout Radar')}><div class="kpi-lbl"><span class="sdot ${mediaCarga==null?'sdot-acc':(mediaCarga>=70?'sdot-amb':'sdot-grn')}"></span>Sobrecarga média</div><div class="kpi-val">${mediaCarga==null?'—':mediaCarga}${mediaCarga==null?'':'<span class="kpi-unit">%</span>'}</div><div class="kpi-delta c-ne">${mediaCarga==null?'Carga não informada':'Meta: 70%'}</div></div>
       <div ${kl('meetings','Ver Atas e Ações')}><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Reuniões (7 dias)</div><div class="kpi-val">${reunioes7d}</div><div class="kpi-delta c-ne">registradas em Atas e Ações</div></div>
       <div ${kl('resources','Ver Colaboradores')}><div class="kpi-lbl"><span class="sdot ${conflitos?'sdot-amb':'sdot-grn'}"></span>Conflito de alocação</div><div class="kpi-val">${conflitos}</div><div class="kpi-delta ${conflitos?'c-wa':'c-ne'}">${conflitos ? 'Alocação dupla' : 'Nenhum'}</div></div>`;
   }
@@ -16426,7 +16427,7 @@ const ImportUi = (() => {
   function previewCells(r) {
     switch(ctx.target) {
       case 'wbs': return [r.label, r.start, r.end, r.pct + '%', (r.children.length) + ' subtarefa(s)'];
-      case 'team': return [r.name, r.role, r.allocationPct + '%', r.workloadPct + '%'];
+      case 'team': return [r.name, r.role, r.allocationPct + '%', (r.workloadPct === null || r.workloadPct === undefined || r.workloadPct === '' ? '' : r.workloadPct + '%')];
       case 'costs': return [r.label, 'R$ ' + r.amount.toLocaleString('pt-BR'), r.date, r.kind];
       case 'risks': return [r.title, 'P' + r.probability + ' × I' + r.impact + ' = ' + r.probability * r.impact, r.category, r.owner];
       case 'backlog': return [r.title, AgileCalc.KINDS[r.kind], r.points === '' ? 'sem pontos' : r.points + ' pts', AgileCalc.COLS.find(c => c.key === r.status).label];
@@ -16861,10 +16862,12 @@ const Burnout = (() => {
   function resetCache() { data = null; }
   function persist() { DB.set('team', data); }
   function initials(name) { return (name||'').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase() || '??'; }
-  function statusOf(pct) { return pct >= 85 ? 'critico' : (pct >= 60 ? 'atencao' : 'saudavel'); }
-  function colorOf(status) { return { critico:'var(--red)', atencao:'var(--amb)', saudavel:'var(--grn)' }[status]; }
-  function bgOf(status) { return { critico:'var(--rd)', atencao:'var(--amd)', saudavel:'var(--gd)' }[status]; }
-  function labelOf(status, pct) { return { critico:`${pct}% — Crítico`, atencao:`${pct}% — Atenção`, saudavel:`${pct}% — OK` }[status]; }
+  // Carga não informada é "sem dados": nunca verde nem "OK" (a carga é lançada à mão pelo gerente; colaborador novo nasce sem ela)
+  const hasLoad = p => p !== null && p !== undefined && p !== '' && isFinite(Number(p));
+  function statusOf(pct) { return !hasLoad(pct) ? 'sem_dado' : pct >= 85 ? 'critico' : (pct >= 60 ? 'atencao' : 'saudavel'); }
+  function colorOf(status) { return { critico:'var(--red)', atencao:'var(--amb)', saudavel:'var(--grn)', sem_dado:'var(--t3)' }[status]; }
+  function bgOf(status) { return { critico:'var(--rd)', atencao:'var(--amd)', saudavel:'var(--gd)', sem_dado:'var(--s2)' }[status]; }
+  function labelOf(status, pct) { return { critico:`${pct}% — Crítico`, atencao:`${pct}% — Atenção`, saudavel:`${pct}% — OK`, sem_dado:'Carga não informada' }[status]; }
 
   function render() {
     ensureLoaded();
@@ -16881,19 +16884,20 @@ const Burnout = (() => {
       listRoot.innerHTML = `<div style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12.5px">Nenhum colaborador cadastrado ainda.</div>`;
       return;
     }
-    const sorted = [...data].sort((a,b) => b.workloadPct - a.workloadPct);
+    const sorted = [...data].sort((a,b) => (hasLoad(b.workloadPct) ? Number(b.workloadPct) : -1) - (hasLoad(a.workloadPct) ? Number(a.workloadPct) : -1));
     listRoot.innerHTML = sorted.map(m => {
       const status = statusOf(m.workloadPct);
       const color = colorOf(status);
-      const sigs = (m.signals||[]).map(s => `<span class="badge ${status==='critico'?'b-red':(status==='atencao'?'b-amb':'b-grn')}">${escapeHtml(s)}</span>`).join('');
+      const sigs = (m.signals||[]).map(s => `<span class="badge ${status==='critico'?'b-red':(status==='atencao'?'b-amb':(status==='sem_dado'?'b-neu':'b-grn'))}">${escapeHtml(s)}</span>`).join('');
       const border = status === 'critico' ? 'border-color:var(--rb)' : '';
       return `<div class="burn-card" style="${border}">
         <div class="burn-ava" style="background:${bgOf(status)};color:${color}">${initials(m.name)}</div>
         <div style="flex:1">
           <div class="burn-name">${escapeHtml(m.name)}</div>
           <div class="burn-role">${escapeHtml(m.role)}</div>
-          <div class="burn-track"><div class="burn-fill" style="width:${Math.min(m.workloadPct,100)}%;background:${color}"></div></div>
+          <div class="burn-track"><div class="burn-fill" style="width:${status==='sem_dado'?0:Math.min(m.workloadPct,100)}%;background:${color}"></div></div>
           <div class="burn-leg"><span>Saudável</span><span style="color:${color};font-weight:${status==='critico'?600:400}">${labelOf(status,m.workloadPct)}</span></div>
+          ${status==='sem_dado' ? '<div class="set-sub" style="margin-top:4px"><i class="ti ti-info-circle"></i> Informe a carga em Editar (lápis) para acompanhar o risco de burnout desta pessoa.</div>' : ''}
           ${sigs ? `<div class="burn-sigs">${sigs}</div>` : ''}
           ${m.recommendation ? `<p style="font-size:12px;color:var(--t2);margin-top:9px;line-height:1.55">${escapeHtml(m.recommendation)}</p>` : ''}
           <div class="btn-row" style="margin-top:6px">
@@ -18702,16 +18706,17 @@ const Resources = (() => {
         root.innerHTML = `<div style="text-align:center;padding:20px 10px;color:var(--t3);font-size:12.5px">Nenhum colaborador cadastrado ainda — adicione pelo Burnout Radar.</div>`;
       } else {
         root.innerHTML = team.map(m => {
-          const status = statusOf(m.workloadPct||0);
-          const color = colorOf(status);
+          const hasW = m.workloadPct !== null && m.workloadPct !== undefined && m.workloadPct !== '' && isFinite(Number(m.workloadPct));
+          const status = hasW ? statusOf(m.workloadPct) : 'sem_dado';
+          const color = hasW ? colorOf(status) : 'var(--t3)';
           const alloc = m.allocationPct!=null ? m.allocationPct : 100;
           const barInner = `<div style="width:${Math.min(alloc,100)}%;height:100%;background:${alloc>100?'var(--red)':'var(--acc)'};border-radius:3px"></div>`;
-          const label = `${alloc}% alocado neste projeto · carga/burnout ${m.workloadPct||0}%`;
+          const label = `${alloc}% alocado neste projeto · carga/burnout ${hasW ? m.workloadPct + '%' : 'não informada'}`;
           return `<div class="res-row">
-            <div class="res-ava" style="background:${bgOf(status)};color:${color}">${initials(m.name)}</div>
+            <div class="res-ava" style="background:${hasW ? bgOf(status) : 'var(--s2)'};color:${color}">${initials(m.name)}</div>
             <div style="flex:1;min-width:60px"><div style="font-size:12.5px;font-weight:500">${escapeHtml(m.name)}</div><div style="font-size:11px;color:var(--t3)">${escapeHtml(m.role)}</div></div>
             <div class="res-bar"><div style="width:100%;height:6px;background:var(--s3);border-radius:3px;overflow:hidden">${barInner}</div><div style="font-size:11px;color:${status==='critico'?'var(--red)':'var(--t3)'};margin-top:2px">${label}</div></div>
-            <span class="res-pct ${diffClassOf(status)}">${m.workloadPct||0}%</span>
+            <span class="res-pct ${hasW ? diffClassOf(status) : ''}">${hasW ? m.workloadPct + '%' : '—'}</span>
           </div>`;
         }).join('');
       }
