@@ -23,6 +23,11 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - Em Modelos de Documentos: "Criar com Rascunho da IA" e, em cada documento, "Rascunho com a IA". A IA recebe só os fatos do projeto (equipe, entregas, riscos, decisões, escopo, impedimentos, partes interessadas), **nunca valores em R$**, e devolve um JSON validado pelo modelo; nada vem como feito; responsável só de quem está na equipe ou nas partes interessadas.
 - A pessoa revê numa janela e só então "Adicionar ao Documento": o rascunho entra no fim, sem repetir nem apagar o que já foi escrito. Nada é gravado antes disso.
 
+## Quadros — tarefas sem projeto (pedido do dono, 04/11/2026)
+- "Quadros" é um grupo próprio do menu, acima de "Gestão do projeto": quadro de tarefas avulsas (como Jira, Trello, Monday), fora de qualquer projeto. "Novo Quadro" pede só o nome.
+- Tecnicamente é um projeto do tipo `quadro` (`projects.methodology = 'quadro'`, migração `20261104200000`): reaproveita permissões, equipe, autonomia do time e limpezas. Fica fora de `Methodology.ORDER` (comparações) e o menu mostra só Quadro Kanban, Backlog, Meu Trabalho, Arquivos e Colaboradores (`Methodology.BOARD_OK`); nasce em modo Kanban (sem sprints).
+- A lista "Selecione o Projeto" não mostra quadros; "Quadros" não mostra projetos.
+
 ## Entrega
 - Versão em 4 lugares: `version.json`, `BRAND.version` (PMO_Compass_v2.html), `package.json`, `sw.js` (`CACHE_NAME`).
 - Testes: `node tests/run.js` e `npm run test:unit` (inclui `datamap`), `npm run test:smoke`; migrações: `node scripts/db-apply.mjs --dry-run` antes de aplicar, depois `node scripts/build-schema.mjs`.

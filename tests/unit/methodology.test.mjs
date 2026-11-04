@@ -59,3 +59,12 @@ test('primeiros passos do projeto ágil falam de Backlog, não de WBS', () => {
   assert.ok(html.includes("title: 'Cadastre os itens no Backlog'"));
   assert.ok(html.includes("agil ? { done: has('backlog')"));
 });
+
+test('Quadro de tarefas: só Quadro, Backlog, Meu Trabalho, Arquivos e Colaboradores; fora de ORDER; migração libera o valor', async () => {
+  const { readFileSync } = await import('node:fs');
+  const h = readFileSync(new URL('../../PMO_Compass_v2.html', import.meta.url), 'utf8');
+  for (const k of ["quadro:  { label:'Quadro de Tarefas (sem projeto)'", "const BOARD_OK = ['kanban', 'backlog', 'mywork', 'repository', 'resources']", "id=\"sbg-quadros\"", "Wizard.open(\'quadro\')", "entry: 'kanban'", "'Criar Quadro'"]) assert.ok(h.includes(k), k);
+  assert.ok(h.includes("const ORDER = ['agil', 'cascata', 'hibrido'];"), 'o quadro não entra nas comparações de metodologia');
+  const mig = readFileSync(new URL('../../supabase/migrations/20261104200000_board_methodology.sql', import.meta.url), 'utf8');
+  assert.ok(/'quadro'/.test(mig));
+});

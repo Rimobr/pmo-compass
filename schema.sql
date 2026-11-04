@@ -1,6 +1,6 @@
 -- =========================================================================
 -- PMO Compass — esquema completo (GERADO por scripts/build-schema.mjs — não edite à mão)
--- Fonte: supabase/migrations/ (49 arquivos). Para instalação do zero, rode este arquivo inteiro
+-- Fonte: supabase/migrations/ (50 arquivos). Para instalação do zero, rode este arquivo inteiro
 -- no SQL Editor; para um banco que já existe, use `node scripts/db-apply.mjs` (aplica só o que falta).
 -- =========================================================================
 
@@ -3147,3 +3147,10 @@ $$ language plpgsql stable security definer set search_path = public;
 
 revoke all on function public.compass_digest() from public, anon;
 grant execute on function public.compass_digest() to authenticated, service_role;
+
+-- ▼▼▼ 20261104200000_board_methodology.sql ▼▼▼
+-- Quadro de tarefas (sem projeto): um espaço só de cartões, criado como um projeto do tipo "quadro".
+-- Reaproveita permissões, equipe, autonomia do quadro e limpezas do projeto; o menu mostra só Quadro, Backlog, Meu Trabalho, Arquivos e Colaboradores.
+alter table public.projects drop constraint if exists projects_methodology_check;
+alter table public.projects add constraint projects_methodology_check
+  check (methodology is null or methodology in ('agil','cascata','hibrido','quadro'));

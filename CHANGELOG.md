@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.57.1 — 2026-11-04
+- Menu lateral com titulos (Selecione o Projeto, Metodologias Disponiveis, Artefatos do Projeto) e linha entre os itens; janela aberta nao fecha mais ao soltar o mouse fora dela
+
 ## 2.56.3 — 2026-11-04
 - Varredura de acessibilidade (axe, 3 temas) e 375 px das telas e janelas novas no CI (test:a11y); contraste do azul do tema claro e do verde do tema cinza; alertas do Dashboard e atividades da WBS abrem o proprio registro
 

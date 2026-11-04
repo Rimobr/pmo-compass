@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.57.1'
+  version: '2.58.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -976,6 +976,14 @@ body.icons-failed i[data-fb]::before{
       <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
       <button class="si" data-p="prioritization" onclick="R.go('prioritization')"><i class="ti ti-sort-descending-2"></i>Priorização</button>
       <button class="si" data-p="report" onclick="R.go('report')"><i class="ti ti-file-report"></i>Relatório</button>
+    </div>
+  </div>
+
+  <div class="sb-group" id="sbg-quadros">
+    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-quadros')" title="Tarefas avulsas da equipe, fora de qualquer projeto"><i class="ti ti-layout-kanban sb-gico"></i>Quadros<i class="ti ti-chevron-right sb-gchev"></i></button>
+    <div class="sb-group-body">
+      <div id="sb-boards-root"></div>
+      <button class="si" data-perm="business" onclick="Wizard.open('quadro')" title="Cria um quadro de tarefas que não depende de projeto"><i class="ti ti-plus"></i>Novo Quadro</button>
     </div>
   </div>
 
@@ -7799,16 +7807,20 @@ const Nav = (() => {
   function renderProjects() {
     const root = document.getElementById('sb-projects-root');
     if(!root || typeof DB === 'undefined') return;
-    const projects = DB.listProjects();
+    const all = DB.listProjects();
+    const isB = p => typeof Methodology !== 'undefined' && Methodology.isBoard(p.id);
+    const projects = all.filter(p => !isB(p)), boards = all.filter(isB);
     const activeId = DB.getActiveProjectId();
+    const broot = document.getElementById('sb-boards-root');
+    if(broot) broot.innerHTML = boards.length ? boards.map(p => `<button class="si${p.id===activeId?' proj-active':''}" style="padding-left:22px" onclick="DB.switchProject('${p.id}');R.go('kanban')"><i class="ti ti-layout-kanban"></i>${escapeHtml(p.name)}</button>`).join('') : '<div class="set-sub" style="padding:6px 22px">Nenhum quadro ainda</div>';
     // O ícone antes do nome é o da METODOLOGIA do projeto (legenda logo abaixo da lista)
-    document.body.classList.toggle('no-project', !projects.length);
+    document.body.classList.toggle('no-project', !all.length);
     if(!projects.length) root.innerHTML = '<div class="set-sub" style="padding:6px 22px">Nenhum projeto ainda</div>'; else
     root.innerHTML = projects.map(p => `<button class="si${p.id===activeId?' proj-active':''}" style="padding-left:22px" onclick="DB.switchProject('${p.id}')">${typeof Methodology !== 'undefined' ? Methodology.iconFor(p.id) : `<i class="ti ti-${escapeHtml(p.icon||'compass')}"></i>`}${escapeHtml(p.name)}</button>`).join('');
     const lg = document.getElementById('sb-method-legend'); if(lg && typeof Methodology !== 'undefined') lg.innerHTML = Methodology.legend();
     const tIco = document.getElementById('tb-proj-ico'); if(tIco && typeof Methodology !== 'undefined') tIco.innerHTML = Methodology.iconFor(activeId);
     const tag = document.getElementById('proj-name');
-    const active = projects.find(x=>x.id===activeId);
+    const active = all.find(x=>x.id===activeId);
     if(tag) tag.textContent = active ? active.name : 'Nenhum projeto';
     // O menu mostra QUAL projeto está escolhido: as "Artefatos do Projeto" valem para ele
     const nm = document.getElementById('sb-proj-name'), cx = document.getElementById('sb-ctx-name');
@@ -14668,11 +14680,18 @@ const Methodology = (() => {
     cascata: { label:'Cascata (preditivo)', short:'Cascata', icon:'timeline',
       resumo:'Plano completo antes de executar: entregas na WBS, linha de base, controle formal de mudanças e orçamento por CPI/SPI.',
       guidance:'Este projeto é em CASCATA (preditivo): cobre aderência ao plano, linha de base, caminho crítico, controle formal de mudanças e desvios de prazo e custo.' },
+    quadro:  { label:'Quadro de Tarefas (sem projeto)', short:'Quadro', icon:'layout-kanban',
+      resumo:'Só um quadro para delegar e acompanhar tarefas avulsas da equipe, como no Jira, no Trello ou no Monday: colunas, cartões com responsável, prazo e lista de tarefas. Não tem plano, orçamento, riscos nem sprints.',
+      guidance:'Este é um QUADRO DE TAREFAS avulsas (não é um projeto): fale só em tarefas, responsáveis, prazos e fluxo entre colunas; não cobre plano, linha de base, orçamento ou riscos.' },
     hibrido: { label:'Híbrido', short:'Híbrido', icon:'arrows-split',
       resumo:'Mistura planejamento preditivo e entrega ágil. Mostra todas as telas.',
       guidance:'Este projeto é HÍBRIDO: planejamento preditivo nas macro-entregas e execução ágil dentro delas; trate prazos e custos do plano e o ritmo das entregas.' }
   };
   const ORDER = ['agil', 'cascata', 'hibrido'];
+  // O Quadro não é uma quarta metodologia de projeto: é um espaço só de tarefas. Fica fora de ORDER (comparações e legenda) e escolhido ao criar.
+  // Num Quadro só aparecem estas telas da área do projeto; as demais (plano, orçamento, riscos, sprints...) ficam fora do menu.
+  const BOARD_OK = ['kanban', 'backlog', 'mywork', 'repository', 'resources'];
+  const PROJECT_PAGES = ['dashboard', 'mywork', 'sprintnow', 'kanban', 'backlog', 'sprints', 'ritos', 'wbs', 'baseline', 'budget', 'risks', 'scope', 'estimates', 'whatif', 'decisions', 'loop', 'trail', 'statusmsg', 'burnout', 'hours', 'resources', 'stakeholders', 'raci', 'lessons', 'meetings', 'repository', 'chat', 'modelos'];
   // Telas que só fazem sentido em alguns métodos. O que não está aqui aparece em todos.
   // A WBS é plano preditivo (entregas com prazo e % de avanço): no projeto ágil quem acompanha as entregas é o Quadro, o Backlog e a Sprint atual.
   // Esconder nunca apaga dado: se o projeto ágil já tem entregas na WBS, ela aparece sozinha (ver KEEP_IF_DATA).
@@ -14713,9 +14732,10 @@ const Methodology = (() => {
     return `<div class="m-legend" role="note" aria-label="Legenda das metodologias">${ORDER.map(k => `<span title="${esc(TYPES[k].short)} — ${esc(TYPES[k].resumo)}"><i class="ti ti-${TYPES[k].icon}" aria-hidden="true"></i>${esc(TYPES[k].short)}</span>`).join('')}<span class="help-q" data-help="O ícone antes do nome mostra como cada projeto é conduzido. Ágil (↻): ciclos curtos em sprints, menu enxuto. Cascata (linha do tempo): plano completo antes de executar, com linha de base e controle de mudanças. Híbrido (⇄): mistura os dois e mostra todas as telas. Mude em Configurações → Perfil de PMO." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>`;
   }
   function showAll() { try { return localStorage.getItem(SHOW_ALL_KEY) === '1'; } catch(e) { return false; } }
-  function visibleFor(pageId, t) { return !ONLY[pageId] || ONLY[pageId].includes(t); }
+  function visibleFor(pageId, t) { if(t === 'quadro') return !PROJECT_PAGES.includes(pageId) || BOARD_OK.includes(pageId); return !ONLY[pageId] || ONLY[pageId].includes(t); }
+  const isBoard = projectId => typeFor(projectId) === 'quadro';
   function visible(pageId) { return showAll() || visibleFor(pageId, type()) || keepByData(pageId); }
-  const methodsOf = pageId => (ONLY[pageId] || []).map(m => TYPES[m].short);
+  const methodsOf = pageId => (ONLY[pageId] || (PROJECT_PAGES.includes(pageId) ? ['Ágil', 'Cascata', 'Híbrido'] : [])).map(m => TYPES[m] ? TYPES[m].short : m);
 
   function apply() {
     document.querySelectorAll('.si[data-p], .ntab[data-p]').forEach(b => b.classList.toggle('m-hidden', !visible(b.dataset.p)));
@@ -14768,9 +14788,9 @@ const Methodology = (() => {
   function render() {
     const root = document.getElementById('method-root'); if(!root) return;
     const cur = type(), all = showAll();
-    const hiddenFor = t => Object.keys(ONLY).filter(p => !visibleFor(p, t));
-    const label = { wbs:'WBS (aparece sozinha se já houver entregas cadastradas)', baseline:'Linha de base', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint' };
-    root.innerHTML = ORDER.map(t => {
+    const hiddenFor = t => (t === 'quadro' ? PROJECT_PAGES : Object.keys(ONLY)).filter(p => !visibleFor(p, t));
+    const label = { dashboard:'Dashboard', mywork:'Meu Trabalho', sprintnow:'Sprint atual', decisions:'Decisões', loop:'Loop de decisões', trail:'Trilha', statusmsg:'Mensagem de status', burnout:'Burnout', hours:'Horas', resources:'Colaboradores', stakeholders:'Partes interessadas', lessons:'Lições aprendidas', meetings:'Reuniões', repository:'Arquivos', chat:'Chat', modelos:'Modelos de documentos', risks:'Riscos', budget:'Orçamento e Custos', wbs:'WBS (aparece sozinha se já houver entregas cadastradas)', baseline:'Linha de base', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint' };
+    root.innerHTML = [...ORDER, 'quadro'].map(t => {
       const hid = hiddenFor(t);
       return `<button type="button" class="m-opt" role="radio" aria-checked="${t === cur}" data-perm="business" onclick="Methodology.set('${t}')">
         <i class="ti ti-${TYPES[t].icon}"></i><span><b>${esc(TYPES[t].label)}</b><span class="m-sub">${esc(TYPES[t].resumo)}</span>
@@ -14779,7 +14799,7 @@ const Methodology = (() => {
   }
 
   function systemGuidance() { return TYPES[type()].guidance; }
-  return { TYPES, ORDER, ONLY, type, typeFor, typeOf, iconFor, tag, tagOf, legend, visibleFor, visible, apply, notice, set, setShowAll, render, systemGuidance, methodsOf };
+  return { TYPES, ORDER, ONLY, BOARD_OK, PROJECT_PAGES, isBoard, type, typeFor, typeOf, iconFor, tag, tagOf, legend, visibleFor, visible, apply, notice, set, setShowAll, render, systemGuidance, methodsOf };
 })();
 </script>
 
@@ -19724,6 +19744,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
           <option value="agil">Ágil (Scrum ou Kanban)</option>
           <option value="cascata">Cascata (PMBOK, plano completo antes)</option>
           <option value="hibrido" selected>Híbrido (mistura os dois)</option>
+          <option value="quadro">Quadro de tarefas (sem projeto)</option>
         </select>
       </div>
     </div>
@@ -20903,9 +20924,11 @@ const Wizard = (() => {
   let step = 1;
   const total = 3;
   const subtitles = ['Configure os dados básicos do projeto','Adicione os colaboradores da equipe','Configure o contexto inicial da IA'];
+  let board = false; // Quadro: só o nome (um passo), sem equipe nem contexto da IA
 
-  function open() {
-    step = 1;
+  function open(kind) {
+    step = 1; board = kind === 'quadro';
+    const sel = document.getElementById('wz-method'); if(sel) sel.value = board ? 'quadro' : 'hibrido';
     render();
     const m = document.getElementById('modal-new-project');
     if(m) m.classList.remove('hidden');
@@ -20925,10 +20948,10 @@ const Wizard = (() => {
     const next = document.getElementById('wz-next');
     const sub = document.getElementById('wz-subtitle');
     if(back) back.style.visibility = step > 1 ? 'visible' : 'hidden';
-    if(next) next.innerHTML = step < total
+    if(next) next.innerHTML = step < total && !board
       ? '<i class="ti ti-arrow-right"></i>Próximo'
-      : '<i class="ti ti-check"></i>Criar projeto';
-    if(sub) sub.textContent = subtitles[step-1];
+      : '<i class="ti ti-check"></i>' + (board ? 'Criar Quadro' : 'Criar projeto');
+    if(sub) sub.textContent = board ? 'Dê um nome ao quadro de tarefas (não é um projeto)' : subtitles[step-1];
   }
   function next() {
     if(step === 1) {
@@ -20942,7 +20965,7 @@ const Wizard = (() => {
         return;
       }
     }
-    if(step < total) { step++; render(); }
+    if(step < total && !board) { step++; render(); }
     else { create(); }
   }
   function back() { if(step > 1) { step--; render(); } }
@@ -20959,13 +20982,20 @@ const Wizard = (() => {
     const name = document.getElementById('wz-name')?.value.trim() || 'Novo projeto';
     const client = document.getElementById('wz-client')?.value.trim() || '';
     const area = document.getElementById('wz-area')?.value.trim() || '';
-    const method = document.getElementById('wz-method')?.value || 'hibrido';
+    const method = board ? 'quadro' : (document.getElementById('wz-method')?.value || 'hibrido');
     close();
     const id = DB.createProject(name, client, area);
     if(id) {
       if(typeof Methodology !== 'undefined') Methodology.set(method, { silent: true }); // o projeto novo já nasce com o menu do seu método
       // Projeto ágil começa pelo Backlog (a primeira coisa a fazer é ter itens); os demais, pelo Dashboard
-      if(method === 'agil') {
+      if(method === 'quadro') {
+        // Quadro nasce no modo Kanban (sem sprints): a pessoa cria o primeiro cartão e já usa
+        const c = { ...(DB.get('agileConfig') || {}), entry: 'kanban' }; DB.set('agileConfig', c);
+        if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(id, 'agileConfig', c);
+        if(typeof Agile !== 'undefined' && Agile.resetCache) Agile.resetCache(); // o quadro lê o modo Kanban já na primeira tela
+        T.show('✅ Quadro "' + name + '" criado! Crie o primeiro cartão e delegue para a equipe.', 6000);
+        R.go('kanban');
+      } else if(method === 'agil') {
         T.show('✅ Projeto "' + name + '" criado! Comece pelo backlog: importe uma planilha ou crie os itens e depois planeje a primeira sprint.', 7000);
         R.go('backlog');
       } else {
