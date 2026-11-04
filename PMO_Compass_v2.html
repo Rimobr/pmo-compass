@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.56.1'
+  version: '2.56.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -59,7 +59,7 @@ html[data-theme="light"] {
   --bg:#f6f7f9; --s1:#ffffff; --s2:#f1f3f6; --s3:#e6e9ee;
   --b1:rgba(15,23,42,0.08); --b2:rgba(15,23,42,0.14); --b3:rgba(15,23,42,0.24);
   --t1:#0f172a; --t2:#55606e; --t3:#5f6a76;
-  --acc:#2a63c7; --ad:rgba(47,111,224,0.08); --ab:rgba(47,111,224,0.28);
+  --acc:#2459b8; --ad:rgba(47,111,224,0.08); --ab:rgba(47,111,224,0.28); /* azul do tema claro: 5:1 até sobre fundo tintado (AA exige 4,5) */
   --grn:#13763d; --gd:rgba(26,158,82,0.08); --gb:rgba(26,158,82,0.28);
   --amb:#895d0b; --amd:rgba(179,121,15,0.10); --ambb:rgba(179,121,15,0.28);
   --red:#bf3026; --rd:rgba(217,54,43,0.08); --rb:rgba(217,54,43,0.28);
@@ -71,7 +71,7 @@ html[data-theme="gray"] {
   --b1:rgba(255,255,255,0.07); --b2:rgba(255,255,255,0.13); --b3:rgba(255,255,255,0.22);
   --t1:#eef1f5; --t2:#a3adb8; --t3:#9aa5b1;
   --acc:#88b7f9; --ad:rgba(91,155,247,0.12); --ab:rgba(91,155,247,0.30);
-  --grn:#4bc767; --gd:rgba(75,199,103,0.11); --gb:rgba(75,199,103,0.30);
+  --grn:#52cc6e; --gd:rgba(75,199,103,0.11); --gb:rgba(75,199,103,0.30); /* verde do tema cinza: mínimo 4,5:1 sobre o fundo tintado dos botões */
   --amb:#e0ab3f; --amd:rgba(224,171,63,0.11); --ambb:rgba(224,171,63,0.30);
   --red:#f59793; --rd:rgba(241,106,99,0.11); --rb:rgba(241,106,99,0.30);
   --pur:#a680fa; --pd:rgba(166,128,250,0.11); --pb:rgba(166,128,250,0.30);
@@ -10604,7 +10604,7 @@ const Dashboard = (() => {
         alerts.push({ sev: m.workloadPct>=90?'Crítico':'Alto', cls: m.workloadPct>=90?'b-red':'b-amb',
           title: `${m.name} — burnout iminente (${m.workloadPct}%)`,
           sub: (m.signals||[]).join(' · ') || 'Sobrecarga acima do limite saudável',
-          page:'burnout', label:'Ver Burnout Radar' });
+          page:'burnout', label:'Ver Burnout Radar', act: Auth.can('business') && m.id ? "Burnout.openEdit('" + m.id + "')" : '', actLabel: 'Informar a Carga' });
       });
     }
     // Alocação real entre projetos (casada por nome via DB.computePortfolioAllocation) —
@@ -10624,7 +10624,7 @@ const Dashboard = (() => {
     if(P.get('criticalRiskAlerts') && typeof RiskMatrix !== 'undefined') {
       const todayD = Clock.today();
       (DB.get('risks') || []).filter(r => RiskMatrix.isOpen(r) && RiskMatrix.scoreOf(r) >= 15).forEach(r => {
-        alerts.push({ sev:'Crítico', cls:'b-red', title: `${r.title} — risco crítico (nota ${RiskMatrix.scoreOf(r)})`, sub: r.owner ? `Responsável: ${r.owner}` : 'Sem responsável definido', page:'risks', label:'Ver riscos' });
+        alerts.push({ sev:'Crítico', cls:'b-red', title: `${r.title} — risco crítico (nota ${RiskMatrix.scoreOf(r)})`, sub: r.owner ? `Responsável: ${r.owner}` : 'Sem responsável definido', page:'risks', label:'Ver riscos', act: Auth.can('business') && r.id ? "Risks.openEdit('" + String(r.id).replace(/'/g, '') + "')" : '', actLabel: 'Abrir o Risco' });
       });
       const vencidas = (DB.get('risks') || []).filter(r => RiskMatrix.isOpen(r) && r.reviewOn && r.reviewOn < Clock.iso(todayD)).length;
       if(vencidas) alerts.push({ sev:'Médio', cls:'b-amb', title: `${vencidas} risco(s) com revisão vencida`, sub:'Reavalie probabilidade e impacto', page:'risks', label:'Revisar' });
@@ -10686,7 +10686,7 @@ const Dashboard = (() => {
     if(typeof Notif !== 'undefined') Notif.refreshBadge();
 
     if(!top.length) { root.innerHTML = '<div style="padding:12px 0;color:var(--t3);font-size:12.5px">Nenhum alerta crítico no momento.</div>'; return; }
-    root.innerHTML = top.map((a,i) => `<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;${i<top.length-1?'border-bottom:1px solid var(--b1)':''}"><span class="badge ${a.cls}" style="margin-top:1px;flex-shrink:0">${a.sev}</span><div><div style="font-size:12.5px;font-weight:500">${escapeHtml(a.title)}</div><div style="font-size:11px;color:var(--t3)">${escapeHtml(a.sub)}</div><button class="link-a" onclick="R.go('${a.page}')"><i class="ti ti-arrow-right"></i>${escapeHtml(a.label)}</button></div></div>`).join('');
+    root.innerHTML = top.map((a,i) => `<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;${i<top.length-1?'border-bottom:1px solid var(--b1)':''}"><span class="badge ${a.cls}" style="margin-top:1px;flex-shrink:0">${a.sev}</span><div><div style="font-size:12.5px;font-weight:500">${escapeHtml(a.title)}</div><div style="font-size:11px;color:var(--t3)">${escapeHtml(a.sub)}</div><button class="link-a" onclick="${a.act ? a.act : "R.go('" + a.page + "')"}"><i class="ti ti-arrow-right"></i>${escapeHtml(a.act ? a.actLabel : a.label)}</button></div></div>`).join('');
   }
 
   function renderPriorityDecision() {
@@ -12410,7 +12410,7 @@ const MyInd = (() => {
         if(!set.has(key(x.responsavel))) return;
         const done = x.status === 'grn' || Number(x.pct) >= 100, due = x.end || '';
         out.push({ kind, ref: '', label: x.label, parent, status: done ? 'Concluída' : (x.pct ? x.pct + '%' : 'Não iniciada'), statusKey: done ? 'done' : 'open', due, daysLeft: due ? diff(today, due) : null,
-          state: stateOf(done, due, today), done, doneOn: '', points: null, stalled: 0, checkDone: 0, checkTotal: 0, bug: false });
+          state: stateOf(done, due, today), done, doneOn: '', points: null, stalled: 0, checkDone: 0, checkTotal: 0, bug: false, wbs: { id: x.id, parent: kind === 'Tarefa' ? m.id : '' } });
       };
       add(m, 'Entrega', '');
       (m.children || []).forEach(t => add(t, 'Tarefa', m.label));
@@ -12522,7 +12522,9 @@ const MyIndPage = (() => {
   const when = r => r.state === 'concluida' ? 'concluída' : r.daysLeft == null ? 'sem prazo' : r.daysLeft < 0 ? 'atrasada há ' + (-r.daysLeft) + (r.daysLeft === -1 ? ' dia' : ' dias') : r.daysLeft === 0 ? 'vence hoje' : 'vence em ' + r.daysLeft + (r.daysLeft === 1 ? ' dia' : ' dias');
   const badge = r => r.state === 'atrasada' ? 'b-red' : (r.state === 'no_prazo' && r.daysLeft <= win) ? 'b-amb' : r.state === 'concluida' ? 'b-grn' : 'b-neu';
   const action = r => r.ref && Auth.can('update_own') ? '<button class="btn btn-sm" onclick="Agile.openItem(\'' + esc(r.ref) + '\')" aria-label="Abrir ' + esc(r.ref) + '"><i class="ti ti-arrow-right"></i>Abrir</button>'
-    : (!r.ref && Auth.canOpen('wbs') ? '<button class="btn btn-sm" onclick="R.go(\'wbs\')"><i class="ti ti-arrow-right"></i>Ver na WBS</button>' : '');
+    : (!r.ref && Auth.canOpen('wbs') ? (r.wbs && r.wbs.id && Auth.can('business')
+      ? '<button class="btn btn-sm" onclick="R.go(\'wbs\');' + (r.wbs.parent ? 'WBS.openEditTask(\'' + esc(r.wbs.parent) + '\',\'' + esc(r.wbs.id) + '\')' : 'WBS.openEditModule(\'' + esc(r.wbs.id) + '\')') + '"><i class="ti ti-arrow-right"></i>Abrir a Atividade</button>'
+      : '<button class="btn btn-sm" onclick="R.go(\'wbs\')"><i class="ti ti-arrow-right"></i>Ver na WBS</button>') : '');
   const goBtn = g => !g ? '' : g.item ? (Auth.can('update_own') ? '<button class="btn btn-sm" onclick="Agile.openItem(\'' + esc(g.item) + '\')">Abrir o Cartão</button>' : '')
     : (Auth.canOpen(g.page) ? '<button class="btn btn-sm" onclick="R.go(\'' + g.page + '\')">Abrir</button>' : '');
 

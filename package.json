@@ -1,10 +1,11 @@
 {
   "name": "pmo-compass",
-  "version": "2.56.1",
+  "version": "2.56.3",
   "private": true,
   "scripts": {
     "test:unit": "node tests/run.js && node --test tests/unit/*.test.mjs",
     "test:smoke": "node tests/smoke/empty-project.mjs",
+    "test:a11y": "node tests/smoke/screens-a11y.mjs",
     "data-map": "node scripts/build-data-map.mjs",
     "test:e2e": "playwright test",
     "check:sql": "node scripts/check-sql.mjs",
@@ -16,7 +17,7 @@
     "check:version": "node scripts/check-version.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "changelog": "node scripts/build-changelog.mjs",
-    "check:all": "npm run lint && npm run check:version && npm run check:secrets && npm run check:sql && npm run check:schema && npm run test:unit && npm run test:smoke"
+    "check:all": "npm run lint && npm run check:version && npm run check:secrets && npm run check:sql && npm run check:schema && npm run test:unit && npm run test:smoke && npm run test:a11y"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.1",

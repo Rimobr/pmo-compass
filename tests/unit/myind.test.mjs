@@ -104,3 +104,10 @@ test('links para telas fechadas ao perfil: o módulo esconde botões e desativa 
   assert.equal(ProfileLinks.pageOf("DB.switchProject('x');R.go('dashboard')"), 'dashboard');
   assert.equal(ProfileLinks.pageOf('alert(1)'), null);
 });
+
+test('botões que levam ao registro: alertas do Dashboard e atividades da WBS abrem o próprio registro para quem edita o plano', () => {
+  for (const k of ["act: Auth.can('business') && m.id ? \"Burnout.openEdit('\" + m.id", "actLabel: 'Abrir o Risco'", 'onclick="${a.act ? a.act :', 'WBS.openEditTask(', 'WBS.openEditModule(', 'Abrir a Atividade']) assert.ok(html.includes(k), k);
+  const wbs = [{ id: 'w1', label: 'Módulo', responsavel: 'Ana', end: '2026-11-06', status: 'amb', pct: 40, children: [{ id: 't1', label: 'Tarefa 1', responsavel: 'Ana', end: '2026-11-03', status: 'red', pct: 10 }] }];
+  const rs = MyInd.rows(inp({ wbs }));
+  assert.deepEqual(rs.map(x => x.wbs), [{ id: 'w1', parent: '' }, { id: 't1', parent: 'w1' }]);
+});
