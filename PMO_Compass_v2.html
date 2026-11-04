@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.58.1'
+  version: '2.58.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -19674,12 +19674,12 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
 <div class="modal-ov hidden" id="modal-new-project" onclick="if(event.target===this)Wizard.close()">
   <div class="modal-box" style="width:540px;max-width:96vw">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <div class="modal-title">Novo Projeto</div>
+      <div class="modal-title" id="wz-title">Novo Projeto</div>
       <button class="btn btn-sm" onclick="Wizard.close()"><i class="ti ti-x"></i></button>
     </div>
     <div class="modal-sub" id="wz-subtitle">Configure os dados básicos do projeto</div>
 
-    <div class="wizard-steps">
+    <div class="wizard-steps" id="wz-steps">
       <div class="wz-step active" id="wz-s1"><span class="wz-num">1</span>Dados básicos</div>
       <div class="wz-step" id="wz-s2"><span class="wz-num">2</span>Equipe</div>
       <div class="wz-step" id="wz-s3"><span class="wz-num">3</span>Contexto IA</div>
@@ -19688,19 +19688,19 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
     <!-- Step 1: Basic info -->
     <div id="wz-panel-1">
       <div class="field-group">
-        <div class="field-label">Nome do projeto *</div>
+        <div class="field-label" id="wz-name-lbl">Nome do projeto *</div>
         <input class="input" id="wz-name" type="text" placeholder="Ex: Portal Nexus 2.0 — Módulo Financeiro" oninput="this.classList.remove('input-error');document.getElementById('wz-name-err').style.display='none'">
         <div class="input-error-msg" id="wz-name-err" style="display:none"><i class="ti ti-alert-circle"></i>Informe o nome do projeto pra continuar</div>
       </div>
-      <div class="field-group">
+      <div class="field-group wz-proj-only">
         <div class="field-label">Cliente / empresa</div>
         <input class="input" id="wz-client" type="text" placeholder="Ex: Grupo Faria Lima Ltda">
       </div>
-      <div class="field-group">
+      <div class="field-group wz-proj-only">
         <div class="field-label">Área / departamento<span class="help-q" data-help="Departamento responsável (TI, Engenharia, Marketing...). Projetos da mesma área são somados nos Indicadores do Portfólio. Opcional; pode ser definida depois em Indicadores → Editar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
         <input class="input" id="wz-area" type="text" maxlength="80" placeholder="Ex: TI">
       </div>
-      <div class="g2" style="gap:10px">
+      <div class="g2 wz-proj-only" style="gap:10px">
         <div class="field-group">
           <div class="field-label">Data de início</div>
           <input class="input" id="wz-start" type="date">
@@ -19710,11 +19710,11 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
           <input class="input" id="wz-end" type="date">
         </div>
       </div>
-      <div class="field-group">
+      <div class="field-group wz-proj-only">
         <div class="field-label">Orçamento baseline (R$)</div>
         <input class="input" id="wz-budget" type="number" placeholder="Ex: 300000">
       </div>
-      <div class="field-group">
+      <div class="field-group wz-proj-only">
         <div class="field-label">Objetivo principal</div>
         <textarea class="input" id="wz-goal" rows="2" placeholder="Descreva o que o projeto precisa entregar..."></textarea>
       </div>
@@ -20958,7 +20958,13 @@ const Wizard = (() => {
     if(next) next.innerHTML = step < total && !board
       ? '<i class="ti ti-arrow-right"></i>Próximo'
       : '<i class="ti ti-check"></i>' + (board ? 'Criar Quadro' : 'Criar projeto');
-    if(sub) sub.textContent = board ? 'Dê um nome ao quadro de tarefas (não é um projeto)' : subtitles[step-1];
+    // Quadro: sem passos, sem cliente, datas, orçamento nem objetivo (só o nome)
+    const setTxt = (id, t) => { const e = document.getElementById(id); if(e) e.textContent = t; };
+    setTxt('wz-title', board ? 'Novo Quadro' : 'Novo Projeto'); setTxt('wz-name-lbl', board ? 'Nome do quadro *' : 'Nome do projeto *');
+    const nm = document.getElementById('wz-name'); if(nm) nm.placeholder = board ? 'Ex: Bugs da Barbearia, Tarefas da equipe' : 'Ex: Portal Nexus 2.0 — Módulo Financeiro';
+    const st = document.getElementById('wz-steps'); if(st) st.style.display = board ? 'none' : '';
+    document.querySelectorAll('#modal-new-project .wz-proj-only').forEach(e => { e.style.display = board ? 'none' : ''; });
+    if(sub) sub.textContent = board ? 'Um quadro de tarefas avulsas: não é um projeto e não tem plano, orçamento nem riscos' : subtitles[step-1];
   }
   function next() {
     if(step === 1) {
