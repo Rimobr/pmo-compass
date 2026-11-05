@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.62.2'
+  version: '2.62.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -213,11 +213,6 @@ body.is-board #kb-sprint,body.is-board #kb-sprint-bar,body.is-board [onclick*="o
 /* telas menos usadas do projeto ficam recolhidas em "Mais Telas" (abrem sozinhas se a tela aberta é uma delas) */
 .sb-proj-area:not(.more) .sb-more-group{display:none}
 .sb-more-btn{color:var(--t2)}
-.sb-recent:empty{display:none}
-.sb-recent{margin:2px 0 4px 8px;padding-left:4px;border-left:2px solid var(--b2)}
-.sb-recent-t{font-size:11px;color:var(--t3);padding:2px 8px}
-.sb-recent-i{padding-top:4px;padding-bottom:4px;font-size:12px}
-.sidebar.collapsed .sb-recent{display:none}
 .sb-more-chev{margin-left:auto;font-size:12px;transition:transform .16s ease}
 .sb-proj-area.more .sb-more-chev{transform:rotate(180deg)}
 .sb-board-menu{display:none;margin-left:8px;border-left:2px solid color-mix(in srgb,var(--acc) 45%,transparent)}
@@ -987,9 +982,7 @@ body.icons-failed i[data-fb]::before{
   <button class="si" data-p="mywork" onclick="R.go('mywork')" title="O que está com você neste projeto: itens, tarefas e horas"><i class="ti ti-user-check"></i>Meu Trabalho</button>
   <button class="si" data-p="myind" onclick="R.go('myind')" title="Os seus números: atrasos, vencimentos, velocidade, horas e orientação do dia"><i class="ti ti-chart-dots"></i>Meus Indicadores</button>
 
-  <div id="sb-recent" class="sb-recent" aria-label="Telas usadas recentemente"></div>
-
-  <div class="sb-group" id="sbg-visao">
+    <div class="sb-group" id="sbg-visao">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-visao')" title="Painéis que juntam todos os projetos"><i class="ti ti-layout-grid sb-gico"></i>Visão Geral<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
       <button class="si" data-p="xray" onclick="R.go('xray')"><i class="ti ti-report-medical"></i>Raio-X do Projeto</button>
@@ -7728,7 +7721,6 @@ const R = (() => {
     const c = document.getElementById('content');
     if(c) c.scrollTop = 0;
     history.replaceState(null,'','#'+id);
-    if(typeof Recent !== 'undefined') Recent.visit(id);
     if(typeof Notif !== 'undefined') Notif.refreshBadge(); // independente do Dashboard — fica live em toda navegação
     if(typeof Dashboard !== 'undefined') Dashboard.render();
     if(id === 'report' && typeof Report !== 'undefined') Report.render();
@@ -7825,7 +7817,7 @@ const Nav = (() => {
   function expandGroupFor(pageId) {
     let groupId = FLAT.includes(pageId) ? '' : GROUP_OF[pageId];
     // Com um quadro ativo, o grupo "Quadros / Kanban" (onde está o menu do quadro) não fecha ao abrir o Kanban ou outra tela solta
-    if(!groupId && document.body.classList.contains('is-board')) groupId = 'sbg-quadros';
+    if(!groupId) { try { if(typeof DB !== 'undefined' && typeof Methodology !== 'undefined' && Methodology.isBoard(DB.getActiveProjectId())) groupId = 'sbg-quadros'; } catch(e) {} }
     const tg = groupId && document.getElementById(groupId), area = document.getElementById('sb-proj-area');
     if(tg && tg.classList.contains('sb-more-group') && area) { area.classList.add('more'); syncMore(); }
     document.querySelectorAll('.sb-group').forEach(g => {
@@ -8147,31 +8139,6 @@ const Onboarding = (() => {
     }, n ? 1200 : 600);
   }
   return { maybeShow, show, dismiss, markSeen, willShow: shouldShow, refresh: () => { try { render(); } catch(e) {} } };
-})();
-</script>
-
-<!-- ■ MODULE: ui/recent-pages ─ "Usados Recentemente": as últimas telas abertas por esta pessoa, neste navegador, em Meu Dia -->
-<script data-module="ui/recent-pages">
-const Recent = (() => {
-  const KEY = 'pmo_recent_pages_v1', MAX = 6, SHOW = 3, SKIP = ['noproject', 'dashboard'];
-  const load = () => { try { const a = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(a) ? a.filter(x => typeof x === 'string').slice(0, MAX) : []; } catch(e) { return []; } };
-  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  // Só entra o que tem item no menu e que o perfil abre agora (nada que a pessoa não possa usar)
-  function source(id) { return document.querySelector('#sidebar .si[data-p="' + id + '"]'); }
-  function ok(id, cur) {
-    const b = source(id); if(!b || id === cur || SKIP.includes(id) || b.classList.contains('m-hidden')) return false;
-    try { return typeof Auth === 'undefined' || Auth.canOpen(id); } catch(e) { return false; }
-  }
-  function render(cur) {
-    const root = document.getElementById('sb-recent'); if(!root) return;
-    const ids = load().filter(id => ok(id, cur)).slice(0, SHOW);
-    root.innerHTML = ids.length ? '<div class="sb-recent-t">Usados Recentemente</div>' + ids.map(id => { const b = source(id), ic = b.querySelector('i'); return '<button class="si sb-recent-i" onclick="R.go(\'' + esc(id) + '\')"><i class="' + esc(ic ? ic.className : 'ti ti-history') + '" aria-hidden="true"></i>' + esc(b.textContent.trim().replace(/\s+/g, ' ').replace(/\d+$/, '')) + '</button>'; }).join('') : '';
-  }
-  function visit(id) {
-    if(id && !SKIP.includes(id)) { try { localStorage.setItem(KEY, JSON.stringify([id, ...load().filter(x => x !== id)].slice(0, MAX))); } catch(e) {} }
-    render(id);
-  }
-  return { visit, render, load };
 })();
 </script>
 

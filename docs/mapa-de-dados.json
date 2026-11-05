@@ -420,12 +420,6 @@
       "logout": "apaga",
       "deleteProject": "nao"
     },
-    "pmo_recent_pages_v1": {
-      "desc": "As últimas telas abertas (até 6), para o bloco Usados Recentemente do menu.",
-      "kind": "preferência",
-      "logout": "apaga",
-      "deleteProject": "nao"
-    },
     "pmo_menu_v2_seen": {
       "desc": "Dica do menu reorganizado já mostrada (aparece uma vez).",
       "kind": "preferência",

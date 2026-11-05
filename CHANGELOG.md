@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.62.2 — 2026-11-04
+- Quadro de tarefas: campo Sprint do cartao tambem some
+
 ## 2.62.1 — 2026-11-04
 - Quadro de tarefas sem sprint (todos os itens, sem seletor nem faixa de sprint, sem Planejar sprint); texto de Apagar Dados acompanha a confirmacao simples
 

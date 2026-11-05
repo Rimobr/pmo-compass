@@ -6,22 +6,6 @@ import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const html = readFileSync(join(root, 'PMO_Compass_v2.html'), 'utf8');
-const mod = html.match(/<script data-module="ui\/recent-pages">([\s\S]*?)<\/script>/)[1];
-
-test('Usados Recentemente: guarda as últimas telas sem repetir, no máximo 6, e ignora Dashboard e sem-projeto', () => {
-  const store = {}; const ls = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = v; } };
-  const { visit, load } = new Function('localStorage', 'document', mod + '\nreturn Recent;')(ls, { getElementById: () => null, querySelector: () => null });
-  for (const p of ['risks', 'kanban', 'dashboard', 'risks', 'wbs', 'noproject', 'hours', 'budget', 'scope', 'raci']) visit(p);
-  assert.deepEqual(load(), ['raci', 'scope', 'budget', 'hours', 'wbs', 'risks']);
-  assert.equal(new Set(load()).size, load().length);
-});
-
-test('só aparece o que existe no menu, não está escondido e o perfil abre; chave do navegador no mapa; o menu usa aspas válidas', () => {
-  for (const k of ['Auth.canOpen(id)', 'm-hidden', 'Usados Recentemente']) assert.ok(mod.includes(k), k);
-  assert.ok(html.includes("if(typeof Recent !== 'undefined') Recent.visit(id);"));
-  assert.ok(readFileSync(join(root, 'docs', 'mapa-de-dados.json'), 'utf8').includes('pmo_recent_pages_v1'));
-});
-
 test('nenhuma tela aparece duas vezes na área do projeto (soltas à vista e dentro de "Mais Telas")', () => {
   const a = html.indexOf('id="sb-proj-area"'), b = html.indexOf('<!-- /sb-proj-area -->');
   const area = html.slice(a, b);
@@ -44,7 +28,7 @@ test('nenhuma expressão regular perdeu a barra invertida (\s, \d) ao ser escrit
 });
 
 test('com um quadro ativo o grupo Quadros / Kanban não fecha ao abrir o Kanban', () => {
-  assert.ok(html.includes("if(!groupId && document.body.classList.contains('is-board')) groupId = 'sbg-quadros';"));
+  assert.ok(html.includes("if(!groupId) { try { if(typeof DB !== 'undefined' && typeof Methodology !== 'undefined' && Methodology.isBoard(DB.getActiveProjectId())) groupId = 'sbg-quadros'; } catch(e) {} }"));
 });
 
 test('excluir e apagar os dados do projeto pedem só OK ou Cancelar (sem digitar o nome)', () => {
@@ -64,4 +48,9 @@ test('o texto de Apagar Dados não promete confirmação digitada onde agora é 
 
 test('o campo Sprint do cartão também some no Quadro de tarefas', () => {
   assert.ok(html.includes('class="field-group ai-sprint-grp"'));
+});
+
+test('Usados Recentemente foi removido do menu (e a chave do navegador some do mapa)', () => {
+  assert.ok(!html.includes('sb-recent') && !html.includes('Recent.visit') && !html.includes('pmo_recent_pages_v1'));
+  assert.ok(!readFileSync(join(root, 'docs', 'mapa-de-dados.json'), 'utf8').includes('pmo_recent_pages_v1'));
 });
