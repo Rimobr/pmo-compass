@@ -46,3 +46,8 @@ test('nenhuma expressão regular perdeu a barra invertida (\s, \d) ao ser escrit
 test('com um quadro ativo o grupo Quadros / Kanban não fecha ao abrir o Kanban', () => {
   assert.ok(html.includes("if(!groupId && document.body.classList.contains('is-board')) groupId = 'sbg-quadros';"));
 });
+
+test('excluir e apagar os dados do projeto pedem só OK ou Cancelar (sem digitar o nome)', () => {
+  assert.ok(!html.includes('digite o nome do projeto exatamente'));
+  for (const k of ['Clique OK para excluir de vez, ou Cancelar para manter o projeto.', 'Clique OK para apagar os dados, ou Cancelar para manter tudo.']) assert.ok(html.includes(k), k);
+});

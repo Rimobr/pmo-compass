@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.61.3'
+  version: '2.62.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -7330,8 +7330,7 @@ const DB = (() => {
     // trazia tudo de volta via pullAll(), porque a cópia na nuvem nunca era tocada. Agora que
     // cada linha carrega project_id, dá pra apagar exatamente a fatia deste projeto lá também.
     const cloudNote = signedIn ? ' e também os dados deste projeto salvos na nuvem' : '';
-    const typed = prompt(`APAGAR OS DADOS DO PROJETO "${activeName}"${cloudNote}\n\nO projeto continua existindo, mas WBS, decisões, documentos, orçamento, equipe e demais registros são apagados. Outros projetos não são afetados. Não dá para desfazer.\n\nPara confirmar, digite o nome do projeto exatamente:`);
-    if(typed === null || typed.trim() !== activeName) { T.show('Limpeza cancelada — nenhum dado foi apagado.'); return; }
+    if(!confirm(`APAGAR OS DADOS DO PROJETO "${activeName}"${cloudNote}\n\nO projeto continua existindo, mas WBS, decisões, documentos, orçamento, equipe e demais registros são apagados. Outros projetos não são afetados. Não dá para desfazer.\n\nClique OK para apagar os dados, ou Cancelar para manter tudo.`)) { T.show('Limpeza cancelada — nenhum dado foi apagado.'); return; }
     if(signedIn) {
       T.show('🗑️ Apagando dados deste projeto na nuvem…');
       await Cloud.clearProjectData(pid);
@@ -7343,16 +7342,14 @@ const DB = (() => {
   }
 
   // Exclui o projeto ativo por inteiro (cadastro + dados), na nuvem e neste navegador. Só o administrador:
-  // oferece backup, pede para digitar o nome do projeto e registra no log de auditoria.
+  // oferece backup, pede uma confirmação (OK ou Cancelar) e registra no log de auditoria.
   async function deleteProject() {
     if(Auth.getRole() !== 'admin') { T.show('🔒 Só o Administrador pode excluir um projeto.'); return; }
     const pid = getActiveProjectId();
     const name = (loadProjects().find(p => p.id === pid) || {}).name || pid;
     const signedIn = typeof Cloud !== 'undefined' && Cloud.isSignedIn();
     if(confirm(`Recomendado: baixar um backup do projeto "${name}" antes de excluí-lo.\n\nClique OK para baixar o backup agora, ou Cancelar para pular.`)) exportBackup();
-    const typed = prompt(`EXCLUIR O PROJETO "${name}"\n\nIsso apaga o projeto e todos os seus dados${signedIn ? ' (inclusive na nuvem, para todas as pessoas)' : ' deste navegador'} e não pode ser desfeito.\n\nPara confirmar, digite o nome do projeto exatamente:`);
-    if(typed === null) { T.show('Exclusão cancelada.'); return; }
-    if(typed.trim() !== name) { T.show('Nome diferente — nenhum dado foi apagado.'); return; }
+    if(!confirm(`EXCLUIR O PROJETO "${name}"\n\nIsso apaga o projeto e todos os seus dados${signedIn ? ' (inclusive na nuvem, para todas as pessoas)' : ' deste navegador'} e não pode ser desfeito.\n\nClique OK para excluir de vez, ou Cancelar para manter o projeto.`)) { T.show('Exclusão cancelada — o projeto foi mantido.'); return; }
     if(signedIn) {
       T.show('🗑️ Excluindo o projeto na nuvem…');
       const r = await Cloud.deleteProject(pid);
