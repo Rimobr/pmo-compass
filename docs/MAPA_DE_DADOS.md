@@ -136,6 +136,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 | `pmo_gantt_lbl_v1` | Largura da coluna de nomes do Gantt. | preferência | apaga | nao |
 | `pmo_report_scope_v1` | Escopo escolhido no relatório. | preferência | apaga | nao |
 | `pmo_sb_area_v1` | Se a área de projeto do menu está recolhida. | preferência | apaga | nao |
+| `pmo_recent_pages_v1` | As últimas telas abertas (até 6), para o bloco Usados Recentemente do menu. | preferência | apaga | nao |
 | `pmo_menu_v2_seen` | Dica do menu reorganizado já mostrada (aparece uma vez). | preferência | apaga | nao |
 | `pmo_show_all_screens` | Mostrar todas as telas, mesmo as que o método esconde. | preferência | apaga | nao |
 | `pmo_sidebar_collapsed_v1` | Menu lateral recolhido. | preferência | apaga | nao |

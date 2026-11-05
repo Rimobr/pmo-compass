@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.60.1 — 2026-11-04
+- Menu: Mais Telas vira Menos Telas quando aberto; grupo Portfolio e Relatorios (sem repetir Indicadores); dica do menu uma vez
+
 ## 2.60.0 — 2026-11-04
 - Menu em tres niveis (etapa 2): Meu Dia, Visao Geral agrupada, Este Projeto com itens do dia a dia a vista e Mais Telas recolhido
 
