@@ -54,3 +54,14 @@ test('Usados Recentemente foi removido do menu (e a chave do navegador some do m
   assert.ok(!html.includes('sb-recent') && !html.includes('Recent.visit') && !html.includes('pmo_recent_pages_v1'));
   assert.ok(!readFileSync(join(root, 'docs', 'mapa-de-dados.json'), 'utf8').includes('pmo_recent_pages_v1'));
 });
+
+test('criar projeto avisa quando o nome já existe (mesmo com acento, hífen, maiúscula ou "de" de diferença)', () => {
+  const src = html.match(/const normName = [^\n]*\n  const sameName = [^\n]*\n/)[0];
+  const { sameName } = new Function(src + '\nreturn { sameName };')();
+  assert.equal(sameName('Sistema Gestão Barbearia', 'Sistema de Gestão Barbearia'), true);
+  assert.equal(sameName('Vida-Financeira', 'Vida Financeira'), true);
+  assert.equal(sameName('Implantação  Cla Guard Pro', 'implantacao cla guard pro'), true);
+  assert.equal(sameName('Vida Financeira', 'Vida Financeira 2'), false);
+  assert.equal(sameName('', ''), false);
+  assert.ok(html.includes('Clique OK para criar mais um com este nome, ou Cancelar para voltar.'));
+});

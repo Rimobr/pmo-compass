@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.62.3'
+  version: '2.63.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -20984,6 +20984,9 @@ const Wizard = (() => {
   const total = 3;
   const subtitles = ['Configure os dados básicos do projeto','Adicione os colaboradores da equipe','Configure o contexto inicial da IA'];
   const setTxt = (id, t) => { const e = document.getElementById(id); if(e) e.textContent = t; };
+  // Nome "igual" para quem cria: sem acento, sem maiúsculas, sem pontuação e sem "de/da/do" ("Sistema de Gestão" = "Sistema Gestão"; "Vida-Financeira" = "Vida Financeira")
+  const normName = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\b(de|da|do|das|dos)\b/g, ' ').replace(/[^a-z0-9]+/g, '');
+  const sameName = (a, b) => { const x = normName(a), y = normName(b); return !!x && x === y; };
   let board = false; // Quadro: só o nome (um passo), sem equipe nem contexto da IA
 
   function open(kind) {
@@ -21049,6 +21052,9 @@ const Wizard = (() => {
     const client = document.getElementById('wz-client')?.value.trim() || '';
     const area = document.getElementById('wz-area')?.value.trim() || '';
     const method = board ? 'quadro' : (document.getElementById('wz-method')?.value || 'hibrido');
+    // Evita criar de novo o que já existe (a tela só confirma depois; sem este aviso, quem não vê o projeto novo cria outro)
+    const twin = (typeof DB !== 'undefined' ? DB.listProjects() : []).find(p => sameName(p.name, name));
+    if(twin && !confirm('Já existe ' + (typeof Methodology !== 'undefined' && Methodology.isBoard(twin.id) ? 'o quadro' : 'o projeto') + ' "' + twin.name + '".\n\nClique OK para criar mais um com este nome, ou Cancelar para voltar.')) { T.show('Nada foi criado — já existe "' + twin.name + '".'); return; }
     close();
     const id = DB.createProject(name, client, area);
     if(id) {
@@ -21070,7 +21076,7 @@ const Wizard = (() => {
       }
     }
   }
-  return { open, close, next, back, addMember, create };
+  return { open, close, next, back, addMember, create, sameName };
 })();
 </script>
 
