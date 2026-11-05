@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.64.0'
+  version: '2.64.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -3260,7 +3260,7 @@ const PfKpi = (() => {
 
   function compute() {
     const alloc = new Set(DB.computePortfolioAllocation().filter(p => p.overallocated).map(p => p.name.trim().toLowerCase()));
-    return DB.listProjects().map(p => {
+    return DB.listPortfolio().map(p => {
       const f = SharedFacts.computeFacts(StatusMsg.factsInput(p.id, alloc), new Date());
       return { id: p.id, name: p.name, area: p.area || '', ev: PortfolioKpi.evaluate(f), days: daysSinceUpdate(p.id), usesRef: f.usesReferenceDate };
     });
@@ -3298,7 +3298,7 @@ const PfKpi = (() => {
     const p = DB.listProjects().find(x => x.id === btn.dataset.id); if(!p) return;
     editingId = p.id;
     el('pj-f-name').value = p.name; el('pj-f-client').value = p.client || ''; el('pj-f-area').value = p.area || '';
-    el('pj-area-list').innerHTML = [...new Set(DB.listProjects().map(x => (x.area || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(a => `<option value="${esc(a)}">`).join('');
+    el('pj-area-list').innerHTML = [...new Set(DB.listPortfolio().map(x => (x.area || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(a => `<option value="${esc(a)}">`).join('');
     el('modal-project').classList.remove('hidden'); el('pj-f-name').focus();
   }
   function closeEdit() { el('modal-project').classList.add('hidden'); }
@@ -3499,7 +3499,7 @@ const PmoView = (() => {
   // Dados de cada projeto no formato que a lógica pura espera
   function collect() {
     const alloc = new Set(DB.computePortfolioAllocation().filter(p => p.overallocated).map(p => p.name.trim().toLowerCase()));
-    const rows = DB.listProjects().map(p => {
+    const rows = DB.listPortfolio().map(p => {
       const g = t => DB.getForProject(p.id, t) || [];
       const f = SharedFacts.computeFacts(StatusMsg.factsInput(p.id, alloc), new Date());
       const today = Clock.today(p.id), todayIso = Clock.iso(today);
@@ -7237,6 +7237,8 @@ const DB = (() => {
 
   // "Não confirmado na nuvem": o projeto foi criado neste navegador e ainda não subiu. Só estes (ou os que têm dados locais de verdade) sobem na sincronização;
   // um projeto vazio que sumiu da nuvem (apagado lá) NÃO volta a ser criado por um navegador que ainda tinha a cópia na lista.
+  // Só projetos de verdade: o Quadro de tarefas (sem plano, orçamento nem riscos) não entra em portfólio, diretoria, relatórios nem priorização
+  function listPortfolio() { return loadProjects().filter(p => p.methodology !== 'quadro'); }
   function markProjectSynced(id) { const p = loadProjects().find(x => x.id === id); if(p && p.unsynced) { delete p.unsynced; persistProjects(); } }
   const LOCAL_DATA_KEYS = ['wbs', 'decisions', 'repository', 'stakeholders', 'trail', 'lessons', 'scopeChanges', 'team', 'meetings', 'budgetLines', 'costActuals', 'risks', 'timeEntries', 'baselines', 'raci', 'backlog', 'sprints', 'rites', 'impediments', 'projectDocs'];
   function projectHasLocalData(id) { try { const c = loadCacheFor(id) || {}; return LOCAL_DATA_KEYS.some(k => Array.isArray(c[k]) && c[k].length > 0); } catch(e) { return false; } }
@@ -7445,7 +7447,7 @@ const DB = (() => {
     })).sort((a,b) => b.total - a.total);
   }
 
-  return { markProjectSynced, projectHasLocalData, get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, deleteProject, factoryReset, reloadDemo, setProjectMethodology, listProjects, getActiveProjectId, switchProject, createProject, updateProject, computePortfolioAllocation, setProjectsFromCloud, isEmpty, NONE_ID };
+  return { listPortfolio, markProjectSynced, projectHasLocalData, get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, deleteProject, factoryReset, reloadDemo, setProjectMethodology, listProjects, getActiveProjectId, switchProject, createProject, updateProject, computePortfolioAllocation, setProjectsFromCloud, isEmpty, NONE_ID };
 })();
 </script>
 
@@ -10045,7 +10047,7 @@ const BatchXray = (() => {
     if(!Auth.guard('business')) return;
     const root = document.getElementById('batchxray-picker-root');
     if(!root || typeof DB === 'undefined') return;
-    const projects = DB.listProjects();
+    const projects = DB.listPortfolio();
     root.innerHTML = projects.map(p => `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12.5px;cursor:pointer"><input type="checkbox" checked class="batchxray-pick" value="${p.id}"> ${Methodology.iconFor(p.id)} ${escapeHtml(p.name)}${p.client?' <span style="color:var(--t3)">— '+escapeHtml(p.client)+'</span>':''}</label>`).join('') +
       `<button class="btn btn-sm btn-acc" style="margin-top:8px" onclick="BatchXray.start()"><i class="ti ti-player-play"></i>Iniciar Lote</button>`;
     root.style.display = '';
@@ -10066,7 +10068,7 @@ const BatchXray = (() => {
   function goToCurrent() {
     const pid = queue[index];
     if(typeof DB !== 'undefined') DB.switchProject(pid);
-    const projects = DB.listProjects();
+    const projects = DB.listPortfolio();
     const p = projects.find(x => x.id === pid);
     const label = document.getElementById('batchxray-progress-label');
     if(label) label.textContent = `Projeto ${index+1} de ${queue.length}: ${p ? p.name : pid}`;
@@ -10098,7 +10100,7 @@ const BatchXray = (() => {
     document.getElementById('batchxray-progress-card').style.display = 'none';
     const root = document.getElementById('batchxray-summary-root');
     if(!root || typeof DB === 'undefined') return;
-    const projects = DB.listProjects();
+    const projects = DB.listPortfolio();
     const rows = queue.map(pid => {
       const p = projects.find(x => x.id === pid);
       const hist = (DB.getForProject(pid, 'raioXHistory') || []);
@@ -17414,7 +17416,7 @@ const Report = (() => {
 
   function render() {
     if(!el('report-root')) return;
-    const projects = DB.listProjects();
+    const projects = DB.listPortfolio();
     if(!scope) { try { scope = localStorage.getItem(K); } catch(e) {} }
     if(scope !== 'all' && !projects.some(p => p.id === scope)) scope = DB.getActiveProjectId();
     el('rp-scope').innerHTML = (projects.length > 1 ? `<option value="all"${scope === 'all' ? ' selected' : ''}>Todos os projetos (${projects.length})</option>` : '') + projects.map(p => `<option value="${esc(p.id)}"${p.id === scope ? ' selected' : ''}>${esc(p.name)} · ${esc(Methodology.TYPES[Methodology.typeFor(p.id)].short)}</option>`).join('');
@@ -17577,7 +17579,7 @@ const Portfolio = (() => {
   function barColor(pct) { return pct >= 70 ? 'var(--grn)' : (pct >= 40 ? 'var(--amb)' : 'var(--red)'); }
 
   function render() {
-    const projects = DB.listProjects();
+    const projects = DB.listPortfolio();
     const activeId = DB.getActiveProjectId();
     const countEl = document.getElementById('pf-count'); if(countEl) countEl.textContent = projects.length;
 
@@ -17805,7 +17807,7 @@ const Prioritization = (() => {
     if(typeof DB === 'undefined') return;
     renderWeightsEditor();
     const cfg = getConfig();
-    const rows = DB.listProjects().map(p => {
+    const rows = DB.listPortfolio().map(p => {
       const scores = getScores(p.id);
       return { project:p, scores, vr:getValueRealization(p.id), value: computeValue(scores, cfg) };
     });
@@ -17815,7 +17817,7 @@ const Prioritization = (() => {
 
   function openEdit(projectId) {
     if(!Auth.guard('business')) return;
-    const projects = DB.listProjects();
+    const projects = DB.listPortfolio();
     const p = projects.find(x => x.id === projectId);
     if(!p) return;
     modalCtx = { projectId };
@@ -18025,7 +18027,7 @@ SEQUENCIAMENTO SUGERIDO: ordem sugerida de atenção entre os projetos recebidos
 Regra inegociável: cite APENAS projetos, números e decisões que estejam literalmente nos dados recebidos. Nunca invente nome de projeto, percentual ou risco que não tenha sido informado.`;
 
   function buildRollup() {
-    const projects = DB.listProjects();
+    const projects = DB.listPortfolio();
     const cfg = Prioritization.getConfig();
     return projects.map(p => {
       const health = (typeof HealthScore !== 'undefined') ? HealthScore.calculate(HealthScore.computeMetrics(p.id)) : null;
@@ -18048,7 +18050,7 @@ Regra inegociável: cite APENAS projetos, números e decisões que estejam liter
       root.innerHTML = `<div class="card-accent" style="border-radius:var(--r8);padding:12px;font-size:12px;color:var(--t2)"><i class="ti ti-info-circle"></i> Configure uma chave de IA em <strong style="color:var(--t1)">Configurações → Provedor de IA</strong> para gerar o diagnóstico.</div>`;
       return;
     }
-    const projects = DB.listProjects();
+    const projects = DB.listPortfolio();
     if(!projects.length) { root.innerHTML = `<div style="font-size:12px;color:var(--t3)">Nenhum projeto no portfólio ainda.</div>`; return; }
 
     root.innerHTML = `<div style="font-size:12px;color:var(--t3);display:flex;align-items:center;gap:6px"><i class="ti ti-loader-2" style="animation:fi-spin 1s linear infinite"></i>Lendo o status real dos ${projects.length} projeto(s) e cruzando os dados…</div>`;
@@ -18092,7 +18094,7 @@ Responda APENAS com um objeto JSON válido, sem markdown, sem texto antes ou dep
 Regras: uma entrada por projeto recebido, na mesma ordem. Só sugira "pausar" ou "escalar" quando houver motivo concreto nos dados (custo bem acima do combinado, risco crítico parado há tempo, valor prometido não realizado apesar do prazo já ter passado) — nunca sem apontar exatamente qual dado sustenta. Nunca invente número, nome de projeto ou risco que não esteja nos dados recebidos. Quando houver histórico de avaliação anterior, leve em conta o que já foi considerado decisão ruim antes, pra não repetir o mesmo raciocínio sem uma justificativa nova.`;
 
   function buildRollup() {
-    const projects = DB.listProjects();
+    const projects = DB.listPortfolio();
     return projects.map(p => {
       const health = (typeof HealthScore !== 'undefined') ? HealthScore.calculate(HealthScore.computeMetrics(p.id)) : null;
       const statusLabel = health != null ? HealthScore.getStatus(health).label : 'sem dado';
@@ -18127,7 +18129,7 @@ Regras: uma entrada por projeto recebido, na mesma ordem. Só sugira "pausar" ou
 
   async function generate() {
     if(!Store.hasKeyOrCloud()) return { error: 'Configure uma chave de IA em Configurações → Provedor de IA.' };
-    const projects = DB.listProjects();
+    const projects = DB.listPortfolio();
     if(!projects.length) return { error: 'Nenhum projeto no portfólio ainda.' };
     const rollup = buildRollup();
     const r = await AI.send([{ role:'user', content: rollup }], { system: SYSTEM, progressTitle: 'Analisando o portfólio' });
@@ -18392,7 +18394,7 @@ const Board = (() => {
     if(!root || typeof BoardHistory === 'undefined') return;
     const rows = BoardHistory.list().filter(r => r.boardDecision);
     if(!rows.length) { root.innerHTML = `<div style="text-align:center;padding:16px 10px;color:var(--t3);font-size:12.5px">Nenhuma decisão registrada ainda.</div>`; return; }
-    const projects = DB.listProjects();
+    const projects = DB.listPortfolio();
     root.innerHTML = rows.map(r => {
       const proj = projects.find(p => p.id === r.projectId);
       const outcomeHtml = r.outcomeRating
@@ -18419,7 +18421,7 @@ const Board = (() => {
     const metaEl = document.getElementById('board-print-meta');
     if(titleEl) titleEl.textContent = `${BRAND.name} — Painel da Diretoria`;
     if(metaEl) metaEl.textContent = `Portfólio completo · gerado em ${new Date().toLocaleString('pt-BR')}`;
-    const rows = DB.listProjects().map(p => projectData(p));
+    const rows = DB.listPortfolio().map(p => projectData(p));
     renderKpis(rows); // KPI strip sempre mostra o portfólio inteiro, sem filtro — é o "big picture"
     const filtered = applyFilters(rows);
     renderHeatmap(filtered);
@@ -18513,7 +18515,7 @@ const ExecView = (() => {
     const metaEl = document.getElementById('execview-print-meta');
     if(titleEl) titleEl.textContent = `${BRAND.name} — Visão Executiva`;
     if(metaEl) metaEl.textContent = `Portfólio completo · gerado em ${new Date().toLocaleString('pt-BR')}`;
-    const projects = DB.listProjects();
+    const projects = DB.listPortfolio();
     renderFinancial(projects);
     renderInbox(projects);
     await renderTrend();
