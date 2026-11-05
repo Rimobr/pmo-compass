@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.65.0 — 2026-11-05
+- Janela de confirmacao do sistema (Dlg): excluir projeto, apagar dados e apagar toda a base com botao vermelho e sem digitar nome ou APAGAR; acessivel e na varredura a11y
+
 ## 2.64.2 — 2026-11-05
 - Sincronizacao: projeto apagado na nuvem nao ressuscita nem com dados locais; so sobe o criado aqui e ainda nao confirmado
 

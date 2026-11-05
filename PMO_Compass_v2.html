@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.65.0'
+  version: '2.65.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -3749,6 +3749,16 @@ const PmoView = (() => {
   <div class="card" style="border-color:var(--ab);background:var(--ad)">
     <div style="font-size:12.5px;color:var(--t1);line-height:1.65"><i class="ti ti-info-circle" style="color:var(--acc)"></i> A lista abaixo é atualizada conforme o app evolui. <span class="badge b-grn">Pronto</span> significa que os dados são reais, salvos e testados. <span class="badge b-amb">Em desenvolvimento</span> significa que a tela existe, mas ainda depende de algo (dado, integração ou decisão) para funcionar de ponta a ponta.</div>
     <button class="btn btn-sm" style="margin-top:10px" onclick="Onboarding.show()"><i class="ti ti-compass"></i>Ver tour de boas-vindas novamente</button>
+  </div>
+
+  <div class="card">
+    <div class="lbl"><i class="ti ti-layout-kanban"></i>Menu, Quadros e Nuvem</div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Como o menu está organizado</strong> — em blocos, do que é seu para o que é do sistema: <b>Meu Dia</b> (Meu Trabalho e Meus Indicadores, valem em qualquer projeto), <b>Visão Geral</b> (Raio-X, Painel da Diretoria, Visão Executiva e Visão do PMO), <b>Portfólio e Relatórios</b>, <b>Quadros / Kanban</b>, <b>Gestão do Projeto</b> e <b>Sistema</b>. Cada perfil vê só o que pode abrir.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Escolher o projeto</strong> — pelo botão no topo da tela, ao lado da marca. Ele separa <b>Projetos</b> e <b>Quadros / Kanban</b> e tem dentro <b>Novo Projeto</b>, <b>Novo Quadro</b> e <b>Mudar Metodologia</b>. O nome do projeto escolhido aparece em “Artefatos do Projeto”, com a metodologia ao lado.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Artefatos do projeto e “Mais Telas”</strong> — ficam à vista as telas do dia a dia: Dashboard, Quadro Kanban, Backlog, WBS, Riscos, Decisões e Colaboradores (a metodologia esconde as que não valem para ela). As demais (Sprints, Planejamento, Equipe, Conhecimento...) ficam em <b>Mais Telas</b>, que vira <b>Menos Telas</b> quando está aberto e abre sozinho se você entra numa delas.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Quadros (tarefas sem projeto)</strong> — um quadro Kanban para delegar e acompanhar tarefas avulsas da equipe, como no Jira, no Trello ou no Monday. Crie em <b>Novo Quadro</b>: só o nome. Não tem sprint, plano, orçamento nem riscos, e não entra no Portfólio nem na Diretoria. O menu do quadro tem Quadro Kanban, Backlog, Arquivos e Colaboradores; o Meu Trabalho continua em Meu Dia.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Nuvem por padrão</strong> — o app já abre conectado à nuvem e pede login; seus dados sincronizam entre dispositivos e os perfis de acesso são validados pelo banco. Para usar só neste navegador, desmarque <b>Salvar na nuvem</b> em Configurações → Nuvem &amp; dados (marcar de novo volta ao padrão). A nuvem é a fonte de verdade: um projeto apagado na nuvem não volta a ser criado por um navegador antigo.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Excluir e apagar dados</strong> — em Configurações → Nuvem &amp; dados → Apagar Dados. Há três tamanhos: só os dados do projeto, o projeto inteiro (só o Administrador) e toda a base. Antes o sistema oferece um backup e abre uma janela com <b>botão vermelho</b>; só para “toda a base” você marca também uma caixa de ciência. Não se digita nome nem palavra de confirmação. Criar um projeto ou quadro com nome igual a um que já existe pede confirmação.</div></div>
   </div>
 
   <div class="card">

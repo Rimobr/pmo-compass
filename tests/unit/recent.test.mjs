@@ -96,3 +96,8 @@ test('a janela Dlg devolve verdadeiro/falso, cancela com Esc e pela área escura
   const m = html.match(/<script data-module="ui\/confirm-dialog">([\s\S]*?)<\/script>/)[1];
   for (const k of ["e.key === 'Escape'", "if(e.target === ov) done(false);", "querySelector('#dlg-cancel').focus()", 'Marque a caixa acima para continuar.', 'prevFocus.focus()']) assert.ok(m.includes(k), k);
 });
+
+test('a Ajuda explica o menu, Quadros, nuvem por padrão e as janelas de exclusão', () => {
+  const i = html.indexOf('id="p-help"'), a = html.slice(i, i + 20000);
+  for (const k of ['Menu, Quadros e Nuvem', 'Mais Telas', 'Menos Telas', 'Salvar na nuvem', 'Quadros (tarefas sem projeto)', 'botão vermelho', 'Meu Dia']) assert.ok(a.includes(k), k);
+});
