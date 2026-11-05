@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.63.2 — 2026-11-04
+- Quadro de tarefas sem sprint de verdade: faixa e seletor de sprint do Kanban realmente ocultos (display !important), Backlog sem subtitulo e previsao em sprints
+
 ## 2.63.0 — 2026-11-04
 - Criar projeto ou quadro avisa quando ja existe um com o mesmo nome (sem acento, hifen ou 'de' de diferenca)
 

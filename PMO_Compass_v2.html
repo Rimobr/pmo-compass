@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.63.2'
+  version: '2.64.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1734,11 +1734,12 @@ body.icons-failed i[data-fb]::before{
 
   <div id="settings-panel-dados" style="display:none">
   <div class="card" data-perm="settings">
-    <div class="lbl"><i class="ti ti-cloud"></i>Backend em nuvem (Supabase) — opcional</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:4px">Sem configurar nada aqui, o app continua funcionando 100% localmente neste navegador (como hoje). Conectar um projeto Supabase faz WBS, Decisões e Repositório serem salvos de verdade na nuvem, sincronizados entre dispositivos, com os 4 perfis de acesso validados pelo próprio banco de dados.</p>
-    <div style="font-size:11.5px;color:var(--t3);margin-bottom:10px" id="cloud-status">⚪ Não configurado (modo local)</div>
+    <div class="lbl"><i class="ti ti-cloud"></i>Nuvem (Supabase)</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:8px">Por padrão o app salva WBS, Decisões, Repositório e tudo mais na nuvem: sincroniza entre dispositivos e os perfis de acesso são validados pelo próprio banco. Desmarque para usar só neste navegador.</p>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t1);margin-bottom:8px;cursor:pointer"><input type="checkbox" id="cloud-use" checked onchange="Cloud.setUse(this.checked)"> Salvar na nuvem (recomendado)</label>
+    <div style="font-size:11.5px;color:var(--t3);margin-bottom:10px" id="cloud-status">⚪ Verificando…</div>
 
-    <div id="cloud-config-box" style="display:flex;flex-direction:column;gap:8px">
+    <div id="cloud-config-box" style="display:flex;flex-direction:column;gap:8px"><div class="set-sub">Usar só neste navegador está ativo. Para usar outro projeto Supabase, informe a URL e a chave pública abaixo; ou marque "Salvar na nuvem" para voltar ao padrão.</div>
       <input class="input" id="cloud-f-url" aria-label="Endereço (URL) do projeto Supabase" placeholder="URL do projeto — https://xxxxx.supabase.co" style="font-family:var(--font-mono);font-size:12px">
       <input class="input" id="cloud-f-key" aria-label="Chave pública (anon) do Supabase" placeholder="anon public key" style="font-family:var(--font-mono);font-size:12px">
       <button class="btn btn-sm btn-acc" onclick="Cloud.configure()" style="align-self:flex-start"><i class="ti ti-plug"></i>Conectar</button>
@@ -1747,14 +1748,14 @@ body.icons-failed i[data-fb]::before{
     <!-- Login/logout viraram ponto único no menu de perfil (topo da tela) — aqui fica só a configuração técnica do projeto -->
     <div id="cloud-login-box" style="display:none;flex-direction:column;gap:8px">
       <div style="font-size:12px;color:var(--t2);line-height:1.6"><i class="ti ti-info-circle"></i> Projeto conectado. Para entrar ou criar conta, clique no seu perfil no canto superior direito da tela.</div>
-      <button class="btn btn-sm btn-red" style="align-self:flex-start" onclick="Cloud.disconnect()"><i class="ti ti-x"></i>Desconectar Projeto</button>
+      <button class="btn btn-sm btn-red" style="align-self:flex-start" onclick="Cloud.disconnect()"><i class="ti ti-x"></i>Usar só este navegador</button>
     </div>
 
     <div id="cloud-signedin-box" style="display:none;flex-direction:column;gap:8px">
       <div style="font-size:12px;color:var(--t2)"><i class="ti ti-info-circle"></i> Para sair da conta, use o menu de perfil no canto superior direito.</div>
       <div class="btn-row">
         <button class="btn btn-sm btn-acc" onclick="Cloud.pullAll()"><i class="ti ti-refresh-alert"></i>Sincronizar Agora</button>
-        <button class="btn btn-sm btn-red" onclick="Cloud.disconnect()"><i class="ti ti-x"></i>Desconectar Projeto</button>
+        <button class="btn btn-sm btn-red" onclick="Cloud.disconnect()"><i class="ti ti-x"></i>Usar só este navegador</button>
       </div>
     </div>
   </div>
@@ -3873,7 +3874,7 @@ const Auth = (() => {
   try {
     const cloudRaw = localStorage.getItem('pmo_cloud_v1');
     const cloudCfg = cloudRaw ? JSON.parse(cloudRaw) : null;
-    pendingCloudConfirm = !!(cloudCfg && cloudCfg.url && cloudCfg.anonKey);
+    pendingCloudConfirm = !(cloudCfg && cloudCfg.localOnly); // a nuvem é o padrão; só quem escolheu "usar só este navegador" fica fora
   } catch(e) {}
 
   function load() {
@@ -4218,7 +4219,9 @@ const Cloud = (() => {
       local: 'timeEntries'
     }
   };
-  let cfg = { url:'', anonKey:'' };
+  // Padrão: o app já nasce conectado à nuvem (a chave "anon" é pública por desenho; a segurança está na RLS do banco). Quem quiser usa só este navegador: cfg.localOnly.
+  const DEFAULT_CLOUD = { url: 'https://cjvpnavjrzbdnxtahnin.supabase.co', anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqdnBuYXZqcnpiZG54dGFobmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1MDEyOTQsImV4cCI6MjEwMzA3NzI5NH0.WSZkxnywFUs6GtDDiO8YrOiUwLvY0OBcrIonteomnOk' };
+  let cfg = { ...DEFAULT_CLOUD };
   let client = null;
   let session = null;
 
@@ -4277,7 +4280,10 @@ const Cloud = (() => {
   let signingOut = false;
 
   function load() {
-    try { const raw = localStorage.getItem(KEY); if(raw) cfg = { ...cfg, ...JSON.parse(raw) }; } catch(e){}
+    let saved = null; try { const raw = localStorage.getItem(KEY); saved = raw ? JSON.parse(raw) : null; } catch(e){}
+    if(saved && saved.localOnly) cfg = { url:'', anonKey:'', localOnly:true };
+    else if(saved && saved.url && saved.anonKey) cfg = { url:saved.url, anonKey:saved.anonKey };
+    else cfg = { ...DEFAULT_CLOUD };
     if(cfg.url && cfg.anonKey) initClient();
     reflectUi();
   }
@@ -4291,8 +4297,9 @@ const Cloud = (() => {
     const configBox = document.getElementById('cloud-config-box');
     const signedInBox = document.getElementById('cloud-signedin-box');
     if(statusEl) {
-      statusEl.textContent = isSignedIn() ? `☁️ Conectado como ${session.user.email}` : (isConfigured() ? '🔌 Configurado — faça login' : '⚪ Não configurado (modo local)');
+      statusEl.textContent = isSignedIn() ? `☁️ Conectado como ${session.user.email}` : (isConfigured() ? '🔌 Conectado à nuvem — faça login' : '⚪ Usando só este navegador (modo local)');
     }
+    const useBox = document.getElementById('cloud-use'); if(useBox) useBox.checked = isConfigured();
     if(configBox) configBox.style.display = isConfigured() ? 'none' : '';
     if(loginBox) loginBox.style.display = (isConfigured() && !isSignedIn()) ? '' : 'none';
     if(signedInBox) signedInBox.style.display = isSignedIn() ? '' : 'none';
@@ -4364,15 +4371,21 @@ const Cloud = (() => {
     reflectUi();
   }
 
+  // Escolha da pessoa: salvar na nuvem (padrão) ou usar só este navegador
+  function setUse(on) {
+    if(on) { cfg = { ...DEFAULT_CLOUD }; persist(); T.show('☁️ Conectando à nuvem…'); initClient().then(reflectUi); reflectUi(); return; }
+    if(!disconnect()) reflectUi();
+  }
   function disconnect() {
-    if(!confirm('Desconectar do Supabase? O app volta a usar só os dados locais deste navegador.')) return;
+    if(!confirm('Usar só este navegador? Os dados deixam de ser salvos na nuvem e de sincronizar entre dispositivos. Você pode voltar a qualquer momento.')) return false;
     if(client && session) pushAuditEvent('cloud_disconnect', `${session.user.email} desconectou este navegador do Supabase`, {});
-    cfg = { url:'', anonKey:'' };
+    cfg = { url:'', anonKey:'', localOnly:true };
     persist();
     client = null; session = null;
     Auth.clearCloudManaged();
     reflectUi();
-    T.show('Desconectado. Voltando ao modo local.');
+    T.show('Usando só este navegador (modo local).');
+    return true;
   }
 
   function getEmail() { return session ? session.user.email : null; }
@@ -4808,8 +4821,13 @@ const Cloud = (() => {
   async function syncProjects() {
     if(!client || !session || typeof DB === 'undefined') return;
     try {
-      const local = DB.listProjects().filter(p => !DEMO_PROJECT_IDS.includes(p.id) && !p.placeholder); // os projetos de demonstração nunca sobem para a nuvem
-      await Promise.all(local.map(p => client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', created_by:session.user.id, area:p.area||null, ...(p.refDate ? { reference_date:p.refDate } : {}), ...(p.methodology ? { methodology:p.methodology } : {}) }).then(()=>{}).catch(()=>{})));
+      // A nuvem manda: só sobe o que está só aqui (criado neste navegador e ainda não confirmado, ou com dados locais de verdade).
+      // Projeto vazio que a nuvem não tem mais (foi apagado lá) sai da lista em vez de ser recriado.
+      const { data: have, error: haveErr } = await client.from('projects').select('id');
+      if(haveErr || !have) return;
+      const inCloud = new Set(have.map(p => p.id));
+      const local = DB.listProjects().filter(p => !DEMO_PROJECT_IDS.includes(p.id) && !p.placeholder && !inCloud.has(p.id) && (p.unsynced || DB.projectHasLocalData(p.id))); // os projetos de demonstração nunca sobem para a nuvem
+      await Promise.all(local.map(p => client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', created_by:session.user.id, area:p.area||null, ...(p.refDate ? { reference_date:p.refDate } : {}), ...(p.methodology ? { methodology:p.methodology } : {}) }).then(r => { if(r && !r.error) DB.markProjectSynced(p.id); }).catch(()=>{})));
       const { data, error } = await client.from('projects').select('*').order('created_at', { ascending:true });
       if(error || !data) return;
       DB.setProjectsFromCloud(data.map(p => ({ id:p.id, name:p.name, client:p.client||'', icon:p.icon||'compass', area:p.area||'', refDate:p.reference_date||'', methodology:p.methodology||'', managerId:p.manager_id||'' })));
@@ -4818,7 +4836,7 @@ const Cloud = (() => {
 
   function pushProject(p) {
     if(!client || !session) return;
-    track(client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', area:p.area||null, ...(p.methodology ? { methodology:p.methodology } : {}), created_by:session.user.id }).then(()=>{}).catch(cloudSyncFailed));
+    track(client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', area:p.area||null, ...(p.methodology ? { methodology:p.methodology } : {}), created_by:session.user.id }).then(r => { if(r && !r.error) DB.markProjectSynced(p.id); }).catch(cloudSyncFailed));
   }
   // Quem cria o projeto precisa conseguir vê-lo — a policy "project_access_self_grant" só deixa
   // conceder acesso PRA SI MESMO, nunca pra outra pessoa (isso continua exigindo um admin).
@@ -5207,7 +5225,7 @@ const Cloud = (() => {
     setTimeout(() => location.reload(), 900);
   }
 
-  return { load, configure, disconnect, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
+  return { load, configure, disconnect, setUse, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
     compassDigest, myWorkload, saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, hoursSummary, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, markOnboarded, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
@@ -7217,10 +7235,15 @@ const DB = (() => {
     if(typeof Cloud !== 'undefined') Cloud.pushProject(p);
   }
 
+  // "Não confirmado na nuvem": o projeto foi criado neste navegador e ainda não subiu. Só estes (ou os que têm dados locais de verdade) sobem na sincronização;
+  // um projeto vazio que sumiu da nuvem (apagado lá) NÃO volta a ser criado por um navegador que ainda tinha a cópia na lista.
+  function markProjectSynced(id) { const p = loadProjects().find(x => x.id === id); if(p && p.unsynced) { delete p.unsynced; persistProjects(); } }
+  const LOCAL_DATA_KEYS = ['wbs', 'decisions', 'repository', 'stakeholders', 'trail', 'lessons', 'scopeChanges', 'team', 'meetings', 'budgetLines', 'costActuals', 'risks', 'timeEntries', 'baselines', 'raci', 'backlog', 'sprints', 'rites', 'impediments', 'projectDocs'];
+  function projectHasLocalData(id) { try { const c = loadCacheFor(id) || {}; return LOCAL_DATA_KEYS.some(k => Array.isArray(c[k]) && c[k].length > 0); } catch(e) { return false; } }
   function createProject(name, client, area) {
     if(!Auth.guard('business')) return null;
     const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
-    const p = { id, name: name || 'Novo projeto', client: client || '', area: (area || '').trim().slice(0, 80), icon:'compass' };
+    const p = { id, name: name || 'Novo projeto', client: client || '', area: (area || '').trim().slice(0, 80), icon:'compass', unsynced: true };
     // O primeiro projeto de verdade substitui o espaço de trabalho vazio "Meu projeto" (placeholder)
     const ph = loadProjects().filter(x => x.placeholder);
     ph.forEach(x => { try { localStorage.removeItem(storageKeyFor(x.id)); } catch(e) {} });
@@ -7422,7 +7445,7 @@ const DB = (() => {
     })).sort((a,b) => b.total - a.total);
   }
 
-  return { get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, deleteProject, factoryReset, reloadDemo, setProjectMethodology, listProjects, getActiveProjectId, switchProject, createProject, updateProject, computePortfolioAllocation, setProjectsFromCloud, isEmpty, NONE_ID };
+  return { markProjectSynced, projectHasLocalData, get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, deleteProject, factoryReset, reloadDemo, setProjectMethodology, listProjects, getActiveProjectId, switchProject, createProject, updateProject, computePortfolioAllocation, setProjectsFromCloud, isEmpty, NONE_ID };
 })();
 </script>
 

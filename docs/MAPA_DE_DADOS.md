@@ -143,7 +143,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 | `pmo_split_` | Posição das divisões de tela (`pmo_split_<tela>`). | preferência | apaga | nao |
 | `pmo_view_type_v1` | Visão escolhida (lista/quadro). | preferência | apaga | nao |
 | `pmo_theme_v1` | Tema de cores. | preferência | preserva | nao |
-| `pmo_cloud_v1` | Endereço e chave pública do Supabase (necessários para entrar de novo). | conexão | preserva | nao |
+| `pmo_cloud_v1` | Escolha da nuvem: só quando a pessoa usa outro projeto Supabase ou escolhe usar só este navegador (localOnly). O padrão é a nuvem, sem gravar nada aqui. | conexão | preserva | nao |
 | `pmo_after_wipe` | Aviso mostrado uma vez depois de sair (fica na sessão da aba). | sessão | apaga | nao |
 | `pmo_sec_` | Quais seções recolhíveis estão abertas ou fechadas (`pmo_sec_<seção>`). | preferência | apaga | nao |
 

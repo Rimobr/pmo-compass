@@ -33,6 +33,10 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - Um só seletor de projeto e de quadro: o chip do topo (com Novo Projeto, Novo Quadro e Mudar Metodologia). O seletor do menu lateral está oculto.
 - Em "Artefatos do Projeto" ficam à vista só os itens do dia a dia (`FLAT`: Dashboard, Quadro Kanban, Backlog, WBS, Riscos, Decisões, Colaboradores — a metodologia esconde o que não vale); o resto está em "Mais Telas" (`.sb-more-group`), que abre sozinho se a tela aberta é uma delas. Tela nova do projeto: decidir se é do dia a dia (solta) ou "Mais Telas".
 
+## Nuvem por padrão e sincronização de projetos (pedido do dono, 04/11/2026)
+- O app já nasce **conectado à nuvem** (`DEFAULT_CLOUD` no módulo Cloud: URL e chave **anon**, que é pública por desenho; a de serviço nunca entra no app — há teste). Quem quiser usar só o navegador desmarca "Salvar na nuvem" em Configurações → Nuvem & dados (`cfg.localOnly` em `pmo_cloud_v1`); marcar de novo volta ao padrão. Os testes de navegador (smoke e a11y) rodam em modo local de propósito.
+- **A nuvem é a verdade**: `syncProjects` só sobe um projeto que não está na nuvem se foi criado neste navegador e ainda não confirmado (`unsynced`) ou tem dados locais de verdade. Projeto vazio apagado na nuvem sai da lista local, não é recriado. Apagar direto na base só vale se os navegadores também limparem (ou use "Excluir o projeto" no sistema).
+
 ## Entrega
 - Versão em 4 lugares: `version.json`, `BRAND.version` (PMO_Compass_v2.html), `package.json`, `sw.js` (`CACHE_NAME`).
 - Testes: `node tests/run.js` e `npm run test:unit` (inclui `datamap`), `npm run test:smoke`; migrações: `node scripts/db-apply.mjs --dry-run` antes de aplicar, depois `node scripts/build-schema.mjs`.

@@ -17,7 +17,10 @@ const port = srv.address().port;
 const DEMO = /Portal Nexus|Valdori|Beltrano|\bSC-00\d|Carla Nogueira|Diretor de TI|leitor de código de barras|homologação do leitor|Maverick IT|Controle de estoque/i;
 const b = await chromium.launch();
 let fail = 0; const ok = (c, m, extra) => { console.log((c ? '  ok  ' : ' FALHA ') + m + (!c && extra ? '\n        ' + extra : '')); if (!c) fail++; };
-const pg = await (await b.newContext({ viewport: { width: 1300, height: 900 } })).newPage();
+// A nuvem é o padrão do app; o teste roda no modo local (nada sai do computador)
+const ctx = await b.newContext({ viewport: { width: 1300, height: 900 } });
+await ctx.addInitScript(() => { try { localStorage.setItem('pmo_cloud_v1', JSON.stringify({ url: '', anonKey: '', localOnly: true })); } catch (e) {} });
+const pg = await ctx.newPage();
 const errs = []; pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(`http://localhost:${port}/`); await pg.waitForTimeout(900);
 await pg.evaluate(() => { document.getElementById('modal-onboarding').classList.add('hidden'); });

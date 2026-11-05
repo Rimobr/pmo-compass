@@ -463,7 +463,7 @@
       "deleteProject": "nao"
     },
     "pmo_cloud_v1": {
-      "desc": "Endereço e chave pública do Supabase (necessários para entrar de novo).",
+      "desc": "Escolha da nuvem: só quando a pessoa usa outro projeto Supabase ou escolhe usar só este navegador (localOnly). O padrão é a nuvem, sem gravar nada aqui.",
       "kind": "conexão",
       "logout": "preserva",
       "deleteProject": "nao"

@@ -70,3 +70,14 @@ test('o Backlog do quadro não fala de sprint (subtítulo e previsão em sprints
   assert.ok(html.includes('<span class="ai-sprint-grp"> Coloque os mais importantes na próxima sprint.</span>'));
   assert.ok(html.includes("(document.body.classList.contains('is-board') ? '' : kpi('Previsão'"));
 });
+
+test('a nuvem é o padrão: o app nasce conectado e "usar só este navegador" é escolha (cfg.localOnly)', () => {
+  for (const k of ['const DEFAULT_CLOUD = { url: ', 'let cfg = { ...DEFAULT_CLOUD };', "if(saved && saved.localOnly) cfg = { url:'', anonKey:'', localOnly:true };", 'pendingCloudConfirm = !(cloudCfg && cloudCfg.localOnly);', 'Salvar na nuvem (recomendado)', 'Cloud.setUse(this.checked)']) assert.ok(html.includes(k), k);
+  const m = html.match(/const DEFAULT_CLOUD = \{ url: '([^']+)', anonKey: '([^']+)' \}/);
+  assert.ok(m && /^https:\/\/[a-z0-9]+\.supabase\.co$/.test(m[1]));
+  const role = JSON.parse(Buffer.from(m[2].split('.')[1], 'base64url').toString()).role;
+  assert.equal(role, 'anon', 'só a chave pública (anon) pode ir no app, nunca a de serviço');
+});
+test('sincronização de projetos: a nuvem manda (não recria projeto vazio que foi apagado lá)', () => {
+  for (const k of ["const { data: have, error: haveErr } = await client.from('projects').select('id');", '!inCloud.has(p.id) && (p.unsynced || DB.projectHasLocalData(p.id))', 'function markProjectSynced(id)', 'icon:' + "'compass', unsynced: true"]) assert.ok(html.includes(k), k);
+});
