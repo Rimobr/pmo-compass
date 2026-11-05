@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.62.1'
+  version: '2.62.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -209,7 +209,7 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 body.no-project .sb-proj-area{display:none}
 body.is-board .sb-proj-area{display:none}
 /* Quadro de tarefas não tem sprint: some o seletor e a faixa de sprint do Kanban e o "Planejar sprint" do Backlog */
-body.is-board #kb-sprint,body.is-board #kb-sprint-bar,body.is-board [onclick*="openPlanNext"]{display:none}
+body.is-board #kb-sprint,body.is-board #kb-sprint-bar,body.is-board [onclick*="openPlanNext"],body.is-board .ai-sprint-grp{display:none}
 /* telas menos usadas do projeto ficam recolhidas em "Mais Telas" (abrem sozinhas se a tela aberta é uma delas) */
 .sb-proj-area:not(.more) .sb-more-group{display:none}
 .sb-more-btn{color:var(--t2)}
@@ -2254,7 +2254,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     </div>
     <div class="g2" style="gap:10px">
       <div class="field-group"><div class="field-label"><label for="ai-assignee">Responsável</label></div><input class="input" id="ai-assignee" list="ai-people" autocomplete="off" maxlength="80" placeholder="Quem vai fazer"><datalist id="ai-people"></datalist></div>
-      <div class="field-group"><div class="field-label"><label for="ai-sprint">Sprint</label></div><select class="input" id="ai-sprint"></select></div>
+      <div class="field-group ai-sprint-grp"><div class="field-label"><label for="ai-sprint">Sprint</label></div><select class="input" id="ai-sprint"></select></div>
     </div>
     <div class="field-group" id="ai-status-grp"><div class="field-label"><label for="ai-status">Situação</label></div><select class="input" id="ai-status"><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="review">Em revisão</option><option value="done">Concluído</option></select></div>
     <div class="field-group"><div class="field-label"><label for="ai-desc">Descrição e critérios de aceite</label></div><textarea class="input" id="ai-desc" rows="3" maxlength="2000" style="resize:vertical;font-family:inherit"></textarea></div>

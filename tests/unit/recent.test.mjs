@@ -54,10 +54,14 @@ test('excluir e apagar os dados do projeto pedem só OK ou Cancelar (sem digitar
 
 test('Quadro de tarefas não mostra sprint: todos os itens no Kanban, sem seletor, faixa nem Planejar sprint', () => {
   assert.ok(html.includes("if(document.body.classList.contains('is-board')) return items.slice();"));
-  assert.ok(html.includes('body.is-board #kb-sprint,body.is-board #kb-sprint-bar,body.is-board [onclick*="openPlanNext"]{display:none}'));
+  assert.ok(html.includes('body.is-board #kb-sprint,body.is-board #kb-sprint-bar,body.is-board [onclick*="openPlanNext"],body.is-board .ai-sprint-grp{display:none}'));
 });
 
 test('o texto de Apagar Dados não promete confirmação digitada onde agora é OK ou Cancelar', () => {
   assert.ok(!html.includes('pede uma confirmação digitada'));
   assert.ok(html.includes('OK ou Cancelar; para apagar toda a base, digitar APAGAR'));
+});
+
+test('o campo Sprint do cartão também some no Quadro de tarefas', () => {
+  assert.ok(html.includes('class="field-group ai-sprint-grp"'));
 });
