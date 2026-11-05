@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.64.1'
+  version: '2.64.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -4821,12 +4821,12 @@ const Cloud = (() => {
   async function syncProjects() {
     if(!client || !session || typeof DB === 'undefined') return;
     try {
-      // A nuvem manda: só sobe o que está só aqui (criado neste navegador e ainda não confirmado, ou com dados locais de verdade).
-      // Projeto vazio que a nuvem não tem mais (foi apagado lá) sai da lista em vez de ser recriado.
+      // A nuvem manda: só sobe o que foi criado neste navegador e ainda não foi confirmado lá (unsynced).
+      // Projeto que a nuvem não tem mais (foi apagado lá), com ou sem dados locais, sai da lista em vez de ser recriado.
       const { data: have, error: haveErr } = await client.from('projects').select('id');
       if(haveErr || !have) return;
       const inCloud = new Set(have.map(p => p.id));
-      const local = DB.listProjects().filter(p => !DEMO_PROJECT_IDS.includes(p.id) && !p.placeholder && !inCloud.has(p.id) && (p.unsynced || DB.projectHasLocalData(p.id))); // os projetos de demonstração nunca sobem para a nuvem
+      const local = DB.listProjects().filter(p => !DEMO_PROJECT_IDS.includes(p.id) && !p.placeholder && !inCloud.has(p.id) && p.unsynced); // os projetos de demonstração nunca sobem para a nuvem
       await Promise.all(local.map(p => client.from('projects').upsert({ id:p.id, name:p.name, client:p.client||null, icon:p.icon||'compass', created_by:session.user.id, area:p.area||null, ...(p.refDate ? { reference_date:p.refDate } : {}), ...(p.methodology ? { methodology:p.methodology } : {}) }).then(r => { if(r && !r.error) DB.markProjectSynced(p.id); }).catch(()=>{})));
       const { data, error } = await client.from('projects').select('*').order('created_at', { ascending:true });
       if(error || !data) return;
@@ -7235,13 +7235,11 @@ const DB = (() => {
     if(typeof Cloud !== 'undefined') Cloud.pushProject(p);
   }
 
-  // "Não confirmado na nuvem": o projeto foi criado neste navegador e ainda não subiu. Só estes (ou os que têm dados locais de verdade) sobem na sincronização;
-  // um projeto vazio que sumiu da nuvem (apagado lá) NÃO volta a ser criado por um navegador que ainda tinha a cópia na lista.
+  // "Não confirmado na nuvem": o projeto foi criado neste navegador e ainda não subiu. Só estes sobem na sincronização;
+  // um projeto que sumiu da nuvem (apagado lá) NÃO volta a ser criado por um navegador que ainda tinha a cópia na lista.
   // Só projetos de verdade: o Quadro de tarefas (sem plano, orçamento nem riscos) não entra em portfólio, diretoria, relatórios nem priorização
   function listPortfolio() { return loadProjects().filter(p => p.methodology !== 'quadro'); }
   function markProjectSynced(id) { const p = loadProjects().find(x => x.id === id); if(p && p.unsynced) { delete p.unsynced; persistProjects(); } }
-  const LOCAL_DATA_KEYS = ['wbs', 'decisions', 'repository', 'stakeholders', 'trail', 'lessons', 'scopeChanges', 'team', 'meetings', 'budgetLines', 'costActuals', 'risks', 'timeEntries', 'baselines', 'raci', 'backlog', 'sprints', 'rites', 'impediments', 'projectDocs'];
-  function projectHasLocalData(id) { try { const c = loadCacheFor(id) || {}; return LOCAL_DATA_KEYS.some(k => Array.isArray(c[k]) && c[k].length > 0); } catch(e) { return false; } }
   function createProject(name, client, area) {
     if(!Auth.guard('business')) return null;
     const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
@@ -7447,7 +7445,7 @@ const DB = (() => {
     })).sort((a,b) => b.total - a.total);
   }
 
-  return { listPortfolio, markProjectSynced, projectHasLocalData, get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, deleteProject, factoryReset, reloadDemo, setProjectMethodology, listProjects, getActiveProjectId, switchProject, createProject, updateProject, computePortfolioAllocation, setProjectsFromCloud, isEmpty, NONE_ID };
+  return { listPortfolio, markProjectSynced, get, set, getForProject, setForProject, exportBackup, importBackup, clearAll, deleteProject, factoryReset, reloadDemo, setProjectMethodology, listProjects, getActiveProjectId, switchProject, createProject, updateProject, computePortfolioAllocation, setProjectsFromCloud, isEmpty, NONE_ID };
 })();
 </script>
 

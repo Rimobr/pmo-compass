@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.64.1 — 2026-11-05
+- Quadro de tarefas fora do Portfolio, Diretoria, Executiva, PMO, relatorio e priorizacao
+
 ## 2.64.0 — 2026-11-04
 - Nuvem como padrao (caixa Salvar na nuvem; usar so o navegador e escolha) e sincronizacao de projetos com a nuvem como verdade: projeto vazio apagado na nuvem nao volta mais
 
