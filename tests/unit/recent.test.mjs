@@ -51,3 +51,13 @@ test('excluir e apagar os dados do projeto pedem só OK ou Cancelar (sem digitar
   assert.ok(!html.includes('digite o nome do projeto exatamente'));
   for (const k of ['Clique OK para excluir de vez, ou Cancelar para manter o projeto.', 'Clique OK para apagar os dados, ou Cancelar para manter tudo.']) assert.ok(html.includes(k), k);
 });
+
+test('Quadro de tarefas não mostra sprint: todos os itens no Kanban, sem seletor, faixa nem Planejar sprint', () => {
+  assert.ok(html.includes("if(document.body.classList.contains('is-board')) return items.slice();"));
+  assert.ok(html.includes('body.is-board #kb-sprint,body.is-board #kb-sprint-bar,body.is-board [onclick*="openPlanNext"]{display:none}'));
+});
+
+test('o texto de Apagar Dados não promete confirmação digitada onde agora é OK ou Cancelar', () => {
+  assert.ok(!html.includes('pede uma confirmação digitada'));
+  assert.ok(html.includes('OK ou Cancelar; para apagar toda a base, digitar APAGAR'));
+});

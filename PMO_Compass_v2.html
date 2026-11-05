@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.62.0'
+  version: '2.62.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -208,6 +208,8 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 .no-link{pointer-events:none;color:inherit!important;text-decoration:none!important;cursor:default}
 body.no-project .sb-proj-area{display:none}
 body.is-board .sb-proj-area{display:none}
+/* Quadro de tarefas não tem sprint: some o seletor e a faixa de sprint do Kanban e o "Planejar sprint" do Backlog */
+body.is-board #kb-sprint,body.is-board #kb-sprint-bar,body.is-board [onclick*="openPlanNext"]{display:none}
 /* telas menos usadas do projeto ficam recolhidas em "Mais Telas" (abrem sozinhas se a tela aberta é uma delas) */
 .sb-proj-area:not(.more) .sb-more-group{display:none}
 .sb-more-btn{color:var(--t2)}
@@ -1790,7 +1792,7 @@ body.icons-failed i[data-fb]::before{
 
   <div class="card" id="erase-card" data-perm="settings">
     <div class="lbl"><i class="ti ti-eraser"></i>Apagar Dados</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Escolha o tamanho do que será apagado. Antes de qualquer exclusão o sistema oferece um backup e pede uma confirmação digitada. Nada é apagado sem você ver o resumo.</p>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Escolha o tamanho do que será apagado. Antes de qualquer exclusão o sistema oferece um backup e pede uma confirmação (OK ou Cancelar; para apagar toda a base, digitar APAGAR). Nada é apagado sem você ver o resumo.</p>
     <div id="erase-root" role="radiogroup" aria-label="O que apagar"></div>
     <div id="erase-sum" class="set-sub" style="margin:10px 0" aria-live="polite"></div>
     <div class="btn-row">
@@ -13154,6 +13156,8 @@ const Agile = (() => {
 
   // ───────── Quadro Kanban ─────────
   function boardItems() {
+    // Quadro de tarefas (sem projeto) não tem sprint: mostra todos os itens
+    if(document.body.classList.contains('is-board')) return items.slice();
     const a = active();
     // Scrum: sem sprint ativa o quadro fica vazio (não despeja o backlog inteiro); Kanban contínuo mostra tudo
     const f = boardSprint === '__auto' ? (a ? a.id : (cfg && cfg.entry === 'kanban' ? '__all' : '__none')) : boardSprint;

@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.62.0 — 2026-11-04
+- Excluir projeto e apagar os dados do projeto: confirmacao simples com OK ou Cancelar, sem digitar o nome
+
 ## 2.61.3 — 2026-11-04
 - Menu: Usados Recentemente; Kanban nao duplicado (Quadro Kanban, Backlog e Colaboradores so a vista); menu do quadro nao fecha ao abrir o Kanban; regex do rascunho dos modelos corrigida
 
