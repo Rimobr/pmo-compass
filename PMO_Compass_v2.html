@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.64.2'
+  version: '2.65.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1786,7 +1786,7 @@ body.icons-failed i[data-fb]::before{
 
   <div class="card" id="erase-card" data-perm="settings">
     <div class="lbl"><i class="ti ti-eraser"></i>Apagar Dados</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Escolha o tamanho do que será apagado. Antes de qualquer exclusão o sistema oferece um backup e pede uma confirmação (OK ou Cancelar; para apagar toda a base, digitar APAGAR). Nada é apagado sem você ver o resumo.</p>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Escolha o tamanho do que será apagado. Antes de qualquer exclusão o sistema oferece um backup e pede uma confirmação numa janela com botão vermelho (para apagar toda a base, marque também a caixa de ciência). Nada é apagado sem você ver o resumo.</p>
     <div id="erase-root" role="radiogroup" aria-label="O que apagar"></div>
     <div id="erase-sum" class="set-sub" style="margin:10px 0" aria-live="polite"></div>
     <div class="btn-row">
@@ -5182,15 +5182,11 @@ const Cloud = (() => {
   async function resetForNewUsers() {
     if(!client || !session) { T.show('⚠️ Faça login no Supabase primeiro.'); return; }
     if(typeof Auth === 'undefined' || Auth.getRole() !== 'admin') { T.show('⚠️ Só um Administrador pode resetar os dados compartilhados.'); return; }
-    const wantsBackup = confirm('Recomendado: baixar um backup dos dados atuais antes de apagar tudo.\n\nClique OK para baixar agora, ou Cancelar para pular esta etapa.');
+    const wantsBackup = await Dlg.ask({ title: 'Baixar um backup antes?', body: 'Recomendado: baixar um backup dos dados atuais antes de apagar tudo.', okLabel: 'Baixar Backup', cancelLabel: 'Pular' });
     if(wantsBackup && typeof DB !== 'undefined') DB.exportBackup();
-    const sure = confirm('⚠️ ATENÇÃO — isso apaga:\n\n• Todos os dados compartilhados na nuvem (WBS, decisões, documentos, orçamento e custos) — para TODAS as pessoas que fizerem login, não só você\n• Os dados de demonstração e projetos salvos neste navegador\n\nContas de usuário e chaves de IA de cada pessoa NÃO são apagadas.\n\nEssa ação não pode ser desfeita. Confirma o reset?');
+    // Ação irreversível que apaga dado de TODAS as pessoas da conta: janela própria com botão vermelho e uma caixa que precisa ser marcada (sem digitar palavra)
+    const sure = await Dlg.ask({ title: 'Apagar toda a base', body: 'Isso apaga:\n\n• Todos os dados compartilhados na nuvem (WBS, decisões, documentos, orçamento e custos), para TODAS as pessoas que fizerem login, não só você\n• Os dados de demonstração e projetos salvos neste navegador\n\nContas de usuário e chaves de IA de cada pessoa NÃO são apagadas.\n\nEssa ação não pode ser desfeita.', okLabel: 'Apagar Toda a Base', cancelLabel: 'Manter', danger: true, check: 'Entendo que isso apaga os dados de todas as pessoas e não pode ser desfeito' });
     if(!sure) { T.show('Reset cancelado — nenhum dado foi apagado.'); return; }
-    // Confirmação reforçada — ação irreversível que apaga dado de TODAS as pessoas da conta, não
-    // só do administrador que clicou. Um segundo "OK" é fácil demais de clicar sem pensar; digitar
-    // a palavra exige uma pausa deliberada antes de uma ação que não tem como desfazer.
-    const typed = prompt('Pra confirmar de vez, digite APAGAR (em maiúsculas) e clique OK:');
-    if(typed !== 'APAGAR') { T.show('Reset cancelado — texto de confirmação não bateu. Nenhum dado foi apagado.'); return; }
     // Registrado ANTES de apagar (e esperado, não fire-and-forget) — se a página recarregar
     // logo em seguida, o evento mais crítico deste módulo não pode depender de vencer a corrida
     // contra o setTimeout do reload. audit_log não está entre as tabelas apagadas abaixo.
@@ -7342,13 +7338,13 @@ const DB = (() => {
     const pid = getActiveProjectId();
     const activeName = (loadProjects().find(p => p.id === pid) || {}).name || pid;
     const signedIn = typeof Cloud !== 'undefined' && Cloud.isSignedIn();
-    const wantsBackup = confirm(`Recomendado: baixar um backup do projeto "${activeName}" antes de apagar.\n\nClique OK para baixar o backup agora, ou Cancelar para pular esta etapa.`);
+    const wantsBackup = await Dlg.ask({ title: 'Baixar um backup antes?', body: `Recomendado: baixar um backup do projeto "${activeName}" antes de apagar.`, okLabel: 'Baixar Backup', cancelLabel: 'Pular' });
     if(wantsBackup) exportBackup();
     // Antes só apagava o localStorage — se a conta estivesse logada na nuvem, o próximo login
     // trazia tudo de volta via pullAll(), porque a cópia na nuvem nunca era tocada. Agora que
     // cada linha carrega project_id, dá pra apagar exatamente a fatia deste projeto lá também.
     const cloudNote = signedIn ? ' e também os dados deste projeto salvos na nuvem' : '';
-    if(!confirm(`APAGAR OS DADOS DO PROJETO "${activeName}"${cloudNote}\n\nO projeto continua existindo, mas WBS, decisões, documentos, orçamento, equipe e demais registros são apagados. Outros projetos não são afetados. Não dá para desfazer.\n\nClique OK para apagar os dados, ou Cancelar para manter tudo.`)) { T.show('Limpeza cancelada — nenhum dado foi apagado.'); return; }
+    if(!(await Dlg.ask({ title: 'Apagar os dados do projeto', body: `Os dados do projeto "${activeName}"${cloudNote} serão apagados.\n\nO projeto continua existindo, mas WBS, decisões, documentos, orçamento, equipe e demais registros são apagados. Outros projetos não são afetados. Não dá para desfazer.`, okLabel: 'Apagar os Dados', cancelLabel: 'Manter', danger: true }))) { T.show('Limpeza cancelada — nenhum dado foi apagado.'); return; }
     if(signedIn) {
       T.show('🗑️ Apagando dados deste projeto na nuvem…');
       await Cloud.clearProjectData(pid);
@@ -7366,8 +7362,8 @@ const DB = (() => {
     const pid = getActiveProjectId();
     const name = (loadProjects().find(p => p.id === pid) || {}).name || pid;
     const signedIn = typeof Cloud !== 'undefined' && Cloud.isSignedIn();
-    if(confirm(`Recomendado: baixar um backup do projeto "${name}" antes de excluí-lo.\n\nClique OK para baixar o backup agora, ou Cancelar para pular.`)) exportBackup();
-    if(!confirm(`EXCLUIR O PROJETO "${name}"\n\nIsso apaga o projeto e todos os seus dados${signedIn ? ' (inclusive na nuvem, para todas as pessoas)' : ' deste navegador'} e não pode ser desfeito.\n\nClique OK para excluir de vez, ou Cancelar para manter o projeto.`)) { T.show('Exclusão cancelada — o projeto foi mantido.'); return; }
+    if(await Dlg.ask({ title: 'Baixar um backup antes?', body: `Recomendado: baixar um backup do projeto "${name}" antes de excluí-lo.`, okLabel: 'Baixar Backup', cancelLabel: 'Pular' })) exportBackup();
+    if(!(await Dlg.ask({ title: 'Excluir o projeto', body: `Isso apaga o projeto "${name}" e todos os seus dados${signedIn ? ' (inclusive na nuvem, para todas as pessoas)' : ' deste navegador'} e não pode ser desfeito.`, okLabel: 'Excluir o Projeto', cancelLabel: 'Manter', danger: true }))) { T.show('Exclusão cancelada — o projeto foi mantido.'); return; }
     if(signedIn) {
       T.show('🗑️ Excluindo o projeto na nuvem…');
       const r = await Cloud.deleteProject(pid);
@@ -8162,6 +8158,62 @@ const Onboarding = (() => {
     }, n ? 1200 : 600);
   }
   return { maybeShow, show, dismiss, markSeen, willShow: shouldShow, refresh: () => { try { render(); } catch(e) {} } };
+})();
+</script>
+
+<!-- ■ MODULE: ui/confirm-dialog ─ Janela de confirmação do sistema (no lugar do confirm do navegador): acessível, com botão vermelho nas ações que não têm volta -->
+<script data-module="ui/confirm-dialog">
+const Dlg = (() => {
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  let ov = null, resolver = null, prevFocus = null;
+  function build() {
+    ov = document.createElement('div'); ov.className = 'modal-ov hidden'; ov.id = 'modal-dlg';
+    ov.innerHTML = '<div class="modal-box" role="alertdialog" aria-modal="true" aria-labelledby="dlg-t" aria-describedby="dlg-b" style="width:480px;max-width:96vw">'
+      + '<div class="modal-title" id="dlg-t"></div>'
+      + '<div id="dlg-b" style="font-size:13px;color:var(--t2);line-height:1.65;margin:6px 0 12px;overflow-wrap:anywhere"></div>'
+      + '<label id="dlg-chk-w" style="display:none;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--t1);margin-bottom:6px;cursor:pointer"><input type="checkbox" id="dlg-chk" style="margin-top:2px"><span id="dlg-chk-t"></span></label>'
+      + '<div id="dlg-err" role="alert" style="display:none;font-size:12px;color:var(--red);margin-bottom:6px"></div>'
+      + '<div class="btn-row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="btn btn-sm" id="dlg-cancel"></button><button type="button" class="btn btn-sm" id="dlg-ok"></button></div></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', e => { if(e.target === ov) done(false); });
+    ov.querySelector('#dlg-cancel').addEventListener('click', () => done(false));
+    ov.querySelector('#dlg-ok').addEventListener('click', () => {
+      const w = ov.querySelector('#dlg-chk-w');
+      if(w.style.display !== 'none' && !ov.querySelector('#dlg-chk').checked) { const er = ov.querySelector('#dlg-err'); er.textContent = 'Marque a caixa acima para continuar.'; er.style.display = ''; ov.querySelector('#dlg-chk').focus(); return; }
+      done(true);
+    });
+    ov.addEventListener('keydown', e => {
+      if(e.key === 'Escape') { e.preventDefault(); done(false); return; }
+      if(e.key !== 'Tab') return;
+      const f = [...ov.querySelectorAll('input,button')].filter(x => x.offsetParent !== null); if(!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if(e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); } else if(!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+  }
+  function done(v) {
+    if(!ov || ov.classList.contains('hidden')) return;
+    ov.classList.add('hidden');
+    const r = resolver; resolver = null;
+    try { if(prevFocus && prevFocus.focus) prevFocus.focus(); } catch(e) {}
+    if(r) r(v);
+  }
+  // opts: { title, body (texto; quebras de linha viram parágrafos), okLabel, cancelLabel, danger, check (texto da caixa que precisa ser marcada) } → Promise<boolean>
+  function ask(opts) {
+    const o = opts || {};
+    if(!ov) build();
+    if(resolver) done(false);
+    prevFocus = document.activeElement;
+    ov.querySelector('#dlg-t').textContent = o.title || 'Confirmar';
+    ov.querySelector('#dlg-b').innerHTML = String(o.body || '').split(/\n{2,}/).map(p => '<p style="margin:0 0 8px">' + esc(p).replace(/\n/g, '<br>') + '</p>').join('');
+    const w = ov.querySelector('#dlg-chk-w'); w.style.display = o.check ? 'flex' : 'none'; ov.querySelector('#dlg-chk').checked = false; ov.querySelector('#dlg-chk-t').textContent = o.check || '';
+    const er = ov.querySelector('#dlg-err'); er.style.display = 'none'; er.textContent = '';
+    const ok = ov.querySelector('#dlg-ok'); ok.textContent = o.okLabel || 'OK'; ok.className = 'btn btn-sm ' + (o.danger ? 'btn-red' : 'btn-acc');
+    ov.querySelector('#dlg-cancel').textContent = o.cancelLabel || 'Cancelar';
+    ov.classList.remove('hidden');
+    setTimeout(() => { try { ov.querySelector('#dlg-cancel').focus(); } catch(e) {} }, 30); // o foco começa no lado seguro (Cancelar)
+    return new Promise(res => { resolver = res; });
+  }
+  return { ask };
 })();
 </script>
 

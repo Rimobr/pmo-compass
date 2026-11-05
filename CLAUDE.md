@@ -37,6 +37,10 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - O app já nasce **conectado à nuvem** (`DEFAULT_CLOUD` no módulo Cloud: URL e chave **anon**, que é pública por desenho; a de serviço nunca entra no app — há teste). Quem quiser usar só o navegador desmarca "Salvar na nuvem" em Configurações → Nuvem & dados (`cfg.localOnly` em `pmo_cloud_v1`); marcar de novo volta ao padrão. Os testes de navegador (smoke e a11y) rodam em modo local de propósito.
 - **A nuvem é a verdade**: `syncProjects` só sobe um projeto que não está na nuvem se foi criado neste navegador e ainda não confirmado (`unsynced`) ou tem dados locais de verdade. Projeto vazio apagado na nuvem sai da lista local, não é recriado. Apagar direto na base só vale se os navegadores também limparem (ou use "Excluir o projeto" no sistema).
 
+## Janela de confirmação do sistema (pedido do dono, 05/11/2026)
+- Excluir projeto, apagar os dados do projeto e apagar toda a base usam `Dlg.ask({...})` (módulo `ui/confirm-dialog`), não `confirm`/`prompt` do navegador: janela acessível (`alertdialog`, foco em Cancelar, Esc cancela, Tab preso), **botão vermelho** no que não tem volta e, só em "Apagar toda a base", uma caixa de ciência a marcar (`check`). Nunca se pede para digitar o nome do projeto nem a palavra APAGAR.
+- Confirmação nova de ação destrutiva usa `Dlg.ask`; a janela está na varredura `test:a11y`. Ainda usam o confirm do navegador outras telas menores (ver `grep "confirm("`).
+
 ## Entrega
 - Versão em 4 lugares: `version.json`, `BRAND.version` (PMO_Compass_v2.html), `package.json`, `sw.js` (`CACHE_NAME`).
 - Testes: `node tests/run.js` e `npm run test:unit` (inclui `datamap`), `npm run test:smoke`; migrações: `node scripts/db-apply.mjs --dry-run` antes de aplicar, depois `node scripts/build-schema.mjs`.

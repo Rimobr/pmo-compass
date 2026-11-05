@@ -31,11 +31,6 @@ test('com um quadro ativo o grupo Quadros / Kanban não fecha ao abrir o Kanban'
   assert.ok(html.includes("if(!groupId) { try { if(typeof DB !== 'undefined' && typeof Methodology !== 'undefined' && Methodology.isBoard(DB.getActiveProjectId())) groupId = 'sbg-quadros'; } catch(e) {} }"));
 });
 
-test('excluir e apagar os dados do projeto pedem só OK ou Cancelar (sem digitar o nome)', () => {
-  assert.ok(!html.includes('digite o nome do projeto exatamente'));
-  for (const k of ['Clique OK para excluir de vez, ou Cancelar para manter o projeto.', 'Clique OK para apagar os dados, ou Cancelar para manter tudo.']) assert.ok(html.includes(k), k);
-});
-
 test('Quadro de tarefas não mostra sprint: todos os itens no Kanban, sem seletor, faixa nem Planejar sprint', () => {
   assert.ok(html.includes("if(document.body.classList.contains('is-board')) return items.slice();"));
   assert.ok(html.includes('body.is-board #kb-sprint,body.is-board #kb-sprint-bar,body.is-board [onclick*="openPlanNext"],body.is-board .ai-sprint-grp{display:none !important}'));
@@ -43,7 +38,7 @@ test('Quadro de tarefas não mostra sprint: todos os itens no Kanban, sem seleto
 
 test('o texto de Apagar Dados não promete confirmação digitada onde agora é OK ou Cancelar', () => {
   assert.ok(!html.includes('pede uma confirmação digitada'));
-  assert.ok(html.includes('OK ou Cancelar; para apagar toda a base, digitar APAGAR'));
+  assert.ok(html.includes('janela com botão vermelho (para apagar toda a base, marque também a caixa de ciência)'));
 });
 
 test('o campo Sprint do cartão também some no Quadro de tarefas', () => {
@@ -90,4 +85,14 @@ test('Quadro de tarefas fica fora dos painéis que juntam projetos (portfólio, 
 
 test('projeto apagado na nuvem não ressuscita mesmo com dados locais (sem exceção por "ter dados")', () => {
   assert.ok(!html.includes('projectHasLocalData') && !html.includes('LOCAL_DATA_KEYS'));
+});
+
+test('exclusões usam a janela do sistema (Dlg) com botão vermelho, sem confirm do navegador e sem digitar nome ou APAGAR', () => {
+  assert.ok(html.includes('data-module="ui/confirm-dialog"') && html.includes('role="alertdialog"'));
+  for (const k of ["okLabel: 'Excluir o Projeto'", "okLabel: 'Apagar os Dados'", "okLabel: 'Apagar Toda a Base'", "check: 'Entendo que isso apaga os dados de todas as pessoas"]) assert.ok(html.includes(k), k);
+  for (const k of ['digite o nome do projeto exatamente', "typed !== 'APAGAR'", "confirm('⚠️ ATENÇÃO", 'Clique OK para excluir de vez', 'Clique OK para apagar os dados']) assert.ok(!html.includes(k), k);
+});
+test('a janela Dlg devolve verdadeiro/falso, cancela com Esc e pela área escura, e foca em Cancelar', () => {
+  const m = html.match(/<script data-module="ui\/confirm-dialog">([\s\S]*?)<\/script>/)[1];
+  for (const k of ["e.key === 'Escape'", "if(e.target === ov) done(false);", "querySelector('#dlg-cancel').focus()", 'Marque a caixa acima para continuar.', 'prevFocus.focus()']) assert.ok(m.includes(k), k);
 });

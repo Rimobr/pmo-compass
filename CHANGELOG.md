@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.64.2 — 2026-11-05
+- Sincronizacao: projeto apagado na nuvem nao ressuscita nem com dados locais; so sobe o criado aqui e ainda nao confirmado
+
 ## 2.64.1 — 2026-11-05
 - Quadro de tarefas fora do Portfolio, Diretoria, Executiva, PMO, relatorio e priorizacao
 

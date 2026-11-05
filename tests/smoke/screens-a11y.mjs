@@ -25,7 +25,8 @@ const SCENES = [
   ['Impedimentos abertos (janela)', `Agile.openImpediments()`, 'modal-agile-imp'],
   ['Personalizar quadro (janela)', `Agile.openBoardCfg()`, 'modal-agile-board'],
   ['Mover em nome de outra pessoa (janela)', `Agile.openBehalf(DB.get('backlog')[2], 'doing', [])`, 'modal-agile-behalf'],
-  ['Rascunho da IA (janela)', `await Models.createWithAi()`, 'modal-models-ai']
+  ['Rascunho da IA (janela)', `await Models.createWithAi()`, 'modal-models-ai'],
+  ['Confirmação de exclusão (janela)', `Dlg.ask({ title: 'Apagar toda a base', body: 'Isso apaga tudo. Não pode ser desfeito.', okLabel: 'Apagar Toda a Base', cancelLabel: 'Manter', danger: true, check: 'Entendo que isso apaga os dados de todas as pessoas' })`, 'modal-dlg']
 ];
 
 const SETUP = `
