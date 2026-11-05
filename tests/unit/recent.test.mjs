@@ -38,7 +38,7 @@ test('excluir e apagar os dados do projeto pedem só OK ou Cancelar (sem digitar
 
 test('Quadro de tarefas não mostra sprint: todos os itens no Kanban, sem seletor, faixa nem Planejar sprint', () => {
   assert.ok(html.includes("if(document.body.classList.contains('is-board')) return items.slice();"));
-  assert.ok(html.includes('body.is-board #kb-sprint,body.is-board #kb-sprint-bar,body.is-board [onclick*="openPlanNext"],body.is-board .ai-sprint-grp{display:none}'));
+  assert.ok(html.includes('body.is-board #kb-sprint,body.is-board #kb-sprint-bar,body.is-board [onclick*="openPlanNext"],body.is-board .ai-sprint-grp{display:none !important}'));
 });
 
 test('o texto de Apagar Dados não promete confirmação digitada onde agora é OK ou Cancelar', () => {
@@ -64,4 +64,9 @@ test('criar projeto avisa quando o nome já existe (mesmo com acento, hífen, ma
   assert.equal(sameName('Vida Financeira', 'Vida Financeira 2'), false);
   assert.equal(sameName('', ''), false);
   assert.ok(html.includes('Clique OK para criar mais um com este nome, ou Cancelar para voltar.'));
+});
+
+test('o Backlog do quadro não fala de sprint (subtítulo e previsão em sprints)', () => {
+  assert.ok(html.includes('<span class="ai-sprint-grp"> Coloque os mais importantes na próxima sprint.</span>'));
+  assert.ok(html.includes("(document.body.classList.contains('is-board') ? '' : kpi('Previsão'"));
 });

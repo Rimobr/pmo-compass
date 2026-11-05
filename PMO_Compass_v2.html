@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.63.0'
+  version: '2.63.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -209,7 +209,7 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 body.no-project .sb-proj-area{display:none}
 body.is-board .sb-proj-area{display:none}
 /* Quadro de tarefas não tem sprint: some o seletor e a faixa de sprint do Kanban e o "Planejar sprint" do Backlog */
-body.is-board #kb-sprint,body.is-board #kb-sprint-bar,body.is-board [onclick*="openPlanNext"],body.is-board .ai-sprint-grp{display:none}
+body.is-board #kb-sprint,body.is-board #kb-sprint-bar,body.is-board [onclick*="openPlanNext"],body.is-board .ai-sprint-grp{display:none !important}
 /* telas menos usadas do projeto ficam recolhidas em "Mais Telas" (abrem sozinhas se a tela aberta é uma delas) */
 .sb-proj-area:not(.more) .sb-more-group{display:none}
 .sb-more-btn{color:var(--t2)}
@@ -2147,7 +2147,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
 
 <section class="page" id="p-backlog" data-module="pages/backlog">
   <div class="pg-hdr">
-    <div><div class="pg-title">Backlog<span class="help-q" data-help="A lista de tudo que o produto ainda precisa receber, em ordem de prioridade (o de cima é o mais importante). Use ▲ ▼ para priorizar e o campo Sprint para colocar o item no próximo ciclo. Pontos são uma estimativa de esforço relativo, não horas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Itens em ordem de prioridade. Coloque os mais importantes na próxima sprint.</div></div>
+    <div><div class="pg-title">Backlog<span class="help-q" data-help="A lista de tudo que o produto ainda precisa receber, em ordem de prioridade (o de cima é o mais importante). Use ▲ ▼ para priorizar e o campo Sprint para colocar o item no próximo ciclo. Pontos são uma estimativa de esforço relativo, não horas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Itens em ordem de prioridade.<span class="ai-sprint-grp"> Coloque os mais importantes na próxima sprint.</span></div></div>
     <div class="btn-row">
       <button class="btn btn-sm btn-acc" data-perm="manage_backlog" onclick="Agile.openItem()"><i class="ti ti-plus"></i>Novo Item</button>
       <button class="btn btn-sm" data-perm="manage_backlog" onclick="ImportUi.open('backlog')"><i class="ti ti-table-import"></i>Importar planilha<span class="help-q" data-help="Traz vários itens de uma vez de uma planilha Excel ou CSV (inclusive exportada do Jira ou Trello). Colunas reconhecidas: título, tipo, pontos, responsável, situação, sprint, prioridade e descrição. Você vê uma prévia e confere antes de importar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
@@ -13417,7 +13417,7 @@ const Agile = (() => {
     const k = document.getElementById('bl-kpis');
     if(k) k.innerHTML = kpi('Itens abertos', open.length, `${items.length - open.length} concluído(s)`) + kpi('Pontos a entregar', fc.remaining, 'soma dos itens abertos')
       + kpi('Sem estimativa', fc.unestimated, fc.unestimated ? 'defina os pontos antes de planejar' : 'tudo estimado', fc.unestimated ? 'sdot-amb' : 'sdot-grn')
-      + kpi('Previsão', fc.sprints == null ? '—' : fc.sprints + ' sprint(s)', fc.sprints == null ? 'precisa de sprints encerradas' : `no ritmo de ${vel.avg} pts por sprint`);
+      + (document.body.classList.contains('is-board') ? '' : kpi('Previsão', fc.sprints == null ? '—' : fc.sprints + ' sprint(s)', fc.sprints == null ? 'precisa de sprints encerradas' : `no ritmo de ${vel.avg} pts por sprint`)); // quadro de tarefas não tem sprint, logo não tem previsão em sprints
     const q = query.trim().toLowerCase();
     const list = items.filter(i => (showDone || i.status !== 'done') && (!q || (i.title + ' ' + i.assignee + ' ' + i.id).toLowerCase().includes(q))).sort(sortByRank);
     if(!items.length) { root.innerHTML = '<div class="rk-empty">O backlog está vazio. Use “Novo item” para começar.</div>'; return; }

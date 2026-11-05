@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.63.0 — 2026-11-04
+- Criar projeto ou quadro avisa quando ja existe um com o mesmo nome (sem acento, hifen ou 'de' de diferenca)
+
 ## 2.62.3 — 2026-11-04
 - Menu: remove Usados Recentemente; Quadros / Kanban nao fica aberto ao sair de um quadro para um projeto
 
