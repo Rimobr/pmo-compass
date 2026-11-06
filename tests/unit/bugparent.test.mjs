@@ -93,3 +93,9 @@ test('responsável: vazio só na primeira coluna; da segunda em diante tem de se
   assert.equal(AgileCalc.assigneeError(' ana souza ', second, cfg, team), '');
   assert.match(AgileCalc.assigneeError('Ana Souza', second, cfg, []), /não está na equipe/);
 });
+
+test('banco: a regra do responsável (vazio só na primeira coluna; da segunda em diante, alguém da equipe) tem trava própria', () => {
+  const sql = readFileSync(join(root, 'supabase', 'migrations', '20261106120000_item_assignee_rule.sql'), 'utf8');
+  for (const k of ['guard_item_assignee', "new.status = 'todo'", 'lower(btrim(tm.name)) = lower(btrim(new.assignee))', 'before insert or update on public.backlog_items', 'o.status is not distinct from new.status']) assert.ok(sql.includes(k), k);
+  assert.ok(readFileSync(join(root, 'schema.sql'), 'utf8').includes('guard_item_assignee'));
+});
