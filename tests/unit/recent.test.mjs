@@ -107,7 +107,7 @@ test('feedback do Leandro: escolher Bug não fecha a janela à toa, comentário/
 });
 
 test('Responsável do cartão é lista da equipe e a regra vale na edição, no botão, no arrasto e na automação', () => {
-  for (const k of ['<select class="input" id="ai-assignee"></select>', 'function fillAssignee(cur)', 'const blk0 = cur0 ? moveBlock(f.assignee, to0) : \'\';', 'const blk = moveBlock(it.assignee, to);', '!moveBlock(it.assignee, a.column)', '(sem acesso ao sistema)']) assert.ok(html.includes(k), k);
+  for (const k of ['<select class="input" id="ai-assignee" onchange="Agile.syncSprintLock()"></select>', 'function fillAssignee(cur)', 'const blk0 = cur0 ? moveBlock(f.assignee, to0) : \'\';', 'const blk = moveBlock(it.assignee, to);', '!moveBlock(it.assignee, a.column)', '(sem acesso ao sistema)']) assert.ok(html.includes(k), k);
   assert.ok(!html.includes('id="ai-people"'));
 });
 
@@ -120,4 +120,8 @@ test('recusa de responsável ajuda: quem pode vai a Pessoas e Acesso; quem não 
   for (const k of ['async function askRegularize(msg)', "okLabel: 'Abrir Pessoas e Acesso'", "SettingsTabs.show('acesso')", 'Procure o administrador ou o gerente do projeto', 'Cloud.projectContacts(DB.getActiveProjectId())', 'const canManage = () =>', 'async function projectContacts(pid)', "client.rpc('project_contacts'", 'signed ? Auth.getName()']) assert.ok(html.includes(k), k);
   const sql = readFileSync(join(root, 'supabase', 'migrations', '20261106150000_item_assignee_self_and_contacts.sql'), 'utf8');
   for (const k of ['function public.project_contacts', 'has_project_access(pid)', "'Gerente do projeto'", "'Administrador'", 'revoke all on function public.project_contacts(text) from public, anon']) assert.ok(sql.includes(k), k);
+});
+
+test('campo Sprint só abre com responsável escolhido; backlog, planejamento e importação respeitam a mesma regra', () => {
+  for (const k of ['onchange="Agile.syncSprintLock()"', 'function syncSprintLock()', "'Escolha o responsável primeiro'", 'AgileCalc.sprintAssigneeError(it.assignee, teamNames())', 'Ficaram de fora da sprint por falta de responsável cadastrado', 'entraram em "A fazer", sem sprint', 'kindPicked, syncSprintLock,']) assert.ok(html.includes(k), k);
 });

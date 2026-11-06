@@ -112,3 +112,12 @@ test('nome antigo do cartão é ligado ao cadastro só quando há uma única pes
   assert.equal(AgileCalc.matchPerson('José', ['Jose Alves']), 'Jose Alves');
   assert.equal(AgileCalc.matchPerson('', ['Ana']), '');
 });
+
+test('sprint: o item só é atrelado a uma sprint com responsável cadastrado', () => {
+  const team = ['Ana Souza'];
+  assert.match(AgileCalc.sprintAssigneeError('', team), /escolha antes o responsável/);
+  assert.match(AgileCalc.sprintAssigneeError('Fulano', team), /ainda não tem acesso/);
+  assert.equal(AgileCalc.sprintAssigneeError(' ana souza ', team), '');
+  const sql = readFileSync(join(root, 'supabase', 'migrations', '20261106160000_item_sprint_needs_assignee.sql'), 'utf8');
+  for (const k of ['old.sprint_id is null', 'new.sprint_id is not null', 'entrar numa sprint']) assert.ok(sql.includes(k), k);
+});

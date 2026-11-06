@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.67.4'
+  version: '2.67.5'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2247,7 +2247,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
       <div class="field-group"><div class="field-label"><label for="ai-points">Pontos</label><span class="help-q" data-help="Estimativa de esforço relativo (1, 2, 3, 5, 8, 13...). Compare com outros itens: um item de 5 dá mais trabalho que um de 2. Deixe vazio se ainda não foi estimado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="ai-points" type="number" min="0" max="100" placeholder="Ex: 5"></div>
     </div>
     <div class="g2" style="gap:10px">
-      <div class="field-group"><div class="field-label"><label for="ai-assignee">Responsável</label></div><select class="input" id="ai-assignee"></select></div>
+      <div class="field-group"><div class="field-label"><label for="ai-assignee">Responsável</label></div><select class="input" id="ai-assignee" onchange="Agile.syncSprintLock()"></select></div>
       <div class="field-group ai-sprint-grp"><div class="field-label"><label for="ai-sprint">Sprint</label></div><select class="input" id="ai-sprint"></select></div>
     </div>
     <div class="field-group" id="ai-status-grp"><div class="field-label"><label for="ai-status">Situação</label></div><select class="input" id="ai-status"><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="review">Em revisão</option><option value="done">Concluído</option></select></div>
@@ -12224,6 +12224,13 @@ const AgileCalc = (() => {
     if(!(teamNames || []).some(n => k(n) === k(a))) return a + ' ainda não tem acesso ao sistema neste projeto.';
     return '';
   }
+  // Entrar numa sprint também exige responsável cadastrado (pessoa com acesso ao sistema): o cartão só é "atrelado" depois de escolher o profissional
+  function sprintAssigneeError(assignee, teamNames) {
+    const a = String(assignee || '').trim();
+    if(!a) return 'Para colocar o item numa sprint, escolha antes o responsável (pessoa cadastrada, com acesso ao sistema).';
+    const k = x => String(x).trim().toLowerCase();
+    return (teamNames || []).some(n => k(n) === k(a)) ? '' : a + ' ainda não tem acesso ao sistema neste projeto.';
+  }
   // Nome antigo do cartão ("Ricardo") x nome do cadastro ("Ricardo M"): se só UMA pessoa da lista começa com o mesmo primeiro nome, é ela
   function matchPerson(cur, names) {
     const norm = x => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().split(/\s+/);
@@ -12368,7 +12375,7 @@ const AgileCalc = (() => {
     return advice;
   }
 
-  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, bugParentError, assigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, bugParentError, assigneeError, sprintAssigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
 })();
 </script>
 
@@ -13562,6 +13569,7 @@ const Agile = (() => {
   function setSprintOf(id, sprintId) {
     if(!Auth.guard('manage_backlog')) return;
     load(); const it = items.find(x => x.id === id); if(!it) return;
+    if(sprintId && sprintId !== (it.sprintId || '')) { const sb = AgileCalc.sprintAssigneeError(it.assignee, teamNames()); if(sb) { blockHelp(sb, it.assignee); renderAll(); return; } }
     it.sprintId = sprintId; saveItems(); pushItem(it); renderAll();
     const sp = sprints.find(s => s.id === sprintId);
     T.show(sp ? `✅ ${id} entrou em "${sp.name}".` : `${id} voltou para o backlog (sem sprint).`);
@@ -13896,6 +13904,14 @@ const Agile = (() => {
   // ───────── Modais ─────────
   const val = id => document.getElementById(id).value;
   const isBoardNow = () => document.body.classList.contains('is-board');
+  // O campo Sprint só abre depois de escolher o responsável cadastrado (sem isso o cartão não é atrelado a sprint)
+  function syncSprintLock() {
+    const el = document.getElementById('ai-sprint'); if(!el) return;
+    const bad = AgileCalc.sprintAssigneeError(val('ai-assignee'), teamNames());
+    el.disabled = !Auth.can('manage_backlog') || !!bad;
+    if(el.options[0]) el.options[0].textContent = bad ? 'Escolha o responsável primeiro' : 'Sem sprint';
+    el.title = bad ? 'Escolha o responsável cadastrado para poder colocar o item numa sprint.' : '';
+  }
   function fillSprintSelect(sel) {
     document.getElementById('ai-sprint').innerHTML = '<option value="">Sem sprint</option>' + sprints.filter(s => s.state !== 'encerrada' || s.id === sel).map(s => `<option value="${esc(s.id)}"${s.id === sel ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
   }
@@ -13956,6 +13972,7 @@ const Agile = (() => {
     checkDraft = it ? (Array.isArray(it.checklist) ? it.checklist : []).map(x => ({ text: x.text, done: !!x.done })) : policy().template.map(t => ({ text: t, done: false }));
     renderCheck();
     ['ai-title', 'ai-kind', 'ai-points', 'ai-assignee', 'ai-sprint', 'ai-parent', 'ai-desc'].forEach(x => { const e = document.getElementById(x); if(e) e.disabled = !full; });
+    syncSprintLock();
     document.getElementById('ai-del').style.display = it && full ? '' : 'none';
     document.getElementById('ai-work').style.display = (it || full) ? '' : 'none'; // comentário e evidências já na criação, não só depois de salvar
     document.getElementById('ai-note').value = ''; document.getElementById('ai-evid').value = '';
@@ -14114,6 +14131,8 @@ const Agile = (() => {
     if(urg) { f.sprintId = urg.sprintId; f.description = (f.description ? f.description + '\n\n' : '') + 'Incluído durante a sprint (mudança de escopo) — motivo: ' + urg.reason; }
     const bad = AgileCalc.bugParentError({ ...f, id: itemCtx || '' }, items, { board: isBoardNow() });
     if(bad) { T.show('⚠️ ' + bad); document.getElementById('ai-parent').focus(); return; }
+    const cur00 = itemCtx ? items.find(x => x.id === itemCtx) : null;
+    if(f.sprintId && f.sprintId !== (cur00 ? cur00.sprintId || '' : '')) { const sb = AgileCalc.sprintAssigneeError(f.assignee, teamNames()); if(sb) { blockHelp(sb, f.assignee); document.getElementById('ai-assignee').focus(); return; } }
     const cur0 = itemCtx ? items.find(x => x.id === itemCtx) : null, to0 = val('ai-status') || (cur0 && cur0.status);
     const blk0 = cur0 ? moveBlock(f.assignee, to0) : ''; if(blk0) { blockHelp(blk0, f.assignee); document.getElementById('ai-assignee').focus(); return; }
     const pend0 = cur0 && to0 !== cur0.status ? BoardRules.pendingFor(policy(), cur0.status, to0, checkDraft) : [], why0 = val('ai-note').trim();
@@ -14221,9 +14240,13 @@ const Agile = (() => {
     });
     // Bug filho de um item que veio na mesma planilha: liga agora que todos já têm código
     created.forEach((it, k) => { const t = rows[k].parentTitle; if(it.kind === 'bug' && t && !it.parentId) { const p = created.find(c => c.kind !== 'bug' && c.title === t); if(p) it.parentId = p.id; } });
+    // Responsável que não é pessoa cadastrada: o item entra em "A fazer", sem sprint (o responsável escrito na planilha fica, para a gestão escolher depois)
+    let ajustados = 0; const names = teamNames();
+    created.forEach(it => { if((it.status !== 'todo' || it.sprintId) && AgileCalc.sprintAssigneeError(it.assignee, names)) { it.status = 'todo'; it.sprintId = ''; it.doneOn = ''; ajustados++; } });
     saveItems();
     if(typeof Cloud !== 'undefined') Cloud.pushMany('backlog_items', created);
     renderAll();
+    if(ajustados) T.show('👤 ' + ajustados + ' item(ns) entraram em "A fazer", sem sprint, porque o responsável não é uma pessoa cadastrada com acesso. Escolha o responsável para movê-los.', 9000);
     return created.length;
   }
 
@@ -14303,7 +14326,9 @@ const Agile = (() => {
     if(!Auth.guard('manage_backlog')) return;
     const cur = currentPlan(); if(!cur || !cur.plan.selected.length) return;
     const { s, plan } = cur;
-    plan.selected.forEach(id => { const it = items.find(x => x.id === id); if(it) { it.sprintId = s.id; pushItem(it); } });
+    const semResp = [];
+    plan.selected.forEach(id => { const it = items.find(x => x.id === id); if(!it) return; if(AgileCalc.sprintAssigneeError(it.assignee, teamNames())) { semResp.push(it.id); return; } it.sprintId = s.id; pushItem(it); });
+    if(semResp.length) T.show('👤 Ficaram de fora da sprint por falta de responsável cadastrado: ' + semResp.join(', ') + '. Abra cada um, escolha o responsável e inclua de novo.', 9000);
     s.capacity = plan.capacity || s.capacity; s.availability = planAvail; pushSprint(s);
     cfg.reservePct = plan.reservePct; DB.set('agileConfig', cfg);
     if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'agileConfig', cfg);
@@ -14373,7 +14398,7 @@ const Agile = (() => {
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, checkDates, openRules, closeRules, editRule, ruleField, ruleAct, ruleAddAct, ruleDelAct, ruleCancel, ruleSave, toggleRule, deleteRule, renderDue, openDue, closeDue, dueChoose, runDue, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
     aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, setPolicyMove, setPolicyCol, openImpediments, closeImpediments, resolveImpediment, setPolicyBehalf, addGate, removeGate, setGate, setTemplate, checkToggle, checkAdd, checkDel, openBehalf, closeBehalf, confirmBehalf, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
-    cfgNow: () => { load(); return cfg; }, kindChanged, kindPicked, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
+    cfgNow: () => { load(); return cfg; }, kindChanged, kindPicked, syncSprintLock, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
 })();
 </script>
 
