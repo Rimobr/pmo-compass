@@ -84,3 +84,12 @@ test('Quadro de tarefas: bug sem item pai é aceito; com pai continua validado',
   assert.match(AgileCalc.bugParentError({ id: 'N', kind: 'bug', parentId: 'NAO' }, items, { board: true }), /não existe/);
   assert.match(AgileCalc.bugParentError({ id: 'N', kind: 'bug', parentId: 'US-2' }, items, { board: true }), /outro bug/);
 });
+
+test('responsável: vazio só na primeira coluna; da segunda em diante tem de ser alguém da equipe', () => {
+  const cfg = {}, first = AgileCalc.cols(cfg)[0].key, second = AgileCalc.cols(cfg)[1].key, team = ['Ana Souza', 'Bruno'];
+  assert.equal(AgileCalc.assigneeError('', first, cfg, team), '');
+  assert.match(AgileCalc.assigneeError('', second, cfg, team), /escolha o responsável/);
+  assert.match(AgileCalc.assigneeError('Fulano', second, cfg, team), /não está na equipe/);
+  assert.equal(AgileCalc.assigneeError(' ana souza ', second, cfg, team), '');
+  assert.match(AgileCalc.assigneeError('Ana Souza', second, cfg, []), /não está na equipe/);
+});

@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.66.0'
+  version: '2.67.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2247,7 +2247,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
       <div class="field-group"><div class="field-label"><label for="ai-points">Pontos</label><span class="help-q" data-help="Estimativa de esforço relativo (1, 2, 3, 5, 8, 13...). Compare com outros itens: um item de 5 dá mais trabalho que um de 2. Deixe vazio se ainda não foi estimado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="ai-points" type="number" min="0" max="100" placeholder="Ex: 5"></div>
     </div>
     <div class="g2" style="gap:10px">
-      <div class="field-group"><div class="field-label"><label for="ai-assignee">Responsável</label></div><input class="input" id="ai-assignee" list="ai-people" autocomplete="off" maxlength="80" placeholder="Quem vai fazer"><datalist id="ai-people"></datalist></div>
+      <div class="field-group"><div class="field-label"><label for="ai-assignee">Responsável</label></div><select class="input" id="ai-assignee"></select></div>
       <div class="field-group ai-sprint-grp"><div class="field-label"><label for="ai-sprint">Sprint</label></div><select class="input" id="ai-sprint"></select></div>
     </div>
     <div class="field-group" id="ai-status-grp"><div class="field-label"><label for="ai-status">Situação</label></div><select class="input" id="ai-status"><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="review">Em revisão</option><option value="done">Concluído</option></select></div>
@@ -12207,6 +12207,15 @@ const AgileCalc = (() => {
     if(lane.estimate === 'com' && !has) return false;
     return true;
   }
+  // Responsável: na primeira coluna (entrada do quadro) pode ficar vazio; da segunda em diante tem de ser alguém cadastrado na equipe do projeto
+  function assigneeError(assignee, status, cfg, teamNames) {
+    const list = cols(cfg); if(!list.length || status === list[0].key) return '';
+    const a = String(assignee || '').trim();
+    if(!a) return 'Para sair de "' + list[0].label + '", escolha o responsável (alguém da equipe do projeto).';
+    const k = x => String(x).trim().toLowerCase();
+    if(!(teamNames || []).some(n => k(n) === k(a))) return a + ' não está na equipe deste projeto. Escolha o responsável na lista (ou cadastre a pessoa em Equipe).';
+    return '';
+  }
   function moveTo(item, status, today) { item.status = status; item.doneOn = status === 'done' ? (item.doneOn || today) : ''; return item; }
   function neighbor(status, dir, cfg) { const list = cols(cfg), i = list.findIndex(c => c.key === status) + dir; return list[i] ? list[i].key : null; }
 
@@ -12342,7 +12351,7 @@ const AgileCalc = (() => {
     return advice;
   }
 
-  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, bugParentError, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, bugParentError, assigneeError, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
 })();
 </script>
 
@@ -13359,6 +13368,12 @@ const Agile = (() => {
   // Decide o movimento de um cartão: permissão, regra de passagem (tarefas), comentário exigido e motivo da gestão; devolve true se o movimento foi interrompido
   function guardMove(it, to) {
     if(!canTouch(it, to)) return true;
+    const blk = moveBlock(it.assignee, to);
+    if(blk) {
+      if(Auth.can('manage_backlog')) { openItem(it.id); document.getElementById('ai-status').value = to; const a = document.getElementById('ai-assignee'); if(a) a.focus(); T.show('👤 ' + blk, 6000); }
+      else T.show('👤 Este cartão ainda não tem responsável. Peça à gestão para indicar quem vai fazer antes de movê-lo.', 6000);
+      return true;
+    }
     const pend = BoardRules.pendingFor(policy(), it.status, to, it.checklist), mgr = Auth.can('manage_backlog');
     if(pend.length && !mgr) { T.show('☑️ Para sair de "' + AgileCalc.colLabel(cfg, it.status) + '", conclua as tarefas do cartão: ' + pendNames(pend) + '. Abra o cartão e marque o que foi feito.', 6500); return true; }
     if(askNote(it, to)) return true;
@@ -13729,7 +13744,7 @@ const Agile = (() => {
         else if(a.field === 'points' && it.points !== a.value) { it.points = a.value; did.push('pontos: ' + a.value); changed = true; }
         else if(a.field === 'sprint') { const sp = sprints.find(s => s.id === a.value && s.state !== 'encerrada'); if((a.value === '' || sp) && it.sprintId !== a.value) { it.sprintId = a.value; did.push('sprint: ' + (sp ? sp.name : 'nenhuma')); changed = true; } }
       }
-      else if(a.type === 'move') { if(keys.includes(a.column) && it.status !== a.column) { AgileCalc.moveTo(it, a.column, todayIso()); did.push('coluna: ' + AgileCalc.colLabel(cfg, a.column)); changed = true; followMove = a.column; } }
+      else if(a.type === 'move') { if(keys.includes(a.column) && it.status !== a.column && !moveBlock(it.assignee, a.column)) { AgileCalc.moveTo(it, a.column, todayIso()); did.push('coluna: ' + AgileCalc.colLabel(cfg, a.column)); changed = true; followMove = a.column; } }
       else if(a.type === 'notify') { if(sendNotice(r, a, ruleVars(it), it.assignee)) did.push('aviso enviado'); }
     }
     if(changed) { saveItems(); pushItem(it); }
@@ -13874,7 +13889,6 @@ const Agile = (() => {
     document.getElementById('ai-title').value = it ? it.title : '';
     document.getElementById('ai-kind').value = it ? it.kind : 'historia';
     document.getElementById('ai-points').value = it ? it.points : '';
-    document.getElementById('ai-assignee').value = it ? it.assignee : '';
     document.getElementById('ai-desc').value = it ? it.description : '';
     // a lista de Situação é a do quadro (inclui as colunas criadas em Personalizar quadro); item numa coluna que não existe mais mostra a primeira
     const stCols = AgileCalc.cols(cfg), stSel = document.getElementById('ai-status');
@@ -13882,7 +13896,7 @@ const Agile = (() => {
     stSel.value = it && stCols.some(c => c.key === it.status) ? it.status : stCols[0].key;
     document.getElementById('ai-status-grp').style.display = it ? '' : 'none';
     document.getElementById('ai-del').style.display = it ? '' : 'none';
-    document.getElementById('ai-people').innerHTML = [...new Set((DB.get('team') || []).map(m => m.name).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(n => `<option value="${esc(n)}">`).join('');
+    fillAssignee(it ? it.assignee : '');
     fillSprintSelect(it ? it.sprintId : (active() ? '' : ''));
     fillParent(it ? it.parentId : '', it ? it.id : '');
     kindChanged();
@@ -13969,6 +13983,7 @@ const Agile = (() => {
     load(); let it = items.find(x => x.id === itemCtx); if(!it) return;
     const to = val('ai-status') || it.status, changed = to !== it.status, note = val('ai-note').trim(), hasFiles = !!(document.getElementById('ai-evid').files || []).length;
     if(changed && !canTouch(it, to)) return;
+    const blk = changed ? moveBlock(it.assignee, to) : ''; if(blk) { T.show('👤 ' + blk, 6000); return; }
     const pend = changed ? BoardRules.pendingFor(policy(), it.status, to, checkDraft) : [];
     if(pend.length) { T.show('☑️ Para sair de "' + AgileCalc.colLabel(cfg, it.status) + '", conclua as tarefas do cartão: ' + pendNames(pend) + '.', 6500); return; }
     if(changed && policy().noteCols.includes(to) && note.length < 5) { T.show('⚠️ Para passar para "' + AgileCalc.colLabel(cfg, to) + '", escreva o comentário (mínimo 5 letras) e anexe as evidências, se houver.'); document.getElementById('ai-note').focus(); return; }
@@ -14040,6 +14055,14 @@ const Agile = (() => {
     document.getElementById('ai-sprint').value = a.id;
     document.getElementById('ai-title').focus();
   }
+  const teamNames = () => [...new Set((DB.get('team') || []).map(m => m.name).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  // Responsável = lista da equipe cadastrada no projeto; quem já estava no item e saiu da equipe aparece marcado, para não se perder sem querer
+  function fillAssignee(cur) {
+    const el = document.getElementById('ai-assignee'), names = teamNames(), out = cur && !names.some(n => n.toLowerCase() === String(cur).trim().toLowerCase());
+    el.innerHTML = '<option value="">Sem responsável</option>' + names.map(n => '<option value="' + esc(n) + '">' + esc(n) + '</option>').join('') + (out ? '<option value="' + esc(cur) + '">' + esc(cur) + ' (fora da equipe)</option>' : '');
+    el.value = cur || '';
+  }
+  const moveBlock = (assignee, to) => AgileCalc.assigneeError(assignee, to, cfg, teamNames());
   function closeItem() { urgent = null; document.getElementById('modal-agile-item').classList.add('hidden'); }
   async function saveItem() {
     if(!Auth.can('manage_backlog')) return saveWork();
@@ -14055,6 +14078,7 @@ const Agile = (() => {
     const bad = AgileCalc.bugParentError({ ...f, id: itemCtx || '' }, items, { board: isBoardNow() });
     if(bad) { T.show('⚠️ ' + bad); document.getElementById('ai-parent').focus(); return; }
     const cur0 = itemCtx ? items.find(x => x.id === itemCtx) : null, to0 = val('ai-status') || (cur0 && cur0.status);
+    const blk0 = cur0 ? moveBlock(f.assignee, to0) : ''; if(blk0) { T.show('👤 ' + blk0, 6000); document.getElementById('ai-assignee').focus(); return; }
     const pend0 = cur0 && to0 !== cur0.status ? BoardRules.pendingFor(policy(), cur0.status, to0, checkDraft) : [], why0 = val('ai-note').trim();
     if(pend0.length && why0.length < 5) { T.show('☑️ Há tarefas pendentes (' + pendNames(pend0) + '). Para mover mesmo assim, escreva o motivo em "Comentário da atividade".', 6500); document.getElementById('ai-note').focus(); return; }
     const ev = await collectEvidence(); if(ev === false) return;
