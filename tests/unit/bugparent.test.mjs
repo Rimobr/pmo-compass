@@ -89,9 +89,9 @@ test('responsável: vazio só na primeira coluna; da segunda em diante tem de se
   const cfg = {}, first = AgileCalc.cols(cfg)[0].key, second = AgileCalc.cols(cfg)[1].key, team = ['Ana Souza', 'Bruno'];
   assert.equal(AgileCalc.assigneeError('', first, cfg, team), '');
   assert.match(AgileCalc.assigneeError('', second, cfg, team), /escolha o responsável/);
-  assert.match(AgileCalc.assigneeError('Fulano', second, cfg, team), /acesso ao sistema/);
+  assert.match(AgileCalc.assigneeError('Fulano', second, cfg, team), /nome cadastrado/);
   assert.equal(AgileCalc.assigneeError(' ana souza ', second, cfg, team), '');
-  assert.match(AgileCalc.assigneeError('Ana Souza', second, cfg, []), /acesso ao sistema/);
+  assert.match(AgileCalc.assigneeError('Ana Souza', second, cfg, []), /nome cadastrado/);
 });
 
 test('banco: a regra do responsável (vazio só na primeira coluna; da segunda em diante, pessoa com conta e acesso ao projeto) tem trava própria', () => {
@@ -116,7 +116,7 @@ test('nome antigo do cartão é ligado ao cadastro só quando há uma única pes
 test('sprint: o item só é atrelado a uma sprint com responsável cadastrado', () => {
   const team = ['Ana Souza'];
   assert.match(AgileCalc.sprintAssigneeError('', team), /escolha antes o responsável/);
-  assert.match(AgileCalc.sprintAssigneeError('Fulano', team), /ainda não tem acesso/);
+  assert.match(AgileCalc.sprintAssigneeError('Fulano', team), /nome cadastrado/);
   assert.equal(AgileCalc.sprintAssigneeError(' ana souza ', team), '');
   const sql = readFileSync(join(root, 'supabase', 'migrations', '20261106160000_item_sprint_needs_assignee.sql'), 'utf8');
   for (const k of ['old.sprint_id is null', 'new.sprint_id is not null', 'entrar numa sprint']) assert.ok(sql.includes(k), k);
