@@ -85,17 +85,22 @@ test('Quadro de tarefas: bug sem item pai é aceito; com pai continua validado',
   assert.match(AgileCalc.bugParentError({ id: 'N', kind: 'bug', parentId: 'US-2' }, items, { board: true }), /outro bug/);
 });
 
-test('responsável: vazio só na primeira coluna; da segunda em diante tem de ser alguém da equipe', () => {
+test('responsável: vazio só na primeira coluna; da segunda em diante tem de ser pessoa com acesso ao sistema', () => {
   const cfg = {}, first = AgileCalc.cols(cfg)[0].key, second = AgileCalc.cols(cfg)[1].key, team = ['Ana Souza', 'Bruno'];
   assert.equal(AgileCalc.assigneeError('', first, cfg, team), '');
   assert.match(AgileCalc.assigneeError('', second, cfg, team), /escolha o responsável/);
-  assert.match(AgileCalc.assigneeError('Fulano', second, cfg, team), /não está na equipe/);
+  assert.match(AgileCalc.assigneeError('Fulano', second, cfg, team), /acesso ao sistema/);
   assert.equal(AgileCalc.assigneeError(' ana souza ', second, cfg, team), '');
-  assert.match(AgileCalc.assigneeError('Ana Souza', second, cfg, []), /não está na equipe/);
+  assert.match(AgileCalc.assigneeError('Ana Souza', second, cfg, []), /acesso ao sistema/);
 });
 
-test('banco: a regra do responsável (vazio só na primeira coluna; da segunda em diante, alguém da equipe) tem trava própria', () => {
+test('banco: a regra do responsável (vazio só na primeira coluna; da segunda em diante, pessoa com conta e acesso ao projeto) tem trava própria', () => {
   const sql = readFileSync(join(root, 'supabase', 'migrations', '20261106120000_item_assignee_rule.sql'), 'utf8');
   for (const k of ['guard_item_assignee', "new.status = 'todo'", 'lower(btrim(tm.name)) = lower(btrim(new.assignee))', 'before insert or update on public.backlog_items', 'o.status is not distinct from new.status']) assert.ok(sql.includes(k), k);
   assert.ok(readFileSync(join(root, 'schema.sql'), 'utf8').includes('guard_item_assignee'));
+});
+
+test('banco: o responsável precisa ser colaborador ligado a conta ativa com acesso ao projeto (ou administrador)', () => {
+  const sql = readFileSync(join(root, 'supabase', 'migrations', '20261106140000_item_assignee_account.sql'), 'utf8');
+  for (const k of ['join public.profiles p on p.id = tm.user_id and p.active', "p.role = 'admin'", 'project_access pa', 'Pessoas e Acesso']) assert.ok(sql.includes(k), k);
 });

@@ -42,8 +42,8 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - Confirmação nova de ação destrutiva usa `Dlg.ask`; a janela está na varredura `test:a11y`. Ainda usam o confirm do navegador outras telas menores (ver `grep "confirm("`).
 
 ## Responsável do cartão (pedido do dono, 06/11/2026)
-- Quem entra na lista de Responsável é cadastrado em **Colaboradores → Adicionar Colaborador** (vale também no Quadro).
-- Na **primeira coluna** do quadro o cartão pode ficar sem responsável; **da segunda coluna em diante** o responsável é obrigatório e vem de **lista suspensa da equipe cadastrada no projeto** (`AgileCalc.assigneeError`). Vale ao salvar o cartão, ao mover por botão ou arrasto (a gestão cai no cartão com o campo em foco) e nas automações de coluna. Quem saiu da equipe aparece como "(fora da equipe)" até ser trocado.
+- O responsável é uma **pessoa cadastrada em Pessoas e Acesso (conta ativa) com acesso ao projeto**: dar acesso ao projeto já cria o colaborador ligado à conta (`ensure_team_member`) e é ele que aparece na lista. Só o administrador liga uma conta a um colaborador (Colaboradores → Adicionar Colaborador). Sem nuvem (só neste navegador) não há contas: vale a equipe toda. O banco impõe a mesma regra (`guard_item_assignee`, migração `20261106140000`).
+- Na **primeira coluna** do quadro o cartão pode ficar sem responsável; **da segunda coluna em diante** o responsável é obrigatório e vem de **lista suspensa** (`AgileCalc.assigneeError`). Vale ao salvar o cartão, ao mover por botão ou arrasto (a gestão cai no cartão com o campo em foco) e nas automações de coluna. Quem perdeu o acesso aparece como "(sem acesso ao sistema)" até ser trocado.
 
 ## Entrega
 - Versão em 4 lugares: `version.json`, `BRAND.version` (PMO_Compass_v2.html), `package.json`, `sw.js` (`CACHE_NAME`).

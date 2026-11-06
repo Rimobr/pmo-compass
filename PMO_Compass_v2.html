@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.67.1'
+  version: '2.67.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -4736,6 +4736,13 @@ const Cloud = (() => {
     pushAuditEvent('users_' + action, action === 'delete' ? n('deleted') + ' conta(s) excluída(s)' : (active ? n('reactivated') + ' conta(s) reativada(s)' : n('inactivated') + ' conta(s) inativada(s)'), { ids });
     return out;
   }
+  // A quem pedir ajuda no projeto: gerente e administradores (nome, papel, e-mail)
+  async function projectContacts(pid) {
+    if(!client || !session) return [];
+    const { data, error } = await client.rpc('project_contacts', { pid });
+    if(error) { console.warn('Supabase: falha ao ler contatos do projeto', error); return []; }
+    return data || [];
+  }
   async function listTeamLinks(userIds) {
     if(!client || !session || !userIds.length) return [];
     const { data, error } = await client.from('team_members').select('project_id,name,user_id').in('user_id', userIds);
@@ -5231,7 +5238,7 @@ const Cloud = (() => {
     setTimeout(() => location.reload(), 900);
   }
 
-  return { load, configure, disconnect, setUse, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
+  return { load, configure, disconnect, setUse, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, projectContacts, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
     compassDigest, myWorkload, saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, hoursSummary, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, markOnboarded, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
@@ -5910,7 +5917,8 @@ const Users = (() => {
     }
   }
 
-  return { render, refresh, setFilter, setManager, pickToggle, pickChange, pickAll, pickCancel, pickSave, setAccess, removeAccess, changeRole, newProfile, editProfile, cancelProfile, saveProfile, removeProfile , newAccount, cancelNew, createAccount, copyNew, resetPw, genPassword , toggleSel, selAll, startLife, cancelLife, runLife, inactivateBlocked, rwProject, rwPreview, rwRun , showPerson, closePerson };
+  const canManage = () => (typeof Cloud !== 'undefined') && Cloud.isSignedIn() && (Auth.getRole() === 'admin' || (Auth.can('business') && managed().length > 0));
+  return { canManage, render, refresh, setFilter, setManager, pickToggle, pickChange, pickAll, pickCancel, pickSave, setAccess, removeAccess, changeRole, newProfile, editProfile, cancelProfile, saveProfile, removeProfile , newAccount, cancelNew, createAccount, copyNew, resetPw, genPassword , toggleSel, selAll, startLife, cancelLife, runLife, inactivateBlocked, rwProject, rwPreview, rwRun , showPerson, closePerson };
 })();
 </script>
 
@@ -12211,9 +12219,9 @@ const AgileCalc = (() => {
   function assigneeError(assignee, status, cfg, teamNames) {
     const list = cols(cfg); if(!list.length || status === list[0].key) return '';
     const a = String(assignee || '').trim();
-    if(!a) return 'Para sair de "' + list[0].label + '", escolha o responsável (alguém da equipe do projeto).';
+    if(!a) return 'Para sair de "' + list[0].label + '", escolha o responsável na lista.';
     const k = x => String(x).trim().toLowerCase();
-    if(!(teamNames || []).some(n => k(n) === k(a))) return a + ' não está na equipe deste projeto. Escolha o responsável na lista (ou cadastre a pessoa em Equipe).';
+    if(!(teamNames || []).some(n => k(n) === k(a))) return a + ' ainda não tem acesso ao sistema neste projeto.';
     return '';
   }
   function moveTo(item, status, today) { item.status = status; item.doneOn = status === 'done' ? (item.doneOn || today) : ''; return item; }
@@ -13370,7 +13378,8 @@ const Agile = (() => {
     if(!canTouch(it, to)) return true;
     const blk = moveBlock(it.assignee, to);
     if(blk) {
-      if(Auth.can('manage_backlog')) { openItem(it.id); document.getElementById('ai-status').value = to; const a = document.getElementById('ai-assignee'); if(a) a.focus(); T.show('👤 ' + blk, 6000); }
+      if(Auth.can('manage_backlog')) { openItem(it.id); document.getElementById('ai-status').value = to; const a = document.getElementById('ai-assignee'); if(a) a.focus(); blockHelp(blk, it.assignee); }
+      else if(typeof Cloud !== 'undefined' && Cloud.isSignedIn()) askRegularize(it.assignee ? blk : 'Este cartão ainda não tem responsável.');
       else T.show('👤 Este cartão ainda não tem responsável. Peça à gestão para indicar quem vai fazer antes de movê-lo.', 6000);
       return true;
     }
@@ -13983,7 +13992,7 @@ const Agile = (() => {
     load(); let it = items.find(x => x.id === itemCtx); if(!it) return;
     const to = val('ai-status') || it.status, changed = to !== it.status, note = val('ai-note').trim(), hasFiles = !!(document.getElementById('ai-evid').files || []).length;
     if(changed && !canTouch(it, to)) return;
-    const blk = changed ? moveBlock(it.assignee, to) : ''; if(blk) { T.show('👤 ' + blk, 6000); return; }
+    const blk = changed ? moveBlock(it.assignee, to) : ''; if(blk) { blockHelp(blk, it.assignee); return; }
     const pend = changed ? BoardRules.pendingFor(policy(), it.status, to, checkDraft) : [];
     if(pend.length) { T.show('☑️ Para sair de "' + AgileCalc.colLabel(cfg, it.status) + '", conclua as tarefas do cartão: ' + pendNames(pend) + '.', 6500); return; }
     if(changed && policy().noteCols.includes(to) && note.length < 5) { T.show('⚠️ Para passar para "' + AgileCalc.colLabel(cfg, to) + '", escreva o comentário (mínimo 5 letras) e anexe as evidências, se houver.'); document.getElementById('ai-note').focus(); return; }
@@ -14055,12 +14064,29 @@ const Agile = (() => {
     document.getElementById('ai-sprint').value = a.id;
     document.getElementById('ai-title').focus();
   }
-  const teamNames = () => [...new Set((DB.get('team') || []).map(m => m.name).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  // Com a nuvem: só quem tem conta cadastrada em Pessoas e Acesso (colaborador ligado à conta, o que acontece ao dar acesso ao projeto). Só neste navegador não há contas: vale a equipe toda
+  const teamNames = () => { const signed = typeof Cloud !== 'undefined' && Cloud.isSignedIn(); return [...new Set([...(DB.get('team') || []).filter(m => !signed || m.userId).map(m => m.name), signed ? Auth.getName() : ''].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')); };
   // Responsável = lista da equipe cadastrada no projeto; quem já estava no item e saiu da equipe aparece marcado, para não se perder sem querer
   function fillAssignee(cur) {
     const el = document.getElementById('ai-assignee'), names = teamNames(), out = cur && !names.some(n => n.toLowerCase() === String(cur).trim().toLowerCase());
-    el.innerHTML = '<option value="">Sem responsável</option>' + names.map(n => '<option value="' + esc(n) + '">' + esc(n) + '</option>').join('') + (out ? '<option value="' + esc(cur) + '">' + esc(cur) + ' (fora da equipe)</option>' : '');
+    el.innerHTML = '<option value="">Sem responsável</option>' + names.map(n => '<option value="' + esc(n) + '">' + esc(n) + '</option>').join('') + (out ? '<option value="' + esc(cur) + '">' + esc(cur) + ' (sem acesso ao sistema)</option>' : '');
     el.value = cur || '';
+  }
+  // Recusa que ajuda: quem pode regularizar o cadastro é levado à tela certa; quem não pode vê a quem pedir (com o e-mail)
+  async function askRegularize(msg) {
+    if(typeof Users !== 'undefined' && Users.canManage && Users.canManage()) {
+      const go = await Dlg.ask({ title: 'Responsável Sem Acesso ao Sistema', body: msg + '\n\nQuer abrir agora a tela onde o cadastro é regularizado (Pessoas e Acesso)?', okLabel: 'Abrir Pessoas e Acesso', cancelLabel: 'Agora Não' });
+      if(go) { closeItem(); R.go('settings'); SettingsTabs.show('acesso'); setTimeout(() => { const u = document.getElementById('users-card'); if(u && u.scrollIntoView) u.scrollIntoView({ block: 'start' }); }, 150); }
+      return;
+    }
+    let lines = '';
+    try { const list = await Cloud.projectContacts(DB.getActiveProjectId()); lines = list.map(x => '• ' + x.name + ' — ' + x.label + (x.email ? ' — ' + x.email : '')).join('\n'); } catch(e) { /* sem contatos: o texto abaixo orienta mesmo assim */ }
+    await Dlg.ask({ title: 'Peça Ajuda para Regularizar o Cadastro', body: msg + '\n\nO seu perfil não altera cadastros. Procure o administrador ou o gerente do projeto:\n' + (lines || '(contatos indisponíveis agora)'), okLabel: 'Entendi', cancelLabel: 'Fechar' });
+  }
+  // Conectado à nuvem e a pessoa escolhida não tem acesso (ou ninguém tem): janela que orienta; senão, só o aviso curto
+  function blockHelp(msg, assignee) {
+    const signed = typeof Cloud !== 'undefined' && Cloud.isSignedIn();
+    if(signed && (assignee || !teamNames().length)) askRegularize(msg); else T.show('👤 ' + msg, 6000);
   }
   const moveBlock = (assignee, to) => AgileCalc.assigneeError(assignee, to, cfg, teamNames());
   function closeItem() { urgent = null; document.getElementById('modal-agile-item').classList.add('hidden'); }
@@ -14078,7 +14104,7 @@ const Agile = (() => {
     const bad = AgileCalc.bugParentError({ ...f, id: itemCtx || '' }, items, { board: isBoardNow() });
     if(bad) { T.show('⚠️ ' + bad); document.getElementById('ai-parent').focus(); return; }
     const cur0 = itemCtx ? items.find(x => x.id === itemCtx) : null, to0 = val('ai-status') || (cur0 && cur0.status);
-    const blk0 = cur0 ? moveBlock(f.assignee, to0) : ''; if(blk0) { T.show('👤 ' + blk0, 6000); document.getElementById('ai-assignee').focus(); return; }
+    const blk0 = cur0 ? moveBlock(f.assignee, to0) : ''; if(blk0) { blockHelp(blk0, f.assignee); document.getElementById('ai-assignee').focus(); return; }
     const pend0 = cur0 && to0 !== cur0.status ? BoardRules.pendingFor(policy(), cur0.status, to0, checkDraft) : [], why0 = val('ai-note').trim();
     if(pend0.length && why0.length < 5) { T.show('☑️ Há tarefas pendentes (' + pendNames(pend0) + '). Para mover mesmo assim, escreva o motivo em "Comentário da atividade".', 6500); document.getElementById('ai-note').focus(); return; }
     const ev = await collectEvidence(); if(ev === false) return;
@@ -18932,7 +18958,7 @@ const Resources = (() => {
     const root = document.getElementById('res-list-root');
     if(root) {
       if(!team.length) {
-        root.innerHTML = `<div style="text-align:center;padding:20px 10px;color:var(--t3);font-size:12.5px">Nenhum colaborador cadastrado ainda — use o botão “Adicionar Colaborador”. Quem está aqui aparece na lista de Responsável dos cartões.</div>`;
+        root.innerHTML = `<div style="text-align:center;padding:20px 10px;color:var(--t3);font-size:12.5px">Nenhum colaborador cadastrado ainda. Dar acesso ao projeto em Pessoas e Acesso (Configurações) já inclui a pessoa aqui; o botão “Adicionar Colaborador” é para quem não usa o sistema ou para vincular uma conta.</div>`;
       } else {
         root.innerHTML = team.map(m => {
           const hasW = m.workloadPct !== null && m.workloadPct !== undefined && m.workloadPct !== '' && isFinite(Number(m.workloadPct));

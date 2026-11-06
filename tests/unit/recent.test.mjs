@@ -107,11 +107,17 @@ test('feedback do Leandro: escolher Bug não fecha a janela à toa, comentário/
 });
 
 test('Responsável do cartão é lista da equipe e a regra vale na edição, no botão, no arrasto e na automação', () => {
-  for (const k of ['<select class="input" id="ai-assignee"></select>', 'function fillAssignee(cur)', 'const blk0 = cur0 ? moveBlock(f.assignee, to0) : \'\';', 'const blk = moveBlock(it.assignee, to);', '!moveBlock(it.assignee, a.column)', '(fora da equipe)']) assert.ok(html.includes(k), k);
+  for (const k of ['<select class="input" id="ai-assignee"></select>', 'function fillAssignee(cur)', 'const blk0 = cur0 ? moveBlock(f.assignee, to0) : \'\';', 'const blk = moveBlock(it.assignee, to);', '!moveBlock(it.assignee, a.column)', '(sem acesso ao sistema)']) assert.ok(html.includes(k), k);
   assert.ok(!html.includes('id="ai-people"'));
 });
 
 test('Colaboradores tem o botão Adicionar Colaborador (também no Quadro, que não tem Burnout Radar) e atualiza a lista ao salvar', () => {
   for (const k of ['onclick="Burnout.openAdd()"><i class="ti ti-plus"></i>Adicionar Colaborador', "render(); if(typeof Resources !== 'undefined') Resources.render();"]) assert.ok(html.includes(k), k);
   assert.ok(!html.includes('adicione pelo Burnout Radar'));
+});
+
+test('recusa de responsável ajuda: quem pode vai a Pessoas e Acesso; quem não pode vê a quem pedir (gerente e administradores, com e-mail)', () => {
+  for (const k of ['async function askRegularize(msg)', "okLabel: 'Abrir Pessoas e Acesso'", "SettingsTabs.show('acesso')", 'Procure o administrador ou o gerente do projeto', 'Cloud.projectContacts(DB.getActiveProjectId())', 'const canManage = () =>', 'async function projectContacts(pid)', "client.rpc('project_contacts'", 'signed ? Auth.getName()']) assert.ok(html.includes(k), k);
+  const sql = readFileSync(join(root, 'supabase', 'migrations', '20261106150000_item_assignee_self_and_contacts.sql'), 'utf8');
+  for (const k of ['function public.project_contacts', 'has_project_access(pid)', "'Gerente do projeto'", "'Administrador'", 'revoke all on function public.project_contacts(text) from public, anon']) assert.ok(sql.includes(k), k);
 });

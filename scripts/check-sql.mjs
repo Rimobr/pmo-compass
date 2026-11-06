@@ -22,7 +22,9 @@ for (const f of readdirSync(dir).filter(f => f.endsWith('.sql')).sort()) {
       if (lang && lang.DefElem.arg.String.sval === 'plpgsql' && body) {
         const src = body.DefElem.arg.List.items[0].String.sval;
         const name = cf.funcname.map(n => n.String.sval).join('.');
-        await parsePlPgSQL(`create function ${'x_' + fns}() returns trigger language plpgsql as $b$${src}$b$`);
+        // função que devolve tabela (RETURN QUERY) não pode ser conferida como gatilho: o invólucro de teste ajusta o tipo de retorno
+        const ret = /return\s+query/i.test(src) ? 'setof record' : 'trigger';
+        await parsePlPgSQL(`create function ${'x_' + fns}() returns ${ret} language plpgsql as $b$${src}$b$`);
         fns++;
       }
     }
