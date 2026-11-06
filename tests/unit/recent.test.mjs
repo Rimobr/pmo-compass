@@ -101,3 +101,7 @@ test('a Ajuda explica o menu, Quadros, nuvem por padrão e as janelas de exclus�
   const i = html.indexOf('id="p-help"'), a = html.slice(i, i + 20000);
   for (const k of ['Menu, Quadros e Nuvem', 'Mais Telas', 'Menos Telas', 'Salvar na nuvem', 'Quadros (tarefas sem projeto)', 'botão vermelho', 'Meu Dia']) assert.ok(a.includes(k), k);
 });
+
+test('feedback do Leandro: escolher Bug não fecha a janela à toa, comentário/evidência já na criação e Ctrl+V no cartão', () => {
+  for (const k of ["document.getElementById('ai-kind').value = 'historia'; kindChanged(); T.show('⚠️ Ainda não há itens", "if(!refs.length && !board) {", "document.getElementById('ai-work').style.display = (it || full) ? '' : 'none';", 'draftId = it ? \'\' : AgileCalc.nextId(', "const ev = await collectEvidence(); if(ev === false) return;", "Colar o print direto no cartão (Ctrl+V)", 'Evidências (cole o print com Ctrl+V']) assert.ok(html.includes(k), k);
+});

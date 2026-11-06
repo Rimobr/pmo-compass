@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.65.1'
+  version: '2.66.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2256,7 +2256,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div id="ai-work" style="display:none;margin-top:10px">
       <div class="g2" style="gap:10px;align-items:start">
       <div class="field-group"><div class="field-label"><label for="ai-note">Comentário da atividade</label><span class="help-q" data-help="O que foi feito e o resultado (ex.: testei os 3 cenários, tudo aprovado). Fica no histórico do cartão com o seu nome e a data. Algumas colunas exigem o comentário para entrar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><textarea class="input" id="ai-note" rows="2" maxlength="500" placeholder="Ex.: Testei os 3 cenários; evidências anexadas. Aprovado." style="resize:vertical;font-family:inherit"></textarea></div>
-      <div class="field-group"><div class="field-label"><label for="ai-evid">Evidências (prints, PDF, planilha; até 5 MB cada)</label></div><input class="input" id="ai-evid" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/csv,.xlsx"></div>
+      <div class="field-group"><div class="field-label"><label for="ai-evid">Evidências (cole o print com Ctrl+V ou anexe prints, PDF, planilha; até 5 MB cada)</label></div><input class="input" id="ai-evid" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/csv,.xlsx"></div>
       </div>
       <div class="set-sub" id="ai-work-hint"></div>
     </div>
@@ -6153,6 +6153,7 @@ const BugReport = (() => {
   const OK_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf', 'text/plain', 'text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
   const SEV = { impede:'Não consigo continuar trabalhando', atrapalha:'Atrapalha, mas dá para contornar', detalhe:'Detalhe visual ou de texto' };
   let files = [];
+  const isBoardNow = () => { try { return document.body.classList.contains('is-board'); } catch(e) { return false; } }; // Quadro de tarefas: item pai opcional
 
   // Contexto técnico curto (cabe na descrição do item): versão, tela, perfil e janela
   function context() {
@@ -6171,7 +6172,7 @@ const BugReport = (() => {
     return parts.join('\n');
   }
   function validate(r) {
-    if(!r.parentId) return 'Escolha a entrega (item) em que o bug foi encontrado — todo bug precisa estar ligado a uma.';
+    if(!r.parentId && !isBoardNow()) return 'Escolha a entrega (item) em que o bug foi encontrado — todo bug precisa estar ligado a uma.';
     if(String(r.title).trim().length < 5) return 'Escreva um resumo do bug (mínimo 5 letras).';
     if(String(r.path).trim().length < 2) return 'Informe o caminho no sistema (menu → tela → função).';
     if(String(r.steps).trim().length < 10) return 'Descreva o que você fez, passo a passo (mínimo 10 letras).';
@@ -6182,12 +6183,13 @@ const BugReport = (() => {
 
   function open(parentId) {
     if(typeof Auth !== 'undefined' && !Auth.guard('manage_backlog')) return;
+    const board = isBoardNow();
     const refs = Agile.itemRefs().filter(i => i.kind !== 'bug');
-    if(!refs.length) { T.show('⚠️ Ainda não há itens (entregas) no projeto. Crie ou importe os itens no Backlog; o bug é sempre filho de um deles.', 6000); return; }
+    if(!refs.length && !board) { T.show('⚠️ Ainda não há itens (entregas) no projeto. Crie ou importe os itens no Backlog; o bug é sempre filho de um deles.', 6000); return; }
     files = []; renderFiles();
     const sprints = Agile.sprintRefsAll();
     const cloud = (typeof Cloud !== 'undefined') && Cloud.isSignedIn();
-    $('bug-f-parent').innerHTML = '<option value="">Escolha o item…</option>' + refs.map(i => '<option value="' + esc(i.id) + '">' + esc(i.id) + ' — ' + esc(i.title) + '</option>').join('');
+    $('bug-f-parent').innerHTML = '<option value="">' + (board ? 'Nenhum (opcional)' : 'Escolha o item…') + '</option>' + refs.map(i => '<option value="' + esc(i.id) + '">' + esc(i.id) + ' — ' + esc(i.title) + '</option>').join('');
     $('bug-f-parent').value = parentId || '';
     const fill = () => {
       const p = refs.find(i => i.id === $('bug-f-parent').value), sel = $('bug-f-sprint');
@@ -6240,7 +6242,7 @@ const BugReport = (() => {
     const it = Agile.createBug({ id, title:r.title, parentId:r.parentId, sprintId:r.sprintId, description:buildDescription(r), attachments });
     btn.disabled = false;
     if(!it) return;
-    close(); T.show('✅ Bug ' + it.id + ' criado como filho de ' + it.parentId + (attachments.length ? ' (' + attachments.length + ' anexo(s))' : '') + '.', 5000);
+    close(); T.show('✅ Bug ' + it.id + ' criado' + (it.parentId ? ' como filho de ' + it.parentId : '') + (attachments.length ? ' (' + attachments.length + ' anexo(s))' : '') + '.', 5000);
     if(document.getElementById('p-kanban') && document.getElementById('p-kanban').classList.contains('on')) Agile.render();
   }
   return { open, close, addFiles, removeFile, send, validate, buildDescription, context, MAX_DESC };
@@ -12137,9 +12139,10 @@ const AgileCalc = (() => {
   // Bug "filho": todo bug está ligado ao item (entrega) em que foi encontrado; o item pai nunca é outro bug
   const bugsOf = (list, parentId) => list.filter(x => x.kind === 'bug' && x.parentId === parentId);
   const parentOptions = (list, selfId) => list.filter(x => x.kind !== 'bug' && x.id !== selfId);
-  function bugParentError(item, list) {
+  // opts.board: num Quadro de tarefas (sem plano) o item pai é opcional; se for informado, continua valendo a regra
+  function bugParentError(item, list, opts) {
     if(!item || item.kind !== 'bug') return '';
-    if(!item.parentId) return 'Todo bug precisa estar ligado ao item (entrega) em que foi encontrado.';
+    if(!item.parentId) return (opts && opts.board) ? '' : 'Todo bug precisa estar ligado ao item (entrega) em que foi encontrado.';
     if(item.parentId === item.id) return 'Um bug não pode ser filho dele mesmo.';
     const p = list.find(x => x.id === item.parentId);
     if(!p) return 'O item pai não existe neste projeto.';
@@ -13859,13 +13862,14 @@ const Agile = (() => {
 
   // ───────── Modais ─────────
   const val = id => document.getElementById(id).value;
+  const isBoardNow = () => document.body.classList.contains('is-board');
   function fillSprintSelect(sel) {
     document.getElementById('ai-sprint').innerHTML = '<option value="">Sem sprint</option>' + sprints.filter(s => s.state !== 'encerrada' || s.id === sel).map(s => `<option value="${esc(s.id)}"${s.id === sel ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
   }
   function openItem(id) {
     const full = Auth.can('manage_backlog');
     if(!full && !(id && Auth.can('update_own'))) { Auth.guard('manage_backlog'); return; }
-    load(); const it = id ? items.find(x => x.id === id) : null; itemCtx = it ? it.id : null;
+    load(); const it = id ? items.find(x => x.id === id) : null; itemCtx = it ? it.id : null; draftId = it ? '' : AgileCalc.nextId('US', items);
     document.getElementById('ai-title-h').textContent = it ? it.id + (full ? ' — editar item' : ' — atualizar atividade') : 'Novo item';
     document.getElementById('ai-title').value = it ? it.title : '';
     document.getElementById('ai-kind').value = it ? it.kind : 'historia';
@@ -13888,7 +13892,7 @@ const Agile = (() => {
     document.getElementById(full ? 'ai-title' : 'ai-note').focus();
   }
   // ───────── Lista de tarefas do cartão ─────────
-  let checkDraft = [];
+  let checkDraft = [], draftId = ''; // draftId: número do item novo, para o anexo já ir para a pasta certa antes de salvar
   const checkNorm = () => checkDraft.map(x => ({ text: String(x.text).slice(0, 120), done: !!x.done }));
   function addHist(it, text) { if(!Array.isArray(it.history)) it.history = []; it.history.push({ at: new Date().toISOString(), by: (typeof Auth !== 'undefined' && Auth.getName()) || 'Sistema', field: '', from: '', to: text }); }
   function renderCheck() {
@@ -13921,7 +13925,7 @@ const Agile = (() => {
     renderCheck();
     ['ai-title', 'ai-kind', 'ai-points', 'ai-assignee', 'ai-sprint', 'ai-parent', 'ai-desc'].forEach(x => { const e = document.getElementById(x); if(e) e.disabled = !full; });
     document.getElementById('ai-del').style.display = it && full ? '' : 'none';
-    document.getElementById('ai-work').style.display = it ? '' : 'none';
+    document.getElementById('ai-work').style.display = (it || full) ? '' : 'none'; // comentário e evidências já na criação, não só depois de salvar
     document.getElementById('ai-note').value = ''; document.getElementById('ai-evid').value = '';
     const p = policy(), hint = [];
     if(!full && it) {
@@ -13934,14 +13938,25 @@ const Agile = (() => {
   // Comentário e evidências do cartão: envia os arquivos antes de gravar (devolve false e avisa se algo impede)
   async function collectEvidence() {
     const note = val('ai-note').trim(), el = document.getElementById('ai-evid'), files = el && el.files ? [...el.files] : [];
-    const cur = items.find(x => x.id === itemCtx), have = cur && Array.isArray(cur.attachments) ? cur.attachments.length : 0;
+    const cid = itemCtx || draftId, cur = items.find(x => x.id === itemCtx), have = cur && Array.isArray(cur.attachments) ? cur.attachments.length : 0;
     if(have + files.length > 6) { T.show('⚠️ Cada cartão aceita até 6 anexos (este já tem ' + have + ').'); return false; }
     const big = files.find(x => x.size > 5242880); if(big) { T.show('⚠️ "' + big.name + '" passa de 5 MB.'); return false; }
     if(files.length && !(typeof Cloud !== 'undefined' && Cloud.getUserId && Cloud.getUserId())) { T.show('⚠️ Os anexos ficam na nuvem: entre com a sua conta.'); return false; }
     const atts = [];
-    for(let i = 0; i < files.length; i++) { const a = await Cloud.uploadItemFile(DB.getActiveProjectId(), itemCtx, have + i + 1, files[i]); if(!a) return false; atts.push(a); }
+    for(let i = 0; i < files.length; i++) { const a = await Cloud.uploadItemFile(DB.getActiveProjectId(), cid, have + i + 1, files[i]); if(!a) return false; atts.push(a); }
     return { note: note.slice(0, 500), atts };
   }
+  // Colar o print direto no cartão (Ctrl+V): vira anexo sem salvar arquivo antes
+  document.addEventListener('paste', e => {
+    const m = document.getElementById('modal-agile-item'), inp = document.getElementById('ai-evid');
+    if(!m || m.classList.contains('hidden') || !inp || !(typeof Cloud !== 'undefined' && Cloud.isSignedIn && Cloud.isSignedIn())) return;
+    const imgs = Array.from((e.clipboardData && e.clipboardData.files) || []).filter(x => x.type.startsWith('image/'));
+    if(!imgs.length) return;
+    e.preventDefault();
+    const dt = new DataTransfer(); Array.from(inp.files || []).forEach(x => dt.items.add(x));
+    imgs.forEach((x, i) => dt.items.add(new File([x], 'print-' + Date.now() + '-' + (i + 1) + '.png', { type: x.type })));
+    inp.files = dt.files; T.show('✅ Print colado: ' + dt.files.length + ' arquivo(s) para anexar ao salvar.');
+  });
   function applyEvidence(it, ev) {
     if(!ev || (!ev.note && !ev.atts.length)) return;
     if(!Array.isArray(it.history)) it.history = [];
@@ -13967,7 +13982,7 @@ const Agile = (() => {
   // Bug filho: o campo "item pai" só aparece (e é obrigatório) quando o tipo é Bug
   function fillParent(selected, selfId) {
     const el = document.getElementById('ai-parent'); if(!el) return;
-    el.innerHTML = '<option value="">Escolha o item…</option>' + AgileCalc.parentOptions(items, selfId).map(x => '<option value="' + esc(x.id) + '">' + esc(x.id) + ' — ' + esc(x.title) + '</option>').join('');
+    el.innerHTML = '<option value="">' + (isBoardNow() ? 'Nenhum (opcional)' : 'Escolha o item…') + '</option>' + AgileCalc.parentOptions(items, selfId).map(x => '<option value="' + esc(x.id) + '">' + esc(x.id) + ' — ' + esc(x.title) + '</option>').join('');
     el.value = selected || '';
   }
   function kindChanged() {
@@ -13988,7 +14003,11 @@ const Agile = (() => {
   function openBugFor(parentId) { closeItem(); BugReport.open(parentId); }
   function kindPicked() {
     const isBug = document.getElementById('ai-kind').value === 'bug';
-    if(isBug && !itemCtx) { closeItem(); BugReport.open(); return; }
+    if(isBug && !itemCtx) {
+      // O formulário guiado de bug exige um item pai (no projeto). Sem item nenhum, a janela NÃO fecha: volta ao tipo anterior e explica
+      if(!isBoardNow() && !itemRefs().some(i => i.kind !== 'bug')) { document.getElementById('ai-kind').value = 'historia'; kindChanged(); T.show('⚠️ Ainda não há itens (entregas) neste projeto. Crie primeiro o item; o bug é sempre filho de um deles.', 6000); return; }
+      closeItem(); BugReport.open(); return;
+    }
     kindChanged();
   }
   function nextBugId() { load(); return AgileCalc.nextId('US', items); }
@@ -13996,10 +14015,10 @@ const Agile = (() => {
   function createBug(d) {
     load();
     const bug = { id: items.some(x => x.id === d.id) ? AgileCalc.nextId('US', items) : d.id, title: d.title, description: d.description || '', kind: 'bug', status: 'todo', points: '', assignee: '', sprintId: d.sprintId || '', parentId: d.parentId || '', attachments: d.attachments || [], rank: Math.max(0, ...items.map(x => x.rank || 0)) + 1, createdOn: todayIso(), doneOn: '' };
-    const bad = AgileCalc.bugParentError(bug, items);
+    const bad = AgileCalc.bugParentError(bug, items, { board: isBoardNow() });
     if(bad) { T.show('⚠️ ' + bad); return null; }
     items.push(bug); saveItems(); pushItem(bug); renderAll();
-    Trail.log('Bug relatado: ' + bug.id + ' — ' + bug.title, Auth.getName(), 'Filho de ' + bug.parentId, 'b-amb');
+    Trail.log('Bug relatado: ' + bug.id + ' — ' + bug.title, Auth.getName(), bug.parentId ? 'Filho de ' + bug.parentId : 'Sem item pai', 'b-amb');
     return bug;
   }
   async function openFile(path) { const u = await Cloud.itemFileUrl(path); if(u) window.open(u, '_blank', 'noopener'); }
@@ -14033,18 +14052,18 @@ const Agile = (() => {
     f.parentId = f.kind === 'bug' ? val('ai-parent') : '';
     const urg = (!itemCtx && urgent) ? urgent : null;
     if(urg) { f.sprintId = urg.sprintId; f.description = (f.description ? f.description + '\n\n' : '') + 'Incluído durante a sprint (mudança de escopo) — motivo: ' + urg.reason; }
-    const bad = AgileCalc.bugParentError({ ...f, id: itemCtx || '' }, items);
+    const bad = AgileCalc.bugParentError({ ...f, id: itemCtx || '' }, items, { board: isBoardNow() });
     if(bad) { T.show('⚠️ ' + bad); document.getElementById('ai-parent').focus(); return; }
     const cur0 = itemCtx ? items.find(x => x.id === itemCtx) : null, to0 = val('ai-status') || (cur0 && cur0.status);
     const pend0 = cur0 && to0 !== cur0.status ? BoardRules.pendingFor(policy(), cur0.status, to0, checkDraft) : [], why0 = val('ai-note').trim();
     if(pend0.length && why0.length < 5) { T.show('☑️ Há tarefas pendentes (' + pendNames(pend0) + '). Para mover mesmo assim, escreva o motivo em "Comentário da atividade".', 6500); document.getElementById('ai-note').focus(); return; }
-    const ev = itemCtx ? await collectEvidence() : null; if(ev === false) return;
+    const ev = await collectEvidence(); if(ev === false) return;
     load(); it = itemCtx ? items.find(x => x.id === itemCtx) : null;
     if(it) { applyEvidence(it, ev); applyChecklist(it); if(pend0.length) addHist(it, 'Movido com ' + pend0.length + ' tarefa(s) pendente(s) — motivo: ' + why0.slice(0, 300)); }
     const was = it ? { status: it.status, assignee: it.assignee || '' } : null;
     if(it) { Object.assign(it, f); AgileCalc.moveTo(it, val('ai-status') || it.status, todayIso()); }
     else { it = { id: AgileCalc.nextId('US', items), status: 'todo', rank: (Math.max(0, ...items.map(x => x.rank || 0)) + 1), createdOn: todayIso(), doneOn: '', ...f }; items.push(it); }
-    if(!was) it.checklist = checkNorm();
+    if(!was) { it.checklist = checkNorm(); applyEvidence(it, ev); }
     saveItems(); pushItem(it);
     if(!was) { fireRules({ type: 'created' }, it); if(it.assignee) fireRules({ type: 'assigned' }, it); }
     else { if(it.status !== was.status) fireRules({ type: 'enter', column: it.status }, it); if(it.assignee && it.assignee !== was.assignee) fireRules({ type: 'assigned' }, it); }

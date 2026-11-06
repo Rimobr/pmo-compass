@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.65.1 — 2026-11-05
+- Ajuda: menu em blocos, Quadros, nuvem por padrao e janelas de exclusao
+
 ## 2.65.0 — 2026-11-05
 - Janela de confirmacao do sistema (Dlg): excluir projeto, apagar dados e apagar toda a base com botao vermelho e sem digitar nome ou APAGAR; acessivel e na varredura a11y
 

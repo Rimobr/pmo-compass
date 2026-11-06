@@ -76,3 +76,11 @@ test('relatar um bug: exige a entrega pai, monta a descrição estruturada e res
   for (const k of ['attachments jsonb', "'item-files'", 'has_project_access', 'drop table if exists public.bug_reports']) assert.ok(sql.includes(k), k);
   for (const k of ['Agile.createBug', 'Cloud.uploadItemFile', 'Relatar um Bug']) assert.ok(html.includes(k), k);
 });
+
+test('Quadro de tarefas: bug sem item pai é aceito; com pai continua validado', () => {
+  const items = [{ id: 'US-1', kind: 'historia' }, { id: 'US-2', kind: 'bug', parentId: 'US-1' }];
+  assert.equal(AgileCalc.bugParentError({ id: 'N', kind: 'bug' }, items, { board: true }), '');
+  assert.match(AgileCalc.bugParentError({ id: 'N', kind: 'bug' }, items, { board: false }), /precisa estar ligado/);
+  assert.match(AgileCalc.bugParentError({ id: 'N', kind: 'bug', parentId: 'NAO' }, items, { board: true }), /não existe/);
+  assert.match(AgileCalc.bugParentError({ id: 'N', kind: 'bug', parentId: 'US-2' }, items, { board: true }), /outro bug/);
+});
