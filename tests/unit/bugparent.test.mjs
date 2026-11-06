@@ -104,3 +104,11 @@ test('banco: o responsável precisa ser colaborador ligado a conta ativa com ace
   const sql = readFileSync(join(root, 'supabase', 'migrations', '20261106140000_item_assignee_account.sql'), 'utf8');
   for (const k of ['join public.profiles p on p.id = tm.user_id and p.active', "p.role = 'admin'", 'project_access pa', 'Pessoas e Acesso']) assert.ok(sql.includes(k), k);
 });
+
+test('nome antigo do cartão é ligado ao cadastro só quando há uma única pessoa com o mesmo primeiro nome', () => {
+  assert.equal(AgileCalc.matchPerson('Ricardo', ['Carla Nogueira', 'Ricardo M']), 'Ricardo M');
+  assert.equal(AgileCalc.matchPerson('ricardo', ['Ricardo M', 'Ricardo Souza']), '');
+  assert.equal(AgileCalc.matchPerson('Ricardo M', ['Ricardo M']), '');
+  assert.equal(AgileCalc.matchPerson('José', ['Jose Alves']), 'Jose Alves');
+  assert.equal(AgileCalc.matchPerson('', ['Ana']), '');
+});

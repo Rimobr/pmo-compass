@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.67.3'
+  version: '2.67.4'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -12224,6 +12224,15 @@ const AgileCalc = (() => {
     if(!(teamNames || []).some(n => k(n) === k(a))) return a + ' ainda não tem acesso ao sistema neste projeto.';
     return '';
   }
+  // Nome antigo do cartão ("Ricardo") x nome do cadastro ("Ricardo M"): se só UMA pessoa da lista começa com o mesmo primeiro nome, é ela
+  function matchPerson(cur, names) {
+    const norm = x => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().split(/\s+/);
+    const c = norm(cur); if(!c[0]) return '';
+    const list = names || [];
+    if(list.some(n => norm(n).join(' ') === c.join(' '))) return '';
+    const hit = list.filter(n => norm(n)[0] === c[0]);
+    return hit.length === 1 ? hit[0] : '';
+  }
   function moveTo(item, status, today) { item.status = status; item.doneOn = status === 'done' ? (item.doneOn || today) : ''; return item; }
   function neighbor(status, dir, cfg) { const list = cols(cfg), i = list.findIndex(c => c.key === status) + dir; return list[i] ? list[i].key : null; }
 
@@ -12359,7 +12368,7 @@ const AgileCalc = (() => {
     return advice;
   }
 
-  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, bugParentError, assigneeError, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, bugParentError, assigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
 })();
 </script>
 
@@ -14068,7 +14077,9 @@ const Agile = (() => {
   const teamNames = () => { const signed = typeof Cloud !== 'undefined' && Cloud.isSignedIn(); return [...new Set([...(DB.get('team') || []).filter(m => !signed || m.userId).map(m => m.name), signed ? Auth.getName() : ''].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')); };
   // Responsável = lista da equipe cadastrada no projeto; quem já estava no item e saiu da equipe aparece marcado, para não se perder sem querer
   function fillAssignee(cur) {
-    const el = document.getElementById('ai-assignee'), names = teamNames(), out = cur && !names.some(n => n.toLowerCase() === String(cur).trim().toLowerCase());
+    const el = document.getElementById('ai-assignee'), names = teamNames(), guess = AgileCalc.matchPerson(cur, names);
+    if(guess) { T.show('👤 O responsável "' + cur + '" foi ligado ao cadastro "' + guess + '". Confira e salve.', 6000); cur = guess; }
+    const out = cur && !names.some(n => n.toLowerCase() === String(cur).trim().toLowerCase());
     el.innerHTML = '<option value="">Sem responsável</option>' + names.map(n => '<option value="' + esc(n) + '">' + esc(n) + '</option>').join('') + (out ? '<option value="' + esc(cur) + '">' + esc(cur) + ' (sem acesso ao sistema)</option>' : '');
     el.value = cur || '';
   }
