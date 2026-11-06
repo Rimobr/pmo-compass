@@ -125,3 +125,12 @@ test('recusa de responsável ajuda: quem pode vai a Pessoas e Acesso; quem não 
 test('campo Sprint só abre com responsável escolhido; backlog, planejamento e importação respeitam a mesma regra', () => {
   for (const k of ['onchange="Agile.syncSprintLock()"', 'function syncSprintLock()', "'Escolha o responsável primeiro'", 'AgileCalc.sprintAssigneeError(it.assignee, teamNames())', 'Ficaram de fora da sprint por falta de responsável cadastrado', 'entraram em "A fazer", sem sprint', 'kindPicked, syncSprintLock,']) assert.ok(html.includes(k), k);
 });
+
+test('janela do cartão: Excluir, Cancelar e Salvar ficam no cabeçalho fixo; "Incluir na Equipe" inclui sozinho quando acha a conta', () => {
+  const i = html.indexOf('id="modal-agile-item"'), j = html.indexOf('id="modal-agile-behalf"'), m = html.slice(i, j);
+  assert.ok(m.includes('class="ai-hd" style="position:sticky;top:-24px'));
+  const hd = m.slice(m.indexOf('class="ai-hd"'), m.indexOf('<label for="ai-title">'));
+  for (const k of ['id="ai-del"', 'Agile.closeItem()', 'Agile.saveItem()']) assert.ok(hd.includes(k), k);
+  assert.ok(!m.slice(m.indexOf('id="ai-hist-list"')).includes('Agile.saveItem()'), 'sobrou botão Salvar no pé da janela');
+  for (const k of ['async function findAccount(nome)', 'Cloud.setProjectAccess(hit.id, DB.getActiveProjectId(), true)', 'foi incluído(a) na equipe deste projeto']) assert.ok(html.includes(k), k);
+});

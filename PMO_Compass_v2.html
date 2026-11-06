@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.67.8'
+  version: '2.67.9'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2239,7 +2239,11 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
 
 <div class="modal-ov hidden" id="modal-agile-item" onclick="if(event.target===this)Agile.closeItem()">
   <div class="modal-box" style="width:560px;max-width:96vw;max-height:92vh;overflow-y:auto" role="dialog" aria-modal="true" aria-labelledby="ai-title-h">
-    <div class="modal-title" id="ai-title-h">Novo Item</div>
+    <div class="ai-hd" style="position:sticky;top:-24px;z-index:3;background:var(--s1);margin:-24px -24px 12px;padding:16px 24px 10px;border-bottom:1px solid var(--b2);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <div class="modal-title" id="ai-title-h" style="margin:0;flex:1;min-width:140px">Novo Item</div>
+      <button class="btn btn-sm btn-red" id="ai-del" onclick="Agile.deleteItem()"><i class="ti ti-trash"></i>Excluir</button>
+      <button class="btn btn-sm" onclick="Agile.closeItem()">Cancelar</button><button class="btn btn-sm btn-acc" onclick="Agile.saveItem()"><i class="ti ti-check"></i>Salvar</button>
+    </div>
     <div class="field-group"><div class="field-label"><label for="ai-title">Título</label></div><input class="input" id="ai-title" maxlength="200" placeholder="Ex: Como cliente, quero consultar meu extrato"></div>
     <div class="field-group" id="ai-parent-grp" style="display:none"><div class="field-label"><label for="ai-parent">Item (entrega) em que o bug foi encontrado — obrigatório</label></div><select class="input" id="ai-parent"></select></div>
     <div class="g2" style="gap:10px">
@@ -2267,10 +2271,6 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
       <input class="input" id="ai-hist-q" type="search" placeholder="Pesquisar no histórico (quem, campo, valor…)" aria-label="Pesquisar no histórico do card" oninput="Agile.histFilter()" style="margin:6px 0">
       <div id="ai-hist-list" style="max-height:150px;overflow-y:auto"></div>
     </details>
-    <div class="btn-row" style="margin-top:14px;justify-content:space-between">
-      <button class="btn btn-sm btn-red" id="ai-del" onclick="Agile.deleteItem()"><i class="ti ti-trash"></i>Excluir</button>
-      <span style="display:flex;gap:8px"><button class="btn btn-sm" onclick="Agile.closeItem()">Cancelar</button><button class="btn btn-sm btn-acc" onclick="Agile.saveItem()"><i class="ti ti-check"></i>Salvar</button></span>
-    </div>
   </div>
 </div>
 
@@ -14101,12 +14101,32 @@ const Agile = (() => {
     el.value = cur || '';
   }
   // Recusa que ajuda: quem pode regularizar o cadastro é levado à tela certa; quem não pode vê a quem pedir (com o e-mail)
+  // Conta com esse nome em Pessoas e Acesso: igual ao nome, ou a única com o mesmo primeiro nome; senão (nenhuma ou várias) a gestão escolhe na tela de pessoas
+  async function findAccount(nome) {
+    try {
+      const list = (await Cloud.listProfiles()).filter(p => p.active !== false && p.name);
+      const n = x => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().replace(/\s+/g, ' ');
+      const exact = list.filter(p => n(p.name) === n(nome)); if(exact.length === 1) return exact[0];
+      const first = list.filter(p => n(p.name).split(' ')[0] === n(nome).split(' ')[0]);
+      return first.length === 1 ? first[0] : null;
+    } catch(e) { return null; }
+  }
   async function askRegularize(msg, who) {
     if(typeof Users !== 'undefined' && Users.canManage && Users.canManage()) {
       const why = Auth.getRole() === 'admin' ? 'Administrador' : 'gerente deste projeto', nome = String(who || '').trim();
-      const body = 'Você pode resolver isto porque é ' + why + '.\n\n' + (nome ? nome + ' não está na equipe deste projeto.' : 'Este cartão ainda não tem responsável.') + '\n\nQuer incluir ' + (nome ? 'essa pessoa na equipe' : 'alguém na equipe') + ' agora ou passar o cartão para outro profissional da lista?';
+      const body = 'Você pode resolver isto porque é ' + why + '.\n\n' + (nome ? nome + ' não está na equipe deste projeto.' : 'Este cartão ainda não tem responsável.') + '\n\nQuer incluir ' + (nome ? 'essa pessoa na equipe' : 'alguém na equipe') + ' agora (se houver uma conta com esse nome, eu a incluo) ou passar o cartão para outro profissional da lista?';
       const go = await Dlg.ask({ title: 'Responsável Fora da Equipe', body, okLabel: 'Incluir na Equipe', cancelLabel: 'Passar para Outro Profissional' });
       if(go) {
+        const hit = await findAccount(nome);
+        if(hit) {
+          const ok = await Cloud.setProjectAccess(hit.id, DB.getActiveProjectId(), true);
+          if(ok) {
+            const tm = (DB.get('team') || []).find(m => m.userId === hit.id), nm = (tm && tm.name) || hit.name;
+            T.show('✅ ' + nm + ' foi incluído(a) na equipe deste projeto.', 5000);
+            fillAssignee(nm); const a = document.getElementById('ai-assignee'); if(a) { a.value = nm; a.focus(); } syncSprintLock();
+            return;
+          }
+        }
         closeItem(); R.go('settings'); SettingsTabs.show('acesso');
         // já cai na pessoa: busca pelo primeiro nome e rola até a lista
         setTimeout(() => { const q = document.getElementById('users-q'); if(q && nome) { q.value = nome.split(/\s+/)[0]; if(typeof Users !== 'undefined' && Users.setFilter) Users.setFilter(); } const u = document.getElementById('users-card'); if(u && u.scrollIntoView) u.scrollIntoView({ block: 'start' }); }, 200);
