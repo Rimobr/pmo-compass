@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PMO Compass — Guia do Testador</title>
+<style>
+:root{--brand:#0F5252;--brand-d:#0B3A3A;--amber:#E8A33D;--bg:#F5F8F7;--card:#fff;--line:#DCEBE8;--text:#16302D;--text2:#3A4A48;--muted:#4F6B67;--ok:#2F6F43;--bad:#8F1C1C;--bad-bg:#FBEAEA}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 Inter,Segoe UI,Arial,sans-serif}
+header{background:var(--brand-d);color:#F0E6C8;padding:28px 16px}
+.w{max-width:860px;margin:0 auto;padding:0 16px}
+header .w{padding:0}
+h1{font:700 26px/1.2 "Space Grotesk",Inter,sans-serif;margin:0 0 6px}
+header p{margin:0;color:#BFD8D3}
+main{padding:20px 0 40px}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:0 0 14px;break-inside:avoid}
+h2{font:600 18px/1.3 "Space Grotesk",Inter,sans-serif;color:var(--brand);margin:0 0 8px}
+ol,ul{margin:6px 0 0;padding-left:22px}li{margin:3px 0}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:#EAF3F1;color:var(--brand-d)}
+.box{border-left:4px solid var(--amber);background:#FDF1E0;padding:8px 12px;border-radius:6px;margin-top:8px;color:#5E3D0B}
+.bad{border-left-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
+code,kbd{background:#EAF3F1;border-radius:4px;padding:0 5px;font-size:13px}
+a{color:var(--brand)}
+@media print{body{background:#fff}section{border-color:#ccc}header{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<header><div class="w"><h1>PMO Compass — Guia do Testador</h1><p>Como testar, o que olhar e como relatar o que não funcionou. Leva uns 30 minutos.</p></div></header>
+<main><div class="w">
+
+<section><h2>1. Antes de começar</h2>
+<ul>
+<li>Abra <a href="https://pmo-compass.vercel.app/">pmo-compass.vercel.app</a> no Chrome e entre com o e-mail e a senha que recebeu.</li>
+<li>Se a tela parecer antiga, recarregue com <kbd>Ctrl</kbd>+<kbd>F5</kbd> (duas vezes).</li>
+<li>Seu perfil define o que aparece. Se um botão não aparece, é porque o seu perfil não pode usá-lo; isso não é erro. Se achar que deveria poder, relate.</li>
+</ul>
+<div class="box"><b>Ambiente de teste:</b> pode criar, mudar e apagar à vontade. Não use dados reais de clientes, senhas reais nem valores confidenciais.</div></section>
+
+<section><h2>2. Roteiro de testes</h2>
+<p>Siga na ordem. Em cada linha, marque <b>Passou</b>, <b>Falhou</b> ou <b>Não consegui testar</b>.</p>
+<table>
+<tr><th>#</th><th>Faça</th><th>O que deve acontecer</th></tr>
+<tr><td>1</td><td>Clique no seletor de projeto no topo e escolha <b>Novo Projeto</b>; informe só o nome.</td><td>O projeto aparece na lista e fica selecionado. Um nome repetido pede confirmação.</td></tr>
+<tr><td>2</td><td>No mesmo seletor, crie um <b>Novo Quadro</b> (tarefas avulsas).</td><td>Abre um Kanban sem sprint, plano ou orçamento. Não aparece na lista de projetos.</td></tr>
+<tr><td>3</td><td>No quadro, clique em novo item, escreva um título e salve.</td><td>O cartão aparece na coluna inicial. Comentário e evidências já estão disponíveis na criação.</td></tr>
+<tr><td>4</td><td>Abra o cartão e cole um print com <kbd>Ctrl</kbd>+<kbd>V</kbd> em Evidências.</td><td>O print vira anexo e fica no cartão depois de salvar.</td></tr>
+<tr><td>5</td><td>Arraste o cartão para outra coluna.</td><td>Ele muda de coluna. Se o perfil não pode mover, o arrasto não deve funcionar.</td></tr>
+<tr><td>6</td><td>Num novo item, escolha o tipo <b>Bug</b>.</td><td>Abre o formulário de bug sem fechar a tela à toa. No quadro, o item pai é opcional.</td></tr>
+<tr><td>7</td><td>Abra <b>Meu Trabalho</b> (Meu Dia, no menu).</td><td>Mostra os cartões atribuídos a você.</td></tr>
+<tr><td>8</td><td>Num projeto, abra Riscos, Decisões e Backlog.</td><td>Telas abrem sem erro; dá para criar e editar um registro em cada uma.</td></tr>
+<tr><td>9</td><td>Troque o tema (claro/escuro) e reduza a janela para tamanho de celular.</td><td>Nada fica ilegível, cortado ou com rolagem para o lado.</td></tr>
+<tr><td>10</td><td>Clique em <b>Mais Telas</b> no menu do projeto.</td><td>A lista abre e o botão passa a dizer <b>Menos Telas</b>.</td></tr>
+</table></section>
+
+<section><h2>3. Como relatar um problema</h2>
+<ol>
+<li>Clique no ícone do <b>inseto</b> na barra superior (<b>Relatar um Bug</b>).</li>
+<li>Escolha a entrega em que o erro apareceu (em um quadro, é opcional).</li>
+<li>Escreva três coisas: <b>o que fez</b> (passo a passo), <b>o que esperava</b> e <b>o que aconteceu</b>.</li>
+<li>Cole o print com <kbd>Ctrl</kbd>+<kbd>V</kbd>. Um print vale mais que um parágrafo; inclua a barra de endereço.</li>
+<li>Se foi um erro com mensagem, copie o texto da mensagem.</li>
+</ol>
+<div class="box">Se o botão não estiver disponível, mande por WhatsApp: <b>tela</b>, <b>passos</b>, <b>o que esperava</b>, <b>o que aconteceu</b> e o print.</div></section>
+
+<section><h2>4. O que olhar além do roteiro</h2>
+<ul>
+<li>Botão que não responde, tela que fecha sozinha, informação que some depois de salvar.</li>
+<li>Texto cortado, termo confuso, número que não bate.</li>
+<li>Algo que você esperava achar e não achou no menu.</li>
+<li>Dado que sumiu. Se isso acontecer, <b>não continue</b>: anote a tela, o horário e o que tinha feito antes, e avise na hora.</li>
+</ul></section>
+
+<section><h2>5. O que não precisa relatar</h2>
+<ul><li>Botão que não aparece para o seu perfil (é por desenho).</li><li>Sugestões de melhoria: ótimas, mas separe-as dos erros.</li></ul></section>
+
+</div></main>
+</body>
+</html>
