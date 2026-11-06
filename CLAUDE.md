@@ -42,6 +42,7 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - Confirmação nova de ação destrutiva usa `Dlg.ask`; a janela está na varredura `test:a11y`. Ainda usam o confirm do navegador outras telas menores (ver `grep "confirm("`).
 
 ## Responsável do cartão (pedido do dono, 06/11/2026)
+- Quem entra na lista de Responsável é cadastrado em **Colaboradores → Adicionar Colaborador** (vale também no Quadro).
 - Na **primeira coluna** do quadro o cartão pode ficar sem responsável; **da segunda coluna em diante** o responsável é obrigatório e vem de **lista suspensa da equipe cadastrada no projeto** (`AgileCalc.assigneeError`). Vale ao salvar o cartão, ao mover por botão ou arrasto (a gestão cai no cartão com o campo em foco) e nas automações de coluna. Quem saiu da equipe aparece como "(fora da equipe)" até ser trocado.
 
 ## Entrega

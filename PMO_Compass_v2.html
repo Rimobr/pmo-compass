@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.67.0'
+  version: '2.67.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1248,7 +1248,7 @@ body.icons-failed i[data-fb]::before{
     <div id="res-portfolio-root"></div>
   </div>
   <div class="card">
-    <div class="lbl"><i class="ti ti-users-group"></i>Equipe Deste Projeto</div>
+    <div class="lbl" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span><i class="ti ti-users-group"></i>Equipe Deste Projeto</span><button class="btn btn-sm btn-acc" style="margin-left:auto" data-perm="business" onclick="Burnout.openAdd()"><i class="ti ti-plus"></i>Adicionar Colaborador</button></div>
     <div id="res-list-root"></div>
   </div>
   <div id="res-redist-root"></div>
@@ -17234,7 +17234,7 @@ const Burnout = (() => {
       // auditoria igual troca de perfil, não só um toast que some (gap apontado na revisão).
       Cloud.pushAuditEvent('team_member_change', `${wasAdd?'Adicionou':'Editou'} colaborador da equipe: ${name} (${alloc}% alocado, ${pct}% de carga)`, { memberId:saved.id, allocationPct:alloc, workloadPct:pct });
     }
-    render();
+    render(); if(typeof Resources !== 'undefined') Resources.render();
     closeModal();
   }
 
@@ -17250,7 +17250,7 @@ const Burnout = (() => {
       Cloud.deleteTeamMember(removedId);
       Cloud.pushAuditEvent('team_member_change', `Removeu colaborador da equipe: ${removedName}`, { memberId:removedId });
     }
-    render();
+    render(); if(typeof Resources !== 'undefined') Resources.render();
     closeModal();
     T.show('🗑️ Colaborador removido.');
   }
@@ -18932,7 +18932,7 @@ const Resources = (() => {
     const root = document.getElementById('res-list-root');
     if(root) {
       if(!team.length) {
-        root.innerHTML = `<div style="text-align:center;padding:20px 10px;color:var(--t3);font-size:12.5px">Nenhum colaborador cadastrado ainda — adicione pelo Burnout Radar.</div>`;
+        root.innerHTML = `<div style="text-align:center;padding:20px 10px;color:var(--t3);font-size:12.5px">Nenhum colaborador cadastrado ainda — use o botão “Adicionar Colaborador”. Quem está aqui aparece na lista de Responsável dos cartões.</div>`;
       } else {
         root.innerHTML = team.map(m => {
           const hasW = m.workloadPct !== null && m.workloadPct !== undefined && m.workloadPct !== '' && isFinite(Number(m.workloadPct));

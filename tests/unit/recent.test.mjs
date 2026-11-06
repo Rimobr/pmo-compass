@@ -110,3 +110,8 @@ test('Responsável do cartão é lista da equipe e a regra vale na edição, no 
   for (const k of ['<select class="input" id="ai-assignee"></select>', 'function fillAssignee(cur)', 'const blk0 = cur0 ? moveBlock(f.assignee, to0) : \'\';', 'const blk = moveBlock(it.assignee, to);', '!moveBlock(it.assignee, a.column)', '(fora da equipe)']) assert.ok(html.includes(k), k);
   assert.ok(!html.includes('id="ai-people"'));
 });
+
+test('Colaboradores tem o botão Adicionar Colaborador (também no Quadro, que não tem Burnout Radar) e atualiza a lista ao salvar', () => {
+  for (const k of ['onclick="Burnout.openAdd()"><i class="ti ti-plus"></i>Adicionar Colaborador', "render(); if(typeof Resources !== 'undefined') Resources.render();"]) assert.ok(html.includes(k), k);
+  assert.ok(!html.includes('adicione pelo Burnout Radar'));
+});
