@@ -161,3 +161,7 @@ test('gestão: cards sem responsável cadastrado têm aviso próprio (OK na audi
   const d = { items: [{ project_id: 'p', id: '1', assignee: '' }, { project_id: 'p', id: '2', assignee: 'Ricardo' }, { project_id: 'p', id: '3', assignee: 'Ana Souza' }, { project_id: 'p', id: '4', assignee: 'Rícardo M' }], linked: [{ project_id: 'p', name: 'ana souza' }], profileNames: ['Ricardo M'] };
   assert.deepEqual(findLoose(d).map(i => i.id), ['1', '2']);
 });
+
+test('resumo de entrada: coluna criada no quadro (ex.: x1) entra na soma como "outras colunas"', () => {
+  assert.ok(html.includes("parts.push(outras + ' em outras colunas do quadro')"));
+});

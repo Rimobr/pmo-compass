@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.68.2'
+  version: '2.68.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -6639,6 +6639,7 @@ const MyDigest = (() => {
   function textMine(items) {
     const by = {}; items.forEach(i => { by[i.status] = (by[i.status] || 0) + 1; });
     const parts = ['todo', 'doing', 'review'].filter(k => by[k]).map(k => by[k] + ' ' + LBL[k]);
+    const outras = items.filter(i => !LBL[i.status]).length; if(outras) parts.push(outras + ' em outras colunas do quadro');
     return 'Você tem ' + items.length + ' card' + (items.length > 1 ? 's' : '') + ' em aberto' + (parts.length ? ' (' + parts.join(', ') + ')' : '') + '.\n\n' + perProject(items, projName()) + '\n\n' + firstLines(items) + '\n\nSeus cards estão em Meu Trabalho (menu "Meu Dia").';
   }
   function textLoose(list) {
