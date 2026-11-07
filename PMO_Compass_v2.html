@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.69.1'
+  version: '2.70.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -230,7 +230,7 @@ html[data-theme="gray"] .b-neu{color:var(--t1)}
 body.no-project .sb-proj-area{display:none}
 body.is-board .sb-proj-area{display:none}
 /* Quadro de tarefas não tem sprint: some o seletor e a faixa de sprint do Kanban e o "Planejar sprint" do Backlog */
-body.is-board #kb-sprint,body.is-board #kb-sprint-bar,body.is-board [onclick*="openPlanNext"],body.is-board .ai-sprint-grp{display:none !important}
+body.is-board [onclick*="openPlanNext"],body.is-board #as-goal-grp,body.is-board #as-cap-grp{display:none !important}
 /* telas menos usadas do projeto ficam recolhidas em "Mais Telas" (abrem sozinhas se a tela aberta é uma delas) */
 .sb-proj-area:not(.more) .sb-more-group{display:none}
 .sb-more-btn{color:var(--t2)}
@@ -2414,13 +2414,14 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
   <div class="modal-box" style="width:480px;max-width:96vw" role="dialog" aria-modal="true" aria-labelledby="as-title-h">
     <div class="modal-title" id="as-title-h">Nova Sprint</div>
     <div class="field-group"><div class="field-label"><label for="as-name">Nome</label></div><input class="input" id="as-name" maxlength="80" placeholder="Ex: Sprint 5"></div>
-    <div class="field-group"><div class="field-label"><label for="as-goal">Meta da sprint</label><span class="help-q" data-help="Uma frase com o que a sprint quer alcançar, por exemplo 'cliente consegue ver o extrato de 90 dias'. Orienta o que entra e o que fica de fora." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="as-goal" maxlength="300"></div>
+    <div class="field-group" id="as-goal-grp"><div class="field-label"><label for="as-goal">Meta da sprint</label><span class="help-q" data-help="Uma frase com o que a sprint quer alcançar, por exemplo 'cliente consegue ver o extrato de 90 dias'. Orienta o que entra e o que fica de fora." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="as-goal" maxlength="300"></div>
     <div class="g2" style="gap:10px">
       <div class="field-group"><div class="field-label"><label for="as-start">Início</label></div><input class="input" id="as-start" type="date" aria-describedby="as-cal-hint"></div>
       <div class="field-group"><div class="field-label"><label for="as-end">Fim</label></div><input class="input" id="as-end" type="date"></div>
     </div>
+    <div class="field-group"><div class="field-label"><label for="as-dur">Duração</label></div><select class="input" id="as-dur" onchange="Agile.sprintDur()" style="max-width:240px"><option value="">Personalizada</option><option value="1">1 semana</option><option value="2">2 semanas (padrão)</option><option value="3">3 semanas</option><option value="4">4 semanas</option></select></div>
     <div id="as-cal-hint" class="set-sub" style="margin:-4px 0 8px"><i class="ti ti-calendar-event"></i> Início e fim não podem cair em fim de semana ou feriado (o gerente pode autorizar uma exceção com justificativa).</div>
-    <div class="field-group"><div class="field-label"><label for="as-cap">Capacidade (pontos)</label><span class="help-q" data-help="Quantos pontos o time consegue entregar nesta sprint. Use a velocidade das sprints anteriores como referência. Passar disso é sinal de sprint cheia demais." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="as-cap" type="number" min="0" max="1000"></div>
+    <div class="field-group" id="as-cap-grp"><div class="field-label"><label for="as-cap">Capacidade (pontos)</label><span class="help-q" data-help="Quantos pontos o time consegue entregar nesta sprint. Use a velocidade das sprints anteriores como referência. Passar disso é sinal de sprint cheia demais." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="as-cap" type="number" min="0" max="1000"></div>
     <div class="btn-row" style="margin-top:14px;justify-content:space-between">
       <button class="btn btn-sm btn-red" id="as-del" onclick="Agile.deleteSprint()"><i class="ti ti-trash"></i>Excluir</button>
       <span style="display:flex;gap:8px"><button class="btn btn-sm" onclick="Agile.closeSprint()">Cancelar</button><button class="btn btn-sm btn-acc" onclick="Agile.saveSprint()"><i class="ti ti-check"></i>Salvar</button></span>
@@ -3784,7 +3785,7 @@ const PmoView = (() => {
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Como o menu está organizado</strong> — em blocos, do que é seu para o que é do sistema: <b>Meu Dia</b> (Meu Trabalho e Meus Indicadores, valem em qualquer projeto), <b>Visão Geral</b> (Raio-X, Painel da Diretoria, Visão Executiva e Visão do PMO), <b>Portfólio e Relatórios</b>, <b>Quadros / Kanban</b>, <b>Gestão do Projeto</b> e <b>Sistema</b>. Cada perfil vê só o que pode abrir.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Escolher o projeto</strong> — pelo botão no topo da tela, ao lado da marca. Ele separa <b>Projetos</b> e <b>Quadros / Kanban</b> e tem dentro <b>Novo Projeto</b>, <b>Novo Quadro</b> e <b>Mudar Metodologia</b>. O nome do projeto escolhido aparece em “Artefatos do Projeto”, com a metodologia ao lado.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Artefatos do projeto e “Mais Telas”</strong> — ficam à vista as telas do dia a dia: Dashboard, Quadro Kanban, Backlog, WBS, Riscos, Decisões e Colaboradores (a metodologia esconde as que não valem para ela). As demais (Sprints, Planejamento, Equipe, Conhecimento...) ficam em <b>Mais Telas</b>, que vira <b>Menos Telas</b> quando está aberto e abre sozinho se você entra numa delas.</div></div>
-    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Quadros (tarefas sem projeto)</strong> — um quadro Kanban para delegar e acompanhar tarefas avulsas da equipe, como no Jira, no Trello ou no Monday. Crie em <b>Novo Quadro</b>: só o nome. Não tem sprint, plano, orçamento nem riscos, e não entra no Portfólio nem na Diretoria. O menu do quadro tem Quadro Kanban, Backlog, Arquivos e Colaboradores; o Meu Trabalho continua em Meu Dia.</div></div>
+    <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Quadros (tarefas sem projeto)</strong> — um quadro Kanban para delegar e acompanhar tarefas avulsas da equipe, como no Jira, no Trello ou no Monday. Crie em <b>Novo Quadro</b>: só o nome. Tem só o essencial do ágil: <b>sprint</b> como janela de tempo (por padrão, 2 semanas) para controlar quando cada entrega precisa estar pronta, e o <b>transbordo</b> do que não terminou (passa para a próxima sprint, estende ou volta ao backlog). Não tem plano, orçamento, riscos nem pontos, e não entra no Portfólio nem na Diretoria. O menu do quadro tem Quadro Kanban, Backlog, Arquivos e Colaboradores; o Meu Trabalho continua em Meu Dia.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Nuvem por padrão</strong> — o app já abre conectado à nuvem e pede login; seus dados sincronizam entre dispositivos e os perfis de acesso são validados pelo banco. Para usar só neste navegador, desmarque <b>Salvar na nuvem</b> em Configurações → Nuvem &amp; dados (marcar de novo volta ao padrão). A nuvem é a fonte de verdade: um projeto apagado na nuvem não volta a ser criado por um navegador antigo.</div></div>
     <div class="help-item"><span class="badge b-grn">Pronto</span><div><strong>Excluir e apagar dados</strong> — em Configurações → Nuvem &amp; dados → Apagar Dados. Há três tamanhos: só os dados do projeto, o projeto inteiro (só o Administrador) e toda a base. Antes o sistema oferece um backup e abre uma janela com <b>botão vermelho</b>; só para “toda a base” você marca também uma caixa de ciência. Não se digita nome nem palavra de confirmação. Criar um projeto ou quadro com nome igual a um que já existe pede confirmação.</div></div>
   </div>
@@ -13413,13 +13414,29 @@ const Agile = (() => {
 
   // ───────── Quadro Kanban ─────────
   function boardItems() {
-    // Quadro de tarefas (sem projeto) não tem sprint: mostra todos os itens
-    if(document.body.classList.contains('is-board')) return items.slice();
     const a = active();
+    // Quadro de tarefas: a sprint é uma janela de tempo e um filtro; por padrão mostra todos os cards
+    const isB = document.body.classList.contains('is-board');
     // Scrum: sem sprint ativa o quadro fica vazio (não despeja o backlog inteiro); Kanban contínuo mostra tudo
-    const f = boardSprint === '__auto' ? (a ? a.id : (cfg && cfg.entry === 'kanban' ? '__all' : '__none')) : boardSprint;
+    const f = boardSprint === '__auto' ? (isB ? '__all' : (a ? a.id : (cfg && cfg.entry === 'kanban' ? '__all' : '__none'))) : boardSprint;
     if(f === '__none') return [];
     return f === '__all' ? items.slice() : items.filter(i => i.sprintId === f);
+  }
+  // Sprint do Quadro: só uma janela de tempo (ex.: 2 semanas) para controlar quando cada entrega precisa estar pronta, e o transbordo do que sobrou
+  function boardBar(act) {
+    const dm = d => d ? d.split('-').reverse().slice(0, 2).join('/') : '', today = todayIso(), mgr = ' data-perm="manage_backlog"';
+    if(act) {
+      const mine = items.filter(i => i.sprintId === act.id), done = mine.filter(i => i.status === 'done').length, left = AgileCalc.diffDays(today, act.endOn);
+      const when = left < 0 ? '<span class="badge b-red">venceu há ' + (-left) + ' dia(s)</span>' : (left === 0 ? '<span class="badge b-amb">termina hoje</span>' : '<span style="color:var(--t2)">' + left + ' dia(s) restantes</span>');
+      return '<span class="badge b-grn">Sprint ativa</span> <b>' + esc(act.name) + '</b> <span style="color:var(--t2)">' + dm(act.startOn) + ' a ' + dm(act.endOn) + ' ·</span> ' + when + ' <span style="color:var(--t2)">· ' + done + ' de ' + mine.length + ' card(s) concluído(s)</span> '
+        + '<button class="btn btn-sm"' + mgr + ' onclick="Agile.openSprint(\'' + esc(act.id) + '\')"><i class="ti ti-pencil"></i>Editar</button> '
+        + '<button class="btn btn-sm"' + mgr + ' onclick="Agile.openDue(\'' + esc(act.id) + '\')" title="Encerra a sprint e decide o que sobrou: passar para a próxima (transbordo), estender ou devolver"><i class="ti ti-gavel"></i>Encerrar e Decidir o que Sobrou</button> '
+        + '<button class="btn btn-sm"' + mgr + ' onclick="Agile.openSprint()"><i class="ti ti-plus"></i>Nova Sprint</button>';
+    }
+    const planned = sprints.filter(x => x.state === 'planejada');
+    return '<span class="badge b-amb">Sem sprint ativa</span> <span style="color:var(--t2)">Defina o prazo das entregas: crie uma sprint (por padrão, 2 semanas).</span> '
+      + planned.map(p => '<button class="btn btn-sm"' + mgr + ' onclick="Agile.startSprint(\'' + esc(p.id) + '\')"><i class="ti ti-player-play"></i>Iniciar ' + esc(p.name) + '</button>').join(' ')
+      + ' <button class="btn btn-sm btn-acc"' + mgr + ' onclick="Agile.openSprint()"><i class="ti ti-plus"></i>Nova Sprint</button>';
   }
   function renderKanban() {
     const root = document.getElementById('kb-root'); if(!root) return;
@@ -13433,12 +13450,14 @@ const Agile = (() => {
       const fmtD = d => d ? d.split('-').reverse().slice(0, 2).join('/') : '';
       const planned = sprints.filter(x => x.state === 'planejada').length;
       const modeBadge = cfg.entry === 'kanban' ? ' <span class="badge">Kanban contínuo</span>' : '';
-      if(act) { const st = AgileCalc.sprintStats(act, items, todayIso()); bar.innerHTML = '<span class="badge b-grn">Sprint ativa</span> <b>' + esc(act.name) + '</b> <span style="color:var(--t2)">' + fmtD(act.startOn) + ' a ' + fmtD(act.endOn) + ' · ' + st.daysLeft + ' dia(s) restantes · ' + st.pct + '% concluído</span>' + (shown && shown.id !== act.id ? ' <span class="badge b-amb">Você está vendo: ' + esc(shown.name) + ' (' + stateLbl[shown.state] + ')</span>' : '') + (boardSprint === '__all' ? ' <span class="badge b-amb">Você está vendo: todos os itens</span>' : ''); }
+      if(document.body.classList.contains('is-board')) bar.innerHTML = boardBar(act);
+      else if(act) { const st = AgileCalc.sprintStats(act, items, todayIso()); bar.innerHTML = '<span class="badge b-grn">Sprint ativa</span> <b>' + esc(act.name) + '</b> <span style="color:var(--t2)">' + fmtD(act.startOn) + ' a ' + fmtD(act.endOn) + ' · ' + st.daysLeft + ' dia(s) restantes · ' + st.pct + '% concluído</span>' + (shown && shown.id !== act.id ? ' <span class="badge b-amb">Você está vendo: ' + esc(shown.name) + ' (' + stateLbl[shown.state] + ')</span>' : '') + (boardSprint === '__all' ? ' <span class="badge b-amb">Você está vendo: todos os itens</span>' : ''); }
       else bar.innerHTML = modeBadge + '<span class="badge b-amb">Nenhuma sprint ativa</span> <span style="color:var(--t2)">' + (planned ? planned + ' planejada(s) aguardando início' : 'ainda não há sprint planejada') + '.</span> <button class="btn btn-sm" onclick="R.go(\'sprints\')"><i class="ti ti-player-play"></i>' + (planned ? 'Iniciar uma sprint' : 'Criar sprint') + '</button>' + (boardSprint === '__all' ? ' <span class="badge b-amb">Você está vendo: todos os itens</span>' : '');
     }
     if(sel) {
       const opts = [['__auto', act ? 'Sprint ativa — ' + act.name : 'Sprint ativa (nenhuma)'], ['__all', 'Todos os itens'], ...sprints.slice().sort((a, b) => (ord[a.state] - ord[b.state]) || (b.startOn || '').localeCompare(a.startOn || '')).map(s => [s.id, s.name + ' (' + stateLbl[s.state] + ')'])];
-      sel.innerHTML = opts.map(([v, l]) => `<option value="${esc(v)}"${v === boardSprint ? ' selected' : ''}>${esc(l)}</option>`).join('');
+      const isB = document.body.classList.contains('is-board'), cur = isB && boardSprint === '__auto' ? '__all' : boardSprint;
+      sel.innerHTML = opts.filter(o => !(isB && o[0] === '__auto')).map(([v, l]) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v === '__all' && isB ? 'Todos os cards' : l)}</option>`).join('');
     }
     const columns = AgileCalc.cols(cfg), keys = columns.map(c => c.key);
     // item cuja coluna foi removida (ou importado de outro quadro) aparece na primeira coluna, nunca some
@@ -13492,6 +13511,9 @@ const Agile = (() => {
   }
   function card(i) {
     const sp = sprints.find(s => s.id === i.sprintId);
+    // No Quadro cada card mostra até quando precisa ficar pronto (fim da sprint) e fica vermelho se passou
+    const dueChip = (document.body.classList.contains('is-board') && sp && sp.endOn && i.status !== 'done')
+      ? (sp.endOn < todayIso() ? '<span class="badge b-red" title="O prazo da ' + esc(sp.name) + ' passou e o card não foi concluído">atrasado · ' + esc(sp.endOn.split('-').reverse().slice(0, 2).join('/')) + '</span>' : '<span class="chip" title="Fim da ' + esc(sp.name) + '"><i class="ti ti-calendar-time"></i>até ' + esc(sp.endOn.split('-').reverse().slice(0, 2).join('/')) + '</span>') : '';
     const prev = AgileCalc.neighbor(i.status, -1, cfg), next = AgileCalc.neighbor(i.status, 1, cfg);
     const lbl = k => AgileCalc.colLabel(cfg, k), f = cfg.card;
     const top = [f.id && `<span class="chip">${esc(i.id)}</span>`, f.kind && `<span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>`, f.points && i.points !== '' && i.points != null && `<span class="badge b-acc">${esc(i.points)} pts</span>`].filter(Boolean).join('');
@@ -13499,7 +13521,7 @@ const Agile = (() => {
     const rel = i.kind === 'bug' ? (i.parentId ? `<span class="chip" title="Este bug é filho do item ${esc(i.parentId)}"><i class="ti ti-corner-down-right"></i>de ${esc(i.parentId)}</span>` : '<span class="badge b-amb" title="Bug antigo, sem item pai: abra o cartão e escolha o item">sem item pai</span>') : (kidsAll.length ? `<span class="chip" title="Bugs ligados a este item"><i class="ti ti-bug"></i>${kidsOpen.length}/${kidsAll.length} bug(s)</span>` : '');
     const att = (Array.isArray(i.attachments) && i.attachments.length) ? `<span class="chip" title="Anexos do bug"><i class="ti ti-paperclip"></i>${i.attachments.length}</span>` : '';
     const chk = Array.isArray(i.checklist) && i.checklist.length ? `<span class="chip" title="Tarefas concluídas do cartão"><i class="ti ti-checklist"></i>${i.checklist.filter(c => c.done).length}/${i.checklist.length}</span>` : '';
-    const bottom = [rel, att, chk, f.assignee && (i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'), f.sprint && sp && `<span class="chip">${esc(sp.name)}</span>`].filter(Boolean).join('');
+    const bottom = [rel, att, chk, f.assignee && (i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'), f.sprint && sp && `<span class="chip">${esc(sp.name)}</span>`, dueChip].filter(Boolean).join('');
     // O cartão é um grupo; só o título é o botão de abrir (botão dentro de botão não é acessível por leitor de tela)
     const act = Auth.can('update_own');
     return `<div class="kb-card"${act ? ` draggable="true" ondragstart="Agile.dragStart(event,'${esc(i.id)}')" ondragend="this.classList.remove('dragging')" onclick="Agile.openItem('${esc(i.id)}')"` : ''} role="group" data-id="${esc(i.id)}" aria-label="${esc(i.id)}: ${esc(i.title)}">
@@ -14100,7 +14122,8 @@ const Agile = (() => {
     document.getElementById('ai-status-grp').style.display = it ? '' : 'none';
     document.getElementById('ai-del').style.display = it ? '' : 'none';
     fillAssignee(it ? it.assignee : '');
-    fillSprintSelect(it ? it.sprintId : (active() ? '' : ''));
+    presetSprint = (!it && isBoardNow() && active()) ? active().id : '';
+    fillSprintSelect(it ? it.sprintId : presetSprint);
     fillParent(it ? it.parentId : '', it ? it.id : '');
     kindChanged();
     renderChildren(it); renderFiles(it); renderHistory(it);
@@ -14109,6 +14132,7 @@ const Agile = (() => {
     document.getElementById(full ? 'ai-title' : 'ai-note').focus();
   }
   // ───────── Lista de tarefas do cartão ─────────
+  let presetSprint = '';
   let checkDraft = [], draftId = ''; // draftId: número do item novo, para o anexo já ir para a pasta certa antes de salvar
   const checkNorm = () => checkDraft.map(x => ({ text: String(x.text).slice(0, 120), done: !!x.done }));
   function addHist(it, text) { if(!Array.isArray(it.history)) it.history = []; it.history.push({ at: new Date().toISOString(), by: (typeof Auth !== 'undefined' && Auth.getName()) || 'Sistema', field: '', from: '', to: text }); }
@@ -14322,6 +14346,8 @@ const Agile = (() => {
     let it = itemCtx ? items.find(x => x.id === itemCtx) : null;
     const f = { title, kind: val('ai-kind'), points, assignee: val('ai-assignee').trim(), description: val('ai-desc').trim(), sprintId: val('ai-sprint') };
     f.parentId = f.kind === 'bug' ? val('ai-parent') : '';
+    // Card novo no Quadro vem na sprint ativa; sem responsável cadastrado ele fica fora dela (a sprint exige a pessoa) e o aviso explica
+    if(!itemCtx && presetSprint && f.sprintId === presetSprint && AgileCalc.sprintAssigneeError(f.assignee, teamNames())) { f.sprintId = ''; T.show('ℹ️ Sem responsável cadastrado, o card ficou fora da sprint. Escolha a pessoa e o sprint no card para controlar o prazo.', 6000); }
     const urg = (!itemCtx && urgent) ? urgent : null;
     if(urg) { f.sprintId = urg.sprintId; f.description = (f.description ? f.description + '\n\n' : '') + 'Incluído durante a sprint (mudança de escopo) — motivo: ' + urg.reason; }
     const bad = AgileCalc.bugParentError({ ...f, id: itemCtx || '' }, items, { board: isBoardNow() });
@@ -14360,16 +14386,24 @@ const Agile = (() => {
     if(!Auth.guard('manage_backlog')) return;
     load(); const s = id ? sprints.find(x => x.id === id) : null; sprintCtx = s ? s.id : null;
     const last = sprints.slice().sort((a, b) => b.endOn.localeCompare(a.endOn))[0];
-    const start = s ? s.startOn : (last ? AgileCalc.addDays(last.endOn, 1) : todayIso());
+    let start = s ? s.startOn : (last ? AgileCalc.addDays(last.endOn, 1) : todayIso());
+    if(!s && typeof WorkCal !== 'undefined') start = WorkCal.nextWorking(start); // a sprint começa em dia útil
     document.getElementById('as-title-h').textContent = s ? 'Editar sprint' : 'Nova sprint';
     document.getElementById('as-name').value = s ? s.name : 'Sprint ' + (sprints.length + 1);
     document.getElementById('as-goal').value = s ? s.goal : '';
     document.getElementById('as-start').value = start;
-    document.getElementById('as-end').value = s ? s.endOn : AgileCalc.addDays(start, 13);
+    document.getElementById('as-end').value = s ? s.endOn : (typeof WorkCal !== 'undefined' ? WorkCal.prevWorking(AgileCalc.addDays(start, 13)) : AgileCalc.addDays(start, 13));
+    { const dd = AgileCalc.diffDays(start, document.getElementById('as-end').value) + 1, w = Math.round(dd / 7); document.getElementById('as-dur').value = (!s || (dd % 7 === 0 || dd % 7 >= 5)) && w >= 1 && w <= 4 ? String(w) : ''; }
     document.getElementById('as-cap').value = s ? s.capacity : (AgileCalc.velocity(sprints, items).avg || '');
     document.getElementById('as-del').style.display = s ? '' : 'none';
     document.getElementById('modal-agile-sprint').classList.remove('hidden');
     document.getElementById('as-name').focus();
+  }
+  // Duração em semanas: o fim vai para o último dia útil da janela (duas semanas é o padrão)
+  function sprintDur() {
+    const w = parseInt(val('as-dur'), 10), st = val('as-start'); if(!w || !st) return;
+    let end = AgileCalc.addDays(st, 7 * w - 1); if(typeof WorkCal !== 'undefined') end = WorkCal.prevWorking(end);
+    document.getElementById('as-end').value = end;
   }
   function closeSprint() { document.getElementById('modal-agile-sprint').classList.add('hidden'); }
   function saveSprint() {
@@ -14593,7 +14627,7 @@ const Agile = (() => {
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, checkDates, openRules, closeRules, editRule, ruleField, ruleAct, ruleAddAct, ruleDelAct, ruleCancel, ruleSave, toggleRule, deleteRule, renderDue, openDue, closeDue, dueChoose, runDue, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
     aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, setPolicyMove, setPolicyCol, openImpediments, closeImpediments, resolveImpediment, setPolicyBehalf, addGate, removeGate, setGate, setTemplate, checkToggle, checkAdd, checkDel, openBehalf, closeBehalf, confirmBehalf, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
-    cfgNow: () => { load(); return cfg; }, kindChanged, kindPicked, syncSprintLock, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
+    cfgNow: () => { load(); return cfg; }, kindChanged, kindPicked, syncSprintLock, sprintDur, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
 })();
 </script>
 
@@ -21446,11 +21480,11 @@ const Wizard = (() => {
       if(typeof Methodology !== 'undefined') Methodology.set(method, { silent: true }); // o projeto novo já nasce com o menu do seu método
       // Projeto ágil começa pelo Backlog (a primeira coisa a fazer é ter itens); os demais, pelo Dashboard
       if(method === 'quadro') {
-        // Quadro nasce no modo Kanban (sem sprints): a pessoa cria o primeiro cartão e já usa
+        // Quadro nasce no modo Kanban (fluxo contínuo); a sprint é opcional, só para controlar o prazo das entregas
         const c = { ...(DB.get('agileConfig') || {}), entry: 'kanban' }; DB.set('agileConfig', c);
         if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(id, 'agileConfig', c);
         if(typeof Agile !== 'undefined' && Agile.resetCache) Agile.resetCache(); // o quadro lê o modo Kanban já na primeira tela
-        T.show('✅ Quadro "' + name + '" criado! Crie o primeiro cartão e delegue para a equipe.', 6000);
+        T.show('✅ Quadro "' + name + '" criado! Crie o primeiro cartão e delegue para a equipe. Para controlar o prazo, crie uma sprint de 2 semanas na faixa do quadro.', 7000);
         R.go('kanban');
       } else if(method === 'agil') {
         T.show('✅ Projeto "' + name + '" criado! Comece pelo backlog: importe uma planilha ou crie os itens e depois planeje a primeira sprint.', 7000);

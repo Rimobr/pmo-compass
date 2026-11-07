@@ -28,6 +28,11 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - Tecnicamente é um projeto do tipo `quadro` (`projects.methodology = 'quadro'`, migração `20261104200000`): reaproveita permissões, equipe, autonomia do time e limpezas. Fica fora de `Methodology.ORDER` (comparações) e o menu mostra só Quadro Kanban, Backlog, Meu Trabalho, Arquivos e Colaboradores (`Methodology.BOARD_OK`); nasce em modo Kanban (sem sprints).
 - A lista "Selecione o Projeto" não mostra quadros; "Quadros" não mostra projetos.
 
+## Sprint simples no Quadro (pedido do dono, 06/11/2026)
+- O Quadro **tem sprint**, só como **janela de tempo** (por padrão **2 semanas**, de 1 a 4) para controlar quando cada entrega precisa estar pronta, e o **transbordo** do que não terminou (passar para a próxima sprint, estender ou devolver ao backlog: `Agile.openDue`). Nada mais do ágil: sem Planejar sprint por pontos, sem meta, sem capacidade, sem previsão, e a página Sprints fica fora do menu do quadro.
+- A faixa do Quadro Kanban (`boardBar`) mostra a sprint ativa, os dias que faltam, os cards concluídos e os botões Editar, Encerrar e Decidir o que Sobrou e Nova Sprint. Cada card mostra "até dd/mm" e fica vermelho ("atrasado") se o prazo passou. O Kanban mostra **todos os cards** por padrão; a sprint é filtro.
+- Card novo nasce na sprint ativa; sem responsável cadastrado ele fica fora dela (a regra do responsável vale para entrar em sprint).
+
 ## Menu em três níveis (pedido do dono, 04/11/2026)
 - Topo: "Meu Dia" (Meu Trabalho, Meus Indicadores); "Visão Geral" (grupo com Raio-X, Painel da Diretoria, Visão Executiva, Visão do PMO); "Indicadores"; "Quadros / Kanban"; "Gestão do Projeto"; "Sistema".
 - Um só seletor de projeto e de quadro: o chip do topo (com Novo Projeto, Novo Quadro e Mudar Metodologia). O seletor do menu lateral está oculto.

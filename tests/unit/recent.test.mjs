@@ -31,19 +31,12 @@ test('com um quadro ativo o grupo Quadros / Kanban não fecha ao abrir o Kanban'
   assert.ok(html.includes("if(!groupId) { try { if(typeof DB !== 'undefined' && typeof Methodology !== 'undefined' && Methodology.isBoard(DB.getActiveProjectId())) groupId = 'sbg-quadros'; } catch(e) {} }"));
 });
 
-test('Quadro de tarefas não mostra sprint: todos os itens no Kanban, sem seletor, faixa nem Planejar sprint', () => {
-  assert.ok(html.includes("if(document.body.classList.contains('is-board')) return items.slice();"));
-  assert.ok(html.includes('body.is-board #kb-sprint,body.is-board #kb-sprint-bar,body.is-board [onclick*="openPlanNext"],body.is-board .ai-sprint-grp{display:none !important}'));
-});
 
 test('o texto de Apagar Dados não promete confirmação digitada onde agora é OK ou Cancelar', () => {
   assert.ok(!html.includes('pede uma confirmação digitada'));
   assert.ok(html.includes('janela com botão vermelho (para apagar toda a base, marque também a caixa de ciência)'));
 });
 
-test('o campo Sprint do cartão também some no Quadro de tarefas', () => {
-  assert.ok(html.includes('class="field-group ai-sprint-grp"'));
-});
 
 test('Usados Recentemente foi removido do menu (e a chave do navegador some do mapa)', () => {
   assert.ok(!html.includes('sb-recent') && !html.includes('Recent.visit') && !html.includes('pmo_recent_pages_v1'));
@@ -61,10 +54,6 @@ test('criar projeto avisa quando o nome já existe (mesmo com acento, hífen, ma
   assert.ok(html.includes('Clique OK para criar mais um com este nome, ou Cancelar para voltar.'));
 });
 
-test('o Backlog do quadro não fala de sprint (subtítulo e previsão em sprints)', () => {
-  assert.ok(html.includes('<span class="ai-sprint-grp"> Coloque os mais importantes na próxima sprint.</span>'));
-  assert.ok(html.includes("(document.body.classList.contains('is-board') ? '' : kpi('Previsão'"));
-});
 
 test('a nuvem é o padrão: o app nasce conectado e "usar só este navegador" é escolha (cfg.localOnly)', () => {
   for (const k of ['const DEFAULT_CLOUD = { url: ', 'let cfg = { ...DEFAULT_CLOUD };', "if(saved && saved.localOnly) cfg = { url:'', anonKey:'', localOnly:true };", 'pendingCloudConfirm = !(cloudCfg && cloudCfg.localOnly);', 'Salvar na nuvem (recomendado)', 'Cloud.setUse(this.checked)']) assert.ok(html.includes(k), k);
@@ -178,4 +167,12 @@ test('quatro temas em todo produto: Branco, Cinza, Preto e Verde (Vigilae), apli
 test('o sino separa Pendências do dia (resumo) de Avisos das automações, e a tela de Automações explica quando o aviso chega', () => {
   for (const k of ['Pendências do dia</div>', 'Avisos das automações</div>', 'Se a pessoa está logada, aparecem em instantes; se não está, esperam e aparecem quando ela entrar.']) assert.ok(html.includes(k), k);
   assert.ok(!html.includes('aparecem na tela da pessoa depois do login'));
+});
+
+
+test('Quadro tem sprint simples: janela de tempo (2 semanas), prazo em cada card, faixa com encerrar e transbordo; sem planejamento por pontos, meta nem capacidade', () => {
+  for (const k of ['function boardBar(act)', 'Encerrar e Decidir o que Sobrou', 'Agile.openDue(', 'Agile.startSprint(', "boardSprint === '__auto' ? (isB ? '__all'", "'Todos os cards'", 'const dueChip =', 'atrasado · ', 'function sprintDur()', 'id="as-dur"', 'id="as-goal-grp"', 'id="as-cap-grp"', 'presetSprint = (!it && isBoardNow() && active())']) assert.ok(html.includes(k), k);
+  assert.ok(html.includes('body.is-board [onclick*="openPlanNext"],body.is-board #as-goal-grp,body.is-board #as-cap-grp{display:none !important}'));
+  assert.ok(!html.includes('body.is-board #kb-sprint,'));
+  assert.ok(html.includes('<select class="input" data-perm="manage_backlog" aria-label="Sprint do item'));
 });
