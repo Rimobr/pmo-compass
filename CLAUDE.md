@@ -49,6 +49,10 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 
 - Janelas de cadastro longas (como o cartão do item) trazem **Excluir, Cancelar e Salvar no cabeçalho fixo**, para não rolar a tela depois de mudar o primeiro grupo de campos.
 
+## Resumo de entrada — Meus Cards (pedido do dono, 06/11/2026)
+- Ao entrar, a pessoa vê uma janela: "Você tem N cards em aberto" (por situação e por projeto, os 5 primeiros), com o botão "Abrir Meu Trabalho" (módulo `ui/my-digest`, `MyDigest`). Só os cards em que o nome dela é o responsável, nos projetos que ela acessa (o banco filtra); nada é gravado, só `pmo_digest_v1` no navegador.
+- **Parâmetro da organização** `entryDigest` (tabela `org_settings`, só o administrador grava) em Configurações → Resumo de Entrada: `diario` (padrão, já gravado: uma vez por dia e de novo se chegar card novo), `login` (a cada login) ou `off`. Sem valor gravado vale `diario`.
+
 ## Entrega
 - Versão em 4 lugares: `version.json`, `BRAND.version` (PMO_Compass_v2.html), `package.json`, `sw.js` (`CACHE_NAME`).
 - Testes: `node tests/run.js` e `npm run test:unit` (inclui `datamap`), `npm run test:smoke`; migrações: `node scripts/db-apply.mjs --dry-run` antes de aplicar, depois `node scripts/build-schema.mjs`.

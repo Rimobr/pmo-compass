@@ -254,7 +254,7 @@
     },
     "org_settings": {
       "domain": "Configurações",
-      "desc": "Configurações da organização (perfil de PMO).",
+      "desc": "Configurações da organização (perfil de PMO e frequência do resumo de entrada).",
       "scope": "sistema",
       "personal": false,
       "clearProject": "não se aplica",
@@ -416,6 +416,12 @@
     },
     "pmo_sb_area_v1": {
       "desc": "Se a área de projeto do menu está recolhida.",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
+    "pmo_digest_v1": {
+      "desc": "Resumo de entrada (Meus Cards): data do último aviso e quantos cards havia, para mostrar uma vez por dia.",
       "kind": "preferência",
       "logout": "apaga",
       "deleteProject": "nao"

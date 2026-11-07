@@ -134,3 +134,10 @@ test('janela do cartão: Excluir, Cancelar e Salvar ficam no cabeçalho fixo; "I
   assert.ok(!m.slice(m.indexOf('id="ai-hist-list"')).includes('Agile.saveItem()'), 'sobrou botão Salvar no pé da janela');
   for (const k of ['async function findAccount(nome)', 'Cloud.setProjectAccess(hit.id, DB.getActiveProjectId(), true)', 'foi incluído(a) na equipe deste projeto']) assert.ok(html.includes(k), k);
 });
+
+test('resumo de entrada: já vem ligado (uma vez por dia), é parâmetro da organização e mostra só os cards da própria pessoa', () => {
+  const m = html.match(/<script data-module="ui\/my-digest">([\s\S]*?)<\/script>/)[1];
+  for (const k of ["const mode = () =>", "MODES.includes(o.mode) ? o.mode : 'diario'", "OrgSettings.set(ORG, { mode: v })", "Cloud.myOpenItems()", "R.go('mywork')", "Auth.getRole() !== 'admin'", 'items.length > (st.n || 0)']) assert.ok(m.includes(k), k);
+  for (const k of ['id="digest-mode"', 'MyDigest.setMode(this.value)', 'Resumo de Entrada (Meus Cards)', 'async function myOpenItems()', ".in('assignee', names).neq('status', 'done')"]) assert.ok(html.includes(k), k);
+  assert.ok(readFileSync(join(root, 'docs', 'mapa-de-dados.json'), 'utf8').includes('"pmo_digest_v1"'));
+});

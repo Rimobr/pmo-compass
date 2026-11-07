@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.67.9'
+  version: '2.68.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1598,6 +1598,13 @@ body.icons-failed i[data-fb]::before{
     <div class="lbl"><i class="ti ti-route"></i>Metodologia Deste Projeto<span class="help-q" data-help="Define quais telas aparecem no menu deste projeto. Esconder uma tela não apaga nenhum dado: se você mudar de ideia, tudo volta. Projetos antigos ficam como Híbrido (todas as telas). Você pode abrir uma tela escondida pela busca (Ctrl+K) ou ligando 'Mostrar todas as telas'." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Escolha como este projeto é conduzido. O menu mostra só o que faz sentido para o método — menos telas, menos ruído.</p>
     <div id="method-root" role="radiogroup" aria-label="Metodologia do projeto"></div>
+  </div>
+  <div class="card" id="digest-card" data-sec="resumo-entrada" data-tint="3" data-collapsed="1">
+    <div class="lbl"><i class="ti ti-bell-ringing"></i>Resumo de Entrada (Meus Cards)<span class="help-q" data-help="Quando a pessoa entra no sistema, uma janela diz quantos cards estão com ela, por situação e por projeto, com um botão para abrir o Meu Trabalho. A pessoa vê só os próprios cards. Nada é gravado; só a data do último aviso fica neste navegador." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:8px">Vale para <strong style="color:var(--t1)">todas as pessoas</strong>. Já vem ligado: uma vez por dia, e de novo se chegar card novo no mesmo dia.</p>
+    <div class="field-group" style="max-width:420px"><div class="field-label"><label for="digest-mode">Quando mostrar</label></div>
+      <select class="input" id="digest-mode" onchange="MyDigest.setMode(this.value)"><option value="diario">Uma vez por dia (e quando chegar card novo)</option><option value="login">A cada login</option><option value="off">Desligado</option></select></div>
+    <p id="digest-note" style="display:none;font-size:11.5px;color:var(--t3);margin-top:6px"><i class="ti ti-lock"></i> Só o administrador altera.</p>
   </div>
   <div class="card" data-sec="perfil-pmo" data-tint="4" data-collapsed="1">
     <div class="lbl"><i class="ti ti-sitemap"></i>Perfil de PMO da Organização<span class="help-q" data-help="O tipo de PMO descreve a sua organização, então vale para TODOS os projetos de uma vez (a metodologia é que muda por projeto). Só o administrador altera. Projetos antigos que tinham um perfil próprio continuam usando-o até a organização escolher o seu." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
@@ -4749,6 +4756,16 @@ const Cloud = (() => {
     if(error) { console.warn('Supabase: falha ao ler equipe', error); return []; }
     return data || [];
   }
+  // Resumo de entrada: os cards em aberto que têm o nome da pessoa como responsável, em todos os projetos que ela acessa
+  async function myOpenItems() {
+    if(!client || !session) return [];
+    const links = await listTeamLinks([session.user.id]);
+    const names = [...new Set([...(links || []).map(l => l.name), (typeof Auth !== 'undefined' ? Auth.getName() : '')].filter(Boolean))];
+    if(!names.length) return [];
+    const { data, error } = await client.from('backlog_items').select('project_id,id,title,status,assignee').in('assignee', names).neq('status', 'done').limit(200);
+    if(error) { console.warn('Supabase: falha ao ler os cards da pessoa', error); return []; }
+    return data || [];
+  }
   async function listTeamNames(pid) {
     if(!client || !session) return [];
     const { data } = await client.from('team_members').select('name').eq('project_id', pid).order('name');
@@ -4963,6 +4980,7 @@ const Cloud = (() => {
         if(org && !org.error && org.data && org.data.length) {
           org.data.forEach(r => { if(r.key) OrgSettings.setLocal(r.key, r.value); });
           if(typeof PmoProfiles !== 'undefined') PmoProfiles.render();
+          if(typeof MyDigest !== 'undefined') MyDigest.render();
         }
       } catch(e) { /* sem org_settings: usa o valor local */ }
       T.show('☁️ Dados sincronizados do Supabase.');
@@ -5238,7 +5256,7 @@ const Cloud = (() => {
     setTimeout(() => location.reload(), 900);
   }
 
-  return { load, configure, disconnect, setUse, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, projectContacts, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
+  return { load, configure, disconnect, setUse, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, projectContacts, myOpenItems, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
     compassDigest, myWorkload, saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, hoursSummary, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, markOnboarded, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
@@ -6584,6 +6602,68 @@ const Notices = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: ui/my-digest ─ Resumo de entrada: ao logar, a pessoa vê quantos cards estão com ela (parâmetro da organização: Configurações → Resumo de Entrada) -->
+<script data-module="ui/my-digest">
+const MyDigest = (() => {
+  const KEY = 'pmo_digest_v1', ORG = 'entryDigest', MODES = ['diario', 'login', 'off'];
+  const LBL = { todo: 'a fazer', doing: 'em andamento', review: 'em revisão' };
+  let shownThisSession = false, busy = false;
+  // Já vem ligado: sem nada gravado vale "uma vez por dia" (o administrador muda em Configurações)
+  const mode = () => { const o = (typeof OrgSettings !== 'undefined') ? OrgSettings.get(ORG) : null; return o && MODES.includes(o.mode) ? o.mode : 'diario'; };
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || 'null') || {}; } catch(e) { return {}; } };
+  const save = o => { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch(e) { /* sem armazenamento: mostra de novo na próxima vez */ } };
+  const uiBusy = () => ['modal-notices', 'modal-onboarding', 'modal-dlg'].some(id => { const e = document.getElementById(id); return e && !e.classList.contains('hidden'); });
+  const hello = () => { const h = new Date().getHours(); return h < 12 ? 'Bom Dia' : h < 18 ? 'Boa Tarde' : 'Boa Noite'; };
+  function text(items) {
+    const names = Object.fromEntries((DB.listProjects() || []).map(p => [p.id, p.name]));
+    const by = {}; items.forEach(i => { by[i.status] = (by[i.status] || 0) + 1; });
+    const parts = ['todo', 'doing', 'review'].filter(k => by[k]).map(k => by[k] + ' ' + LBL[k]);
+    const perProj = {}; items.forEach(i => { perProj[i.project_id] = (perProj[i.project_id] || 0) + 1; });
+    const projLines = Object.keys(perProj).map(p => '• ' + (names[p] || 'Projeto') + ': ' + perProj[p]).join('\n');
+    const first = items.slice(0, 5).map(i => '• ' + i.id + ' — ' + String(i.title || '').slice(0, 70)).join('\n');
+    return 'Você tem ' + items.length + ' card' + (items.length > 1 ? 's' : '') + ' em aberto' + (parts.length ? ' (' + parts.join(', ') + ')' : '') + '.\n\n' + projLines + '\n\n' + first + (items.length > 5 ? '\n… e mais ' + (items.length - 5) + '.' : '');
+  }
+  // force: o botão de teste/ajuda pode chamar sem respeitar a frequência
+  async function check(force) {
+    if(busy) return; busy = true;
+    try {
+      if(typeof Cloud === 'undefined' || !Cloud.isSignedIn() || (typeof Auth !== 'undefined' && Auth.isPending())) return;
+      const m = mode(); if(m === 'off' && !force) return;
+      if(uiBusy()) return; // tem outra janela aberta: tenta de novo no próximo ciclo
+      const items = await Cloud.myOpenItems(); if(!items.length) return;
+      const today = Clock.iso(Clock.today()), st = load();
+      const due = force || (m === 'login' ? !shownThisSession : (st.day !== today || items.length > (st.n || 0)));
+      if(!due || uiBusy()) return;
+      shownThisSession = true; save({ day: today, n: items.length });
+      const nome = String(Auth.getName() || '').trim().split(/\s+/)[0];
+      const go = await Dlg.ask({ title: hello() + (nome ? ', ' + nome : ''), body: text(items), okLabel: 'Abrir Meu Trabalho', cancelLabel: 'Fechar' });
+      if(go) {
+        const per = {}; items.forEach(i => { per[i.project_id] = (per[i.project_id] || 0) + 1; });
+        const best = Object.keys(per).sort((a, b) => per[b] - per[a])[0];
+        try { if(best && DB.getActiveProjectId() !== best) DB.switchProject(best); } catch(e) { /* projeto indisponível */ }
+        R.go('mywork');
+      }
+    } catch(e) { console.warn('Resumo de entrada:', e); } finally { busy = false; }
+  }
+  // Configurações: só o administrador altera (o banco confere); os demais veem o valor
+  function render() {
+    const sel = document.getElementById('digest-mode'); if(!sel) return;
+    sel.value = mode();
+    const adm = typeof Auth !== 'undefined' && Auth.getRole() === 'admin';
+    sel.disabled = !adm;
+    const note = document.getElementById('digest-note'); if(note) note.style.display = adm ? 'none' : '';
+  }
+  function setMode(v) {
+    if(!MODES.includes(v)) return;
+    if(typeof Auth !== 'undefined' && Auth.getRole() !== 'admin') { T.show('🔒 Só o administrador altera o resumo de entrada.'); render(); return; }
+    OrgSettings.set(ORG, { mode: v });
+    T.show(v === 'off' ? '✅ Resumo de entrada desligado.' : '✅ Resumo de entrada: ' + (v === 'login' ? 'a cada login.' : 'uma vez por dia.'));
+  }
+  setTimeout(check, 9000); setInterval(check, 10 * 60 * 1000);
+  return { check, render, setMode, mode };
+})();
+</script>
+
 <!-- ■ MODULE: pages/account ─ Minha conta: a pessoa vê e altera o que é dela (nome, cadastro, WhatsApp, senha) e sai -->
 <script data-module="pages/account">
 const Account = (() => {
@@ -7792,6 +7872,7 @@ const R = (() => {
     if(typeof Agile !== 'undefined') Agile.renderDashboard();
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
     if(id === 'settings' && typeof PmoProfiles !== 'undefined') PmoProfiles.render();
+    if(id === 'settings' && typeof MyDigest !== 'undefined') MyDigest.render();
     if(id === 'settings' && typeof Users !== 'undefined') Users.render();
     if(id === 'settings' && typeof Erase !== 'undefined') Erase.render();
     if(typeof Nav !== 'undefined') { Nav.revealArea(id); Nav.expandGroupFor(id); Nav.renderBreadcrumb(id); Nav.closeDrawer(); }
