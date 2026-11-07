@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.70.2'
+  version: '2.71.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -4531,6 +4531,11 @@ const Cloud = (() => {
     return true;
   }
 
+  // Entrar na equipe do projeto com a própria conta (administrador, ou gerente do projeto: o banco confere)
+  async function joinTeam(projectId) {
+    if(!client || !session || !projectId) return false;
+    return setProjectAccess(session.user.id, projectId, true);
+  }
   async function updateUserRole(userId, role) {
     if(!client || !session) return false;
     const { error } = await client.from('profiles').update({ role }).eq('id', userId);
@@ -5036,7 +5041,7 @@ const Cloud = (() => {
 
   function pushTeamMember(m) {
     if(!client || !session) return;
-    track(client.from('team_members').upsert({ id:m.id, name:m.name, role:m.role||null, allocation_pct:m.allocationPct, workload_pct:m.workloadPct, signals:m.signals||[], recommendation:m.recommendation||null, action_page:m.actionPage||null, ...(m.userId !== undefined && Auth.getRole() === 'admin' ? { user_id:m.userId||null } : {}), project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed));
+    return track(client.from('team_members').upsert({ id:m.id, name:m.name, role:m.role||null, allocation_pct:m.allocationPct, workload_pct:m.workloadPct, signals:m.signals||[], recommendation:m.recommendation||null, action_page:m.actionPage||null, ...(m.userId !== undefined && Auth.getRole() === 'admin' ? { user_id:m.userId||null } : {}), project_id:DB.getActiveProjectId() }).then(()=>{}).catch(cloudSyncFailed));
   }
   function deleteTeamMember(id) { if(client && session) track(client.from('team_members').delete().eq('id', id).then(()=>{}).catch(cloudSyncFailed)); }
   // Uma linha só, pra detectar edição concorrente antes de sobrescrever (ver Burnout.saveFromModal)
@@ -5289,7 +5294,7 @@ const Cloud = (() => {
     setTimeout(() => location.reload(), 900);
   }
 
-  return { load, configure, disconnect, setUse, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, projectContacts, myOpenItems, openItemsForManagers, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
+  return { load, configure, disconnect, setUse, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, projectContacts, joinTeam, myOpenItems, openItemsForManagers, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
     compassDigest, myWorkload, saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, hoursSummary, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, markOnboarded, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
@@ -12667,6 +12672,8 @@ const MyWork = (() => {
     const uid = (typeof Cloud !== 'undefined' && Cloud.isSignedIn()) ? Cloud.getUserId() : null;
     const linked = uid ? team.filter(m => m.userId === uid) : [];
     const byName = linked.length ? linked : team.filter(m => key(m.name) === key(Auth.getName()));
+    // Entrou com conta mas ainda não está na equipe deste projeto (ex.: administrador): vale o nome do cadastro, o mesmo que o card aceita como responsável
+    if(!byName.length && uid && Auth.getName()) return { names: [Auth.getName()], roles: [], linked: false, viaConta: true };
     return { names: byName.map(m => m.name), roles: byName.map(m => m.role).filter(Boolean), linked: linked.length > 0 };
   }
   function weekRange() {
@@ -12732,7 +12739,7 @@ const MyWork = (() => {
         : '<div class="rk-empty">Você ainda não tem entregas atribuídas neste projeto.</div>';
       mine = '<div class="kpi-row" style="margin-bottom:12px">' + kpi('Entregas abertas', open.length, list.length - open.length + ' concluída(s)') + kpi('Atrasadas', late, late ? 'passaram do prazo' : 'nenhuma', late ? 'sdot-red' : '') + kpi('Podem estourar', risk, risk ? 'avanço bem atrás do esperado' : 'nenhuma', risk ? 'sdot-amb' : '') + kpi('Horas na semana', Math.round(hours * 10) / 10 + ' h', soon ? soon + ' perto de terminar' : 'apontadas por você') + '</div>'
         + '<div class="card"><div class="lbl"><i class="ti ti-target-arrow"></i>Minhas Entregas</div>' + rows + '</div>'
-        + (me.linked ? '' : '<div style="font-size:11.5px;color:var(--t3);margin-top:10px"><i class="ti ti-info-circle"></i> Encontrei você pelo nome. Peça para vincular a sua conta ao colaborador, para não depender do nome.</div>');
+        + linkHint();
     }
     root.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:12px">' + where
       + '<div class="card"><div class="lbl"><i class="ti ti-users"></i>Meu Time</div><div id="mw-team"><div style="font-size:12px;color:var(--t3)"><i class="ti ti-loader-2"></i> Carregando…</div></div></div>'
@@ -12740,7 +12747,19 @@ const MyWork = (() => {
     const t = await teamHtml(); const el = document.getElementById('mw-team'); if(el) el.innerHTML = t;
   }
   const isMine = name => !!name && myNames().names.some(n => key(n) === key(name));
-  return { render, isMine, deliveries, names: myNames };
+  // Aviso quando a pessoa aparece só pelo nome: quem pode (administrador ou gerente) entra na equipe com um clique; os demais pedem à gestão
+  function linkHint() {
+    const me = myNames(); if(me.linked || !me.names.length) return '';
+    const can = typeof Cloud !== 'undefined' && Cloud.isSignedIn() && (Auth.getRole() === 'admin' || Auth.can('business'));
+    return '<div style="font-size:11.5px;color:var(--t3);margin-top:10px"><i class="ti ti-info-circle"></i> Encontrei você pelo nome do seu cadastro, porque você ainda não está na equipe deste projeto. '
+      + (can ? '<button class="btn btn-sm" onclick="MyWork.joinTeam()"><i class="ti ti-user-plus"></i>Entrar na Equipe Deste Projeto</button>' : 'Peça ao administrador ou ao gerente do projeto para incluir você na equipe (Colaboradores).') + '</div>';
+  }
+  async function joinTeam() {
+    if(typeof Cloud === 'undefined' || !Cloud.joinTeam) return;
+    const ok = await Cloud.joinTeam(DB.getActiveProjectId());
+    if(ok) { T.show('✅ Você entrou na equipe deste projeto.'); try { render(); if(typeof MyIndPage !== 'undefined') MyIndPage.render(); } catch(e) { /* tela fechada */ } }
+  }
+  return { render, isMine, deliveries, names: myNames, linkHint, joinTeam };
 })();
 </script>
 
@@ -12944,7 +12963,7 @@ const MyIndPage = (() => {
         + '<td style="padding:6px 8px">' + esc(x.status) + (x.stalled >= MyInd.STALL_DAYS ? '<div style="color:var(--amb);font-size:11px">parado há ' + x.stalled + ' dias</div>' : '') + '</td><td style="padding:6px 8px;white-space:nowrap">' + fmtD(x.due) + '</td><td style="padding:6px 8px"><span class="badge ' + badge(x) + '">' + esc(when(x)) + '</span></td><td style="padding:6px 8px;text-align:right">' + action(x) + '</td></tr>').join('')
       + '</tbody></table></div>' : '<div class="rk-empty">' + (mode === 'atrasadas' ? 'Nenhuma atividade atrasada. Bom trabalho.' : mode === 'vencem' ? 'Nada vence nos próximos ' + win + ' dias.' : mode === 'concluidas' ? 'Você ainda não concluiu nada nos últimos 28 dias neste projeto.' : mode === 'sem_prazo' ? 'Todas as suas atividades abertas têm prazo.' : 'Você não tem atividades abertas neste projeto.') + '</div>';
     const how = '<div style="font-size:11px;color:var(--t3);margin-top:8px;line-height:1.55"><i class="ti ti-info-circle"></i> <b>Como calculamos:</b> o prazo de um item do quadro é o fim da sprint dele; o de uma tarefa da WBS é o término do cronograma. "Parado" é o item fora de "A fazer" e de "Concluído" que não muda de coluna há ' + MyInd.STALL_DAYS + ' dias ou mais. Itens sem sprint e tarefas sem término ficam em "Sem prazo definido". Os números são do projeto aberto agora e só trazem o que é seu.</div>';
-    root.innerHTML = '<div class="set-sub" style="margin-bottom:10px"><i class="ti ti-user"></i> ' + esc(me.names[0]) + ' · ' + esc(me.roles[0] || Auth.label()) + ' · projeto <b>' + esc(proj.name || '—') + '</b></div>' + kp
+    root.innerHTML = '<div class="set-sub" style="margin-bottom:10px"><i class="ti ti-user"></i> ' + esc(me.names[0]) + ' · ' + esc(me.roles[0] || Auth.label()) + ' · projeto <b>' + esc(proj.name || '—') + '</b></div>' + MyWork.linkHint() + kp
       + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin-bottom:12px">' + adv + '<div class="card">' + bars(r.weekly) + '</div></div>'
       + '<div class="card"><div class="lbl"><i class="ti ti-target-arrow"></i>Minhas Atividades <span class="badge">' + list.length + '</span></div>' + filt + tbl + how + '</div>' + projects();
     loadProjects();
@@ -13756,6 +13775,12 @@ const Agile = (() => {
     order.forEach((x, n) => { if(x.rank !== n + 1) { x.rank = n + 1; pushItem(x); } });
     saveItems(); renderBacklog();
     const b = document.querySelector(`.ag-rank button[aria-label$="${CSS.escape(id)}"]`); if(b) b.focus();
+  }
+  // Renomeou o colaborador: os cards dele passam para o nome novo (o card guarda o nome)
+  function renamePerson(oldName, newName) {
+    load(); const k = x => String(x || '').trim().toLowerCase(); let n = 0;
+    items.forEach(i => { if(i.assignee && k(i.assignee) === k(oldName)) { i.assignee = newName; pushItem(i); n++; } });
+    if(n) { saveItems(); renderAll(); T.show('✅ ' + n + ' card(s) passaram para o nome "' + newName + '".', 5000); }
   }
   function setSprintOf(id, sprintId) {
     if(!Auth.guard('manage_backlog')) return;
@@ -14623,7 +14648,7 @@ const Agile = (() => {
 
   function renderAll() { renderKanban(); renderBacklog(); renderSprints(); renderDashboard(); renderDue(); }
   function render() { renderAll(); }
-  return { histFilter, render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, rank, setSprintOf, setBacklogQuery, setShowDone,
+  return { histFilter, render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, rank, setSprintOf, renamePerson, setBacklogQuery, setShowDone,
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, checkDates, openRules, closeRules, editRule, ruleField, ruleAct, ruleAddAct, ruleDelAct, ruleCancel, ruleSave, toggleRule, deleteRule, renderDue, openDue, closeDue, dueChoose, runDue, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
     aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, setPolicyMove, setPolicyCol, openImpediments, closeImpediments, resolveImpediment, setPolicyBehalf, addGate, removeGate, setGate, setTemplate, checkToggle, checkAdd, checkDel, openBehalf, closeBehalf, confirmBehalf, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
@@ -17487,7 +17512,7 @@ const Burnout = (() => {
     const rec = document.getElementById('burnout-f-rec').value.trim();
     if(!name) { T.show('⚠️ Dê um nome para o colaborador.'); return; }
 
-    let saved;
+    let saved, oldName = '';
     const wasAdd = modalCtx.mode === 'add';
     // Edição concorrente: se outra pessoa salvou este membro depois que abrimos o modal, a
     // última gravação vencia em silêncio — agora avisa e deixa a pessoa decidir.
@@ -17511,7 +17536,7 @@ const Burnout = (() => {
       data.push(saved);
       T.show('✅ Colaborador adicionado!');
     } else {
-      saved = data.find(x => x.id === modalCtx.id);
+      saved = data.find(x => x.id === modalCtx.id); oldName = saved ? saved.name : '';
       if(saved) { saved.name=name; saved.role=role; saved.allocationPct=alloc; saved.workloadPct=pct; saved.signals=signals; saved.recommendation=rec; }
       T.show('✅ Atualizado!');
       if(statusOf(pct) === 'critico') Trail.log(`${name} entrou em zona crítica de sobrecarga (${pct}%)`, Auth.getName(), 'Atenção necessária', 'b-red');
@@ -17520,7 +17545,9 @@ const Burnout = (() => {
     if(saved && acc && acc.style.display !== 'none') saved.userId = document.getElementById('burnout-f-account').value;
     persist();
     if(saved && typeof Cloud !== 'undefined') {
-      Cloud.pushTeamMember(saved);
+      const pushed = Cloud.pushTeamMember(saved);
+      // Renomeou: os cards da pessoa passam para o nome novo (depois de gravar o colaborador, para o banco reconhecer o nome)
+      if(!wasAdd && typeof oldName === 'string' && oldName && oldName !== name && typeof Agile !== 'undefined' && Agile.renamePerson) Promise.resolve(pushed).then(() => Agile.renamePerson(oldName, name));
       // Sobrealocação e burnout afetam decisão de alocação de recursos — vira evento de
       // auditoria igual troca de perfil, não só um toast que some (gap apontado na revisão).
       Cloud.pushAuditEvent('team_member_change', `${wasAdd?'Adicionou':'Editou'} colaborador da equipe: ${name} (${alloc}% alocado, ${pct}% de carga)`, { memberId:saved.id, allocationPct:alloc, workloadPct:pct });

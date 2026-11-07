@@ -188,3 +188,7 @@ test('Sprint do card novo: pelo Quadro Kanban vem escolhida e travada; pelo Back
 test('sprint travada no card novo avisa no rótulo que o responsável é obrigatório', () => {
   assert.ok(html.includes("'Responsável (obrigatório na sprint)' : 'Responsável'"));
 });
+
+test('pessoa única: "quem sou eu" cai no nome do cadastro, administrador entra na equipe com um clique e o renome leva os cards', () => {
+  for (const k of ['return { names: [Auth.getName()], roles: [], linked: false, viaConta: true };', 'function linkHint()', 'MyWork.joinTeam()', "'</b></div>' + MyWork.linkHint() + kp", 'async function joinTeam(projectId)', 'return setProjectAccess(session.user.id, projectId, true);', 'function renamePerson(oldName, newName)', 'Agile.renamePerson(oldName, name)', 'return track(client.from(\'team_members\').upsert(']) assert.ok(html.includes(k), k);
+});

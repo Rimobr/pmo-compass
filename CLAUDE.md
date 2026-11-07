@@ -64,6 +64,10 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - **Branco** (`light`), **Cinza** (`gray`), **Preto** (`dark`, sem atributo; é o padrão) e **Verde** (`green`, identidade Vigilae: fundo claro, marca verde-petróleo e barra lateral verde escura com realce âmbar). Módulo `core/theme` (`Theme.set`, `Theme.next`); o botão da barra superior passa ao tema seguinte e Configurações lista os quatro. Aplicado por script no `<head>` antes da primeira pintura; `<meta theme-color>` acompanha. Chave `pmo_theme_v1` (fica ao sair da conta).
 - `npm run test:a11y` roda o axe e o teste de 375 px nos **quatro** temas; tela ou janela nova passa nos quatro. Cores só por token (`var(--...)`); o Verde redefine os tokens da barra lateral só dentro dela.
 
+## Pessoa única (pedido do dono, 06/11/2026)
+- A pessoa é a **conta** (Pessoas e Acesso). "Quem sou eu" (`MyWork.names`) é, nesta ordem: o colaborador ligado à minha conta, o colaborador com o meu nome, ou o **nome do meu cadastro** (administrador ainda fora da equipe); é o mesmo que o card aceita como responsável e que o resumo de entrada conta. Meu Trabalho e Meus Indicadores avisam quando a pessoa aparece só pelo nome e oferecem **Entrar na Equipe Deste Projeto** (`Cloud.joinTeam`: dá o acesso ao projeto, o que já cria o colaborador ligado; administrador, ou gerente do projeto se o banco permitir).
+- O card guarda o **nome**: ao renomear um colaborador, `Agile.renamePerson` leva os cards dele para o nome novo (depois de gravar o colaborador).
+
 ## Entrega
 - Versão em 4 lugares: `version.json`, `BRAND.version` (PMO_Compass_v2.html), `package.json`, `sw.js` (`CACHE_NAME`).
 - Testes: `node tests/run.js` e `npm run test:unit` (inclui `datamap`), `npm run test:smoke`; migrações: `node scripts/db-apply.mjs --dry-run` antes de aplicar, depois `node scripts/build-schema.mjs`.
