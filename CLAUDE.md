@@ -51,6 +51,8 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 
 ## Resumo de entrada — Meus Cards (pedido do dono, 06/11/2026)
 - Ao entrar, a pessoa vê uma janela: "Você tem N cards em aberto" (por situação e por projeto, os 5 primeiros), com o botão "Abrir Meu Trabalho" (módulo `ui/my-digest`, `MyDigest`). Só os cards em que o nome dela é o responsável, nos projetos que ela acessa (o banco filtra); nada é gravado, só `pmo_digest_v1` no navegador.
+- É **aviso de ciência**: só o botão "OK, Li e Entendi" (`Dlg.ask({ onlyOk: true })`, sem Cancelar e sem Esc) e o **OK vai para a auditoria de cada projeto** (`digest_ack`: quem, quando, quantos cards e quais). Aparece assim que o login termina, sem espera.
+- **Gestão** (quem tem `manage_backlog`: gerente, Scrum Master, PO, administrador) recebe também "Cards Sem Responsável Cadastrado" (sem nome, ou nome que não é de pessoa ligada a conta), no mesmo molde, com OK em `digest_ack_unassigned`. O **sino** soma avisos não lidos + cards pendentes e a janela do sino traz esse painel no topo.
 - **Parâmetro da organização** `entryDigest` (tabela `org_settings`, só o administrador grava) em Configurações → Resumo de Entrada: `diario` (padrão, já gravado: uma vez por dia e de novo se chegar card novo), `login` (a cada login) ou `off`. Sem valor gravado vale `diario`.
 
 ## Entrega

@@ -94,7 +94,7 @@ test('exclusões usam a janela do sistema (Dlg) com botão vermelho, sem confirm
 });
 test('a janela Dlg devolve verdadeiro/falso, cancela com Esc e pela área escura, e foca em Cancelar', () => {
   const m = html.match(/<script data-module="ui\/confirm-dialog">([\s\S]*?)<\/script>/)[1];
-  for (const k of ["e.key === 'Escape'", "if(e.target === ov) done(false);", "querySelector('#dlg-cancel').focus()", 'Marque a caixa acima para continuar.', 'prevFocus.focus()']) assert.ok(m.includes(k), k);
+  for (const k of ["e.key === 'Escape'", "if(e.target === ov && !onlyOk) done(false);", "querySelector(onlyOk ? '#dlg-ok' : '#dlg-cancel').focus()", 'Marque a caixa acima para continuar.', 'prevFocus.focus()']) assert.ok(m.includes(k), k);
 });
 
 test('a Ajuda explica o menu, Quadros, nuvem por padrão e as janelas de exclusão', () => {
@@ -137,7 +137,27 @@ test('janela do cartão: Excluir, Cancelar e Salvar ficam no cabeçalho fixo; "I
 
 test('resumo de entrada: já vem ligado (uma vez por dia), é parâmetro da organização e mostra só os cards da própria pessoa', () => {
   const m = html.match(/<script data-module="ui\/my-digest">([\s\S]*?)<\/script>/)[1];
-  for (const k of ["const mode = () =>", "MODES.includes(o.mode) ? o.mode : 'diario'", "OrgSettings.set(ORG, { mode: v })", "Cloud.myOpenItems()", "R.go('mywork')", "Auth.getRole() !== 'admin'", 'items.length > (st.n || 0)']) assert.ok(m.includes(k), k);
+  for (const k of ["const mode = () =>", "MODES.includes(o.mode) ? o.mode : 'diario'", "OrgSettings.set(ORG, { mode: v })", "Cloud.myOpenItems()", "Auth.getRole() !== 'admin'", 'state.mine.length > (st.n || 0)', 'onlyOk: true', "okLabel: 'OK, Li e Entendi'", 'function acknowledge(action, label, list, m)', "'digest_ack'"]) assert.ok(m.includes(k), k);
   for (const k of ['id="digest-mode"', 'MyDigest.setMode(this.value)', 'Resumo de Entrada (Meus Cards)', 'async function myOpenItems()', ".in('assignee', names).neq('status', 'done')"]) assert.ok(html.includes(k), k);
   assert.ok(readFileSync(join(root, 'docs', 'mapa-de-dados.json'), 'utf8').includes('"pmo_digest_v1"'));
+});
+
+test('resumo de entrada: sem espera (dispara ao terminar o login), só o botão OK e o OK vai para a auditoria de cada projeto', () => {
+  assert.ok(!html.includes('setTimeout(check, 9000)'));
+  assert.ok(html.includes("if(typeof MyDigest !== 'undefined') MyDigest.check();"));
+  const dlg = html.match(/<script data-module="ui\/confirm-dialog">([\s\S]*?)<\/script>/)[1];
+  for (const k of ['onlyOk = !!o.onlyOk', "if(e.target === ov && !onlyOk) done(false);", "if(!onlyOk) done(false); return; }"]) assert.ok(dlg.includes(k), k);
+  assert.ok(html.includes("function pushAuditEvent(action, description, metadata, projectId)") && html.includes("project_id: projectId || DB.getActiveProjectId(),"));
+  assert.ok(html.includes("digest_ack:'Resumo de entrada (OK)'"));
+});
+
+test('gestão: cards sem responsável cadastrado têm aviso próprio (OK na auditoria) e o sino soma os pendentes', () => {
+  const m = html.match(/<script data-module="ui\/my-digest">([\s\S]*?)<\/script>/)[1].replace(/\r\n/g, '\n');
+  for (const k of ["isMgr = () => typeof Auth !== 'undefined' && Auth.can('manage_backlog')", "'digest_ack_unassigned'", "title: 'Cards Sem Responsável Cadastrado'", 'function findLoose(d)', 'pendingCount', 'function panelHtml()']) assert.ok(m.includes(k), k);
+  for (const k of ['async function openItemsForManagers()', "const extra = (typeof MyDigest !== 'undefined') ? MyDigest.pendingCount() : 0, total = n + extra;", "typeof MyDigest !== 'undefined' ? MyDigest.panelHtml() : ''", "digest_ack_unassigned:'Cards sem responsável (OK)'"]) assert.ok(html.includes(k), k);
+  // findLoose: sem nome ou com nome que não é de pessoa ligada a conta nem de perfil cadastrado
+  const src = m.match(/const norm = [^\n]*\n/)[0] + m.match(/  function findLoose\(d\) \{[\s\S]*?\n  \}\n/)[0];
+  const { findLoose } = new Function(src + '\nreturn { findLoose };')();
+  const d = { items: [{ project_id: 'p', id: '1', assignee: '' }, { project_id: 'p', id: '2', assignee: 'Ricardo' }, { project_id: 'p', id: '3', assignee: 'Ana Souza' }, { project_id: 'p', id: '4', assignee: 'Rícardo M' }], linked: [{ project_id: 'p', name: 'ana souza' }], profileNames: ['Ricardo M'] };
+  assert.deepEqual(findLoose(d).map(i => i.id), ['1', '2']);
 });

@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.68.0'
+  version: '2.68.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1600,8 +1600,8 @@ body.icons-failed i[data-fb]::before{
     <div id="method-root" role="radiogroup" aria-label="Metodologia do projeto"></div>
   </div>
   <div class="card" id="digest-card" data-sec="resumo-entrada" data-tint="3" data-collapsed="1">
-    <div class="lbl"><i class="ti ti-bell-ringing"></i>Resumo de Entrada (Meus Cards)<span class="help-q" data-help="Quando a pessoa entra no sistema, uma janela diz quantos cards estão com ela, por situação e por projeto, com um botão para abrir o Meu Trabalho. A pessoa vê só os próprios cards. Nada é gravado; só a data do último aviso fica neste navegador." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:8px">Vale para <strong style="color:var(--t1)">todas as pessoas</strong>. Já vem ligado: uma vez por dia, e de novo se chegar card novo no mesmo dia.</p>
+    <div class="lbl"><i class="ti ti-bell-ringing"></i>Resumo de Entrada (Meus Cards)<span class="help-q" data-help="Quando a pessoa entra no sistema, uma janela diz quantos cards estão com ela, por situação e por projeto. Ela só fecha no botão OK, e o OK fica registrado na auditoria de cada projeto (quem, quando e quais cards), para provar que a pessoa leu e entendeu. A pessoa vê só os próprios cards." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:8px">Vale para <strong style="color:var(--t1)">todas as pessoas</strong>. Já vem ligado: uma vez por dia, e de novo se chegar card novo no mesmo dia. O <strong style="color:var(--t1)">OK de cada pessoa fica na auditoria</strong> do projeto.</p>
     <div class="field-group" style="max-width:420px"><div class="field-label"><label for="digest-mode">Quando mostrar</label></div>
       <select class="input" id="digest-mode" onchange="MyDigest.setMode(this.value)"><option value="diario">Uma vez por dia (e quando chegar card novo)</option><option value="login">A cada login</option><option value="off">Desligado</option></select></div>
     <p id="digest-note" style="display:none;font-size:11.5px;color:var(--t3);margin-top:6px"><i class="ti ti-lock"></i> Só o administrador altera.</p>
@@ -4766,6 +4766,16 @@ const Cloud = (() => {
     if(error) { console.warn('Supabase: falha ao ler os cards da pessoa', error); return []; }
     return data || [];
   }
+  // Gestão: cards em aberto de todos os projetos que a pessoa acessa + quem está ligado a uma conta em cada projeto (para achar responsável não cadastrado)
+  async function openItemsForManagers() {
+    if(!client || !session) return null;
+    const a = await client.from('backlog_items').select('project_id,id,title,status,assignee').neq('status', 'done').limit(600);
+    if(a.error) { console.warn('Supabase: falha ao ler os cards em aberto', a.error); return null; }
+    const b = await client.from('team_members').select('project_id,name,user_id').not('user_id', 'is', null).limit(2000);
+    let profileNames = [];
+    try { profileNames = (await listProfiles()).filter(p => p.active !== false && p.name).map(p => p.name); } catch(e) { /* sem permissão para listar: só vale o vínculo da equipe */ }
+    return { items: a.data || [], linked: (b && b.data) || [], profileNames };
+  }
   async function listTeamNames(pid) {
     if(!client || !session) return [];
     const { data } = await client.from('team_members').select('name').eq('project_id', pid).order('name');
@@ -4984,6 +4994,7 @@ const Cloud = (() => {
         }
       } catch(e) { /* sem org_settings: usa o valor local */ }
       T.show('☁️ Dados sincronizados do Supabase.');
+      try { if(typeof MyDigest !== 'undefined') MyDigest.check(); } catch(e) { /* resumo é opcional */ }
     } catch(e) { console.warn('Supabase: falha ao sincronizar', e); T.show('⚠️ Não consegui buscar os dados mais recentes da nuvem — mostrando o que já estava salvo neste navegador.'); }
   }
 
@@ -5144,10 +5155,10 @@ const Cloud = (() => {
   // Só grava eventos sensíveis de governança/segurança (login, promoção de perfil, backup,
   // reset de dados, tentativa bloqueada por permissão) — não o volume operacional do dia a
   // dia, que já tem a Trilha (Trail.log) pra isso.
-  function pushAuditEvent(action, description, metadata) {
+  function pushAuditEvent(action, description, metadata, projectId) {
     if(!client || !session) return;
     track(client.from('audit_log').insert({
-      project_id: DB.getActiveProjectId(),
+      project_id: projectId || DB.getActiveProjectId(),
       actor_id: session.user.id,
       actor_email: session.user.email,
       actor_role: (typeof Auth !== 'undefined') ? Auth.realRole() : null,
@@ -5256,7 +5267,7 @@ const Cloud = (() => {
     setTimeout(() => location.reload(), 900);
   }
 
-  return { load, configure, disconnect, setUse, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, projectContacts, myOpenItems, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
+  return { load, configure, disconnect, setUse, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, projectContacts, myOpenItems, openItemsForManagers, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
     compassDigest, myWorkload, saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, hoursSummary, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, markOnboarded, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
@@ -6565,13 +6576,17 @@ const Notices = (() => {
   const when = iso => { try { return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch(e) { return ''; } };
   function paint() {
     const b = $('tb-notices'), n = unread().length; if(!b) return;
-    b.style.display = list.length ? '' : 'none';
-    const c = $('tb-notices-n'); c.textContent = n > 9 ? '9+' : String(n); c.style.display = n ? '' : 'none';
+    const extra = (typeof MyDigest !== 'undefined') ? MyDigest.pendingCount() : 0, total = n + extra;
+    b.style.display = (list.length || extra) ? '' : 'none';
+    const c = $('tb-notices-n'); c.textContent = total > 9 ? '9+' : String(total); c.style.display = total ? '' : 'none';
+    b.title = 'Avisos para você' + (total ? ' — ' + total + ' pendente(s): ' + n + ' aviso(s) não lido(s)' + (extra ? ' e ' + extra + ' card(s) para tratar' : '') : '');
     b.classList.toggle('urgent', unread().some(x => x.severity === 'urgent'));
   }
-  async function refresh() {
+  async function refresh(keepOpen) {
     if(typeof Cloud === 'undefined' || !Cloud.getUserId || !Cloud.getUserId()) { list = []; paint(); return; }
-    list = await Cloud.listNotices(); paint();
+    list = await Cloud.listNotices();
+    try { if(typeof MyDigest !== 'undefined') await MyDigest.load(); } catch(e) { /* o sino segue só com os avisos */ }
+    paint(); if(keepOpen === true) return;
     const urg = unread().filter(x => x.severity === 'urgent' && !seenUrgent.has(x.id)); urg.forEach(x => seenUrgent.add(x.id));
     if((!shown && unread().length) || urg.length) { shown = true; open(); }
     if(typeof Agile !== 'undefined') { try { Agile.checkDates(); } catch(e) { /* sem projeto aberto */ } }
@@ -6579,10 +6594,10 @@ const Notices = (() => {
   function render() {
     const b = $('nt-body'); if(!b) return;
     const names = Object.fromEntries((DB.listProjects() || []).map(p => [p.id, p.name]));
-    b.innerHTML = list.length ? sorted().map(n => '<div class="nt-item' + (n.read_at ? '' : ' unread') + ' sev-' + (n.severity || 'info') + '"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b style="font-size:13px">' + ((SEV[n.severity] || SEV.info)[1] ? '<i class="ti ' + SEV[n.severity][1] + '"></i> ' : '') + esc(n.title) + '</b><span style="margin-left:auto;font-size:11.5px;color:var(--t2)">' + esc(when(n.created_at)) + '</span></div>'
+    b.innerHTML = (typeof MyDigest !== 'undefined' ? MyDigest.panelHtml() : '') + (list.length ? sorted().map(n => '<div class="nt-item' + (n.read_at ? '' : ' unread') + ' sev-' + (n.severity || 'info') + '"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b style="font-size:13px">' + ((SEV[n.severity] || SEV.info)[1] ? '<i class="ti ' + SEV[n.severity][1] + '"></i> ' : '') + esc(n.title) + '</b><span style="margin-left:auto;font-size:11.5px;color:var(--t2)">' + esc(when(n.created_at)) + '</span></div>'
       + (n.detail ? '<div style="font-size:12.5px;color:var(--t1);margin-top:3px">' + esc(n.detail) + '</div>' : '')
       + '<div style="font-size:11.5px;color:var(--t2);margin-top:4px">' + esc(names[n.project_id] || '') + (n.source ? ' · ' + esc(n.source) : '') + '</div>'
-      + (target(n.page) ? '<button class="btn btn-sm" style="margin-top:6px" onclick="Notices.go(\'' + esc(n.project_id) + '\',\'' + esc(n.page) + '\')"><i class="ti ti-external-link"></i>' + esc(target(n.page).label) + '</button>' : '') + '</div>').join('') : '<div class="rk-empty">Nenhum aviso.</div>';
+      + (target(n.page) ? '<button class="btn btn-sm" style="margin-top:6px" onclick="Notices.go(\'' + esc(n.project_id) + '\',\'' + esc(n.page) + '\')"><i class="ti ti-external-link"></i>' + esc(target(n.page).label) + '</button>' : '') + '</div>').join('') : (MyDigest.pendingCount() ? '' : '<div class="rk-empty">Nenhum aviso.</div>'));
   }
   function open() { render(); $('modal-notices').classList.remove('hidden'); }
   async function readAll() { const ids = unread().map(n => n.id); if(!ids.length) return; await Cloud.markNoticesRead(ids); const now = new Date().toISOString(); list.forEach(n => { if(!n.read_at) n.read_at = now; }); paint(); render(); }
@@ -6607,42 +6622,86 @@ const Notices = (() => {
 const MyDigest = (() => {
   const KEY = 'pmo_digest_v1', ORG = 'entryDigest', MODES = ['diario', 'login', 'off'];
   const LBL = { todo: 'a fazer', doing: 'em andamento', review: 'em revisão' };
-  let shownThisSession = false, busy = false;
+  let shownMine = false, shownMgr = false, busy = false;
+  let state = { mine: [], loose: [] }; // mine: cards da pessoa; loose: (só gestão) cards sem responsável cadastrado
   // Já vem ligado: sem nada gravado vale "uma vez por dia" (o administrador muda em Configurações)
   const mode = () => { const o = (typeof OrgSettings !== 'undefined') ? OrgSettings.get(ORG) : null; return o && MODES.includes(o.mode) ? o.mode : 'diario'; };
-  const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || 'null') || {}; } catch(e) { return {}; } };
-  const save = o => { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch(e) { /* sem armazenamento: mostra de novo na próxima vez */ } };
+  const loadSt = () => { try { return JSON.parse(localStorage.getItem(KEY) || 'null') || {}; } catch(e) { return {}; } };
+  const saveSt = o => { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch(e) { /* sem armazenamento: mostra de novo na próxima vez */ } };
   const uiBusy = () => ['modal-notices', 'modal-onboarding', 'modal-dlg'].some(id => { const e = document.getElementById(id); return e && !e.classList.contains('hidden'); });
   const hello = () => { const h = new Date().getHours(); return h < 12 ? 'Bom Dia' : h < 18 ? 'Boa Tarde' : 'Boa Noite'; };
-  function text(items) {
-    const names = Object.fromEntries((DB.listProjects() || []).map(p => [p.id, p.name]));
+  const norm = x => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const isMgr = () => typeof Auth !== 'undefined' && Auth.can('manage_backlog');
+  const signed = () => typeof Cloud !== 'undefined' && Cloud.isSignedIn() && !(typeof Auth !== 'undefined' && Auth.isPending());
+  const projName = () => Object.fromEntries((DB.listProjects() || []).map(p => [p.id, p.name]));
+  const perProject = (list, names) => { const per = {}; list.forEach(i => { per[i.project_id] = (per[i.project_id] || 0) + 1; }); return Object.keys(per).map(p => '• ' + (names[p] || 'Projeto') + ': ' + per[p]).join('\n'); };
+  const firstLines = (list, extra) => list.slice(0, 5).map(i => '• ' + i.id + ' — ' + String(i.title || '').slice(0, 60) + (extra ? extra(i) : '')).join('\n') + (list.length > 5 ? '\n… e mais ' + (list.length - 5) + '.' : '');
+  function textMine(items) {
     const by = {}; items.forEach(i => { by[i.status] = (by[i.status] || 0) + 1; });
     const parts = ['todo', 'doing', 'review'].filter(k => by[k]).map(k => by[k] + ' ' + LBL[k]);
-    const perProj = {}; items.forEach(i => { perProj[i.project_id] = (perProj[i.project_id] || 0) + 1; });
-    const projLines = Object.keys(perProj).map(p => '• ' + (names[p] || 'Projeto') + ': ' + perProj[p]).join('\n');
-    const first = items.slice(0, 5).map(i => '• ' + i.id + ' — ' + String(i.title || '').slice(0, 70)).join('\n');
-    return 'Você tem ' + items.length + ' card' + (items.length > 1 ? 's' : '') + ' em aberto' + (parts.length ? ' (' + parts.join(', ') + ')' : '') + '.\n\n' + projLines + '\n\n' + first + (items.length > 5 ? '\n… e mais ' + (items.length - 5) + '.' : '');
+    return 'Você tem ' + items.length + ' card' + (items.length > 1 ? 's' : '') + ' em aberto' + (parts.length ? ' (' + parts.join(', ') + ')' : '') + '.\n\n' + perProject(items, projName()) + '\n\n' + firstLines(items) + '\n\nSeus cards estão em Meu Trabalho (menu "Meu Dia").';
   }
-  // force: o botão de teste/ajuda pode chamar sem respeitar a frequência
+  function textLoose(list) {
+    const semNome = list.filter(i => !String(i.assignee || '').trim()).length, naoCad = list.length - semNome;
+    return list.length + ' card' + (list.length > 1 ? 's' : '') + ' sem responsável cadastrado' + ' (' + [semNome ? semNome + ' sem nome' : '', naoCad ? naoCad + ' com nome que não está em Pessoas e Acesso' : ''].filter(Boolean).join(', ') + ').\n\n' + perProject(list, projName()) + '\n\n'
+      + firstLines(list, i => String(i.assignee || '').trim() ? ' (' + String(i.assignee).trim() + ')' : ' (sem responsável)')
+      + '\n\nPara decidir: abra o card (Backlog ou Quadro Kanban) e escolha o responsável. Se a pessoa certa não está na lista, inclua-a em Pessoas e Acesso.';
+  }
+  // Cards da gestão: sem responsável, ou com nome que não é de uma pessoa cadastrada (ligada a conta) naquele projeto
+  function findLoose(d) {
+    const linked = {}; (d.linked || []).forEach(l => { (linked[l.project_id] = linked[l.project_id] || new Set()).add(norm(l.name)); });
+    const prof = new Set((d.profileNames || []).map(norm));
+    return (d.items || []).filter(i => { const a = norm(i.assignee); return !a || !((linked[i.project_id] && linked[i.project_id].has(a)) || prof.has(a)); });
+  }
+  async function load() {
+    if(!signed()) { state = { mine: [], loose: [] }; return state; }
+    const mine = await Cloud.myOpenItems();
+    let loose = [];
+    if(isMgr()) { const d = await Cloud.openItemsForManagers(); if(d) loose = findLoose(d); }
+    state = { mine, loose }; return state;
+  }
+  const pendingCount = () => (state.mine || []).length + (state.loose || []).length;
+  // Painel do sino: o que está pendente agora
+  function panelHtml() {
+    const m = state.mine || [], l = state.loose || []; if(!m.length && !l.length) return '';
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const row = (ico, txt, go) => '<div class="nt-item unread"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><i class="ti ti-' + ico + '"></i><b>' + esc(txt) + '</b></div>' + (go ? '<button class="btn btn-sm" style="margin-top:6px" onclick="MyDigest.openWork()"><i class="ti ti-external-link"></i>Abrir Meu Trabalho</button>' : '') + '</div>';
+    return (m.length ? row('user-check', 'Você tem ' + m.length + ' card' + (m.length > 1 ? 's' : '') + ' em aberto', true) : '') + (l.length ? row('user-question', l.length + ' card' + (l.length > 1 ? 's' : '') + ' sem responsável cadastrado (decisão da gestão)', false) : '');
+  }
+  function openWork() {
+    const per = {}; (state.mine || []).forEach(i => { per[i.project_id] = (per[i.project_id] || 0) + 1; });
+    const best = Object.keys(per).sort((a, b) => per[b] - per[a])[0];
+    try { if(typeof Notices !== 'undefined') Notices.close(); if(best && DB.getActiveProjectId() !== best) DB.switchProject(best); } catch(e) { /* projeto indisponível */ }
+    R.go('mywork');
+  }
+  // OK registrado na auditoria de cada projeto: quem, quando, quantos cards e quais
+  function acknowledge(action, label, list, m) {
+    if(typeof Cloud === 'undefined' || !Cloud.pushAuditEvent) return;
+    const per = {}; list.forEach(i => { (per[i.project_id] = per[i.project_id] || []).push(i.id); });
+    Object.keys(per).forEach(pid => Cloud.pushAuditEvent(action, label + ': ' + per[pid].length + ' card(s) (' + per[pid].slice(0, 12).join(', ') + (per[pid].length > 12 ? '…' : '') + ')', { cards: per[pid].length, ids: per[pid].slice(0, 50), mode: m }, pid));
+  }
+  // Aviso de ciência: só o botão OK; o OK fica na auditoria (prova que a pessoa leu e entendeu)
   async function check(force) {
     if(busy) return; busy = true;
     try {
-      if(typeof Cloud === 'undefined' || !Cloud.isSignedIn() || (typeof Auth !== 'undefined' && Auth.isPending())) return;
+      if(!signed()) return;
       const m = mode(); if(m === 'off' && !force) return;
       if(uiBusy()) return; // tem outra janela aberta: tenta de novo no próximo ciclo
-      const items = await Cloud.myOpenItems(); if(!items.length) return;
-      const today = Clock.iso(Clock.today()), st = load();
-      const due = force || (m === 'login' ? !shownThisSession : (st.day !== today || items.length > (st.n || 0)));
-      if(!due || uiBusy()) return;
-      shownThisSession = true; save({ day: today, n: items.length });
-      const nome = String(Auth.getName() || '').trim().split(/\s+/)[0];
-      const go = await Dlg.ask({ title: hello() + (nome ? ', ' + nome : ''), body: text(items), okLabel: 'Abrir Meu Trabalho', cancelLabel: 'Fechar' });
-      if(go) {
-        const per = {}; items.forEach(i => { per[i.project_id] = (per[i.project_id] || 0) + 1; });
-        const best = Object.keys(per).sort((a, b) => per[b] - per[a])[0];
-        try { if(best && DB.getActiveProjectId() !== best) DB.switchProject(best); } catch(e) { /* projeto indisponível */ }
-        R.go('mywork');
+      await load();
+      const today = Clock.iso(Clock.today()), st = loadSt(), nome = String(Auth.getName() || '').trim().split(/\s+/)[0];
+      const dueMine = state.mine.length && (force || (m === 'login' ? !shownMine : (st.day !== today || state.mine.length > (st.n || 0))));
+      if(dueMine && !uiBusy()) {
+        shownMine = true; saveSt({ ...loadSt(), day: today, n: state.mine.length });
+        await Dlg.ask({ title: hello() + (nome ? ', ' + nome : ''), body: textMine(state.mine), okLabel: 'OK, Li e Entendi', onlyOk: true });
+        acknowledge('digest_ack', 'Leu o resumo de entrada e deu OK', state.mine, m);
       }
+      const dueMgr = state.loose.length && (force || (m === 'login' ? !shownMgr : (st.mday !== today || state.loose.length > (st.mn || 0))));
+      if(dueMgr && !uiBusy()) {
+        shownMgr = true; saveSt({ ...loadSt(), mday: today, mn: state.loose.length });
+        await Dlg.ask({ title: 'Cards Sem Responsável Cadastrado', body: textLoose(state.loose), okLabel: 'OK, Li e Entendi', onlyOk: true });
+        acknowledge('digest_ack_unassigned', 'Leu os cards sem responsável cadastrado e deu OK', state.loose, m);
+      }
+      if(typeof Notices !== 'undefined') Notices.refresh(true);
     } catch(e) { console.warn('Resumo de entrada:', e); } finally { busy = false; }
   }
   // Configurações: só o administrador altera (o banco confere); os demais veem o valor
@@ -6659,8 +6718,8 @@ const MyDigest = (() => {
     OrgSettings.set(ORG, { mode: v });
     T.show(v === 'off' ? '✅ Resumo de entrada desligado.' : '✅ Resumo de entrada: ' + (v === 'login' ? 'a cada login.' : 'uma vez por dia.'));
   }
-  setTimeout(check, 9000); setInterval(check, 10 * 60 * 1000);
-  return { check, render, setMode, mode };
+  setInterval(check, 10 * 60 * 1000); // só tenta de novo se havia outra janela aberta; a primeira tentativa é ao terminar o login (Cloud)
+  return { check, load, render, setMode, mode, pendingCount, panelHtml, openWork, findLoose };
 })();
 </script>
 
@@ -6776,11 +6835,11 @@ const AuditLog = (() => {
     login:'Login', logout:'Logout', role_change:'Troca de perfil', backup_export:'Backup exportado',
     backup_import:'Backup restaurado', cloud_disconnect:'Desconectou da nuvem',
     reset_shared_data:'Reset de dados compartilhados', project_data_cleared:'Dados de projeto apagados',
-    permission_denied:'Permissão negada', team_member_change:'Alteração na equipe'
+    permission_denied:'Permissão negada', team_member_change:'Alteração na equipe', digest_ack:'Resumo de entrada (OK)', digest_ack_unassigned:'Cards sem responsável (OK)'
   };
   const ACTION_CLS = {
     permission_denied:'b-amb', reset_shared_data:'b-red', project_data_cleared:'b-red',
-    role_change:'b-acc', login:'b-grn', logout:'b-neu', team_member_change:'b-acc'
+    role_change:'b-acc', login:'b-grn', logout:'b-neu', team_member_change:'b-acc', digest_ack:'b-grn', digest_ack_unassigned:'b-grn'
   };
   let rows = [];
   function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -8266,7 +8325,7 @@ const Onboarding = (() => {
 <script data-module="ui/confirm-dialog">
 const Dlg = (() => {
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-  let ov = null, resolver = null, prevFocus = null;
+  let ov = null, resolver = null, prevFocus = null, onlyOk = false;
   function build() {
     ov = document.createElement('div'); ov.className = 'modal-ov hidden'; ov.id = 'modal-dlg';
     ov.innerHTML = '<div class="modal-box" role="alertdialog" aria-modal="true" aria-labelledby="dlg-t" aria-describedby="dlg-b" style="width:480px;max-width:96vw">'
@@ -8276,7 +8335,7 @@ const Dlg = (() => {
       + '<div id="dlg-err" role="alert" style="display:none;font-size:12px;color:var(--red);margin-bottom:6px"></div>'
       + '<div class="btn-row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="btn btn-sm" id="dlg-cancel"></button><button type="button" class="btn btn-sm" id="dlg-ok"></button></div></div>';
     document.body.appendChild(ov);
-    ov.addEventListener('click', e => { if(e.target === ov) done(false); });
+    ov.addEventListener('click', e => { if(e.target === ov && !onlyOk) done(false); });
     ov.querySelector('#dlg-cancel').addEventListener('click', () => done(false));
     ov.querySelector('#dlg-ok').addEventListener('click', () => {
       const w = ov.querySelector('#dlg-chk-w');
@@ -8284,7 +8343,7 @@ const Dlg = (() => {
       done(true);
     });
     ov.addEventListener('keydown', e => {
-      if(e.key === 'Escape') { e.preventDefault(); done(false); return; }
+      if(e.key === 'Escape') { e.preventDefault(); if(!onlyOk) done(false); return; }
       if(e.key !== 'Tab') return;
       const f = [...ov.querySelectorAll('input,button')].filter(x => x.offsetParent !== null); if(!f.length) return;
       const first = f[0], last = f[f.length - 1];
@@ -8298,7 +8357,7 @@ const Dlg = (() => {
     try { if(prevFocus && prevFocus.focus) prevFocus.focus(); } catch(e) {}
     if(r) r(v);
   }
-  // opts: { title, body (texto; quebras de linha viram parágrafos), okLabel, cancelLabel, danger, check (texto da caixa que precisa ser marcada) } → Promise<boolean>
+  // opts: { title, body (texto; quebras de linha viram parágrafos), okLabel, cancelLabel, danger, check (texto da caixa que precisa ser marcada), onlyOk (aviso de ciência: só o botão OK, sem Cancelar nem Esc) } → Promise<boolean>
   function ask(opts) {
     const o = opts || {};
     if(!ov) build();
@@ -8310,8 +8369,9 @@ const Dlg = (() => {
     const er = ov.querySelector('#dlg-err'); er.style.display = 'none'; er.textContent = '';
     const ok = ov.querySelector('#dlg-ok'); ok.textContent = o.okLabel || 'OK'; ok.className = 'btn btn-sm ' + (o.danger ? 'btn-red' : 'btn-acc');
     ov.querySelector('#dlg-cancel').textContent = o.cancelLabel || 'Cancelar';
+    onlyOk = !!o.onlyOk; ov.querySelector('#dlg-cancel').style.display = onlyOk ? 'none' : '';
     ov.classList.remove('hidden');
-    setTimeout(() => { try { ov.querySelector('#dlg-cancel').focus(); } catch(e) {} }, 30); // o foco começa no lado seguro (Cancelar)
+    setTimeout(() => { try { ov.querySelector(onlyOk ? '#dlg-ok' : '#dlg-cancel').focus(); } catch(e) {} }, 30); // o foco começa no lado seguro (Cancelar); em aviso de ciência, no OK
     return new Promise(res => { resolver = res; });
   }
   return { ask };
