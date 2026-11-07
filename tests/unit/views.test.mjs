@@ -90,7 +90,7 @@ test('incluir uma pessoa de execução no projeto cria o colaborador ligado à c
 
 test('base vazia de verdade: nenhum projeto de enchimento ("Meu projeto"); quem entra cria o primeiro', () => {
   assert.doesNotMatch(html, /name:'Meu projeto'/);
-  for (const k of ['isEmpty, NONE_ID', "DB.isEmpty() && !['settings', 'account', 'help', 'noproject'].includes(id)", 'Nenhum projeto ainda', 'Criar o Meu Projeto', 'body.no-project .sb-proj-area', "setItem(PROJECTS_KEY, '[]')"]) assert.ok(html.includes(k), k);
+  for (const k of ['isEmpty, NONE_ID', "DB.isEmpty() && !['settings', 'account', 'help', 'noproject', 'drpmo'].includes(id)", 'Nenhum projeto ainda', 'Criar o Meu Projeto', 'body.no-project .sb-proj-area', "setItem(PROJECTS_KEY, '[]')"]) assert.ok(html.includes(k), k);
   assert.ok(html.includes('if(!Array.isArray(cloudList)) return;'), 'a nuvem manda, inclusive lista vazia (sem exigir ao menos um projeto)');
   assert.ok(!html.includes('!cloudList.length) return;'));
 });

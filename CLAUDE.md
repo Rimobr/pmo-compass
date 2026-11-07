@@ -75,6 +75,11 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - O botão da Bússola (barra superior) aparece para **quem tem qualquer ferramenta de IA** (`Compass.paint`), não só para quem tem `ask_compass`. A janela lista só as ferramentas que a pessoa pode usar (`Compass.tools`): **Perguntar sobre os projetos** (`ask_compass`), **Perguntar aos documentos** (responde dentro da Bússola, citando a fonte), **Diagnosticar documentos (Raio-X)**, **Estimar pontos do backlog** (`manage_backlog`), **Rascunhar um documento** (`run_rites`) e **Simular um cenário (What-If)**.
 - Ferramenta de IA nova entra na lista `TOOLS` do módulo `ui/compass` com a sua permissão. Trocar de modo começa conversa nova. Os pedidos ficam no log de auditoria como `compass_question`. A consulta rápida dos Arquivos passa pela Bússola (`Compass.askDocsFrom`).
 
+## Diagnóstico PMO — Dr. PMO (pedido do dono, 07/11/2026)
+- Função própria (tela `drpmo`, menu Visão Geral, ferramenta da Bússola, convite na base vazia): a pessoa aponta os arquivos que já tem (planilhas, termos, atas…) e recebe o **veredito** (Quadro de tarefas ou Projeto; se projeto, ágil, cascata ou híbrido, com os motivos), os **riscos que já aparecem**, os **buracos**, a cobertura de documentos e a fala do Dr. PMO (o que está errado e por que usar o Compass). Vale antes de existir projeto (`view_management`).
+- **Nada é gravado**: a leitura é `FileIntake.readOnly` (descaracteriza LGPD e devolve o texto; não indexa no Repositório) e o resultado só existe na tela. Criar o quadro ou projeto é decisão da pessoa (`Wizard.open(formato)`). A IA (opcional) recebe só trechos descaracterizados, sem valores em R$, e devolve JSON validado (`DrPmoCore.parse`); sem IA vale a análise por regras (`DrPmoCore.analyze`).
+- Quadro não é cobrado por termo, escopo ou orçamento: o foco é dono, prazo e informação solta. Módulos `services/dr-pmo` e `pages/drpmo-js`; tela nova entra no `SCENES` do a11y e no mapa de visões.
+
 ## Entrega
 - Versão em 4 lugares: `version.json`, `BRAND.version` (PMO_Compass_v2.html), `package.json`, `sw.js` (`CACHE_NAME`).
 - Testes: `node tests/run.js` e `npm run test:unit` (inclui `datamap`), `npm run test:smoke`; migrações: `node scripts/db-apply.mjs --dry-run` antes de aplicar, depois `node scripts/build-schema.mjs`.

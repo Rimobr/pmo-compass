@@ -65,7 +65,7 @@ await pg.evaluate(() => DB.setProjectsFromCloud([]));
 await pg.waitForTimeout(300);
 ok(await pg.evaluate(() => DB.isEmpty() && DB.getActiveProjectId() === DB.NONE_ID), 'base vazia: não existe nenhum projeto (nem "Meu projeto" de enchimento)');
 const semProjeto = [];
-for (const id of pages.filter(p => !['settings', 'account', 'help', 'noproject'].includes(p))) {
+for (const id of pages.filter(p => !['settings', 'account', 'help', 'noproject', 'drpmo'].includes(p))) {
   const on = await pg.evaluate(async id => { try { R.go(id); } catch (e) { return 'erro: ' + e.message; } await new Promise(r => setTimeout(r, 120)); return Array.from(document.querySelectorAll('section.page.on')).map(s => s.id).join(','); }, id);
   if (on !== 'p-noproject') semProjeto.push(id + ' → ' + on);
 }
@@ -74,7 +74,7 @@ const np = await pg.evaluate(() => ({ txt: document.getElementById('p-noproject'
 ok(/Nenhum projeto ainda/.test(np.txt) && /Criar o Meu Projeto/.test(np.txt), 'o convite oferece criar o primeiro projeto');
 ok(np.label === 'Nenhum projeto' && np.areaHidden, 'o topo diz "Nenhum projeto" e o menu do projeto some');
 ok(!DEMO.test(np.txt), 'nenhum texto de demonstração');
-for (const id of ['settings', 'account', 'help']) { const on = await pg.evaluate(async id => { R.go(id); await new Promise(r => setTimeout(r, 150)); return document.getElementById('p-' + id).classList.contains('on'); }, id); ok(on, 'sem projeto, "' + id + '" continua abrindo'); }
+for (const id of ['settings', 'account', 'help', 'drpmo']) { const on = await pg.evaluate(async id => { R.go(id); await new Promise(r => setTimeout(r, 150)); return document.getElementById('p-' + id).classList.contains('on'); }, id); ok(on, 'sem projeto, "' + id + '" continua abrindo'); }
 ok(!errs.length, 'sem erros de script', errs.join(' | '));
 
 await b.close(); srv.close();

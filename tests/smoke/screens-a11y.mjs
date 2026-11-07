@@ -16,6 +16,8 @@ const port = srv.address().port;
 // Cenário: o que preparar e abrir. "open" roda dentro da página.
 const SCENES = [
   ['Meus Indicadores', `R.go('myind')`, null],
+  ['Diagnóstico PMO (antes de analisar)', `R.go('drpmo')`, null],
+  ['Diagnóstico PMO (resultado)', `R.go('drpmo'); await DrPmo.run([new File(['Tarefa;Prazo;Trocar piso;01/11;Pintar sala;05/11 atraso pendente bloqueado impedimento'], 'tarefas.csv'), new File(['EAP marcos fases cronograma'], 'plano.txt')])`, null],
   ['Quadro Kanban', `R.go('kanban')`, null],
   ['Modelos de Documentos', `R.go('modelos')`, null],
   ['Orçamento e Custos (ágil)', `R.go('budget')`, null],

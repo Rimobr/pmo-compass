@@ -620,6 +620,10 @@
         "Raio-X do Projeto",
         "view_management"
       ],
+      "drpmo": [
+        "Diagnóstico PMO",
+        "view_management"
+      ],
       "dashboard": [
         "Dashboard",
         "view_management"
