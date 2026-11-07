@@ -174,3 +174,8 @@ test('quatro temas em todo produto: Branco, Cinza, Preto e Verde (Vigilae), apli
   assert.ok(html.includes('onclick="Theme.next()"'));
   assert.ok(readFileSync(join(root, 'tests', 'smoke', 'screens-a11y.mjs'), 'utf8').includes("['dark', 'light', 'gray', 'green']"));
 });
+
+test('o sino separa Pendências do dia (resumo) de Avisos das automações, e a tela de Automações explica quando o aviso chega', () => {
+  for (const k of ['Pendências do dia</div>', 'Avisos das automações</div>', 'Se a pessoa está logada, aparecem em instantes; se não está, esperam e aparecem quando ela entrar.']) assert.ok(html.includes(k), k);
+  assert.ok(!html.includes('aparecem na tela da pessoa depois do login'));
+});

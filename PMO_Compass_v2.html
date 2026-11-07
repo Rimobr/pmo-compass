@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.69.0'
+  version: '2.69.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -6615,7 +6615,7 @@ const Notices = (() => {
   function render() {
     const b = $('nt-body'); if(!b) return;
     const names = Object.fromEntries((DB.listProjects() || []).map(p => [p.id, p.name]));
-    b.innerHTML = (typeof MyDigest !== 'undefined' ? MyDigest.panelHtml() : '') + (list.length ? sorted().map(n => '<div class="nt-item' + (n.read_at ? '' : ' unread') + ' sev-' + (n.severity || 'info') + '"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b style="font-size:13px">' + ((SEV[n.severity] || SEV.info)[1] ? '<i class="ti ' + SEV[n.severity][1] + '"></i> ' : '') + esc(n.title) + '</b><span style="margin-left:auto;font-size:11.5px;color:var(--t2)">' + esc(when(n.created_at)) + '</span></div>'
+    b.innerHTML = (typeof MyDigest !== 'undefined' ? MyDigest.panelHtml() : '') + (list.length ? '<div class="lbl" style="margin:10px 0 6px"><i class="ti ti-bolt"></i>Avisos das automações</div>' + sorted().map(n => '<div class="nt-item' + (n.read_at ? '' : ' unread') + ' sev-' + (n.severity || 'info') + '"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b style="font-size:13px">' + ((SEV[n.severity] || SEV.info)[1] ? '<i class="ti ' + SEV[n.severity][1] + '"></i> ' : '') + esc(n.title) + '</b><span style="margin-left:auto;font-size:11.5px;color:var(--t2)">' + esc(when(n.created_at)) + '</span></div>'
       + (n.detail ? '<div style="font-size:12.5px;color:var(--t1);margin-top:3px">' + esc(n.detail) + '</div>' : '')
       + '<div style="font-size:11.5px;color:var(--t2);margin-top:4px">' + esc(names[n.project_id] || '') + (n.source ? ' · ' + esc(n.source) : '') + '</div>'
       + (target(n.page) ? '<button class="btn btn-sm" style="margin-top:6px" onclick="Notices.go(\'' + esc(n.project_id) + '\',\'' + esc(n.page) + '\')"><i class="ti ti-external-link"></i>' + esc(target(n.page).label) + '</button>' : '') + '</div>').join('') : (MyDigest.pendingCount() ? '' : '<div class="rk-empty">Nenhum aviso.</div>'));
@@ -6688,7 +6688,7 @@ const MyDigest = (() => {
     const m = state.mine || [], l = state.loose || []; if(!m.length && !l.length) return '';
     const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
     const row = (ico, txt, go) => '<div class="nt-item unread"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><i class="ti ti-' + ico + '"></i><b>' + esc(txt) + '</b></div>' + (go ? '<button class="btn btn-sm" style="margin-top:6px" onclick="MyDigest.openWork()"><i class="ti ti-external-link"></i>Abrir Meu Trabalho</button>' : '') + '</div>';
-    return (m.length ? row('user-check', 'Você tem ' + m.length + ' card' + (m.length > 1 ? 's' : '') + ' em aberto', true) : '') + (l.length ? row('user-question', l.length + ' card' + (l.length > 1 ? 's' : '') + ' sem responsável cadastrado (decisão da gestão)', false) : '');
+    return '<div class="lbl" style="margin:0 0 6px"><i class="ti ti-checklist"></i>Pendências do dia</div>' + (m.length ? row('user-check', 'Você tem ' + m.length + ' card' + (m.length > 1 ? 's' : '') + ' em aberto', true) : '') + (l.length ? row('user-question', l.length + ' card' + (l.length > 1 ? 's' : '') + ' sem responsável cadastrado (decisão da gestão)', false) : '');
   }
   function openWork() {
     const per = {}; (state.mine || []).forEach(i => { per[i.project_id] = (per[i.project_id] || 0) + 1; });
@@ -14031,7 +14031,7 @@ const Agile = (() => {
       <div class="lbl">Então <span class="help-q" data-help="O que fazer. Use {id}, {titulo}, {coluna}, {responsavel}, {sprint} e {data} nos textos do aviso. Mudar dado do item vale para o item que disparou a automação." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
       ${r.actions.map(actRow).join('')}
       <div class="btn-row" style="margin:6px 0 12px"><button class="btn btn-sm" ${r.actions.length >= 5 ? 'disabled' : ''} onclick="Agile.ruleAddAct()"><i class="ti ti-plus"></i>Outra ação</button></div>
-      <div class="set-sub" style="margin-bottom:10px"><i class="ti ti-info-circle"></i> Os avisos aparecem na tela da pessoa depois do login (o botão de avisos no topo). E-mail e WhatsApp entram quando o envio estiver configurado.</div>
+      <div class="set-sub" style="margin-bottom:10px"><i class="ti ti-info-circle"></i> Os avisos chegam no botão de avisos (sino) no topo. Se a pessoa está logada, aparecem em instantes; se não está, esperam e aparecem quando ela entrar. E-mail e WhatsApp entram quando o envio estiver configurado.</div>
       <div class="btn-row" style="justify-content:flex-end"><button class="btn btn-sm" onclick="Agile.ruleCancel()">Cancelar</button><button class="btn btn-sm btn-acc" onclick="Agile.ruleSave()"><i class="ti ti-check"></i>Salvar Automação</button></div>`;
   }
   // Setters do editor; o 3º argumento "quiet" evita redesenhar (e perder o foco) a cada tecla
