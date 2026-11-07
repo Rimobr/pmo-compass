@@ -71,6 +71,10 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 ## O que aparece no cartão (pedido do dono, 07/11/2026)
 - Em Personalizar quadro → "Informações Que Aparecem no Cartão" (só quem tem `manage_backlog`: gerente do projeto, Scrum Master, PO e administrador) a gestão liga ou desliga: Código, Tipo, Pontos, Responsável, Sprint, **Prazo (até quando)**, **Bugs ligados**, **Anexos** e **Tarefas do cartão**. Padrão: tudo aparece. O título sempre aparece e os dados continuam salvos no item.
 
+## Bússola como porta única da IA (pedido do dono, 07/11/2026)
+- O botão da Bússola (barra superior) aparece para **quem tem qualquer ferramenta de IA** (`Compass.paint`), não só para quem tem `ask_compass`. A janela lista só as ferramentas que a pessoa pode usar (`Compass.tools`): **Perguntar sobre os projetos** (`ask_compass`), **Perguntar aos documentos** (responde dentro da Bússola, citando a fonte), **Diagnosticar documentos (Raio-X)**, **Estimar pontos do backlog** (`manage_backlog`), **Rascunhar um documento** (`run_rites`) e **Simular um cenário (What-If)**.
+- Ferramenta de IA nova entra na lista `TOOLS` do módulo `ui/compass` com a sua permissão. Trocar de modo começa conversa nova. Os pedidos ficam no log de auditoria como `compass_question`. A consulta rápida dos Arquivos passa pela Bússola (`Compass.askDocsFrom`).
+
 ## Entrega
 - Versão em 4 lugares: `version.json`, `BRAND.version` (PMO_Compass_v2.html), `package.json`, `sw.js` (`CACHE_NAME`).
 - Testes: `node tests/run.js` e `npm run test:unit` (inclui `datamap`), `npm run test:smoke`; migrações: `node scripts/db-apply.mjs --dry-run` antes de aplicar, depois `node scripts/build-schema.mjs`.

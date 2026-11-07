@@ -197,3 +197,14 @@ test('a gestão escolhe o que aparece no cartão: código, tipo, pontos, respons
   for (const k of ["const DEFAULT_CARD = { id: true, kind: true, points: true, assignee: true, sprint: true, bugs: true, attachments: true, checklist: true, due: true };", "['due', 'Prazo (até quando)'], ['bugs', 'Bugs ligados'], ['attachments', 'Anexos'], ['checklist', 'Tarefas do cartão']", 'const bottom = [f.bugs && rel, f.attachments && att, f.checklist && chk, f.assignee &&', 'f.due && dueChip']) assert.ok(html.includes(k), k);
   assert.ok(html.includes('data-perm="manage_backlog" onclick="Agile.openBoardCfg()"'));
 });
+
+test('Bússola é a porta única da IA: ferramentas por permissão, botão para quem tem alguma, modo documentos responde dentro dela e a consulta dos Arquivos passa por ela', () => {
+  const m = html.match(/<script data-module="ui\/compass">([\s\S]*?)<\/script>/)[1].replace(/\r\n/g, '\n');
+  for (const k of ["{ id: 'proj'", "{ id: 'docs'", "{ id: 'xray'", "{ id: 'estimate'", "{ id: 'models'", "{ id: 'whatif'", 'const tools = () => TOOLS.filter', 'function paint()', 'async function askDocs(q)', "kind: 'aid'", 'function askDocsFrom(q)', "if(mode === 'docs')"]) assert.ok(m.includes(k), k);
+  for (const k of ['id="tb-compass"', 'id="cp-tools"', "Compass.paint) Compass.paint();", "onclick=\"Compass.askDocsFrom(document.getElementById('repo-search').value)\""]) assert.ok(html.includes(k), k);
+  assert.ok(!html.includes('data-perm="ask_compass" onclick="Compass.open()"'));
+});
+
+test('Bússola: trocar de modo começa conversa nova', () => {
+  assert.ok(html.includes('function setMode(m) { if(m !== mode) items = [];'));
+});

@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.71.1'
+  version: '2.72.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -719,6 +719,11 @@ body:not([data-can~="log_hours"]) [data-perm="log_hours"],
 body:not([data-can~="view_all_hours"]) [data-perm="view_all_hours"],
 body:not([data-can~="create_projects"]) [data-perm="create_projects"],
 body:not([data-can~="ask_compass"]) [data-perm="ask_compass"]{display:none !important;}
+.cp-tools{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}
+.cp-tool{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--r6);border:1px solid var(--b2);background:transparent;color:var(--t2);cursor:pointer;font-size:12px;font-weight:500}
+.cp-tool:hover{background:var(--s2);color:var(--t1);border-color:var(--b3)}
+.cp-tool.on{background:var(--ad);border-color:var(--ab);color:var(--acc)}
+.cp-tool i{font-size:14px}
 
 .role-badge{font-size:11px;font-weight:700;letter-spacing:.03em;padding:3px 9px;border-radius:20px;background:var(--s3);color:var(--t2);white-space:nowrap}
 body[data-role="admin"] .role-badge{background:var(--ad);color:var(--acc)}
@@ -977,7 +982,7 @@ body.icons-failed i[data-fb]::before{
   <div class="tb-actions">
     <button class="ico-btn" onclick="Theme.next()" title="Trocar tema (Branco / Cinza / Preto / Verde)"><i class="ti ti-contrast-2"></i></button>
     <button class="ico-btn" onclick="CmdK.open()" title="Busca rápida (Ctrl/Cmd+K)"><i class="ti ti-search"></i></button>
-    <button class="ico-btn compass" data-perm="ask_compass" onclick="Compass.open()" title="Bússola de Negócios: pergunte sobre os projetos" aria-label="Bússola de Negócios: pergunte sobre os projetos"><i class="ti ti-compass"></i></button>
+    <button class="ico-btn compass" id="tb-compass" style="display:none" onclick="Compass.open()" title="Bússola de Negócios: a porta única da IA (perguntar, diagnosticar, estimar, rascunhar, simular)" aria-label="Bússola de Negócios: a porta única da IA"><i class="ti ti-compass"></i></button>
     <button class="ico-btn" onclick="R.go('decisions')" title="Notificações"><i class="ti ti-bell"></i><span class="bdot"></span></button>
     <button class="ico-btn" id="tb-notices" style="display:none;position:relative" onclick="Notices.open()" title="Avisos para você" aria-label="Avisos para você"><i class="ti ti-bell-ringing"></i><span id="tb-notices-n" class="notice-n" style="display:none"></span></button>
     <button class="ico-btn" data-perm="business" onclick="Wizard.open()" title="Novo projeto"><i class="ti ti-plus"></i></button>
@@ -1892,7 +1897,7 @@ body.icons-failed i[data-fb]::before{
     <p style="font-size:12.5px;color:var(--t2);margin-bottom:10px">Digite qualquer pergunta sobre o projeto — a IA busca nos documentos e responde com citação de fonte.</p>
     <div style="display:flex;gap:8px">
       <input class="input" id="repo-search" type="text" placeholder="Ex: qual é o requisito de integração? quais são os critérios de aceite de uma história?">
-      <button class="btn btn-acc" title="Abre o Chat contextual e envia a pergunta" onclick="Chat.ask(document.getElementById('repo-search').value)"><i class="ti ti-message-2"></i>Perguntar à IA</button>
+      <button class="btn btn-acc" title="Abre o Chat contextual e envia a pergunta" onclick="Compass.askDocsFrom(document.getElementById('repo-search').value)"><i class="ti ti-message-2"></i>Perguntar à IA</button>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
       <span style="font-size:11px;color:var(--t3)">Sugestões:</span>
@@ -4021,6 +4026,7 @@ const Auth = (() => {
     // Sem login o conteúdo fica inerte (nem o teclado alcança o que está atrás da tela de entrada)
     Array.from(document.body.children).filter(el => el.id !== 'login-gate' && !el.classList.contains('modal-ov') && !['SCRIPT','STYLE','LINK'].includes(el.tagName)).forEach(el => { el.inert = noLogin; });
     document.body.setAttribute('data-can', grantedScopes().join(' '));
+    if(typeof Compass !== 'undefined' && Compass.paint) Compass.paint();
     const ava = document.getElementById('tb-avatar');
     if(ava) { ava.textContent = noLogin ? '?' : initialsFor(state.name, state.role); ava.title = `Minha conta — ${state.name} (${label()})`; ava.setAttribute('aria-label', 'Minha conta: ' + state.name); }
     const tag = document.getElementById('tb-role-tag');
@@ -8585,8 +8591,45 @@ const CompassCore = (() => {
 <script data-module="ui/compass">
 const Compass = (() => {
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let digest = null, at = 0, items = [];
+  let digest = null, at = 0, items = [], mode = 'proj';
   const $ = id => document.getElementById(id);
+  // As ferramentas de IA do produto numa só porta. Cada uma só aparece para quem pode usá-la.
+  const can = p => !p || Auth.can(p), open_ = pg => !pg || Auth.canOpen(pg);
+  const TOOLS = [
+    { id: 'proj', ico: 'compass', label: 'Perguntar sobre os projetos', desc: 'Maior desvio, atrasos, horas, riscos, decisões e orçamento de todos os projetos que você acompanha.', ok: () => can('ask_compass'), mode: true },
+    { id: 'docs', ico: 'file-search', label: 'Perguntar aos documentos', desc: 'A IA busca nos documentos do projeto aberto e responde citando a fonte.', ok: () => open_('chat') || open_('repository'), mode: true },
+    { id: 'xray', ico: 'report-medical', label: 'Diagnosticar documentos (Raio-X)', desc: 'Envie documentos e receba o diagnóstico do projeto.', ok: () => open_('xray'), go: () => R.go('xray') },
+    { id: 'estimate', ico: 'sparkles', label: 'Estimar pontos do backlog', desc: 'A IA sugere os pontos e a divisão de itens grandes, calibrada pelo histórico do time.', ok: () => can('manage_backlog') && open_('backlog'), go: () => { R.go('backlog'); setTimeout(() => { try { Agile.aiEstimate(); } catch(e) { /* abre o backlog mesmo assim */ } }, 450); } },
+    { id: 'models', ico: 'file-text', label: 'Rascunhar um documento', desc: 'A IA sugere o conteúdo de um modelo com os fatos do projeto (sem valores em R$); você revê antes de entrar.', ok: () => can('run_rites') && open_('modelos'), go: () => R.go('modelos') },
+    { id: 'whatif', ico: 'arrows-split', label: 'Simular um cenário (What-If)', desc: 'Compare caminhos antes de decidir: prazo, custo e risco.', ok: () => open_('whatif'), go: () => R.go('whatif') }
+  ];
+  const tools = () => TOOLS.filter(t => { try { return t.ok(); } catch(e) { return false; } });
+  // O botão aparece se a pessoa tem pelo menos uma ferramenta
+  function paint() { const b = $('tb-compass'); if(b) b.style.display = (typeof Auth !== 'undefined' && !document.body.classList.contains('no-login') && tools().length) ? '' : 'none'; }
+  function renderTools() {
+    const box = $('cp-tools'); if(!box) return;
+    box.innerHTML = tools().map(t => '<button type="button" class="cp-tool' + (t.mode && t.id === mode ? ' on' : '') + '" onclick="Compass.tool(\'' + t.id + '\')" title="' + esc(t.desc) + '"><i class="ti ti-' + t.ico + '"></i><span>' + esc(t.label) + '</span></button>').join('');
+    const cur = TOOLS.find(t => t.id === mode); const d = $('cp-tool-desc'); if(d && cur) d.textContent = cur.desc;
+    const q = $('cp-q'); if(q) q.placeholder = mode === 'docs' ? 'Ex.: quais são os requisitos principais? qual o critério de aceite?' : 'Ex.: qual projeto está com o maior desvio?';
+    $('cp-sugs').innerHTML = (mode === 'docs' ? ['requisitos principais', 'critérios de aceite', 'lições aprendidas do projeto'] : CompassCore.SUGGESTIONS).map(s => '<button class="chat-sug" onclick="Compass.ask(this.textContent)">' + esc(s) + '</button>').join('');
+  }
+  // Trocar de modo começa uma conversa nova (a pergunta aos documentos não se mistura com a dos projetos)
+  function setMode(m) { if(m !== mode) items = []; mode = m; renderTools(); renderLog(); const q = $('cp-q'); if(q) q.focus(); if(mode === 'proj') load().then(d => { status(); if(!d && !items.length) note('A Bússola usa os dados de todos os projetos na nuvem. Entre com a sua conta para perguntar.'); }); }
+  function tool(id) {
+    const t = TOOLS.find(x => x.id === id); if(!t) return;
+    if(t.mode) { setMode(id); return; }
+    close(); if(t.go) t.go();
+  }
+  // Pergunta aos documentos do projeto aberto: usa a mesma IA e o mesmo contexto do Chat, e responde aqui dentro
+  async function askDocs(q) {
+    if(!Store.hasKeyOrCloud()) { note('Para perguntar aos documentos, configure a IA em Configurações → Inteligência artificial (ou entre na nuvem).'); return; }
+    items.push({ kind: 'wait' }); renderLog();
+    if(typeof Cloud !== 'undefined' && Cloud.pushAuditEvent) Cloud.pushAuditEvent('compass_question', 'Pergunta aos documentos pela Bússola: ' + q.slice(0, 200), { intent: 'documentos' });
+    const r = await AI.send([{ role: 'user', content: q }], { progressTitle: 'A Bússola está consultando os documentos' });
+    items = items.filter(x => x.kind !== 'wait');
+    items.push(r && r.text ? { kind: 'aid', text: r.text } : { kind: 'note', text: '❌ ' + ((r && r.error) || 'A IA não respondeu.') });
+    renderLog();
+  }
   const fmtWhen = ms => { const d = new Date(ms); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 
   async function load(force) {
@@ -8600,13 +8643,16 @@ const Compass = (() => {
     const el = $('cp-status'); if(!el) return;
     el.innerHTML = digest ? '<i class="ti ti-database"></i> Dados de ' + fmtWhen(at) + ' · ' + (digest.projects || []).length + ' projeto(s) · ' + (digest.canSeeCosts ? 'com custos' : 'sem custos') + ' · ' + (digest.canSeeHours ? 'com horas das pessoas' : 'sem horas das pessoas') + ' <button class="link-a" onclick="Compass.refresh()">Atualizar</button>' : '';
   }
-  function open() {
-    if(!Auth.guard('ask_compass')) return;
+  function open(m) {
+    if(!tools().length) { T.show('🔒 O seu perfil não tem ferramentas de IA liberadas.'); return; }
+    const before = mode;
+    if(m && tools().some(t => t.id === m)) mode = m; else if(!tools().some(t => t.id === mode)) mode = (tools().find(t => t.mode) || tools()[0]).id;
+    if(mode !== before) items = [];
     $('modal-compass').classList.remove('hidden');
-    $('cp-sugs').innerHTML = CompassCore.SUGGESTIONS.map(s => '<button class="chat-sug" onclick="Compass.ask(this.textContent)">' + esc(s) + '</button>').join('');
+    renderTools();
     renderLog();
     $('cp-q').focus();
-    load().then(d => { status(); if(!d && !items.length) note('A Bússola usa os dados de todos os projetos na nuvem. Entre com a sua conta para perguntar.'); });
+    if(mode === 'proj') load().then(d => { status(); if(!d && !items.length) note('A Bússola usa os dados de todos os projetos na nuvem. Entre com a sua conta para perguntar.'); });
   }
   function close() { $('modal-compass').classList.add('hidden'); }
   async function refresh() { await load(true); status(); T.show('✅ Dados atualizados.'); }
@@ -8619,6 +8665,7 @@ const Compass = (() => {
     const ico = '<div class="chat-ico" style="background:var(--ad)"><i class="ti ti-compass" style="color:var(--acc)"></i></div>';
     if(it.kind === 'note') return '<div class="chat-msg">' + ico + '<div class="bub ai">' + esc(it.text) + '</div></div>';
     if(it.kind === 'wait') return '<div class="chat-msg">' + ico + '<div class="bub ai"><i class="ti ti-loader-2"></i> A IA está analisando os dados…</div></div>';
+    if(it.kind === 'aid') return '<div class="chat-msg">' + ico + '<div class="bub ai">' + ai(it.text) + '<div class="set-sub" style="margin-top:6px"><i class="ti ti-file-search"></i> Resposta da IA a partir dos documentos do projeto aberto; confira a fonte citada antes de decidir.</div></div></div>';
     if(it.kind === 'ai') return '<div class="chat-msg">' + ico + '<div class="bub ai">' + ai(it.text) + '<div class="set-sub" style="margin-top:6px"><i class="ti ti-sparkles"></i> Resposta da IA a partir dos números do sistema; confira nos painéis antes de decidir.</div></div></div>';
     const a = it.a;
     return '<div class="chat-msg">' + ico + '<div class="bub ai" style="max-width:100%"><b>' + esc(a.title) + '</b>'
@@ -8644,6 +8691,7 @@ const Compass = (() => {
   }
   async function ask(q) {
     q = String(q || '').trim().slice(0, 400); if(!q) return;
+    if(mode === 'docs') { $('cp-q').value = ''; items.push({ kind: 'q', text: q }); renderLog(); await askDocs(q); return; }
     if(!Auth.can('ask_compass')) { Auth.guard('ask_compass'); return; }
     $('cp-q').value = '';
     items.push({ kind: 'q', text: q }); renderLog();
@@ -8656,14 +8704,19 @@ const Compass = (() => {
     else await viaAi(q, d);
   }
   async function detail(i) { const it = items[i]; if(!it || !it.q) return; const d = await load(); if(d) await viaAi(it.q, d, 'Explique em mais detalhe e sugira ações práticas. Pergunta: '); }
-  return { open, close, ask, refresh, detail, load };
+  setTimeout(paint, 0);
+  // Atalho da consulta rápida dos Arquivos: abre a Bússola no modo documentos e já pergunta
+  function askDocsFrom(q) { q = String(q || '').trim(); if(!q) { T.show('⚠️ Digite a pergunta primeiro.'); return; } open('docs'); ask(q); }
+  return { open, close, ask, refresh, detail, load, tool, tools, paint, setMode, askDocsFrom };
 })();
 </script>
 
 <div class="modal-ov hidden" id="modal-compass" onclick="if(event.target===this)Compass.close()">
   <div class="modal-box" style="width:780px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column" role="dialog" aria-modal="true" aria-labelledby="cp-title">
     <div class="modal-title" id="cp-title"><i class="ti ti-compass" style="color:var(--acc)"></i> Bússola de Negócios</div>
-    <div class="modal-sub">Pergunte sobre todos os projetos que você acompanha. As respostas vêm dos números do sistema, com sugestões para retomar. <span id="cp-status"></span></div>
+    <div class="modal-sub">A porta única da IA do PMO Compass: escolha o que você quer fazer. <span id="cp-status"></span></div>
+    <div class="cp-tools" id="cp-tools" role="group" aria-label="Ferramentas de IA"></div>
+    <div class="set-sub" id="cp-tool-desc" style="margin:4px 0 8px"></div>
     <div class="chat-sugs" id="cp-sugs" style="margin-bottom:8px"></div>
     <div class="chat-scroll" id="cp-log" role="log" aria-live="polite" style="flex:1;min-height:180px;max-height:46vh;overflow-y:auto"></div>
     <div class="chat-input-row" style="display:flex;gap:8px;margin-top:10px"><label for="cp-q" class="sr-only" style="position:absolute;left:-9999px">Pergunta para a Bússola de Negócios</label><input class="input" id="cp-q" type="text" maxlength="400" autocomplete="off" placeholder="Ex.: qual projeto está com maior desvio?" style="flex:1" onkeydown="if(event.key==='Enter')Compass.ask(this.value)"><button class="btn btn-acc" onclick="Compass.ask(document.getElementById('cp-q').value)"><i class="ti ti-send"></i>Perguntar</button><button class="btn" onclick="Compass.close()">Fechar</button></div>
