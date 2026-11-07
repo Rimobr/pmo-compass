@@ -463,7 +463,7 @@
       "deleteProject": "nao"
     },
     "pmo_theme_v1": {
-      "desc": "Tema de cores.",
+      "desc": "Tema escolhido: light (Branco), gray (Cinza), dark (Preto) ou green (Verde, identidade Vigilae).",
       "kind": "preferência",
       "logout": "preserva",
       "deleteProject": "nao"

@@ -165,3 +165,12 @@ test('gestão: cards sem responsável cadastrado têm aviso próprio (OK na audi
 test('resumo de entrada: coluna criada no quadro (ex.: x1) entra na soma como "outras colunas"', () => {
   assert.ok(html.includes("parts.push(outras + ' em outras colunas do quadro')"));
 });
+
+test('quatro temas em todo produto: Branco, Cinza, Preto e Verde (Vigilae), aplicados antes da primeira pintura e no botão da barra', () => {
+  const th = html.match(/<script data-module="core\/theme">([\s\S]*?)<\/script>/)[1];
+  for (const k of ["label:'Branco'", "label:'Cinza'", "label:'Preto'", "label:'Verde'", "|| theme === 'green'", 'function next()']) assert.ok(th.includes(k), k);
+  assert.ok(html.includes('html[data-theme="green"] {') && html.includes('html[data-theme="green"] .sidebar {'));
+  assert.ok(html.includes("t === 'light' || t === 'gray' || t === 'green'"));
+  assert.ok(html.includes('onclick="Theme.next()"'));
+  assert.ok(readFileSync(join(root, 'tests', 'smoke', 'screens-a11y.mjs'), 'utf8').includes("['dark', 'light', 'gray', 'green']"));
+});

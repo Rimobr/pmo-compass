@@ -55,6 +55,10 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - **Gestão** (quem tem `manage_backlog`: gerente, Scrum Master, PO, administrador) recebe também "Cards Sem Responsável Cadastrado" (sem nome, ou nome que não é de pessoa ligada a conta), no mesmo molde, com OK em `digest_ack_unassigned`. O **sino** soma avisos não lidos + cards pendentes e a janela do sino traz esse painel no topo.
 - **Parâmetro da organização** `entryDigest` (tabela `org_settings`, só o administrador grava) em Configurações → Resumo de Entrada: `diario` (padrão, já gravado: uma vez por dia e de novo se chegar card novo), `login` (a cada login) ou `off`. Sem valor gravado vale `diario`.
 
+## Quatro temas (regra do dono, 06/11/2026; vale para todas as aplicações)
+- **Branco** (`light`), **Cinza** (`gray`), **Preto** (`dark`, sem atributo; é o padrão) e **Verde** (`green`, identidade Vigilae: fundo claro, marca verde-petróleo e barra lateral verde escura com realce âmbar). Módulo `core/theme` (`Theme.set`, `Theme.next`); o botão da barra superior passa ao tema seguinte e Configurações lista os quatro. Aplicado por script no `<head>` antes da primeira pintura; `<meta theme-color>` acompanha. Chave `pmo_theme_v1` (fica ao sair da conta).
+- `npm run test:a11y` roda o axe e o teste de 375 px nos **quatro** temas; tela ou janela nova passa nos quatro. Cores só por token (`var(--...)`); o Verde redefine os tokens da barra lateral só dentro dela.
+
 ## Entrega
 - Versão em 4 lugares: `version.json`, `BRAND.version` (PMO_Compass_v2.html), `package.json`, `sw.js` (`CACHE_NAME`).
 - Testes: `node tests/run.js` e `npm run test:unit` (inclui `datamap`), `npm run test:smoke`; migrações: `node scripts/db-apply.mjs --dry-run` antes de aplicar, depois `node scripts/build-schema.mjs`.

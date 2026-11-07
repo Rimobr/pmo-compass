@@ -61,7 +61,7 @@ await pg.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' }); a
 await pg.evaluate(`(async () => { ${SETUP} })()`);
 
 const closeAll = () => pg.evaluate(`document.querySelectorAll('.modal-ov').forEach(m => m.classList.add('hidden'))`);
-for (const theme of ['dark', 'light', 'gray']) {
+for (const theme of ['dark', 'light', 'gray', 'green']) {
   await pg.evaluate(`Theme.set('${theme}')`);
   for (const [name, open, modal] of SCENES) {
     await closeAll();
