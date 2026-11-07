@@ -68,6 +68,9 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - A pessoa é a **conta** (Pessoas e Acesso). "Quem sou eu" (`MyWork.names`) é, nesta ordem: o colaborador ligado à minha conta, o colaborador com o meu nome, ou o **nome do meu cadastro** (administrador ainda fora da equipe); é o mesmo que o card aceita como responsável e que o resumo de entrada conta. Meu Trabalho e Meus Indicadores avisam quando a pessoa aparece só pelo nome e oferecem **Entrar na Equipe Deste Projeto** (`Cloud.joinTeam`: dá o acesso ao projeto, o que já cria o colaborador ligado; administrador, ou gerente do projeto se o banco permitir).
 - O card guarda o **nome**: ao renomear um colaborador, `Agile.renamePerson` leva os cards dele para o nome novo (depois de gravar o colaborador).
 
+## O que aparece no cartão (pedido do dono, 07/11/2026)
+- Em Personalizar quadro → "Informações Que Aparecem no Cartão" (só quem tem `manage_backlog`: gerente do projeto, Scrum Master, PO e administrador) a gestão liga ou desliga: Código, Tipo, Pontos, Responsável, Sprint, **Prazo (até quando)**, **Bugs ligados**, **Anexos** e **Tarefas do cartão**. Padrão: tudo aparece. O título sempre aparece e os dados continuam salvos no item.
+
 ## Entrega
 - Versão em 4 lugares: `version.json`, `BRAND.version` (PMO_Compass_v2.html), `package.json`, `sw.js` (`CACHE_NAME`).
 - Testes: `node tests/run.js` e `npm run test:unit` (inclui `datamap`), `npm run test:smoke`; migrações: `node scripts/db-apply.mjs --dry-run` antes de aplicar, depois `node scripts/build-schema.mjs`.

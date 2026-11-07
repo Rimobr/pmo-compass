@@ -192,3 +192,8 @@ test('sprint travada no card novo avisa no rótulo que o responsável é obrigat
 test('pessoa única: "quem sou eu" cai no nome do cadastro, administrador entra na equipe com um clique e o renome leva os cards', () => {
   for (const k of ['return { names: [Auth.getName()], roles: [], linked: false, viaConta: true };', 'function linkHint()', 'MyWork.joinTeam()', "'</b></div>' + MyWork.linkHint() + kp", 'async function joinTeam(projectId)', 'return setProjectAccess(session.user.id, projectId, true);', 'function renamePerson(oldName, newName)', 'Agile.renamePerson(oldName, name)', 'return track(client.from(\'team_members\').upsert(']) assert.ok(html.includes(k), k);
 });
+
+test('a gestão escolhe o que aparece no cartão: código, tipo, pontos, responsável, sprint, prazo, bugs ligados, anexos e tarefas', () => {
+  for (const k of ["const DEFAULT_CARD = { id: true, kind: true, points: true, assignee: true, sprint: true, bugs: true, attachments: true, checklist: true, due: true };", "['due', 'Prazo (até quando)'], ['bugs', 'Bugs ligados'], ['attachments', 'Anexos'], ['checklist', 'Tarefas do cartão']", 'const bottom = [f.bugs && rel, f.attachments && att, f.checklist && chk, f.assignee &&', 'f.due && dueChip']) assert.ok(html.includes(k), k);
+  assert.ok(html.includes('data-perm="manage_backlog" onclick="Agile.openBoardCfg()"'));
+});

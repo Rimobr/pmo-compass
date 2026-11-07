@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.71.0'
+  version: '2.71.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2387,7 +2387,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div id="ab-policy" style="margin-bottom:12px"></div>
     <div class="lbl">Como os itens entram no quadro<span class="help-q" data-help="Scrum (padrão): todo item nasce no Backlog, é estimado e priorizado, e só entra no quadro quando entra numa sprint (Planejar sprint). O quadro mostra apenas a sprint ativa. Kanban contínuo: sem sprints; os itens são criados e importados direto no quadro, e o limite de itens em andamento controla o fluxo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <select class="input" id="ab-entry" aria-label="Como os itens entram no quadro" style="margin-bottom:12px"><option value="scrum">Scrum — pelo Backlog e pela sprint (recomendado)</option><option value="kanban">Kanban contínuo — direto no quadro, sem sprints</option></select>
-    <div class="lbl">Informações Que Aparecem no Cartão<span class="help-q" data-help="Cartões mais enxutos deixam o quadro mais limpo; o título sempre aparece. Os dados continuam salvos no item mesmo escondidos." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div class="lbl">Informações Que Aparecem no Cartão<span class="help-q" data-help="Cartões mais enxutos deixam o quadro mais limpo; o título sempre aparece. Quem decide é a gestão (gerente do projeto, Scrum Master, PO ou administrador). Os dados continuam salvos no item mesmo escondidos." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div id="ab-card" style="display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--t1)"></div>
     <div class="btn-row" style="margin-top:14px;justify-content:space-between">
       <button class="btn btn-sm" onclick="Agile.resetBoardCfg()">Restaurar Padrão</button>
@@ -12340,7 +12340,7 @@ const AgileCalc = (() => {
   const diffDays = (a, b) => Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / DAY);
   // Colunas do quadro: "todo" sempre a primeira e "done" sempre a última; no meio de 0 a 5 colunas livres (nome técnico curto, rótulo à vontade)
   const KEY_RE = /^[a-z0-9]{1,12}$/;
-  const DEFAULT_CARD = { id: true, kind: true, points: true, assignee: true, sprint: true };
+  const DEFAULT_CARD = { id: true, kind: true, points: true, assignee: true, sprint: true, bugs: true, attachments: true, checklist: true, due: true };
   function cols(cfg) {
     const raw = cfg && Array.isArray(cfg.columns) ? cfg.columns : null;
     if(!raw) return COLS.map(c => ({ ...c }));
@@ -13540,7 +13540,7 @@ const Agile = (() => {
     const rel = i.kind === 'bug' ? (i.parentId ? `<span class="chip" title="Este bug é filho do item ${esc(i.parentId)}"><i class="ti ti-corner-down-right"></i>de ${esc(i.parentId)}</span>` : '<span class="badge b-amb" title="Bug antigo, sem item pai: abra o cartão e escolha o item">sem item pai</span>') : (kidsAll.length ? `<span class="chip" title="Bugs ligados a este item"><i class="ti ti-bug"></i>${kidsOpen.length}/${kidsAll.length} bug(s)</span>` : '');
     const att = (Array.isArray(i.attachments) && i.attachments.length) ? `<span class="chip" title="Anexos do bug"><i class="ti ti-paperclip"></i>${i.attachments.length}</span>` : '';
     const chk = Array.isArray(i.checklist) && i.checklist.length ? `<span class="chip" title="Tarefas concluídas do cartão"><i class="ti ti-checklist"></i>${i.checklist.filter(c => c.done).length}/${i.checklist.length}</span>` : '';
-    const bottom = [rel, att, chk, f.assignee && (i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'), f.sprint && sp && `<span class="chip">${esc(sp.name)}</span>`, dueChip].filter(Boolean).join('');
+    const bottom = [f.bugs && rel, f.attachments && att, f.checklist && chk, f.assignee && (i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'), f.sprint && sp && `<span class="chip">${esc(sp.name)}</span>`, f.due && dueChip].filter(Boolean).join('');
     // O cartão é um grupo; só o título é o botão de abrir (botão dentro de botão não é acessível por leitor de tela)
     const act = Auth.can('update_own');
     return `<div class="kb-card"${act ? ` draggable="true" ondragstart="Agile.dragStart(event,'${esc(i.id)}')" ondragend="this.classList.remove('dragging')" onclick="Agile.openItem('${esc(i.id)}')"` : ''} role="group" data-id="${esc(i.id)}" aria-label="${esc(i.id)}: ${esc(i.title)}">
@@ -13633,7 +13633,7 @@ const Agile = (() => {
   function setBoardSprint(v) { boardSprint = v; renderKanban(); }
   // ───────── Personalizar o quadro (colunas, limites e campos do cartão) ─────────
   let boardDraft = null;
-  const CARD_FIELDS = [['id', 'Código'], ['kind', 'Tipo'], ['points', 'Pontos'], ['assignee', 'Responsável'], ['sprint', 'Sprint']];
+  const CARD_FIELDS = [['id', 'Código'], ['kind', 'Tipo'], ['points', 'Pontos'], ['assignee', 'Responsável'], ['sprint', 'Sprint'], ['due', 'Prazo (até quando)'], ['bugs', 'Bugs ligados'], ['attachments', 'Anexos'], ['checklist', 'Tarefas do cartão']];
   function openBoardCfg() {
     if(!Auth.guard('manage_backlog')) return;
     load();

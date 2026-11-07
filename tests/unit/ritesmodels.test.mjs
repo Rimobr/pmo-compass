@@ -32,7 +32,7 @@ test('limite WIP e vizinhança seguem as colunas personalizadas', () => {
   assert.equal(w.find(c => c.key === 'x1').over, true);
   assert.equal(AgileCalc.neighbor('x1', 1, cfg), 'done'); assert.equal(AgileCalc.neighbor('x1', -1, cfg), 'todo'); assert.equal(AgileCalc.neighbor('done', 1, cfg), null);
   assert.equal(AgileCalc.colLabel(cfg, 'x1'), 'Teste'); assert.equal(AgileCalc.colLabel(cfg, 'sumiu'), 'A fazer');
-  assert.deepEqual(cfg.card, { id: true, kind: true, points: true, assignee: true, sprint: true });
+  assert.deepEqual(cfg.card, { id: true, kind: true, points: true, assignee: true, sprint: true, bugs: true, attachments: true, checklist: true, due: true });
 });
 
 // ── Ritos ──
