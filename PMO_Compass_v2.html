@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.70.0'
+  version: '2.70.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -14095,13 +14095,15 @@ const Agile = (() => {
   // ───────── Modais ─────────
   const val = id => document.getElementById(id).value;
   const isBoardNow = () => document.body.classList.contains('is-board');
-  // O campo Sprint só abre depois de escolher o responsável cadastrado (sem isso o cartão não é atrelado a sprint)
+  // Sprint do card: criado pelo Quadro Kanban (dentro da sprint ativa), ela já vem escolhida e travada; criado pelo Backlog, o campo é livre e começa em "Sem sprint".
+  // Quem escolhe sprint sem responsável cadastrado é avisado ao salvar (a sprint exige a pessoa).
   function syncSprintLock() {
     const el = document.getElementById('ai-sprint'); if(!el) return;
-    const bad = AgileCalc.sprintAssigneeError(val('ai-assignee'), teamNames());
-    el.disabled = !Auth.can('manage_backlog') || !!bad;
-    if(el.options[0]) el.options[0].textContent = bad ? 'Escolha o responsável primeiro' : 'Sem sprint';
-    el.title = bad ? 'Escolha o responsável cadastrado para poder colocar o item numa sprint.' : '';
+    const locked = !!presetSprint && !itemCtx;
+    el.disabled = !Auth.can('manage_backlog') || locked;
+    el.title = locked ? 'Este item está sendo criado dentro da sprint ativa; a sprint não muda aqui.' : '';
+    if(el.options[0]) el.options[0].textContent = 'Sem sprint';
+    const lb = document.querySelector('label[for="ai-assignee"]'); if(lb) lb.textContent = locked ? 'Responsável (obrigatório na sprint)' : 'Responsável';
   }
   function fillSprintSelect(sel) {
     document.getElementById('ai-sprint').innerHTML = '<option value="">Sem sprint</option>' + sprints.filter(s => s.state !== 'encerrada' || s.id === sel).map(s => `<option value="${esc(s.id)}"${s.id === sel ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
@@ -14122,7 +14124,7 @@ const Agile = (() => {
     document.getElementById('ai-status-grp').style.display = it ? '' : 'none';
     document.getElementById('ai-del').style.display = it ? '' : 'none';
     fillAssignee(it ? it.assignee : '');
-    presetSprint = (!it && isBoardNow() && active()) ? active().id : '';
+    presetSprint = (!it && location.hash === '#kanban' && active()) ? active().id : ''; // só quando o card nasce no Quadro Kanban
     fillSprintSelect(it ? it.sprintId : presetSprint);
     fillParent(it ? it.parentId : '', it ? it.id : '');
     kindChanged();
@@ -14280,7 +14282,7 @@ const Agile = (() => {
     if(reason.length < 5) { if(reason) T.show('⚠️ Descreva o motivo (mínimo 5 letras).'); return; }
     openItem(); urgent = { reason, sprintId: a.id };
     document.getElementById('ai-title-h').textContent = 'Item urgente — ' + a.name;
-    document.getElementById('ai-sprint').value = a.id;
+    presetSprint = a.id; document.getElementById('ai-sprint').value = a.id; syncSprintLock();
     document.getElementById('ai-title').focus();
   }
   // Com a nuvem: só quem tem conta cadastrada em Pessoas e Acesso (colaborador ligado à conta, o que acontece ao dar acesso ao projeto). Só neste navegador não há contas: vale a equipe toda
@@ -14346,8 +14348,6 @@ const Agile = (() => {
     let it = itemCtx ? items.find(x => x.id === itemCtx) : null;
     const f = { title, kind: val('ai-kind'), points, assignee: val('ai-assignee').trim(), description: val('ai-desc').trim(), sprintId: val('ai-sprint') };
     f.parentId = f.kind === 'bug' ? val('ai-parent') : '';
-    // Card novo no Quadro vem na sprint ativa; sem responsável cadastrado ele fica fora dela (a sprint exige a pessoa) e o aviso explica
-    if(!itemCtx && presetSprint && f.sprintId === presetSprint && AgileCalc.sprintAssigneeError(f.assignee, teamNames())) { f.sprintId = ''; T.show('ℹ️ Sem responsável cadastrado, o card ficou fora da sprint. Escolha a pessoa e o sprint no card para controlar o prazo.', 6000); }
     const urg = (!itemCtx && urgent) ? urgent : null;
     if(urg) { f.sprintId = urg.sprintId; f.description = (f.description ? f.description + '\n\n' : '') + 'Incluído durante a sprint (mudança de escopo) — motivo: ' + urg.reason; }
     const bad = AgileCalc.bugParentError({ ...f, id: itemCtx || '' }, items, { board: isBoardNow() });

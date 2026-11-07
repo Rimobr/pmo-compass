@@ -112,7 +112,7 @@ test('recusa de responsável ajuda: quem pode vai a Pessoas e Acesso; quem não 
 });
 
 test('campo Sprint só abre com responsável escolhido; backlog, planejamento e importação respeitam a mesma regra', () => {
-  for (const k of ['onchange="Agile.syncSprintLock()"', 'function syncSprintLock()', "'Escolha o responsável primeiro'", 'AgileCalc.sprintAssigneeError(it.assignee, teamNames())', 'Ficaram de fora da sprint por falta de responsável cadastrado', 'entraram em "A fazer", sem sprint', 'kindPicked, syncSprintLock,']) assert.ok(html.includes(k), k);
+  for (const k of ['onchange="Agile.syncSprintLock()"', 'function syncSprintLock()', "'Este item está sendo criado dentro da sprint ativa; a sprint não muda aqui.'", 'AgileCalc.sprintAssigneeError(it.assignee, teamNames())', 'Ficaram de fora da sprint por falta de responsável cadastrado', 'entraram em "A fazer", sem sprint', 'kindPicked, syncSprintLock,']) assert.ok(html.includes(k), k);
 });
 
 test('janela do cartão: Excluir, Cancelar e Salvar ficam no cabeçalho fixo; "Incluir na Equipe" inclui sozinho quando acha a conta', () => {
@@ -171,8 +171,20 @@ test('o sino separa Pendências do dia (resumo) de Avisos das automações, e a 
 
 
 test('Quadro tem sprint simples: janela de tempo (2 semanas), prazo em cada card, faixa com encerrar e transbordo; sem planejamento por pontos, meta nem capacidade', () => {
-  for (const k of ['function boardBar(act)', 'Encerrar e Decidir o que Sobrou', 'Agile.openDue(', 'Agile.startSprint(', "boardSprint === '__auto' ? (isB ? '__all'", "'Todos os cards'", 'const dueChip =', 'atrasado · ', 'function sprintDur()', 'id="as-dur"', 'id="as-goal-grp"', 'id="as-cap-grp"', 'presetSprint = (!it && isBoardNow() && active())']) assert.ok(html.includes(k), k);
+  for (const k of ['function boardBar(act)', 'Encerrar e Decidir o que Sobrou', 'Agile.openDue(', 'Agile.startSprint(', "boardSprint === '__auto' ? (isB ? '__all'", "'Todos os cards'", 'const dueChip =', 'atrasado · ', 'function sprintDur()', 'id="as-dur"', 'id="as-goal-grp"', 'id="as-cap-grp"', "presetSprint = (!it && location.hash === '#kanban' && active())"]) assert.ok(html.includes(k), k);
   assert.ok(html.includes('body.is-board [onclick*="openPlanNext"],body.is-board #as-goal-grp,body.is-board #as-cap-grp{display:none !important}'));
   assert.ok(!html.includes('body.is-board #kb-sprint,'));
   assert.ok(html.includes('<select class="input" data-perm="manage_backlog" aria-label="Sprint do item'));
+});
+
+test('Sprint do card novo: pelo Quadro Kanban vem escolhida e travada; pelo Backlog é livre e começa em "Sem sprint"; sem aviso silencioso', () => {
+  const m = html.replace(/\r\n/g, '\n').match(/function syncSprintLock\(\) \{[\s\S]*?\n  \}\n/)[0];
+  for (const k of ['const locked = !!presetSprint && !itemCtx;', "el.options[0].textContent = 'Sem sprint'"]) assert.ok(m.includes(k), k);
+  assert.ok(!m.includes('sprintAssigneeError'), 'o campo não trava mais por falta de responsável');
+  assert.ok(html.includes("presetSprint = a.id; document.getElementById('ai-sprint').value = a.id; syncSprintLock();"));
+  assert.ok(!html.includes('o card ficou fora da sprint'));
+});
+
+test('sprint travada no card novo avisa no rótulo que o responsável é obrigatório', () => {
+  assert.ok(html.includes("'Responsável (obrigatório na sprint)' : 'Responsável'"));
 });
