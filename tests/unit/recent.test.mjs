@@ -208,3 +208,7 @@ test('Bússola é a porta única da IA: ferramentas por permissão, botão para 
 test('Bússola: trocar de modo começa conversa nova', () => {
   assert.ok(html.includes('function setMode(m) { if(m !== mode) items = [];'));
 });
+
+test('os blocos Gestão do Projeto e Quadros / Kanban têm fundo mais escuro que o resto do menu', () => {
+  for (const k of ['.sidebar{--sb-dark:70%}', 'html[data-theme="light"] .sidebar{--sb-dark:93%}', '#sbg-quadros{background:color-mix(in srgb,var(--s1) var(--sb-dark,70%),#000)', '.sb-proj-area{display:flex;flex-direction:column;gap:1px;background:color-mix(in srgb,var(--s1) var(--sb-dark,70%),#000)']) assert.ok(html.includes(k), k);
+});

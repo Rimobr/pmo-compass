@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.73.1'
+  version: '2.73.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -319,7 +319,12 @@ body.no-login #login-gate{display:flex}
 .sb-divl{display:flex;align-items:center;gap:8px;margin:12px 4px 6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);white-space:nowrap}
 .sb-divl::before,.sb-divl::after{content:'';flex:1;height:1px;background:var(--b2)}
 /* A área de gestão do projeto tem um fundo levemente diferente: o olho separa "diretoria/PMO" de "gerente e equipe" */
-.sb-proj-area{display:flex;flex-direction:column;gap:1px;background:var(--s2);background:color-mix(in srgb, var(--acc) 6%, var(--s1));border:1px solid var(--b1);border-radius:var(--r8);padding:0 4px 6px;margin:8px -2px 4px}
+.sb-proj-area{display:flex;flex-direction:column;gap:1px;background:color-mix(in srgb,var(--s1) var(--sb-dark,70%),#000);border:1px solid var(--b2);border-radius:var(--r8);padding:0 4px 6px;margin:8px -2px 4px}
+/* Os dois blocos de trabalho (Gestão do Projeto e Quadros / Kanban) ficam num fundo mais escuro que o resto do menu; no tema Branco o escurecimento é leve para não perder contraste */
+.sidebar{--sb-dark:70%}
+html[data-theme="light"] .sidebar{--sb-dark:93%}
+#sbg-quadros{background:color-mix(in srgb,var(--s1) var(--sb-dark,70%),#000);border:1px solid var(--b2);border-radius:var(--r8);padding:0 4px 4px;margin:8px -2px 4px}
+.sidebar.collapsed #sbg-quadros{padding:0 2px 4px;margin:8px 0 4px}
 .sb-proj-area .sb-divl{margin-top:8px}
 .proj-pick{position:relative}
 .proj-pick summary{cursor:pointer;list-style:none;width:auto;display:inline-flex;align-items:center;gap:6px;user-select:none}

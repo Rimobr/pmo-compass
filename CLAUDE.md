@@ -80,6 +80,9 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - **Nada é gravado**: a leitura é `FileIntake.readOnly` (descaracteriza LGPD e devolve o texto; não indexa no Repositório) e o resultado só existe na tela. Criar o quadro ou projeto é decisão da pessoa (`Wizard.open(formato)`). A IA (opcional) recebe só trechos descaracterizados, sem valores em R$, e devolve JSON validado (`DrPmoCore.parse`); sem IA vale a análise por regras (`DrPmoCore.analyze`).
 - Quadro não é cobrado por termo, escopo ou orçamento: o foco é dono, prazo e informação solta. Módulos `services/dr-pmo` e `pages/drpmo-js`; tela nova entra no `SCENES` do a11y e no mapa de visões.
 
+## Destaque dos blocos de trabalho no menu (pedido do dono, 07/11/2026)
+- "Gestão do Projeto" (`.sb-proj-area`) e "Quadros / Kanban" (`#sbg-quadros`) têm **fundo mais escuro** que o resto do menu (`color-mix` do `--s1` com preto, `--sb-dark`: 70%; no tema Branco 93%, para não perder contraste) e borda, para separar visualmente os dois blocos onde a pessoa trabalha. Vale nos quatro temas.
+
 ## Entrega
 - Versão em 4 lugares: `version.json`, `BRAND.version` (PMO_Compass_v2.html), `package.json`, `sw.js` (`CACHE_NAME`).
 - Testes: `node tests/run.js` e `npm run test:unit` (inclui `datamap`), `npm run test:smoke`; migrações: `node scripts/db-apply.mjs --dry-run` antes de aplicar, depois `node scripts/build-schema.mjs`.
