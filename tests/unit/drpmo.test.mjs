@@ -106,3 +106,17 @@ test('Diagnóstico PMO está ligado ao produto: página, menu, permissão, base 
   const ui = html.match(/<script data-module="pages\/drpmo-js">([\s\S]*?)<\/script>/)[1];
   assert.ok(!/DB\.set|Repo\.add|localStorage\.setItem/.test(ui), 'o diagnóstico não grava nada');
 });
+
+test('o diagnóstico tem versão para imprimir ou salvar em PDF, em documento próprio e sem gravar', () => {
+  for (const k of ['DrPmo.pdf()', 'Salvar em PDF / Imprimir', 'function printHtml()', "fr.srcdoc = printHtml()"]) assert.ok(html.includes(k), k);
+  const ui = html.match(/<script data-module="pages\/drpmo-js">([\s\S]*?)<\/script>/)[1];
+  const fn = ui.match(/function printHtml\(\) \{[\s\S]*?\n  \}\n/)[0];
+  assert.ok(!/DB\.set|Repo\.add|localStorage\.setItem/.test(fn));
+  assert.match(fn, /Riscos que já conseguimos apresentar/);
+  assert.match(fn, /O que o Dr\. PMO tem a dizer/);
+});
+
+test('quadro não mostra a cobertura de documentos de projeto, nem na tela nem no PDF', () => {
+  assert.ok(html.includes("const cov = v.formato === 'quadro' ? ''"));
+  assert.ok(html.includes("(v.formato === 'quadro' ? '' : '<h2>Cobertura dos documentos</h2>"));
+});

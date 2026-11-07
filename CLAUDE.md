@@ -90,3 +90,7 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - Antes de publicar: `npm run check:all` (lint ESLint, versão nos 4 lugares, segredos, SQL, esquema, testes, smoke e `test:a11y`: axe nos três temas e 375 px das telas e janelas novas; tela ou janela nova entra na lista `SCENES` de `tests/smoke/screens-a11y.mjs`). O CI roda o mesmo e ainda `npm audit` das dependências de produção; o CI também falha se o app mudar sem a versão subir. Ao subir uma versão: `npm run changelog` (gera o CHANGELOG.md do Git; os commits terminam com `(x.y.z)`).
 - O arquivo principal usa CRLF: edições de várias linhas por script Node (normalizar para LF e devolver CRLF).
 - Ler os bugs de um projeto para corrigir outro sistema: `node scripts/read-bugs.mjs "<nome do projeto>"` (somente leitura; gera `bugs-export/<projeto>/bugs.md` com anexos). Não corrigir o código de outro projeto a partir desta sessão: entregar a pasta para a sessão daquele projeto. Está explícito no sistema: Configurações → Inteligência artificial → "Ler os bugs com uma IA" (comando e instrução prontos para copiar) e na Ajuda.
+
+## Diagnóstico PMO em PDF (pedido do dono, 07/11/2026)
+- Na tela do Dr. PMO, "Salvar em PDF / Imprimir" (`DrPmo.pdf`) monta um **documento próprio** (iframe oculto, não imprime o app) com veredito, motivos, riscos, buracos, cobertura e a fala do Dr. PMO, para mostrar ao cliente. Nada é gravado.
+- **Quadro** não mostra a cobertura de documentos de projeto (termo, escopo, orçamento…), nem na tela nem no PDF.

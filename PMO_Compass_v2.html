@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.73.2'
+  version: '2.74.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -10558,13 +10558,14 @@ const DrPmo = (() => {
     const head = '<div class="card card-accent"><div class="lbl" style="color:var(--acc)"><i class="ti ti-stethoscope"></i>Veredito do Dr. PMO</div>'
       + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 8px"><span class="badge b-acc" style="font-size:12px">' + (v.formato === 'quadro' ? 'Isto é um Quadro de tarefas' : 'Isto é um Projeto') + '</span>' + (v.metodologia ? '<span class="badge b-acc" style="font-size:12px">Metodologia sugerida: ' + MET[v.metodologia] + '</span>' : '') + '<span class="set-sub">' + last.read.docs.length + ' arquivo(s) lidos aqui no seu navegador' + (last.read.redactions ? ' · ' + last.read.redactions + ' dado(s) pessoal(is) descaracterizado(s)' : '') + '</span></div>'
       + '<ul style="margin:0 0 10px 18px;font-size:12.5px;color:var(--t1);line-height:1.65">' + v.porque.map(m => '<li>' + esc(m) + '</li>').join('') + '</ul>'
-      + '<div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="DrPmo.create()"><i class="ti ti-plus"></i>' + (v.formato === 'quadro' ? 'Criar como Quadro' : 'Criar como Projeto ' + MET[v.metodologia]) + '</button><button class="btn btn-sm" onclick="DrPmo.copy()"><i class="ti ti-copy"></i>Copiar o Diagnóstico</button><button class="btn btn-sm" onclick="DrPmo.reset()"><i class="ti ti-refresh"></i>Nova Análise</button></div>'
+      + '<div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="DrPmo.create()"><i class="ti ti-plus"></i>' + (v.formato === 'quadro' ? 'Criar como Quadro' : 'Criar como Projeto ' + MET[v.metodologia]) + '</button><button class="btn btn-sm" onclick="DrPmo.pdf()"><i class="ti ti-file-type-pdf"></i>Salvar em PDF / Imprimir</button><button class="btn btn-sm" onclick="DrPmo.copy()"><i class="ti ti-copy"></i>Copiar o Diagnóstico</button><button class="btn btn-sm" onclick="DrPmo.reset()"><i class="ti ti-refresh"></i>Nova Análise</button></div>'
       + '<div class="set-sub" style="margin-top:8px"><i class="ti ti-shield-check"></i> Nada foi gravado: o diagnóstico existe só nesta tela. Criar o quadro ou o projeto é decisão sua.</div></div>';
     const risksArr = (ai && ai.ok && ai.data.riscos.length ? ai.data.riscos : L.risks), gapsArr = (ai && ai.ok && ai.data.buracos.length ? ai.data.buracos : L.gaps);
     const riskHtml = risksArr.length ? risksArr.map(r => '<div class="set-row" style="gap:8px;align-items:flex-start"><span class="badge ' + SEV[r.gravidade][0] + '">' + SEV[r.gravidade][1] + '</span><div style="flex:1;min-width:0"><b>' + esc(r.titulo) + '</b><div style="font-size:12px;color:var(--t2);margin-top:2px">' + esc(r.evidencia) + '</div><div style="font-size:12px;color:var(--t1);margin-top:2px"><i class="ti ti-route"></i> ' + esc(r.acao) + '</div></div></div>').join('') : '<div class="rk-empty">Nenhum risco aparente só pelos documentos.</div>';
     const gapHtml = gapsArr.length ? gapsArr.map(g => '<div class="set-row" style="gap:8px;align-items:flex-start"><i class="ti ti-alert-triangle" style="color:var(--amb);margin-top:2px"></i><div style="flex:1;min-width:0"><b>' + esc(g.titulo) + '</b><div style="font-size:12px;color:var(--t2);margin-top:2px">' + esc(g.detalhe) + '</div><div style="font-size:12px;color:var(--t1);margin-top:2px"><i class="ti ti-circle-check" style="color:var(--grn)"></i> ' + esc(g.como_resolver) + '</div></div></div>').join('') : '<div class="rk-empty">Nenhum buraco aparente.</div>';
     const two = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin-top:12px"><div class="card"><div class="lbl"><i class="ti ti-alert-octagon"></i>Riscos que já conseguimos apresentar <span class="badge">' + risksArr.length + '</span></div>' + riskHtml + '</div><div class="card"><div class="lbl"><i class="ti ti-hole"></i>Os buracos (o que falta ou está solto) <span class="badge">' + gapsArr.length + '</span></div>' + gapHtml + '</div></div>';
-    const cov = '<div class="card" style="margin-top:12px"><div class="lbl"><i class="ti ti-checklist"></i>Cobertura dos documentos</div><div style="overflow-x:auto" tabindex="0" role="region" aria-label="Cobertura dos documentos (role para os lados se precisar)"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:480px"><thead><tr><th scope="col" style="text-align:left;padding:6px 8px">O que um projeto precisa ter por escrito</th><th scope="col" style="text-align:left;padding:6px 8px">Situação</th><th scope="col" style="text-align:left;padding:6px 8px">Onde apareceu</th></tr></thead><tbody>'
+    // Quadro não é cobrado por termo, escopo ou orçamento: a cobertura só aparece para projeto
+    const cov = v.formato === 'quadro' ? '' : '<div class="card" style="margin-top:12px"><div class="lbl"><i class="ti ti-checklist"></i>Cobertura dos documentos</div><div style="overflow-x:auto" tabindex="0" role="region" aria-label="Cobertura dos documentos (role para os lados se precisar)"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:480px"><thead><tr><th scope="col" style="text-align:left;padding:6px 8px">O que um projeto precisa ter por escrito</th><th scope="col" style="text-align:left;padding:6px 8px">Situação</th><th scope="col" style="text-align:left;padding:6px 8px">Onde apareceu</th></tr></thead><tbody>'
       + L.coverage.map(c => '<tr style="border-top:1px solid var(--b1)"><td style="padding:6px 8px">' + esc(c.label) + '</td><td style="padding:6px 8px">' + (c.gap ? '<span class="badge b-red">Falta</span>' : '<span class="badge b-grn">Encontrado</span>') + '</td><td style="padding:6px 8px;color:var(--t2);overflow-wrap:anywhere">' + (c.gap ? '—' : esc(c.found.slice(0, 3).join(', ') + (c.found.length > 3 ? '…' : ''))) + '</td></tr>').join('') + '</tbody></table></div></div>';
     const msg = (ai && ai.ok && ai.data.mensagem) ? ai.data.mensagem : L.message;
     const dr = '<div class="card" style="margin-top:12px"><div class="lbl"><i class="ti ti-message-chatbot"></i>O que o Dr. PMO tem a dizer</div><div style="font-size:13px;color:var(--t1);line-height:1.7">' + para(msg) + '</div>'
@@ -10593,8 +10594,37 @@ const DrPmo = (() => {
     const t = ['DIAGNÓSTICO PMO (Dr. PMO)', 'Formato: ' + (v.formato === 'quadro' ? 'Quadro de tarefas' : 'Projeto') + (v.metodologia ? ' · Metodologia: ' + MET[v.metodologia] : ''), '', 'Motivos:'].concat(v.porque.map(m => '- ' + m), ['', 'Riscos:'], L.risks.map(r => '- [' + SEV[r.gravidade][1] + '] ' + r.titulo + ': ' + r.evidencia), ['', 'Buracos:'], L.gaps.map(g => '- ' + g.titulo), ['', L.message]).join('\n');
     try { navigator.clipboard.writeText(t); T.show('✅ Diagnóstico copiado.'); } catch(e) { T.show('⚠️ Não consegui copiar; selecione o texto.'); }
   }
+  // Documento próprio para imprimir ou salvar em PDF (material para mostrar ao cliente); fica fora do app, sem gravar nada
+  function printHtml() {
+    const v = verdict(), L = last.local, ai = last.ai, ok = ai && ai.ok;
+    const risks = ok && ai.data.riscos.length ? ai.data.riscos : L.risks, gaps = ok && ai.data.buracos.length ? ai.data.buracos : L.gaps;
+    const msg = ok && ai.data.mensagem ? ai.data.mensagem : L.message;
+    const brand = (typeof BRAND !== 'undefined' && BRAND.name) || 'PMO Compass';
+    const when = new Date().toLocaleDateString('pt-BR');
+    const sev = { alta: 'Alta', media: 'Média', baixa: 'Baixa' };
+    const css = ':root{--ink:#16202a;--mut:#4a5865;--line:#d5dce3;--acc:#1f5f8b;--red:#a3231c;--amb:#8a5a12;--grn:#2c6e3f}*{box-sizing:border-box}body{font:13px/1.55 Arial,Helvetica,sans-serif;color:var(--ink);margin:0;padding:0}@page{size:A4;margin:14mm}h1{font-size:22px;margin:0 0 2px}h2{font-size:15px;margin:18px 0 6px;color:var(--acc);border-bottom:1px solid var(--line);padding-bottom:3px}.sub{color:var(--mut);font-size:12px}.tag{display:inline-block;border:1px solid var(--acc);color:var(--acc);border-radius:10px;padding:1px 9px;font-size:12px;margin:4px 6px 4px 0}ul{margin:4px 0 4px 18px;padding:0}li{margin:2px 0}.it{border-top:1px solid var(--line);padding:6px 0;break-inside:avoid}.it b{display:block}.s-alta{color:var(--red)}.s-media{color:var(--amb)}.s-baixa{color:var(--mut)}table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;padding:4px 6px;border-top:1px solid var(--line)}tr{break-inside:avoid}.falta{color:var(--red);font-weight:700}.ok{color:var(--grn);font-weight:700}.box{border:1px solid var(--line);border-left:4px solid var(--acc);padding:8px 12px;margin-top:6px;break-inside:avoid}.foot{margin-top:18px;color:var(--mut);font-size:11px;border-top:1px solid var(--line);padding-top:6px}';
+    const li = a => a.map(x => '<li>' + esc(x) + '</li>').join('');
+    return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Diagnóstico PMO</title><style>' + css + '</style></head><body>'
+      + '<h1>Diagnóstico PMO</h1><div class="sub">Gerado em ' + when + ' · ' + last.read.docs.length + ' arquivo(s) analisado(s) · dados pessoais descaracterizados</div>'
+      + '<div><span class="tag">' + (v.formato === 'quadro' ? 'Isto é um Quadro de tarefas' : 'Isto é um Projeto') + '</span>' + (v.metodologia ? '<span class="tag">Metodologia sugerida: ' + MET[v.metodologia] + '</span>' : '') + '</div>'
+      + '<h2>Por que esta conclusão</h2><ul>' + li(v.porque) + '</ul>'
+      + '<h2>Riscos que já conseguimos apresentar (' + risks.length + ')</h2>' + (risks.length ? risks.map(x => '<div class="it"><b><span class="s-' + x.gravidade + '">[' + sev[x.gravidade] + ']</span> ' + esc(x.titulo) + '</b>' + esc(x.evidencia) + '<br><i>O que fazer:</i> ' + esc(x.acao) + '</div>').join('') : '<div class="sub">Nenhum risco aparente só pelos documentos.</div>')
+      + '<h2>Os buracos: o que falta ou está solto (' + gaps.length + ')</h2>' + (gaps.length ? gaps.map(x => '<div class="it"><b>' + esc(x.titulo) + '</b>' + esc(x.detalhe) + '<br><i>Como resolver:</i> ' + esc(x.como_resolver) + '</div>').join('') : '<div class="sub">Nenhum buraco aparente.</div>')
+      + (v.formato === 'quadro' ? '' : '<h2>Cobertura dos documentos</h2><table><thead><tr><th>O que um projeto precisa ter por escrito</th><th>Situação</th><th>Onde apareceu</th></tr></thead><tbody>' + L.coverage.map(x => '<tr><td>' + esc(x.label) + '</td><td class="' + (x.gap ? 'falta">Falta' : 'ok">Encontrado') + '</td><td>' + (x.gap ? '—' : esc(x.found.slice(0, 3).join(', '))) + '</td></tr>').join('') + '</tbody></table>')
+      + '<h2>O que o Dr. PMO tem a dizer</h2><div class="box">' + para(msg) + '</div>'
+      + '<div class="foot">Diagnóstico feito no ' + esc(brand) + ' a partir dos arquivos apontados; nada foi gravado no sistema. Leitura ' + (ok ? 'aprofundada por IA, sem dados pessoais e sem valores em reais' : 'por regras do sistema') + '.</div></body></html>';
+  }
+  function pdf() {
+    if(!last) return;
+    const old = document.getElementById('drpmo-print-frame'); if(old) old.remove();
+    const fr = document.createElement('iframe'); fr.id = 'drpmo-print-frame'; fr.title = 'Diagnóstico PMO para impressão'; fr.setAttribute('aria-hidden', 'true');
+    fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+    fr.onload = () => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch(e) { T.show('⚠️ Não consegui abrir a impressão.'); } };
+    fr.srcdoc = printHtml(); document.body.appendChild(fr);
+    T.show('🖨️ Na janela de impressão, escolha "Salvar como PDF".', 5000);
+  }
   function reset() { last = null; render(); }
-  return { run, dragOver, dragLeave, drop, create, copy, reset };
+  return { run, dragOver, dragLeave, drop, create, copy, pdf, printHtml: () => last ? printHtml() : '', reset };
 })();
 </script>
 
