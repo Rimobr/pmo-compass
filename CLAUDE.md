@@ -97,3 +97,7 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 
 ## Seleção no menu (pedido do dono, 08/11/2026)
 - O projeto ou quadro selecionado nas listas do menu (`.si.proj-active`) aparece em **destaque**: fonte maior (14px), negrito, cor da marca, fundo tingido, barra à esquerda e um ponto à direita. Vale nos quatro temas.
+
+## Celular enxuto (pedido do dono, 08/11/2026)
+- Até 600 px a tela mostra **só o que apoia ou pede decisão**: o cabeçalho cabe inteiro (menu, projeto, Bússola, avisos, bug e conta; marca e busca saem), sem trilha de navegação, sem texto explicativo, sem "?" de ajuda e sem aviso de metodologia. Backlog mantém Novo Item e Planejar sprint e os 2 primeiros números; o Kanban esconde Automações e Personalizar (são de gestão no computador).
+- Tela nova: pensar primeiro no celular (o que a pessoa decide ali?) e esconder o resto por CSS no bloco `@media(max-width:600px)`. `test:a11y` confere que nenhum botão do cabeçalho fica fora da tela em 375 px.

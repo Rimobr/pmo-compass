@@ -216,3 +216,7 @@ test('os blocos Gestão do Projeto e Quadros / Kanban têm fundo mais escuro que
 test('projeto ou quadro selecionado no menu fica em destaque: fonte maior, negrito, cor da marca e marcador', () => {
   for (const k of ['.si.proj-active{color:var(--acc);background:color-mix(in srgb,var(--acc) 20%,transparent);font-size:14px;font-weight:700', '.si.proj-active::after{content:']) assert.ok(html.includes(k), k);
 });
+
+test('celular: cabeçalho enxuto e telas só com o que apoia decisão', () => {
+  for (const k of ['.tb-logo,.tb-actions .ico-btn[title^="Busca rápida"]{display:none!important}', '.pg-breadcrumb,.m-notice,.help-q{display:none!important}', '#bl-kpis>*:nth-child(n+3),#sp-kpis>*:nth-child(n+3){display:none}']) assert.ok(html.includes(k), k);
+});

@@ -86,6 +86,12 @@ for (const [name, open, modal] of SCENES) {
   const m = await pg.evaluate(`(() => { const d = document.documentElement, box = ${modal ? `document.querySelector('#${modal} .modal-box')` : 'null'}, r = box && box.getBoundingClientRect(); return { lateral: d.scrollWidth > d.clientWidth, cabe: r ? (r.top >= 0 && r.bottom <= innerHeight + 1 && r.right <= innerWidth + 1) : true }; })()`);
   ok(!m.lateral && m.cabe, `[375 px] ${name}: sem rolagem lateral e cabe na tela`, JSON.stringify(m));
 }
+// Celular: o cabeçalho cabe inteiro (nenhum botão fica para fora da tela) e a tela não mostra o texto explicativo
+for (const pgName of ['dashboard', 'kanban', 'backlog']) {
+  await closeAll(); await pg.evaluate(`R.go('${pgName}')`); await pg.waitForTimeout(350); await closeAll();
+  const h = await pg.evaluate(`(() => { const t = document.querySelector('.topbar'), out = [...t.querySelectorAll('button')].filter(e => e.getBoundingClientRect().width > 0 && e.getBoundingClientRect().right > t.clientWidth + 1).map(e => e.title || e.id); return { sobra: t.scrollWidth > t.clientWidth, fora: out }; })()`);
+  ok(!h.sobra && !h.fora.length, `[375 px] ${pgName}: cabeçalho cabe inteiro`, JSON.stringify(h));
+}
 ok(!errs.length, 'nenhum erro de JavaScript durante a varredura', errs.slice(0, 3).join(' | '));
 await b.close(); srv.close();
 console.log(fail ? `\n${fail} falha(s).` : '\nVarredura de acessibilidade e 375 px: tudo certo');
