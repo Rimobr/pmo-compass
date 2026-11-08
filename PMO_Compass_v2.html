@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.75.0'
+  version: '2.75.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -8850,7 +8850,16 @@ const KG = (() => {
   function key(e, id) {
     if(e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); tog(id); }
   }
-  return { tog, key };
+  // Celular: o Dashboard abre só com Prazo e cronograma (farol e decisões críticas) aberto; os demais grupos ficam recolhidos, com o farol de cada um no cabeçalho. Uma vez por carga: o que a pessoa abrir depois é respeitado
+  function compactForPhone() {
+    try { if(!window.matchMedia || !window.matchMedia('(max-width:600px)').matches) return; } catch(e) { return; }
+    document.querySelectorAll('#p-dashboard .kg').forEach(kg => {
+      if(kg.id === 'kg-sch') return;
+      const body = kg.querySelector('.kg-body'); if(body && !body.classList.contains('cl')) tog(kg.id);
+    });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', compactForPhone); else compactForPhone();
+  return { tog, key, compactForPhone };
 })();
 </script>
 

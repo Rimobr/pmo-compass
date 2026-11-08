@@ -220,3 +220,9 @@ test('projeto ou quadro selecionado no menu fica em destaque: fonte maior, negri
 test('celular: cabeçalho enxuto e telas só com o que apoia decisão', () => {
   for (const k of ['.tb-logo,.tb-actions .ico-btn[title^="Busca rápida"]{display:none!important}', '.pg-breadcrumb,.m-notice,.help-q{display:none!important}', '#bl-kpis>*:nth-child(n+3),#sp-kpis>*:nth-child(n+3){display:none}']) assert.ok(html.includes(k), k);
 });
+
+test('celular: o Dashboard abre só com Prazo e cronograma aberto', () => {
+  assert.ok(html.includes('function compactForPhone()'));
+  assert.ok(html.includes("if(kg.id === 'kg-sch') return;"));
+  assert.ok(html.includes("matchMedia('(max-width:600px)')"));
+});

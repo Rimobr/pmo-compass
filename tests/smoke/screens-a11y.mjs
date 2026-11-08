@@ -86,6 +86,10 @@ for (const [name, open, modal] of SCENES) {
   const m = await pg.evaluate(`(() => { const d = document.documentElement, box = ${modal ? `document.querySelector('#${modal} .modal-box')` : 'null'}, r = box && box.getBoundingClientRect(); return { lateral: d.scrollWidth > d.clientWidth, cabe: r ? (r.top >= 0 && r.bottom <= innerHeight + 1 && r.right <= innerWidth + 1) : true }; })()`);
   ok(!m.lateral && m.cabe, `[375 px] ${name}: sem rolagem lateral e cabe na tela`, JSON.stringify(m));
 }
+// Celular: o Dashboard recolhe os grupos de números, menos Prazo e cronograma (que traz o farol e as decisões)
+await pg.evaluate(`R.go('dashboard'); KG.compactForPhone()`); await pg.waitForTimeout(250);
+const kgs = await pg.evaluate(`[...document.querySelectorAll('#p-dashboard .kg')].filter(k => !k.classList.contains('m-hidden')).map(k => [k.id, !k.querySelector('.kg-body').classList.contains('cl')])`);
+ok(kgs.filter(([id, open]) => open).every(([id]) => id === 'kg-sch'), '[375 px] Dashboard: só Prazo e cronograma aberto', JSON.stringify(kgs));
 // Celular: o cabeçalho cabe inteiro (nenhum botão fica para fora da tela) e a tela não mostra o texto explicativo
 for (const pgName of ['dashboard', 'kanban', 'backlog']) {
   await closeAll(); await pg.evaluate(`R.go('${pgName}')`); await pg.waitForTimeout(350); await closeAll();
