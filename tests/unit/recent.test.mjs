@@ -230,3 +230,11 @@ test('celular: o Dashboard abre só com Prazo e cronograma aberto', () => {
 test('celular: a decisão prioritária sobe para logo abaixo do título do Dashboard', () => {
   for (const k of ['#dash-priority-card{order:-1}', '#p-dashboard .pg-hdr{order:-2}']) assert.ok(html.includes(k), k);
 });
+
+test('celular: Meu Trabalho, Riscos, Decisões e Colaboradores mostram primeiro o que decide', () => {
+  for (const k of ['#mw-root>div:first-child{order:2}', '#p-risks .rk-grid>.card:first-child{order:2}', '#p-decisions .pg-hdr .btn:not(.btn-acc)', '#res-portfolio-card{order:2}']) assert.ok(html.includes(k), k);
+});
+
+test('celular: barra de alocação e de entrega vão para baixo do nome, sem sobreposição', () => {
+  for (const k of ['.res-row .res-bar{flex:1 1 100%;order:3;min-width:0}', '#mw-root .set-row>div[style*="min-width:130px"]{flex:1 1 100%!important}']) assert.ok(html.includes(k), k);
+});

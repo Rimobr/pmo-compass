@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.75.2'
+  version: '2.75.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -454,7 +454,7 @@ html[data-theme="light"] .sidebar{--sb-dark:93%}
   .tb-actions{margin-left:auto;flex-shrink:0}
   /* Telas enxutas: sem trilha de navegação, sem texto explicativo, sem aviso de metodologia e sem os botões que não apoiam uma decisão */
   .pg-breadcrumb,.m-notice,.help-q{display:none!important}
-  .pg-hdr .pg-sub:not(:has(.pg-sub-link)){display:none}
+  .pg-hdr .pg-sub:not(:has(.pg-sub-link)):not(:has(#dec-pending-count)){display:none}
   .pg-title{font-size:19px}
   #p-backlog .pg-hdr .btn-row .btn:not(.btn-acc):not([onclick*="openPlanNext"]),#p-kanban .kb-bar .btn,#kb-actions .btn,#p-kanban .kb-hint{display:none!important}
   #bl-kpis>*:nth-child(n+3),#sp-kpis>*:nth-child(n+3){display:none}
@@ -462,6 +462,22 @@ html[data-theme="light"] .sidebar{--sb-dark:93%}
   #p-dashboard .pg-hdr{order:-2}
   #dash-priority-card{order:-1}
   #dash-priority-root .chip{display:none}
+  /* Meu Trabalho: primeiro o que é meu (entregas e números); "Onde estou" e "Meu time" saem, e "o que o projeto deve entregar" desce */
+  #mw-root{display:flex;flex-direction:column}
+  #mw-root>div:first-child{order:2}
+  #mw-root>div:first-child>.card:nth-child(-n+2){display:none}
+  /* Riscos: a lista (o que exige ação) vem antes da matriz; sem importar, exportar e legenda */
+  #p-risks .pg-hdr .btn-row .btn:not(.btn-acc),#rk-legend{display:none!important}
+  #p-risks .rk-grid>.card:first-child{order:2}
+  /* Decisões: só aceitar, adiar e discordar; sem exportar nem excluir */
+  #p-decisions .pg-hdr .btn:not(.btn-acc),#dec-list-root .wbs-ic-btn[title="Excluir"]{display:none!important}
+  /* Colaboradores: a equipe primeiro; a alocação entre projetos desce */
+  #res-portfolio-card{order:2}
+  #res-redist-root{order:3}
+  /* Linhas com barra: a barra vai para baixo do nome e ocupa a largura toda (nada sobreposto) */
+  .res-row{flex-wrap:wrap}
+  .res-row .res-bar{flex:1 1 100%;order:3;min-width:0}
+  #mw-root .set-row>div[style*="min-width:130px"]{flex:1 1 100%!important}
   #dash-priority-root p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 }
 @media(prefers-reduced-motion:reduce){.sidebar{transition:none}}
