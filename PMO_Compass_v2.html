@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.74.0'
+  version: '2.74.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -390,8 +390,10 @@ html[data-theme="light"] .sidebar{--sb-dark:93%}
 .sb-group-body .si{padding-left:22px}
 .sb-group.has-active .sb-group-hdr{color:var(--t1);background:var(--s2)}
 .sb-group.has-active .sb-group-hdr i.sb-gico{color:var(--acc)}
-.si.proj-active{color:var(--acc);background:var(--ad)}
-.si.proj-active i{color:var(--acc)}
+.si.proj-active{color:var(--acc);background:color-mix(in srgb,var(--acc) 20%,transparent);font-size:14px;font-weight:700;box-shadow:inset 3px 0 0 var(--acc);border-radius:var(--r8)}
+.si.proj-active i{color:var(--acc);font-size:17px}
+.si.proj-active::after{content:'';margin-left:auto;width:7px;height:7px;border-radius:50%;background:var(--acc);flex-shrink:0}
+.sidebar.collapsed .si.proj-active::after{display:none}
 /* Botão de destaque — a "segunda frente" do app (diagnóstico por documento) precisa se
    distinguir visualmente do resto da navegação, não parecer só mais um item de menu. */
 .sb-xray-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;margin-bottom:4px;border-radius:var(--r8);border:1px solid var(--ab);background:var(--ad);color:var(--acc);font-size:12.5px;font-weight:600;cursor:pointer;text-align:left}

@@ -94,3 +94,6 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 ## Diagnóstico PMO em PDF (pedido do dono, 07/11/2026)
 - Na tela do Dr. PMO, "Salvar em PDF / Imprimir" (`DrPmo.pdf`) monta um **documento próprio** (iframe oculto, não imprime o app) com veredito, motivos, riscos, buracos, cobertura e a fala do Dr. PMO, para mostrar ao cliente. Nada é gravado.
 - **Quadro** não mostra a cobertura de documentos de projeto (termo, escopo, orçamento…), nem na tela nem no PDF.
+
+## Seleção no menu (pedido do dono, 08/11/2026)
+- O projeto ou quadro selecionado nas listas do menu (`.si.proj-active`) aparece em **destaque**: fonte maior (14px), negrito, cor da marca, fundo tingido, barra à esquerda e um ponto à direita. Vale nos quatro temas.

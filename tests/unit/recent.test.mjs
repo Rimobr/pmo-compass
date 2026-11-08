@@ -212,3 +212,7 @@ test('Bússola: trocar de modo começa conversa nova', () => {
 test('os blocos Gestão do Projeto e Quadros / Kanban têm fundo mais escuro que o resto do menu', () => {
   for (const k of ['.sidebar{--sb-dark:70%}', 'html[data-theme="light"] .sidebar{--sb-dark:93%}', '#sbg-quadros{background:color-mix(in srgb,var(--s1) var(--sb-dark,70%),#000)', '.sb-proj-area{display:flex;flex-direction:column;gap:1px;background:color-mix(in srgb,var(--s1) var(--sb-dark,70%),#000)']) assert.ok(html.includes(k), k);
 });
+
+test('projeto ou quadro selecionado no menu fica em destaque: fonte maior, negrito, cor da marca e marcador', () => {
+  for (const k of ['.si.proj-active{color:var(--acc);background:color-mix(in srgb,var(--acc) 20%,transparent);font-size:14px;font-weight:700', '.si.proj-active::after{content:']) assert.ok(html.includes(k), k);
+});
