@@ -226,3 +226,7 @@ test('celular: o Dashboard abre só com Prazo e cronograma aberto', () => {
   assert.ok(html.includes("if(kg.id === 'kg-sch') return;"));
   assert.ok(html.includes("matchMedia('(max-width:600px)')"));
 });
+
+test('celular: a decisão prioritária sobe para logo abaixo do título do Dashboard', () => {
+  for (const k of ['#dash-priority-card{order:-1}', '#p-dashboard .pg-hdr{order:-2}']) assert.ok(html.includes(k), k);
+});
