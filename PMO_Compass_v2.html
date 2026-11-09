@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.77.1'
+  version: '2.77.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -4340,7 +4340,9 @@ const Cloud = (() => {
   // cópia na nuvem ficou desatualizada. Debounced pra não empilhar um toast por item numa
   // instabilidade de rede que afeta vários saves em sequência.
   let syncFailToastAt = 0;
-  function cloudSyncFailed() {
+  function cloudSyncFailed(err) {
+    // Regra do servidor (campo obrigatório etc.) não é falha de rede: mostrar a mensagem da regra, sem debounce
+    if(err && err.code === 'P0001' && err.message) { T.show('⚠️ A nuvem não aceitou a mudança: ' + String(err.message).slice(0, 160) + ' Corrija e salve de novo.', 7000); return; }
     const now = Date.now();
     if(now - syncFailToastAt < 8000) return;
     syncFailToastAt = now;
@@ -6306,7 +6308,7 @@ const BugReport = (() => {
     return parts.join('\n');
   }
   function validate(r) {
-    if(!r.parentId && !isBoardNow()) return 'Escolha a entrega (item) em que o bug foi encontrado — todo bug precisa estar ligado a uma.';
+    if(!r.parentId) return 'Campo obrigatório não preenchido: Entrega (item). Todo bug precisa estar ligado à entrega em que foi encontrado.';
     if(String(r.title).trim().length < 5) return 'Escreva um resumo do bug (mínimo 5 letras).';
     if(String(r.path).trim().length < 2) return 'Informe o caminho no sistema (menu → tela → função).';
     if(String(r.steps).trim().length < 10) return 'Descreva o que você fez, passo a passo (mínimo 10 letras).';
@@ -6323,8 +6325,8 @@ const BugReport = (() => {
     files = []; renderFiles();
     const sprints = Agile.sprintRefsAll();
     const cloud = (typeof Cloud !== 'undefined') && Cloud.isSignedIn();
-    $('bug-f-parent-lbl').textContent = 'Entrega (item) em que o bug foi encontrado (' + (board ? 'opcional' : 'obrigatório') + ')';
-    $('bug-f-parent').innerHTML = '<option value="">' + (board ? 'Nenhum (opcional)' : 'Escolha o item…') + '</option>' + refs.map(i => '<option value="' + esc(i.id) + '">' + esc(i.id) + ' — ' + esc(i.title) + '</option>').join('');
+    $('bug-f-parent-lbl').textContent = 'Entrega (item) em que o bug foi encontrado (obrigatório)';
+    $('bug-f-parent').innerHTML = '<option value="">' + 'Escolha o item…' + '</option>' + refs.map(i => '<option value="' + esc(i.id) + '">' + esc(i.id) + ' — ' + esc(i.title) + '</option>').join('');
     $('bug-f-parent').value = parentId || '';
     const fill = () => {
       const p = refs.find(i => i.id === $('bug-f-parent').value), sel = $('bug-f-sprint');
@@ -12722,10 +12724,10 @@ const AgileCalc = (() => {
   // Bug "filho": todo bug está ligado ao item (entrega) em que foi encontrado; o item pai nunca é outro bug
   const bugsOf = (list, parentId) => list.filter(x => x.kind === 'bug' && x.parentId === parentId);
   const parentOptions = (list, selfId) => list.filter(x => x.kind !== 'bug' && x.id !== selfId);
-  // opts.board: num Quadro de tarefas (sem plano) o item pai é opcional; se for informado, continua valendo a regra
+  // O item pai do bug é obrigatório em projeto e em quadro (o banco também exige); opts é aceito só por compatibilidade
   function bugParentError(item, list, opts) {
     if(!item || item.kind !== 'bug') return '';
-    if(!item.parentId) return (opts && opts.board) ? '' : 'Todo bug precisa estar ligado ao item (entrega) em que foi encontrado.';
+    if(!item.parentId) return 'Campo obrigatório não preenchido: Item pai. Todo bug precisa estar ligado ao item (entrega) em que foi encontrado.';
     if(item.parentId === item.id) return 'Um bug não pode ser filho dele mesmo.';
     const p = list.find(x => x.id === item.parentId);
     if(!p) return 'O item pai não existe neste projeto.';
@@ -14652,8 +14654,8 @@ const Agile = (() => {
   // Bug filho: o campo "item pai" só aparece (e é obrigatório) quando o tipo é Bug
   function fillParent(selected, selfId) {
     const el = document.getElementById('ai-parent'); if(!el) return;
-    const lb = document.getElementById('ai-parent-lbl'); if(lb) lb.textContent = 'Item (entrega) em que o bug foi encontrado — ' + (isBoardNow() ? 'opcional' : 'obrigatório');
-    el.innerHTML = '<option value="">' + (isBoardNow() ? 'Nenhum (opcional)' : 'Escolha o item…') + '</option>' + AgileCalc.parentOptions(items, selfId).map(x => '<option value="' + esc(x.id) + '">' + esc(x.id) + ' — ' + esc(x.title) + '</option>').join('');
+    const lb = document.getElementById('ai-parent-lbl'); if(lb) lb.textContent = 'Item (entrega) em que o bug foi encontrado — obrigatório';
+    el.innerHTML = '<option value="">' + 'Escolha o item…' + '</option>' + AgileCalc.parentOptions(items, selfId).map(x => '<option value="' + esc(x.id) + '">' + esc(x.id) + ' — ' + esc(x.title) + '</option>').join('');
     el.value = selected || '';
   }
   function kindChanged() {
@@ -14776,7 +14778,8 @@ const Agile = (() => {
     f.parentId = f.kind === 'bug' ? val('ai-parent') : '';
     const urg = (!itemCtx && urgent) ? urgent : null;
     if(urg) { f.sprintId = urg.sprintId; f.description = (f.description ? f.description + '\n\n' : '') + 'Incluído durante a sprint (mudança de escopo) — motivo: ' + urg.reason; }
-    const bad = AgileCalc.bugParentError({ ...f, id: itemCtx || '' }, items, { board: isBoardNow() });
+    const prevB = itemCtx ? items.find(x => x.id === itemCtx) : null;
+    const bad = (prevB && prevB.kind === 'bug' && !prevB.parentId && !f.parentId) ? '' : AgileCalc.bugParentError({ ...f, id: itemCtx || '' }, items);
     if(bad) { T.show('⚠️ ' + bad); document.getElementById('ai-parent').focus(); return; }
     const cur00 = itemCtx ? items.find(x => x.id === itemCtx) : null;
     if(f.sprintId && f.sprintId !== (cur00 ? cur00.sprintId || '' : '')) { const sb = AgileCalc.sprintAssigneeError(f.assignee, teamNames()); if(sb) { blockHelp(sb, f.assignee); document.getElementById('ai-assignee').focus(); return; } }

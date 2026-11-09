@@ -255,6 +255,7 @@ test('cabeçalho mostra a versão do sistema ao lado do avatar e a esconde no ce
   assert.ok(html.indexOf('id="tb-avatar"') < html.indexOf('id="tb-ver"'));
 });
 
-test('bug: o rótulo da entrega acompanha a regra (obrigatório no projeto, opcional no quadro)', () => {
-  for (const k of ['id="ai-parent-lbl"', 'id="bug-f-parent-lbl"', "(isBoardNow() ? 'opcional' : 'obrigatório')", "(board ? 'opcional' : 'obrigatório')"]) assert.ok(html.includes(k), k);
+test('bug: item pai obrigatório também no quadro, com aviso claro; recusa do banco não vira falha de rede', () => {
+  for (const k of ['Campo obrigatório não preenchido: Item pai', "err.code === 'P0001'", 'A nuvem não aceitou a mudança']) assert.ok(html.includes(k), k);
+  assert.ok(!html.includes('Nenhum (opcional)'));
 });

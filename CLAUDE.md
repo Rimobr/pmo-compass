@@ -118,3 +118,5 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 
 
 - Cabeçalho: o selo **"Ver. x.y.z"** (versão do sistema, `#tb-ver`) fica ao lado do avatar, no mesmo estilo do selo de perfil; some no celular (pedido do dono, 09/11/2026).
+
+- Bug sempre tem **Item pai obrigatório** (projeto e quadro; o banco também exige): sem ele o aviso é "Campo obrigatório não preenchido: Item pai". Se o banco recusar uma regra (erro P0001), o app mostra a mensagem da regra e não "Falha ao sincronizar" (reservado a rede) (09/11/2026).
