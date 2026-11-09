@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.80.0'
+  version: '2.80.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -236,20 +236,14 @@ body.is-board [onclick*="openPlanNext"],body.is-board #as-goal-grp,body.is-board
 .sb-more-btn{color:var(--t2)}
 .sb-more-chev{margin-left:auto;font-size:12px;transition:transform .16s ease}
 .sb-proj-area.more .sb-more-chev{transform:rotate(180deg)}
-.kb-burn{border:1px solid var(--b1);border-radius:var(--r8);background:var(--s1);padding:8px 12px 6px;margin:0 0 10px}
-.kb-burn-h{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;font-size:12.5px;color:var(--t2);margin-bottom:2px}
-.kb-burn-h b{color:var(--t1);font-size:13px}
-.kb-burn-lg{display:inline-flex;gap:12px;margin-left:auto;font-size:12px}
-.kb-burn-lg span{display:inline-flex;align-items:center;gap:5px}
-.kb-burn svg{display:block;width:100%;max-width:760px;height:auto}
-.kb-burn .kbb-bar{fill:var(--acc);fill-opacity:.28;stroke:var(--acc);stroke-width:1.5}
-.kb-burn .kbb-v{fill:var(--t1);font-size:12px;font-weight:700;text-anchor:middle}
-.kb-burn .kbb-x{fill:var(--t2);font-size:11px;text-anchor:middle}
-.kb-burn .kbb-x.hoje{fill:var(--t1);font-weight:700}
+.kb-barrow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin:0 0 10px}.kb-barrow #kb-sprint-bar{margin:0!important;flex:1 1 auto}
+.kb-burn{display:inline-flex;align-items:center;gap:8px;margin-left:auto;font-size:11px;color:var(--t2);white-space:nowrap}
+.kb-burn svg{display:block;height:30px;width:auto}
+.kb-burn .kbb-bar{fill:var(--acc);fill-opacity:.28;stroke:var(--acc);stroke-width:1}
+.kb-burn .kbb-v{fill:var(--t1);font-size:11px;font-weight:700;text-anchor:middle}
 .kb-burn .kbb-base{stroke:var(--b2);stroke-width:1}
-.kb-burn .kbb-trend{fill:none;stroke:var(--t1);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.kb-burn details{font-size:12px;color:var(--t2);margin-top:2px}
-.kb-burn table{border-collapse:collapse;margin-top:4px}.kb-burn td,.kb-burn th{padding:2px 10px 2px 0;text-align:left;font-weight:400}
+.kb-burn .kbb-trend{fill:none;stroke:var(--t1);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.kb-burn .kbb-lg{display:inline-flex;align-items:center;gap:4px}
 @media(max-width:600px){.kb-burn{display:none!important}}
 .sb-board-pick{padding:6px 8px 4px}.sb-board-lbl{display:block;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t2);margin:0 2px 3px}.sb-board-sel{width:100%;font-size:13px;font-weight:700;padding:7px 4px;text-overflow:ellipsis}.sb-board-sel.on{color:var(--acc);border-color:var(--acc);background:color-mix(in srgb,var(--acc) 14%,var(--s1))}.sidebar.collapsed .sb-board-pick{display:none}
 .sb-board-menu{display:none;margin-left:8px;border-left:2px solid color-mix(in srgb,var(--acc) 45%,transparent)}
@@ -2265,8 +2259,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <span id="kb-imp"></span>
   </div>
   <div class="sprint-due-slot"></div>
-  <div id="kb-sprint-bar" role="status" aria-live="polite" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;margin:0 0 10px"></div>
-  <div id="kb-burn" class="kb-burn" hidden></div>
+  <div class="kb-barrow"><div id="kb-sprint-bar" role="status" aria-live="polite" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;margin:0 0 10px"></div>
+  <div id="kb-burn" class="kb-burn" hidden></div></div>
   <div id="kb-root"></div>
 </section>
 
@@ -13948,7 +13942,7 @@ const Agile = (() => {
       + planned.map(p => '<button class="btn btn-sm"' + mgr + ' onclick="Agile.startSprint(\'' + esc(p.id) + '\')"><i class="ti ti-player-play"></i>Iniciar ' + esc(p.name) + '</button>').join(' ')
       + ' <button class="btn btn-sm btn-acc"' + mgr + ' onclick="Agile.openSprint()"><i class="ti ti-plus"></i>Nova Sprint</button>';
   }
-  // Gráfico simples da sprint ativa: barras translúcidas (cards concluídos por dia), número no topo de cada barra e linha de tendência
+  // Mini gráfico da sprint ativa (cabe na linha da faixa): barras translúcidas de cards concluídos por dia, número no topo e linha de tendência
   function burnChart(act) {
     const box = document.getElementById('kb-burn'); if(!box) return;
     if(!act) { box.hidden = true; box.innerHTML = ''; return; }
@@ -13957,22 +13951,20 @@ const Agile = (() => {
     if(!days.length) { box.hidden = true; return; }
     const past = days.filter(d => !d.future), trend = AgileCalc.trendLine(past.map(d => d.n));
     const total = past.reduce((a, d) => a + d.n, 0), max = Math.max(1, ...days.map(d => d.n), ...(trend || []).map(v => Math.ceil(v)));
-    const W = Math.max(320, days.length * 38 + 16), H = 150, top = 22, base = H - 34, ph = base - top, bw = Math.min(26, (W - 16) / days.length - 8), step = (W - 16) / days.length;
-    const xc = i => 8 + step * i + step / 2, yv = v => base - v / max * ph, wd = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-    let g = '';
+    const step = 17, W = days.length * step + 4, H = 30, top = 12, base = H - 2, ph = base - top, bw = 10;
+    const xc = i => 2 + step * i + step / 2, yv = v => base - v / max * ph;
+    let g = '<line class="kbb-base" x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '"/>';
     days.forEach((d, i) => {
-      const h = d.n / max * ph, x = xc(i) - bw / 2, hoje = d.date === today;
-      if(d.n > 0 && !d.future) g += '<path class="kbb-bar" d="M' + x + ' ' + base + 'V' + (base - h + 4) + 'Q' + x + ' ' + (base - h) + ' ' + (x + 4) + ' ' + (base - h) + 'H' + (x + bw - 4) + 'Q' + (x + bw) + ' ' + (base - h) + ' ' + (x + bw) + ' ' + (base - h + 4) + 'V' + base + 'Z"><title>' + esc(d.date.split('-').reverse().join('/')) + ': ' + d.n + ' card(s) concluído(s)</title></path><text class="kbb-v" x="' + xc(i) + '" y="' + (base - h - 5) + '">' + d.n + '</text>';
-      g += '<text class="kbb-x' + (hoje ? ' hoje' : '') + '" x="' + xc(i) + '" y="' + (base + 14) + '">' + esc(d.date.slice(8)) + '</text><text class="kbb-x' + (hoje ? ' hoje' : '') + '" x="' + xc(i) + '" y="' + (base + 27) + '">' + wd[new Date(d.date + 'T12:00:00Z').getUTCDay()] + '</text>';
+      if(d.n <= 0 || d.future) return;
+      const h = d.n / max * ph, x = xc(i) - bw / 2, y = base - h;
+      g += '<path class="kbb-bar" d="M' + x + ' ' + base + 'V' + (y + 3) + 'Q' + x + ' ' + y + ' ' + (x + 3) + ' ' + y + 'H' + (x + bw - 3) + 'Q' + (x + bw) + ' ' + y + ' ' + (x + bw) + ' ' + (y + 3) + 'V' + base + 'Z"><title>' + esc(d.date.split('-').reverse().join('/')) + ': ' + d.n + ' card(s) concluído(s)</title></path><text class="kbb-v" x="' + xc(i) + '" y="' + (y - 3) + '">' + d.n + '</text>';
     });
     if(trend) g += '<polyline class="kbb-trend" points="' + trend.map((v, i) => xc(i).toFixed(1) + ',' + yv(v).toFixed(1)).join(' ') + '"/>';
-    const resumo = past.length ? past.map(d => d.date.split('-').reverse().slice(0, 2).join('/') + ': ' + d.n).join('; ') : '';
+    const resumo = past.map(d => d.date.split('-').reverse().slice(0, 2).join('/') + ': ' + d.n).join('; ');
     box.hidden = false;
-    box.innerHTML = '<div class="kb-burn-h"><b>Cards concluídos por dia</b><span>' + esc(act.name) + ' · ' + total + ' concluído(s)' + (past.length ? ' · média de ' + (total / past.length).toFixed(1).replace('.', ',') + ' por dia' : '') + '</span>'
-      + '<span class="kb-burn-lg"><span><svg width="14" height="12" aria-hidden="true" style="width:14px"><rect x="1" y="1" width="12" height="10" rx="2" class="kbb-bar"/></svg>Concluídos no dia</span>' + (trend ? '<span><svg width="18" height="12" aria-hidden="true" style="width:18px"><line x1="1" y1="6" x2="17" y2="6" class="kbb-trend"/></svg>Tendência</span>' : '') + '</span></div>'
-      + '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Cards concluídos por dia na ' + esc(act.name) + '. ' + esc(resumo) + '"><line class="kbb-base" x1="8" y1="' + base + '" x2="' + (W - 8) + '" y2="' + base + '"/>' + g + '</svg>'
-      + (trend ? '' : '<div style="font-size:12px;color:var(--t2)">A linha de tendência aparece a partir do 3º dia da sprint.</div>')
-      + '<details><summary>Ver em tabela</summary><table><thead><tr><th>Dia</th><th>Concluídos</th></tr></thead><tbody>' + past.map(d => '<tr><td>' + esc(d.date.split('-').reverse().join('/')) + '</td><td>' + d.n + '</td></tr>').join('') + '</tbody></table></details>';
+    box.title = 'Cards concluídos por dia na ' + act.name + ' (' + total + ' no total)' + (trend ? '. A linha é a tendência.' : '. A tendência aparece a partir do 3º dia.');
+    box.innerHTML = '<span>Concluídos por dia</span><svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Cards concluídos por dia na ' + esc(act.name) + '. ' + esc(resumo) + '">' + g + '</svg>'
+      + (trend ? '<span class="kbb-lg"><svg viewBox="0 0 14 8" width="14" height="8" aria-hidden="true" style="height:8px"><line x1="1" y1="4" x2="13" y2="4" class="kbb-trend"/></svg>tendência</span>' : '');
   }
   function renderKanban() {
     const root = document.getElementById('kb-root'); if(!root) return;
@@ -16637,10 +16629,12 @@ const SessionGuard = (() => {
       + '<p class="modal-sub" id="ses-msg" style="line-height:1.6"></p>'
       + '<div class="field-group" id="ses-pw-grp"><div class="field-label"><label for="ses-pw">Senha</label></div><input class="input" id="ses-pw" type="password" autocomplete="current-password"></div>'
       + '<div class="ses-err" id="ses-err" role="alert"></div>'
-      + '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px"><button type="button" class="btn btn-sm" id="ses-out">Sair Agora</button><button type="button" class="btn btn-sm btn-acc" id="ses-ok"><i class="ti ti-refresh"></i>Renovar Sessão</button></div></div>';
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px"><button type="button" class="btn btn-sm" id="ses-out">Sair Agora</button><button type="button" class="btn btn-sm" id="ses-close" aria-label="Fechar esta janela e voltar para a tela">Fechar</button><button type="button" class="btn btn-sm btn-acc" id="ses-ok"><i class="ti ti-refresh"></i>Renovar Sessão</button></div></div>';
     document.body.appendChild(d);
     $('ses-ok').addEventListener('click', renew); $('ses-out').addEventListener('click', () => leave('Você saiu. Os dados deste usuário foram removidos do navegador.'));
     $('ses-pw').addEventListener('keydown', e => { if(e.key === 'Enter') renew(); });
+    $('ses-close').addEventListener('click', () => { if(left() > WARN_S) close(); });
+    d.addEventListener('keydown', e => { if(e.key === 'Escape' && left() > WARN_S) { e.stopPropagation(); close(); } }); // aberta por engano (faltando mais de 30 s): volta para a tela
   }
   function paintModal(sec) {
     const sso = Cloud.authProvider() !== 'email', dead = sec <= 0, manual = sec > WARN_S;
@@ -16648,6 +16642,7 @@ const SessionGuard = (() => {
     $('ses-count').textContent = dead ? '' : fmt(sec);
     $('ses-msg').textContent = (dead ? 'O tempo máximo logado acabou. ' : manual ? 'Renove quando quiser. ' : 'O tempo máximo logado está acabando. ') + (sso ? 'Clique em Renovar para continuar de onde está.' : 'Digite a sua senha para continuar de onde está; o que você deixou aberto não se perde.');
     $('ses-pw-grp').style.display = sso ? 'none' : '';
+    $('ses-close').style.display = manual ? '' : 'none'; // nos últimos 30 s só dá para renovar ou sair
   }
   function open() {
     if(opened || typeof Cloud === 'undefined' || !Cloud.isSignedIn()) return;
