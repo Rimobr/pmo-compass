@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.79.0'
+  version: '2.80.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -236,6 +236,21 @@ body.is-board [onclick*="openPlanNext"],body.is-board #as-goal-grp,body.is-board
 .sb-more-btn{color:var(--t2)}
 .sb-more-chev{margin-left:auto;font-size:12px;transition:transform .16s ease}
 .sb-proj-area.more .sb-more-chev{transform:rotate(180deg)}
+.kb-burn{border:1px solid var(--b1);border-radius:var(--r8);background:var(--s1);padding:8px 12px 6px;margin:0 0 10px}
+.kb-burn-h{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;font-size:12.5px;color:var(--t2);margin-bottom:2px}
+.kb-burn-h b{color:var(--t1);font-size:13px}
+.kb-burn-lg{display:inline-flex;gap:12px;margin-left:auto;font-size:12px}
+.kb-burn-lg span{display:inline-flex;align-items:center;gap:5px}
+.kb-burn svg{display:block;width:100%;max-width:760px;height:auto}
+.kb-burn .kbb-bar{fill:var(--acc);fill-opacity:.28;stroke:var(--acc);stroke-width:1.5}
+.kb-burn .kbb-v{fill:var(--t1);font-size:12px;font-weight:700;text-anchor:middle}
+.kb-burn .kbb-x{fill:var(--t2);font-size:11px;text-anchor:middle}
+.kb-burn .kbb-x.hoje{fill:var(--t1);font-weight:700}
+.kb-burn .kbb-base{stroke:var(--b2);stroke-width:1}
+.kb-burn .kbb-trend{fill:none;stroke:var(--t1);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.kb-burn details{font-size:12px;color:var(--t2);margin-top:2px}
+.kb-burn table{border-collapse:collapse;margin-top:4px}.kb-burn td,.kb-burn th{padding:2px 10px 2px 0;text-align:left;font-weight:400}
+@media(max-width:600px){.kb-burn{display:none!important}}
 .sb-board-pick{padding:6px 8px 4px}.sb-board-lbl{display:block;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t2);margin:0 2px 3px}.sb-board-sel{width:100%;font-size:13px;font-weight:700;padding:7px 4px;text-overflow:ellipsis}.sb-board-sel.on{color:var(--acc);border-color:var(--acc);background:color-mix(in srgb,var(--acc) 14%,var(--s1))}.sidebar.collapsed .sb-board-pick{display:none}
 .sb-board-menu{display:none;margin-left:8px;border-left:2px solid color-mix(in srgb,var(--acc) 45%,transparent)}
 body.is-board .sb-board-menu{display:block}
@@ -2251,6 +2266,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
   </div>
   <div class="sprint-due-slot"></div>
   <div id="kb-sprint-bar" role="status" aria-live="polite" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;margin:0 0 10px"></div>
+  <div id="kb-burn" class="kb-burn" hidden></div>
   <div id="kb-root"></div>
 </section>
 
@@ -12759,6 +12775,21 @@ const AgileCalc = (() => {
   // Bug "filho": todo bug está ligado ao item (entrega) em que foi encontrado; o item pai nunca é outro bug
   const bugsOf = (list, parentId) => list.filter(x => x.kind === 'bug' && x.parentId === parentId);
   const parentOptions = (list, selfId) => list.filter(x => x.kind !== 'bug' && x.id !== selfId);
+  // Gráfico da sprint: cards concluídos por dia (dias de folga sem conclusão ficam de fora) e reta de tendência (mínimos quadrados) só até hoje
+  function doneByDay(list, sprint, todayIso, isOff) {
+    if(!sprint || !sprint.startOn || !sprint.endOn) return [];
+    const cnt = {}; list.forEach(x => { if(x.sprintId === sprint.id && x.status === 'done' && x.doneOn) cnt[x.doneOn] = (cnt[x.doneOn] || 0) + 1; });
+    const out = []; let d = sprint.startOn, guard = 0;
+    while(d <= sprint.endOn && guard++ < 62) { if(!(isOff && isOff(d)) || cnt[d]) out.push({ date: d, n: cnt[d] || 0, future: d > todayIso }); d = addDays(d, 1); }
+    return out;
+  }
+  function trendLine(values) {
+    const n = values.length; if(n < 3) return null;
+    const mx = (n - 1) / 2, my = values.reduce((a, b) => a + b, 0) / n;
+    let num = 0, den = 0; values.forEach((y, i) => { num += (i - mx) * (y - my); den += (i - mx) * (i - mx); });
+    const slope = den ? num / den : 0, b = my - slope * mx;
+    return values.map((_, i) => Math.max(0, b + slope * i));
+  }
   // Fila de prioridade dos bugs (1 = primeiro a corrigir): só bugs em aberto; cada posição vale para um bug só
   const isOpenBug = x => !!x && x.kind === 'bug' && x.status !== 'done';
   const byPriority = (a, b) => (Number(a.bugPriority) || 1e9) - (Number(b.bugPriority) || 1e9);
@@ -13010,7 +13041,7 @@ const AgileCalc = (() => {
     return advice;
   }
 
-  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, isOpenBug, byPriority, bugQueue, placeBug, compactQueue, bugParentError, assigneeError, sprintAssigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, doneByDay, trendLine, isOpenBug, byPriority, bugQueue, placeBug, compactQueue, bugParentError, assigneeError, sprintAssigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
 })();
 </script>
 
@@ -13917,9 +13948,36 @@ const Agile = (() => {
       + planned.map(p => '<button class="btn btn-sm"' + mgr + ' onclick="Agile.startSprint(\'' + esc(p.id) + '\')"><i class="ti ti-player-play"></i>Iniciar ' + esc(p.name) + '</button>').join(' ')
       + ' <button class="btn btn-sm btn-acc"' + mgr + ' onclick="Agile.openSprint()"><i class="ti ti-plus"></i>Nova Sprint</button>';
   }
+  // Gráfico simples da sprint ativa: barras translúcidas (cards concluídos por dia), número no topo de cada barra e linha de tendência
+  function burnChart(act) {
+    const box = document.getElementById('kb-burn'); if(!box) return;
+    if(!act) { box.hidden = true; box.innerHTML = ''; return; }
+    const today = todayIso(), off = d => typeof WorkCal !== 'undefined' && !!WorkCal.reason(d, WorkCal.cfgNow());
+    const days = AgileCalc.doneByDay(items, act, today, off);
+    if(!days.length) { box.hidden = true; return; }
+    const past = days.filter(d => !d.future), trend = AgileCalc.trendLine(past.map(d => d.n));
+    const total = past.reduce((a, d) => a + d.n, 0), max = Math.max(1, ...days.map(d => d.n), ...(trend || []).map(v => Math.ceil(v)));
+    const W = Math.max(320, days.length * 38 + 16), H = 150, top = 22, base = H - 34, ph = base - top, bw = Math.min(26, (W - 16) / days.length - 8), step = (W - 16) / days.length;
+    const xc = i => 8 + step * i + step / 2, yv = v => base - v / max * ph, wd = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+    let g = '';
+    days.forEach((d, i) => {
+      const h = d.n / max * ph, x = xc(i) - bw / 2, hoje = d.date === today;
+      if(d.n > 0 && !d.future) g += '<path class="kbb-bar" d="M' + x + ' ' + base + 'V' + (base - h + 4) + 'Q' + x + ' ' + (base - h) + ' ' + (x + 4) + ' ' + (base - h) + 'H' + (x + bw - 4) + 'Q' + (x + bw) + ' ' + (base - h) + ' ' + (x + bw) + ' ' + (base - h + 4) + 'V' + base + 'Z"><title>' + esc(d.date.split('-').reverse().join('/')) + ': ' + d.n + ' card(s) concluído(s)</title></path><text class="kbb-v" x="' + xc(i) + '" y="' + (base - h - 5) + '">' + d.n + '</text>';
+      g += '<text class="kbb-x' + (hoje ? ' hoje' : '') + '" x="' + xc(i) + '" y="' + (base + 14) + '">' + esc(d.date.slice(8)) + '</text><text class="kbb-x' + (hoje ? ' hoje' : '') + '" x="' + xc(i) + '" y="' + (base + 27) + '">' + wd[new Date(d.date + 'T12:00:00Z').getUTCDay()] + '</text>';
+    });
+    if(trend) g += '<polyline class="kbb-trend" points="' + trend.map((v, i) => xc(i).toFixed(1) + ',' + yv(v).toFixed(1)).join(' ') + '"/>';
+    const resumo = past.length ? past.map(d => d.date.split('-').reverse().slice(0, 2).join('/') + ': ' + d.n).join('; ') : '';
+    box.hidden = false;
+    box.innerHTML = '<div class="kb-burn-h"><b>Cards concluídos por dia</b><span>' + esc(act.name) + ' · ' + total + ' concluído(s)' + (past.length ? ' · média de ' + (total / past.length).toFixed(1).replace('.', ',') + ' por dia' : '') + '</span>'
+      + '<span class="kb-burn-lg"><span><svg width="14" height="12" aria-hidden="true" style="width:14px"><rect x="1" y="1" width="12" height="10" rx="2" class="kbb-bar"/></svg>Concluídos no dia</span>' + (trend ? '<span><svg width="18" height="12" aria-hidden="true" style="width:18px"><line x1="1" y1="6" x2="17" y2="6" class="kbb-trend"/></svg>Tendência</span>' : '') + '</span></div>'
+      + '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Cards concluídos por dia na ' + esc(act.name) + '. ' + esc(resumo) + '"><line class="kbb-base" x1="8" y1="' + base + '" x2="' + (W - 8) + '" y2="' + base + '"/>' + g + '</svg>'
+      + (trend ? '' : '<div style="font-size:12px;color:var(--t2)">A linha de tendência aparece a partir do 3º dia da sprint.</div>')
+      + '<details><summary>Ver em tabela</summary><table><thead><tr><th>Dia</th><th>Concluídos</th></tr></thead><tbody>' + past.map(d => '<tr><td>' + esc(d.date.split('-').reverse().join('/')) + '</td><td>' + d.n + '</td></tr>').join('') + '</tbody></table></details>';
+  }
   function renderKanban() {
     const root = document.getElementById('kb-root'); if(!root) return;
     load();
+    try { burnChart(active()); } catch(e) { const bb = document.getElementById('kb-burn'); if(bb) bb.hidden = true; }
     const sel = document.getElementById('kb-sprint');
     const act = active(), stateLbl = { ativa:'ativa', planejada:'planejada', encerrada:'encerrada' };
     const ord = { ativa:0, planejada:1, encerrada:2 };

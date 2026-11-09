@@ -52,3 +52,17 @@ test('fila de prioridade: tela, nuvem, leitura de bugs e banco ligados', () => {
   const sql = readFileSync(join(root, 'supabase/migrations/20261109120000_bug_priority.sql'), 'utf8');
   for (const k of ['bug_priority int', 'bug_priority_queue', 'bug_priority_gap', 'pg_trigger_depth']) assert.ok(sql.includes(k), k);
 });
+
+test('gráfico da sprint: cards concluídos por dia, folgas sem conclusão ficam de fora e futuro não conta', () => {
+  const sp = { id: 'S1', startOn: '2026-11-02', endOn: '2026-11-08' };
+  const list = [{ sprintId: 'S1', status: 'done', doneOn: '2026-11-03' }, { sprintId: 'S1', status: 'done', doneOn: '2026-11-03' }, { sprintId: 'S1', status: 'done', doneOn: '2026-11-07' }, { sprintId: 'S2', status: 'done', doneOn: '2026-11-03' }, { sprintId: 'S1', status: 'doing', doneOn: '' }];
+  const off = d => d === '2026-11-07' || d === '2026-11-08'; // fim de semana
+  const days = AgileCalc.doneByDay(list, sp, '2026-11-05', off);
+  assert.deepEqual(days.map(d => d.date.slice(8) + ':' + d.n), ['02:0', '03:2', '04:0', '05:0', '06:0', '07:1']); // 08 (folga sem card) sai; 07 fica porque teve card
+  assert.deepEqual(days.map(d => d.future), [false, false, false, false, true, true]);
+});
+test('gráfico da sprint: tendência é a reta de mínimos quadrados e só existe a partir de 3 dias', () => {
+  assert.equal(AgileCalc.trendLine([1, 2]), null);
+  const t = AgileCalc.trendLine([0, 2, 4]); assert.deepEqual(t.map(v => Math.round(v * 100) / 100), [0, 2, 4]);
+  assert.ok(AgileCalc.trendLine([3, 0, 0]).every(v => v >= 0));
+});
