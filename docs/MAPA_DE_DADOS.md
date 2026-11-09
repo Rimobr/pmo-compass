@@ -107,7 +107,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 
 | Tabela | Para que serve | Escopo | Dado pessoal | Apagar dados do projeto | Apagar toda a base | Campos |
 |---|---|---|---|---|---|---|
-| `org_settings` | Configurações da organização (perfil de PMO e frequência do resumo de entrada). | sistema | não | não se aplica | preserva | `key`, `value`, `updated_at`, `updated_by` |
+| `org_settings` | Configurações da organização (perfil de PMO, frequência do resumo de entrada, atualização automática dos dados e tempo máximo de sessão). | sistema | não | não se aplica | preserva | `key`, `value`, `updated_at`, `updated_by` |
 
 ### Catálogos
 

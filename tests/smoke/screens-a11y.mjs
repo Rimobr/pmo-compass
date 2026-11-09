@@ -27,6 +27,7 @@ const SCENES = [
   ['Impedimentos abertos (janela)', `Agile.openImpediments()`, 'modal-agile-imp'],
   ['Personalizar quadro (janela)', `Agile.openBoardCfg()`, 'modal-agile-board'],
   ['Mover em nome de outra pessoa (janela)', `Agile.openBehalf(DB.get('backlog')[2], 'doing', [])`, 'modal-agile-behalf'],
+  ['Renovar a sessão (janela)', `window.__restoreCloud = (o => () => { Object.assign(Cloud, o); window.__restoreCloud = null; })({ isSignedIn: Cloud.isSignedIn, sessionStart: Cloud.sessionStart, authProvider: Cloud.authProvider }); Cloud.isSignedIn = () => true; Cloud.sessionStart = () => Date.now() - 479 * 60000; Cloud.authProvider = () => 'email'; SessionGuard.open()`, 'modal-session'],
   ['Rascunho da IA (janela)', `await Models.createWithAi()`, 'modal-models-ai'],
   ['Confirmação de exclusão (janela)', `Dlg.ask({ title: 'Apagar toda a base', body: 'Isso apaga tudo. Não pode ser desfeito.', okLabel: 'Apagar Toda a Base', cancelLabel: 'Manter', danger: true, check: 'Entendo que isso apaga os dados de todas as pessoas' })`, 'modal-dlg']
 ];
@@ -62,7 +63,7 @@ const errs = []; pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' }); await pg.waitForTimeout(1500);
 await pg.evaluate(`(async () => { ${SETUP} })()`);
 
-const closeAll = () => pg.evaluate(`document.querySelectorAll('.modal-ov').forEach(m => m.classList.add('hidden'))`);
+const closeAll = () => pg.evaluate(`if(window.__restoreCloud) window.__restoreCloud(); document.querySelectorAll('.modal-ov').forEach(m => m.classList.add('hidden'))`);
 for (const theme of ['dark', 'light', 'gray', 'green']) {
   await pg.evaluate(`Theme.set('${theme}')`);
   for (const [name, open, modal] of SCENES) {

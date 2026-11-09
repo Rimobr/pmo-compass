@@ -254,7 +254,7 @@
     },
     "org_settings": {
       "domain": "Configurações",
-      "desc": "Configurações da organização (perfil de PMO e frequência do resumo de entrada).",
+      "desc": "Configurações da organização (perfil de PMO, frequência do resumo de entrada, atualização automática dos dados e tempo máximo de sessão).",
       "scope": "sistema",
       "personal": false,
       "clearProject": "não se aplica",

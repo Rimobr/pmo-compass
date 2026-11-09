@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.78.1'
+  version: '2.79.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -236,6 +236,7 @@ body.is-board [onclick*="openPlanNext"],body.is-board #as-goal-grp,body.is-board
 .sb-more-btn{color:var(--t2)}
 .sb-more-chev{margin-left:auto;font-size:12px;transition:transform .16s ease}
 .sb-proj-area.more .sb-more-chev{transform:rotate(180deg)}
+.sb-board-pick{padding:6px 8px 4px}.sb-board-lbl{display:block;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t2);margin:0 2px 3px}.sb-board-sel{width:100%;font-size:13px;font-weight:700;padding:7px 4px;text-overflow:ellipsis}.sb-board-sel.on{color:var(--acc);border-color:var(--acc);background:color-mix(in srgb,var(--acc) 14%,var(--s1))}.sidebar.collapsed .sb-board-pick{display:none}
 .sb-board-menu{display:none;margin-left:8px;border-left:2px solid color-mix(in srgb,var(--acc) 45%,transparent)}
 body.is-board .sb-board-menu{display:block}
 .preview-bar{display:flex;background:var(--amd);color:var(--t1);border-bottom:1px solid var(--ambb);padding:6px 14px;font-size:12.5px;align-items:center;gap:10px;flex-wrap:wrap}.preview-bar[hidden]{display:none}
@@ -445,7 +446,7 @@ html[data-theme="light"] .sidebar{--sb-dark:93%}
 @media(max-width:600px){
   .tb-logo [data-brand="name"]{display:none}
   .tb-logo{border-right:0}
-  #tb-cloud-badge,#tb-role-tag,#tb-ver,.tb-actions .ico-btn[title="Configurações"],.tb-actions .ico-btn[title="Novo projeto"],.tb-actions .ico-btn[title^="Trocar tema"]{display:none!important}
+  #tb-cloud-badge,#tb-role-tag,#tb-ver,#tb-ses,.tb-actions .ico-btn[title="Configurações"],.tb-actions .ico-btn[title="Novo projeto"],.tb-actions .ico-btn[title^="Trocar tema"]{display:none!important}
   /* Celular: só o que decide ou avisa. O cabeçalho cabe inteiro (menu, projeto, Bússola, avisos, bug e conta); marca e busca saem */
   .tb-logo,.tb-actions .ico-btn[title^="Busca rápida"]{display:none!important}
   .tb-proj-wrap{flex:1 1 auto;min-width:0}
@@ -1032,6 +1033,7 @@ body.icons-failed i[data-fb]::before{
     <select id="tb-viewas" class="input" aria-label="Ver o sistema como outro perfil (só visualização)" title="Ver o sistema como outro perfil — só visualização, nada é alterado" onchange="Auth.setPreview(this.value)" style="display:none;width:auto;max-width:210px;font-size:11.5px;padding:4px 6px"></select>
     <span id="tb-cloud-badge" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:999px;background:var(--s2);color:var(--t3)" title="Carregando…"><i class="ti ti-cloud" style="font-size:12px"></i></span>
     <span class="role-badge" id="tb-role-tag" title="O seu perfil de acesso">Administrador</span>
+    <button type="button" class="role-badge ses-timer" id="tb-ses" hidden onclick="SessionGuard.open(true)" title="Tempo restante da sessão. Clique para renovar" aria-label="Tempo restante da sessão. Clique para renovar"></button>
     <button type="button" class="ava" id="tb-avatar" title="Minha conta" aria-label="Minha conta" onclick="Auth.openAccount()" style="cursor:pointer">MR</button>
     <span class="role-badge" id="tb-ver" title="Versão do sistema" aria-label="Versão do sistema"></span>
   </div>
@@ -1695,6 +1697,15 @@ body.icons-failed i[data-fb]::before{
     <div class="field-group" style="max-width:420px"><div class="field-label"><label for="digest-mode">Quando mostrar</label></div>
       <select class="input" id="digest-mode" onchange="MyDigest.setMode(this.value)"><option value="diario">Uma vez por dia (e quando chegar card novo)</option><option value="login">A cada login</option><option value="off">Desligado</option></select></div>
     <p id="digest-note" style="display:none;font-size:11.5px;color:var(--t3);margin-top:6px"><i class="ti ti-lock"></i> Só o administrador altera.</p>
+  </div>
+  <div class="card" id="session-card" data-sec="sessao-atualizacao" data-tint="2" data-collapsed="1">
+    <div class="lbl"><i class="ti ti-clock-hour-4"></i>Atualização e Sessão<span class="help-q" data-help="Atualização: de quanto em quanto tempo o sistema aberto relê os dados sozinho, para mostrar o que outra pessoa mudou (sem recarregar a página e sem interromper quem está digitando). Sessão: por quanto tempo a pessoa pode ficar logada; um cronômetro aparece ao lado do usuário e, quando faltam 30 segundos, o sistema pede a senha para renovar, sem perder o que está aberto. Sem renovar, a pessoa sai da conta." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:8px">Vale para <strong style="color:var(--t1)">todas as pessoas</strong>. Já vem assim: atualizar a cada <strong style="color:var(--t1)">10 minutos</strong> e sessão de <strong style="color:var(--t1)">8 horas</strong>.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;max-width:560px">
+      <div class="field-group"><div class="field-label"><label for="sg-refresh">Atualizar os dados a cada</label></div><select class="input" id="sg-refresh" onchange="SessionGuard.setRefresh(this.value)"></select></div>
+      <div class="field-group"><div class="field-label"><label for="sg-session">Tempo máximo logado</label></div><select class="input" id="sg-session" onchange="SessionGuard.setSession(this.value)"></select></div>
+    </div>
+    <p id="sg-note" style="display:none;font-size:11.5px;color:var(--t3);margin-top:6px"><i class="ti ti-lock"></i> Só o administrador altera.</p>
   </div>
   <div class="card" data-sec="perfil-pmo" data-tint="4" data-collapsed="1">
     <div class="lbl"><i class="ti ti-sitemap"></i>Perfil de PMO da Organização<span class="help-q" data-help="O tipo de PMO descreve a sua organização, então vale para TODOS os projetos de uma vez (a metodologia é que muda por projeto). Só o administrador altera. Projetos antigos que tinham um perfil próprio continuam usando-o até a organização escolher o seu." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
@@ -4501,6 +4512,25 @@ const Cloud = (() => {
   }
 
   function getEmail() { return session ? session.user.email : null; }
+  // Tempo logado: começa no último login (ou renovação) e é parametrizado pela organização (SessionGuard)
+  function sessionStart() { const t = session && session.user && session.user.last_sign_in_at; const n = t ? Date.parse(t) : NaN; return isNaN(n) ? null : n; }
+  const authProvider = () => (session && session.user && session.user.app_metadata && session.user.app_metadata.provider) || 'email';
+  // Renova SEM recarregar a página: conta com senha confere a senha de novo; conta corporativa (SSO) só renova o token
+  async function renewSession(password) {
+    if(!client || !session) return { ok: false, msg: 'Sem sessão ativa.' };
+    if(authProvider() === 'email') {
+      if(!password) return { ok: false, msg: 'Digite a senha.' };
+      const { data, error } = await client.auth.signInWithPassword({ email: session.user.email, password });
+      if(error) return { ok: false, msg: /invalid|credentials/i.test(error.message) ? 'Senha incorreta.' : error.message };
+      session = data.session;
+    } else {
+      const { data, error } = await client.auth.refreshSession();
+      if(error) return { ok: false, msg: error.message };
+      if(data && data.session) session = data.session;
+    }
+    pushAuditEvent('session_renew', 'Sessão renovada por ' + session.user.email, {});
+    return { ok: true };
+  }
   function getUserId() { return session ? session.user.id : null; }
 
   // ── Chaves de IA vinculadas à conta (nunca voltam pro navegador depois de salvas) ──
@@ -4919,7 +4949,7 @@ const Cloud = (() => {
     return true;
   }
 
-  async function signOut() {
+  async function signOut(opts) {
     signingOut = true;
     if(client && session) pushAuditEvent('logout', `Logout de ${session.user.email}`, {});
     try { await flush(); } catch(e) {} // antes de apagar o navegador, termina de enviar o que estava pendente
@@ -4928,7 +4958,7 @@ const Cloud = (() => {
     Auth.clearCloudManaged();
     reflectUi();
     // O navegador não pode guardar nada do usuário que saiu: apaga e recarrega (volta a pedir o login)
-    await wipeLocalData({ message:'Você saiu. Os dados deste usuário foram removidos do navegador.' });
+    await wipeLocalData({ message:(opts && opts.message) || 'Você saiu. Os dados deste usuário foram removidos do navegador.' });
   }
 
   // Roda a cada login E a cada reload com sessão já ativa (chamado por initClient) — é o que
@@ -5091,6 +5121,7 @@ const Cloud = (() => {
           org.data.forEach(r => { if(r.key) OrgSettings.setLocal(r.key, r.value); });
           if(typeof PmoProfiles !== 'undefined') PmoProfiles.render();
           if(typeof MyDigest !== 'undefined') MyDigest.render();
+          if(typeof SessionGuard !== 'undefined') SessionGuard.render();
         }
       } catch(e) { /* sem org_settings: usa o valor local */ }
       T.show('☁️ Dados sincronizados do Supabase.');
@@ -5367,7 +5398,7 @@ const Cloud = (() => {
     setTimeout(() => location.reload(), 900);
   }
 
-  return { load, configure, disconnect, setUse, isConfigured, isSignedIn, getEmail, getUserId, listProfiles, projectContacts, joinTeam, myOpenItems, openItemsForManagers, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
+  return { load, configure, disconnect, setUse, isConfigured, isSignedIn, getEmail, sessionStart, authProvider, renewSession, getUserId, listProfiles, projectContacts, joinTeam, myOpenItems, openItemsForManagers, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
     compassDigest, myWorkload, saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, hoursSummary, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, markOnboarded, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
@@ -8042,6 +8073,7 @@ const R = (() => {
     if(id === 'chat' && typeof Chat !== 'undefined') Chat.render();
     if(id === 'settings' && typeof PmoProfiles !== 'undefined') PmoProfiles.render();
     if(id === 'settings' && typeof MyDigest !== 'undefined') MyDigest.render();
+    if(id === 'settings' && typeof SessionGuard !== 'undefined') SessionGuard.render();
     if(id === 'settings' && typeof Users !== 'undefined') Users.render();
     if(id === 'settings' && typeof Erase !== 'undefined') Erase.render();
     if(typeof Nav !== 'undefined') { Nav.revealArea(id); Nav.expandGroupFor(id); Nav.renderBreadcrumb(id); Nav.closeDrawer(); }
@@ -8148,7 +8180,8 @@ const Nav = (() => {
     document.body.classList.toggle('is-board', boards.some(p => p.id === activeId));
     const bg = document.getElementById('sbg-quadros'); if(bg && boards.some(p => p.id === activeId)) { document.querySelectorAll('.sb-group').forEach(g => g.classList.remove('open')); bg.classList.add('open'); }
     const broot = document.getElementById('sb-boards-root');
-    if(broot) broot.innerHTML = boards.length ? boards.map(p => `<button class="si${p.id===activeId?' proj-active':''}" style="padding-left:22px" onclick="DB.switchProject('${p.id}');R.go('kanban')"><i class="ti ti-layout-kanban"></i>${escapeHtml(p.name)}</button>`).join('') : '<div class="set-sub" style="padding:6px 22px">Nenhum quadro ainda</div>';
+    // Um só seletor: a caixa mostra QUAL quadro está aberto e o menu logo abaixo vale para ele (antes era uma lista de quadros com o menu no meio)
+    if(broot) broot.innerHTML = boards.length ? `<div class="sb-board-pick"><label class="sb-board-lbl" for="sb-board-sel">Quadro Aberto</label><select title="Quadro aberto: o menu abaixo vale para ele" class="input sb-board-sel${boards.some(p => p.id === activeId) ? ' on' : ''}" id="sb-board-sel" onchange="if(this.value){DB.switchProject(this.value);R.go('kanban')}">${boards.some(p => p.id === activeId) ? '' : '<option value="" selected>Selecione o quadro…</option>'}${boards.map(p => `<option value="${escapeHtml(p.id)}"${p.id === activeId ? ' selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}</select></div>` : '<div class="set-sub" style="padding:6px 22px">Nenhum quadro ainda</div>';
     // O ícone antes do nome é o da METODOLOGIA do projeto (legenda logo abaixo da lista)
     document.body.classList.toggle('no-project', !all.length);
     if(!projects.length) root.innerHTML = '<div class="set-sub" style="padding:6px 22px">Nenhum projeto ainda</div>'; else
@@ -16507,10 +16540,109 @@ const UpdateCheck = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: ui/session-guard ─ Tempo de sessão parametrizado pela organização: cronômetro ao lado do usuário e, nos últimos 30 s, janela para renovar com a senha sem recarregar a página (nada aberto se perde). Sem renovar, sai da conta. -->
+<style data-module="ui/session-guard-css">
+.ses-timer{border:1px solid var(--b2);cursor:pointer;font-variant-numeric:tabular-nums}
+.ses-timer.warn{background:var(--amd);color:var(--amb);border-color:var(--ambb)}
+.ses-timer.crit{background:var(--rd);color:var(--red);border-color:var(--rb)}
+.ses-count{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;text-align:center;margin:6px 0 2px}
+.ses-err{color:var(--red);font-size:12.5px;min-height:18px;margin-top:6px}
+</style>
+<script data-module="ui/session-guard">
+const SessionGuard = (() => {
+  const ORG = 'sessionPolicy', WARN_S = 30;
+  const REFRESH_OPTS = [1, 2, 5, 10, 15, 30, 60], SESSION_OPTS = [30, 60, 120, 240, 480, 720, 0]; // minutos; 0 = sem limite
+  const DEFAULT = { refreshMin: 10, sessionMin: 480 };
+  // Regras puras (testadas)
+  const num = v => (v === undefined || v === null || v === '') ? NaN : Number(v);
+  const clean = o => ({
+    refreshMin: REFRESH_OPTS.includes(num(o && o.refreshMin)) ? num(o.refreshMin) : DEFAULT.refreshMin,
+    sessionMin: SESSION_OPTS.includes(num(o && o.sessionMin)) ? num(o.sessionMin) : DEFAULT.sessionMin,
+  });
+  const remainingSec = (startMs, sessionMin, nowMs) => sessionMin > 0 ? Math.ceil((startMs + sessionMin * 60000 - nowMs) / 1000) : Infinity;
+  const fmt = sec => { sec = Math.max(0, Math.floor(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60, p = n => String(n).padStart(2, '0'); return h ? h + ':' + p(m) + ':' + p(s) : p(m) + ':' + p(s); };
+  const stage = sec => sec <= 0 ? 'expirou' : sec <= WARN_S ? 'aviso' : 'normal';
+  const policy = () => clean(typeof OrgSettings !== 'undefined' ? OrgSettings.get(ORG) : null);
+  const label = m => m === 0 ? 'Sem limite' : m < 60 ? m + ' minutos' : m === 60 ? '1 hora' : (m / 60) + ' horas';
+
+  let renewedAt = 0, timer = null, opened = false, restoreEl = null, busy = false, loadExpired = false, checkedLoad = false;
+  const $ = id => document.getElementById(id);
+  const start = () => Math.max(Cloud.sessionStart() || 0, renewedAt);
+  const left = () => remainingSec(start(), policy().sessionMin, Date.now());
+
+  function ensureModal() {
+    if($('modal-session')) return;
+    const d = document.createElement('div');
+    d.className = 'modal-ov hidden'; d.id = 'modal-session'; d.setAttribute('role', 'alertdialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 'ses-title'); d.setAttribute('aria-describedby', 'ses-msg');
+    d.innerHTML = '<div class="modal-box" style="width:420px;max-width:94vw"><div class="modal-title" id="ses-title">Sua Sessão Vai Terminar</div>'
+      + '<div class="ses-count" id="ses-count" aria-hidden="true"></div>'
+      + '<p class="modal-sub" id="ses-msg" style="line-height:1.6"></p>'
+      + '<div class="field-group" id="ses-pw-grp"><div class="field-label"><label for="ses-pw">Senha</label></div><input class="input" id="ses-pw" type="password" autocomplete="current-password"></div>'
+      + '<div class="ses-err" id="ses-err" role="alert"></div>'
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px"><button type="button" class="btn btn-sm" id="ses-out">Sair Agora</button><button type="button" class="btn btn-sm btn-acc" id="ses-ok"><i class="ti ti-refresh"></i>Renovar Sessão</button></div></div>';
+    document.body.appendChild(d);
+    $('ses-ok').addEventListener('click', renew); $('ses-out').addEventListener('click', () => leave('Você saiu. Os dados deste usuário foram removidos do navegador.'));
+    $('ses-pw').addEventListener('keydown', e => { if(e.key === 'Enter') renew(); });
+  }
+  function paintModal(sec) {
+    const sso = Cloud.authProvider() !== 'email', dead = sec <= 0, manual = sec > WARN_S;
+    $('ses-title').textContent = dead ? 'Sessão Expirada' : manual ? 'Renovar a Sessão' : 'Sua Sessão Vai Terminar';
+    $('ses-count').textContent = dead ? '' : fmt(sec);
+    $('ses-msg').textContent = (dead ? 'O tempo máximo logado acabou. ' : manual ? 'Renove quando quiser. ' : 'O tempo máximo logado está acabando. ') + (sso ? 'Clique em Renovar para continuar de onde está.' : 'Digite a sua senha para continuar de onde está; o que você deixou aberto não se perde.');
+    $('ses-pw-grp').style.display = sso ? 'none' : '';
+  }
+  function open() {
+    if(opened || typeof Cloud === 'undefined' || !Cloud.isSignedIn()) return;
+    ensureModal(); opened = true; restoreEl = document.activeElement; $('ses-err').textContent = ''; $('ses-pw').value = '';
+    paintModal(left()); $('modal-session').classList.remove('hidden');
+    setTimeout(() => { const f = Cloud.authProvider() !== 'email' ? $('ses-ok') : $('ses-pw'); if(f) f.focus(); }, 30);
+  }
+  function close() { opened = false; const m = $('modal-session'); if(m) m.classList.add('hidden'); if(restoreEl && restoreEl.focus && document.contains(restoreEl)) { try { restoreEl.focus(); } catch(e) { /* foco perdido: segue */ } } restoreEl = null; }
+  async function renew() {
+    if(busy) return; busy = true; const err = $('ses-err'); err.textContent = ''; $('ses-ok').disabled = true;
+    try {
+      const res = await Cloud.renewSession($('ses-pw').value);
+      if(res.ok) { renewedAt = Date.now(); loadExpired = false; close(); paint(); T.show('✅ Sessão renovada.'); }
+      else { err.textContent = res.msg || 'Não consegui renovar.'; const p = $('ses-pw'); if(p && p.select) p.select(); }
+    } finally { busy = false; $('ses-ok').disabled = false; }
+  }
+  async function leave(msg) { close(); try { await Cloud.signOut({ message: msg }); } catch(e) { location.reload(); } }
+  function paint() {
+    const b = $('tb-ses'); if(!b) return;
+    if(typeof Cloud === 'undefined' || !Cloud.isSignedIn() || policy().sessionMin === 0) { b.hidden = true; if(opened) close(); return; }
+    const sec = left(), st = stage(sec);
+    b.hidden = false; b.textContent = '⏱ ' + fmt(sec); b.classList.toggle('warn', sec <= 300 && sec > WARN_S); b.classList.toggle('crit', sec <= WARN_S);
+    if(!checkedLoad) { checkedLoad = true; loadExpired = sec <= 0; } // abriu a página já vencida: pede a senha em vez de apagar tudo de surpresa
+    if(st === 'aviso') { if(!opened) open(); else paintModal(sec); }
+    else if(st === 'expirou') { if(loadExpired) { if(!opened) open(); else paintModal(sec); } else leave('Sua sessão terminou pelo tempo máximo logado. Entre de novo para continuar.'); }
+    else if(opened) paintModal(sec);
+  }
+  function begin() { if(timer || typeof document === 'undefined') return; timer = setInterval(() => { try { paint(); } catch(e) { /* o cronômetro nunca derruba a tela */ } }, 1000); }
+  // Configurações: só o administrador altera (o banco confere)
+  function render() {
+    const a = $('sg-refresh'), b = $('sg-session'); if(!a || !b) return;
+    const p = policy();
+    a.innerHTML = REFRESH_OPTS.map(m => '<option value="' + m + '"' + (m === p.refreshMin ? ' selected' : '') + '>' + label(m) + '</option>').join('');
+    b.innerHTML = SESSION_OPTS.map(m => '<option value="' + m + '"' + (m === p.sessionMin ? ' selected' : '') + '>' + label(m) + '</option>').join('');
+    const adm = typeof Auth !== 'undefined' && Auth.getRole() === 'admin';
+    a.disabled = b.disabled = !adm; const n = $('sg-note'); if(n) n.style.display = adm ? 'none' : '';
+  }
+  function save(patch, msg) {
+    if(typeof Auth !== 'undefined' && Auth.getRole() !== 'admin') { T.show('🔒 Só o administrador altera a atualização e a sessão.'); render(); return; }
+    OrgSettings.set(ORG, clean({ ...policy(), ...patch })); T.show('✅ ' + msg); paint(); render();
+  }
+  const setRefresh = v => save({ refreshMin: Number(v) }, 'Os dados serão atualizados a cada ' + label(Number(v)) + '.');
+  const setSession = v => save({ sessionMin: Number(v) }, Number(v) === 0 ? 'Sessão sem limite de tempo.' : 'Tempo máximo logado: ' + label(Number(v)) + '.');
+  if(typeof document !== 'undefined') { if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', begin); else begin(); }
+  return { clean, remainingSec, fmt, stage, policy, label, open, render, setRefresh, setSession, renew, REFRESH_OPTS, SESSION_OPTS, DEFAULT, WARN_S };
+})();
+</script>
+
 <!-- ■ MODULE: ui/auto-refresh ─ Atualização automática dos dados: com a nuvem conectada, a cada 10 minutos o app relê os dados do projeto aberto (o que outra pessoa mudou aparece sem recarregar a página). Nunca interrompe quem está digitando ou com janela aberta -->
 <script data-module="ui/auto-refresh">
 const AutoRefresh = (() => {
   const EVERY_MS = 10 * 60 * 1000, TICK_MS = 30 * 1000;
+  const every = () => (typeof SessionGuard !== 'undefined' ? SessionGuard.policy().refreshMin : 10) * 60 * 1000; // parâmetro da organização
   let lastAt = Date.now(), busy = false, started = false;
   // Regras puras (testadas): passou o intervalo? há algo que não pode ser interrompido?
   const due = (now, last, every) => now - last >= (every || EVERY_MS);
@@ -16533,7 +16665,7 @@ const AutoRefresh = (() => {
   }
   // Chamada a cada 30 s e ao voltar para a aba: só atualiza se já passaram 10 minutos e nada está sendo editado
   function tick(now) {
-    if(!due(now == null ? Date.now() : now, lastAt) || blocked(env())) return Promise.resolve(false);
+    if(!due(now == null ? Date.now() : now, lastAt, every()) || blocked(env())) return Promise.resolve(false);
     return run();
   }
   function start() {

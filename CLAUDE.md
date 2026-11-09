@@ -135,3 +135,8 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 
 ## Em revisão devolve o card a quem o abriu (pedido do dono, 09/11/2026)
 - Na baixa da skill `analise-pmo-compass` (`read-bugs.mjs --mark`), além de **Em revisão** e do bloco na descrição, o **responsável do card passa a ser quem o abriu** (nome do primeiro registro do histórico casado com um colaborador da equipe ligado a uma conta; sem um único candidato o responsável não muda). O histórico recebe a linha "Responsável: de X para Y".
+
+## Atualização e sessão parametrizáveis, cronômetro e renovação (pedido do dono, 09/11/2026)
+- Configurações → "Atualização e Sessão" (só o administrador grava; `org_settings`, chave `sessionPolicy` = `{refreshMin, sessionMin}`; módulo `ui/session-guard`, `SessionGuard`): **atualizar os dados a cada** 1, 2, 5, **10 (padrão)**, 15, 30 ou 60 min (`AutoRefresh` usa o valor) e **tempo máximo logado** de 30 min a 12 h, **8 h (padrão)** ou sem limite.
+- Com limite, um **cronômetro** (`#tb-ses`) fica ao lado do avatar (some no celular; âmbar nos últimos 5 min, vermelho nos últimos 30 s; clicar nele abre a renovação). **Faltando 30 s** abre a janela "Sua Sessão Vai Terminar" (`modal-session`): conta com senha digita a senha (`Cloud.renewSession` confere com `signInWithPassword`, **sem recarregar a página**: nada do que está aberto se perde); conta SSO só clica em Renovar. Sem renovar, `Cloud.signOut` sai da conta. Se a página abre já vencida, pede a senha em vez de sair de surpresa. A renovação fica na auditoria (`session_renew`).
+- O tempo conta do último login (`user.last_sign_in_at`) ou da última renovação. Janela nova passa por `SCENES` do `test:a11y`.
