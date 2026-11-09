@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.78.0'
+  version: '2.78.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -16504,6 +16504,47 @@ const UpdateCheck = (() => {
     if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
   }
   return { check, apply, differs };
+})();
+</script>
+
+<!-- ■ MODULE: ui/auto-refresh ─ Atualização automática dos dados: com a nuvem conectada, a cada 10 minutos o app relê os dados do projeto aberto (o que outra pessoa mudou aparece sem recarregar a página). Nunca interrompe quem está digitando ou com janela aberta -->
+<script data-module="ui/auto-refresh">
+const AutoRefresh = (() => {
+  const EVERY_MS = 10 * 60 * 1000, TICK_MS = 30 * 1000;
+  let lastAt = Date.now(), busy = false, started = false;
+  // Regras puras (testadas): passou o intervalo? há algo que não pode ser interrompido?
+  const due = (now, last, every) => now - last >= (every || EVERY_MS);
+  const blocked = e => !!(e && (e.hidden || e.offline || e.modalOpen || e.typing));
+  function env() {
+    const a = document.activeElement;
+    return {
+      hidden: document.visibilityState === 'hidden',
+      offline: navigator.onLine === false,
+      modalOpen: !!document.querySelector('[id^="modal-"]:not(.hidden), [role="alertdialog"]'),
+      typing: !!(a && (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || a.isContentEditable)),
+    };
+  }
+  async function run() {
+    if(busy || typeof Cloud === 'undefined' || !Cloud.isSignedIn()) return false;
+    busy = true;
+    try { await Cloud.pullAll(); if(typeof renderAllModules === 'function') renderAllModules(); lastAt = Date.now(); return true; }
+    catch(e) { return false; } // sem rede ou erro: tenta de novo no próximo ciclo; os dados locais continuam intactos
+    finally { busy = false; }
+  }
+  // Chamada a cada 30 s e ao voltar para a aba: só atualiza se já passaram 10 minutos e nada está sendo editado
+  function tick(now) {
+    if(!due(now == null ? Date.now() : now, lastAt) || blocked(env())) return Promise.resolve(false);
+    return run();
+  }
+  function start() {
+    if(started || typeof document === 'undefined' || location.protocol === 'file:') return;
+    started = true; lastAt = Date.now();
+    setInterval(() => tick(), TICK_MS);
+    document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') tick(); });
+    window.addEventListener('online', () => tick());
+  }
+  if(typeof document !== 'undefined') { if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start(); }
+  return { due, blocked, tick, run, start, EVERY_MS };
 })();
 </script>
 

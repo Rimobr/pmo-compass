@@ -128,3 +128,10 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - Campo "Prioridade do bug na fila" no cartão do bug e no formulário de novo bug (só quem tem `manage_backlog`): a lista mostra as posições já usadas ("Posição 2 — hoje é US-007 · título (ele e os de baixo descem)") e a fila de hoje logo abaixo. Escolher uma posição ocupada **encaixa** o bug ali e os de baixo descem; concluir, excluir ou mudar o tipo tira o bug da fila e os de baixo sobem.
 - A regra mora no banco (gatilho `bug_priority_queue`/`bug_priority_gap`, sem buracos e sem repetição) e a tela só espelha (`AgileCalc.placeBug`/`compactQueue`). O cartão mostra "P1", "P2"…; "Bugs deste item" vem na ordem da fila.
 - `scripts/read-bugs.mjs` lista os bugs por prioridade (P1 primeiro, sem prioridade por último) e a skill `analise-pmo-compass` corrige nessa ordem.
+
+## Atualização automática a cada 10 minutos (regra do dono, 09/11/2026; vale para todo sistema)
+- Todo sistema aberto **relê os dados sozinho a cada 10 minutos** (módulo `ui/auto-refresh`, `AutoRefresh`): com a nuvem conectada, `Cloud.pullAll()` e `renderAllModules()`, para que o que outra pessoa mudou apareça sem recarregar a página. Também confere ao voltar para a aba ou quando a rede volta.
+- **Nunca interrompe**: não atualiza com janela aberta, campo em digitação, aba oculta ou sem rede (tenta de novo no ciclo seguinte, a cada 30 s). Não recarrega a página, não grava nada e não perde o que está pendente (o `pullAll` espera as gravações em andamento).
+
+## Em revisão devolve o card a quem o abriu (pedido do dono, 09/11/2026)
+- Na baixa da skill `analise-pmo-compass` (`read-bugs.mjs --mark`), além de **Em revisão** e do bloco na descrição, o **responsável do card passa a ser quem o abriu** (nome do primeiro registro do histórico casado com um colaborador da equipe ligado a uma conta; sem um único candidato o responsável não muda). O histórico recebe a linha "Responsável: de X para Y".

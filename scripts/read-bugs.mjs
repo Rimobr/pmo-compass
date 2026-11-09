@@ -68,19 +68,30 @@ const main = async () => { try {
     if (note.length > room) { console.error('A nota tem ' + note.length + ' caracteres; o máximo é ' + room + ' (o rótulo "' + LABEL + '" é somado depois). Reescreva mais curta, sem cortar com reticências.'); process.exitCode = 2; return; }
     const comment = note + SEP + LABEL;
     const now = new Date().toISOString(), by = 'Claude Code (correção automática)';
-    const rows = await q(`select id, status, history, description from public.backlog_items where project_id = ${lit(p.id)} and kind = 'bug' and id in (${ids.map(lit).join(',')})`);
+    const rows = await q(`select id, status, history, description, assignee from public.backlog_items where project_id = ${lit(p.id)} and kind = 'bug' and id in (${ids.map(lit).join(',')})`);
     const miss = ids.filter(i => !rows.find(r => r.id === i)); if (miss.length) console.error('Não é bug deste projeto (ignorado): ' + miss.join(', '));
+    // Ao ir para Em revisão o card volta para quem o ABRIU (primeiro registro do histórico), para essa pessoa conferir a correção.
+    // Só se ela for uma pessoa da equipe ligada a uma conta (regra do banco para responsável); se não achar uma só, o responsável fica como está.
+    const team = await q(`select name, user_id from public.team_members where project_id = ${lit(p.id)} and user_id is not null`);
+    const reporterOf = row => {
+      const by = plain(((Array.isArray(row.history) && row.history[0] && row.history[0].by) || '')).trim(); if (!by || by.startsWith('claude')) return null;
+      const exact = team.filter(m => plain(m.name).trim() === by); if (exact.length === 1) return exact[0].name;
+      const first = team.filter(m => plain(m.name).trim().split(' ')[0] === by.split(' ')[0]); return first.length === 1 ? first[0].name : null;
+    };
     for (const row of rows) {
       if (row.status === 'done') { console.error(`  ${row.id}: já concluído, não mexi.`); continue; }
       const hist = (Array.isArray(row.history) ? row.history : []).concat([
         { at: now, by, field: 'Situação', from: ({ todo: 'A fazer', doing: 'Em andamento', review: 'Em revisão' })[row.status] || row.status, to: 'Em revisão' },
-      ]).slice(-300);
+      ]);
+      const back = reporterOf(row);
+      if (back && back !== row.assignee) hist.push({ at: now, by, field: 'Responsável', from: row.assignee || '(vazio)', to: back });
+      hist.splice(0, Math.max(0, hist.length - 300));
       // O que foi feito entra no campo Descrição e critérios de aceite: o texto original fica e o bloco é somado no fim, entre linhas de asteriscos
       const bar = '*'.repeat(36), block = bar + '\n' + comment + '\n' + bar;
       const desc = (row.description ? row.description.replace(/\s+$/, '') + '\n\n' : '') + block;
       if (desc.length > 2000) { console.error(`  ${row.id}: a descrição ficaria com ${desc.length} caracteres (máximo 2000); não mexi. Reduza o texto do card.`); continue; }
-      await q(`update public.backlog_items set status = 'review', done_on = null, description = ${lit(desc)}, history = ${lit(JSON.stringify(hist))}::jsonb, updated_at = now() where project_id = ${lit(p.id)} and id = ${lit(row.id)}`);
-      console.log(`  ${row.id}: movido para Em revisão; descrição recebeu o bloco: "${comment}"`);
+      await q(`update public.backlog_items set status = 'review', done_on = null, ${back && back !== row.assignee ? 'assignee = ' + lit(back) + ', ' : ''}description = ${lit(desc)}, history = ${lit(JSON.stringify(hist))}::jsonb, updated_at = now() where project_id = ${lit(p.id)} and id = ${lit(row.id)}`);
+      console.log(`  ${row.id}: movido para Em revisão` + (back ? `, devolvido a ${back} (quem abriu)` : ', responsável mantido (não achei quem abriu na equipe)') + `; descrição recebeu o bloco: "${comment}"`);
     }
     { process.exitCode = 0; return; }
   }
