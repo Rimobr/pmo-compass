@@ -122,3 +122,9 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - Bug sempre tem **Item pai obrigatório** (projeto e quadro; o banco também exige): sem ele o aviso é "Campo obrigatório não preenchido: Item pai". Se o banco recusar uma regra (erro P0001), o app mostra a mensagem da regra e não "Falha ao sincronizar" (reservado a rede) (09/11/2026).
 
 - Correção: o comentário da baixa **não** vai para o histórico; vai para o campo **Descrição e critérios de aceite**, no fim, preservando o texto original, entre duas linhas de 36 asteriscos (limite de 2000 caracteres da descrição) (09/11/2026).
+
+## Fila de prioridade dos bugs (pedido do dono, 09/11/2026)
+- Todo card do tipo **Bug** pode ter uma **posição na fila de prioridade** (1 = primeiro a corrigir; `backlog_items.bug_priority`, migração `20261109120000`). Cada posição vale para um bug só, entre os bugs **em aberto** do projeto/quadro; sem posição = fora da fila.
+- Campo "Prioridade do bug na fila" no cartão do bug e no formulário de novo bug (só quem tem `manage_backlog`): a lista mostra as posições já usadas ("Posição 2 — hoje é US-007 · título (ele e os de baixo descem)") e a fila de hoje logo abaixo. Escolher uma posição ocupada **encaixa** o bug ali e os de baixo descem; concluir, excluir ou mudar o tipo tira o bug da fila e os de baixo sobem.
+- A regra mora no banco (gatilho `bug_priority_queue`/`bug_priority_gap`, sem buracos e sem repetição) e a tela só espelha (`AgileCalc.placeBug`/`compactQueue`). O cartão mostra "P1", "P2"…; "Bugs deste item" vem na ordem da fila.
+- `scripts/read-bugs.mjs` lista os bugs por prioridade (P1 primeiro, sem prioridade por último) e a skill `analise-pmo-compass` corrige nessa ordem.

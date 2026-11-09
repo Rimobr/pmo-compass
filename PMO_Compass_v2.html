@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.77.3'
+  version: '2.78.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2343,6 +2343,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     </div>
     <div class="field-group"><div class="field-label"><label for="ai-title">Título</label></div><input class="input" id="ai-title" maxlength="200" placeholder="Ex: Como cliente, quero consultar meu extrato"></div>
     <div class="field-group" id="ai-parent-grp" style="display:none"><div class="field-label"><label for="ai-parent" id="ai-parent-lbl">Item (entrega) em que o bug foi encontrado — obrigatório</label></div><select class="input" id="ai-parent"></select></div>
+    <div class="field-group" id="ai-prio-grp" style="display:none"><div class="field-label"><label for="ai-prio">Prioridade do bug na fila</label></div><select class="input" id="ai-prio"></select><div id="ai-prio-q" style="font-size:12px;color:var(--t2);margin-top:4px;line-height:1.5"></div></div>
     <div class="g2" style="gap:10px">
       <div class="field-group"><div class="field-label"><label for="ai-kind">Tipo</label></div><select class="input" id="ai-kind" onchange="Agile.kindPicked()"><option value="bug">Bug</option><option value="historia" selected>História</option><option value="tarefa">Tarefa</option></select></div>
       <div class="field-group"><div class="field-label"><label for="ai-points">Pontos</label><span class="help-q" data-help="Estimativa de esforço relativo (1, 2, 3, 5, 8, 13...). Compare com outros itens: um item de 5 dá mais trabalho que um de 2. Deixe vazio se ainda não foi estimado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="ai-points" type="number" min="0" max="100" placeholder="Ex: 5"></div>
@@ -4293,8 +4294,8 @@ const Cloud = (() => {
       local: 'baselines'
     },
     backlog_items: {
-      toDb: (x, pid) => ({ project_id:pid, id:x.id, title:x.title, description:x.description||null, kind:x.kind||'historia', status:x.status||'todo', points:(x.points===''||x.points==null)?null:x.points, assignee:x.assignee||null, sprint_id:x.sprintId||null, rank:x.rank||0, created_on:x.createdOn||null, done_on:x.doneOn||null, parent_id:(x.kind==='bug' && x.parentId)?x.parentId:null, attachments:Array.isArray(x.attachments)?x.attachments:[], history:Array.isArray(x.history)?x.history.slice(-300):[], checklist:Array.isArray(x.checklist)?x.checklist.slice(0,20).map(c=>({text:String(c&&c.text||'').slice(0,120),done:!!(c&&c.done)})):[], updated_at:new Date().toISOString() }),
-      fromDb: r => ({ id:r.id, title:r.title, description:r.description||'', kind:r.kind, status:r.status, points:r.points==null?'':r.points, assignee:r.assignee||'', sprintId:r.sprint_id||'', rank:r.rank||0, createdOn:r.created_on||'', doneOn:r.done_on||'', parentId:r.parent_id||'', attachments:Array.isArray(r.attachments)?r.attachments:[], history:Array.isArray(r.history)?r.history:[], checklist:Array.isArray(r.checklist)?r.checklist:[] }),
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, title:x.title, description:x.description||null, kind:x.kind||'historia', status:x.status||'todo', points:(x.points===''||x.points==null)?null:x.points, assignee:x.assignee||null, sprint_id:x.sprintId||null, rank:x.rank||0, created_on:x.createdOn||null, done_on:x.doneOn||null, parent_id:(x.kind==='bug' && x.parentId)?x.parentId:null, bug_priority:(x.kind==='bug' && x.status!=='done' && Number(x.bugPriority)>0)?Number(x.bugPriority):null, attachments:Array.isArray(x.attachments)?x.attachments:[], history:Array.isArray(x.history)?x.history.slice(-300):[], checklist:Array.isArray(x.checklist)?x.checklist.slice(0,20).map(c=>({text:String(c&&c.text||'').slice(0,120),done:!!(c&&c.done)})):[], updated_at:new Date().toISOString() }),
+      fromDb: r => ({ id:r.id, title:r.title, description:r.description||'', kind:r.kind, status:r.status, points:r.points==null?'':r.points, assignee:r.assignee||'', sprintId:r.sprint_id||'', rank:r.rank||0, createdOn:r.created_on||'', doneOn:r.done_on||'', parentId:r.parent_id||'', bugPriority:r.bug_priority||'', attachments:Array.isArray(r.attachments)?r.attachments:[], history:Array.isArray(r.history)?r.history:[], checklist:Array.isArray(r.checklist)?r.checklist:[] }),
       local: 'backlog'
     },
     sprints: {
@@ -6335,6 +6336,7 @@ const BugReport = (() => {
       sel.value = (p && live.some(x => x.id === p.sprintId)) ? p.sprintId : '';
     };
     $('bug-f-parent').onchange = fill; fill();
+    $('bug-f-prio').innerHTML = Agile.prioOptions('', ''); $('bug-f-prioq').innerHTML = Agile.prioQueueHtml('');
     ['title', 'steps', 'exp', 'act'].forEach(k => { $('bug-f-' + k).value = ''; });
     $('bug-f-sev').value = 'atrapalha'; $('bug-f-path').value = suggestPath();
     $('bug-files-hint').textContent = cloud ? 'ou cole o print aqui com Ctrl+V · até 6 arquivos de 5 MB (imagem, PDF, planilha ou texto)' : 'Anexos precisam da conexão com a nuvem. Sem ela, descreva bem o bug e guarde o print para enviar à equipe.';
@@ -6366,7 +6368,7 @@ const BugReport = (() => {
   });
 
   async function send() {
-    const r = { parentId:$('bug-f-parent').value, sprintId:$('bug-f-sprint').value, title:$('bug-f-title').value.trim(), severity:$('bug-f-sev').value, path:$('bug-f-path').value.trim(), steps:$('bug-f-steps').value.trim(), expected:$('bug-f-exp').value.trim(), actual:$('bug-f-act').value.trim(), context:context() };
+    const r = { parentId:$('bug-f-parent').value, sprintId:$('bug-f-sprint').value, title:$('bug-f-title').value.trim(), priority:$('bug-f-prio').value, severity:$('bug-f-sev').value, path:$('bug-f-path').value.trim(), steps:$('bug-f-steps').value.trim(), expected:$('bug-f-exp').value.trim(), actual:$('bug-f-act').value.trim(), context:context() };
     const bad = validate(r); if(bad) { T.show('⚠️ ' + bad, 5000); return; }
     if(!files.length && (typeof Cloud !== 'undefined' && Cloud.isSignedIn()) && !confirm('Você não anexou nenhum print. Um print do ocorrido acelera muito a correção. Criar o bug mesmo assim?')) return;
     const btn = $('bug-send'); btn.disabled = true;
@@ -6376,7 +6378,7 @@ const BugReport = (() => {
       if(!a) { btn.disabled = false; return; }
       attachments.push(a);
     }
-    const it = Agile.createBug({ id, title:r.title, parentId:r.parentId, sprintId:r.sprintId, description:buildDescription(r), attachments });
+    const it = Agile.createBug({ id, title:r.title, parentId:r.parentId, sprintId:r.sprintId, priority:r.priority, description:buildDescription(r), attachments });
     btn.disabled = false;
     if(!it) return;
     close(); T.show('✅ Bug ' + it.id + ' criado' + (it.parentId ? ' como filho de ' + it.parentId : '') + (attachments.length ? ' (' + attachments.length + ' anexo(s))' : '') + '.', 5000);
@@ -12724,6 +12726,29 @@ const AgileCalc = (() => {
   // Bug "filho": todo bug está ligado ao item (entrega) em que foi encontrado; o item pai nunca é outro bug
   const bugsOf = (list, parentId) => list.filter(x => x.kind === 'bug' && x.parentId === parentId);
   const parentOptions = (list, selfId) => list.filter(x => x.kind !== 'bug' && x.id !== selfId);
+  // Fila de prioridade dos bugs (1 = primeiro a corrigir): só bugs em aberto; cada posição vale para um bug só
+  const isOpenBug = x => !!x && x.kind === 'bug' && x.status !== 'done';
+  const byPriority = (a, b) => (Number(a.bugPriority) || 1e9) - (Number(b.bugPriority) || 1e9);
+  const bugQueue = list => list.filter(x => isOpenBug(x) && Number(x.bugPriority) > 0).sort((a, b) => byPriority(a, b) || String(a.id).localeCompare(String(b.id)));
+  // Põe o bug na posição pos (os de baixo descem; pos vazia/0 tira da fila e os de baixo sobem). Devolve os ids dos OUTROS bugs que mudaram de posição.
+  function placeBug(list, id, pos) {
+    const it = list.find(x => x.id === id), changed = [];
+    if(!it) return changed;
+    const old = Number(it.bugPriority) > 0 ? Number(it.bugPriority) : 0;
+    const others = list.filter(x => x !== it && isOpenBug(x) && Number(x.bugPriority) > 0);
+    if(old) others.forEach(x => { if(Number(x.bugPriority) > old) { x.bugPriority = Number(x.bugPriority) - 1; changed.push(x.id); } });
+    const p = isOpenBug(it) && Number(pos) > 0 ? Math.min(Math.floor(Number(pos)), others.length + 1) : 0;
+    if(p) others.forEach(x => { if(Number(x.bugPriority) >= p) { x.bugPriority = Number(x.bugPriority) + 1; if(!changed.includes(x.id)) changed.push(x.id); } });
+    it.bugPriority = p || '';
+    return changed;
+  }
+  // Fecha buracos: bug concluído ou de outro tipo sai da fila e a numeração volta a 1..n sem repetir
+  function compactQueue(list) {
+    const changed = [];
+    list.forEach(x => { if(!isOpenBug(x) && x.bugPriority) { x.bugPriority = ''; changed.push(x.id); } });
+    bugQueue(list).forEach((x, k) => { if(Number(x.bugPriority) !== k + 1) { x.bugPriority = k + 1; changed.push(x.id); } });
+    return changed;
+  }
   // O item pai do bug é obrigatório em projeto e em quadro (o banco também exige); opts é aceito só por compatibilidade
   function bugParentError(item, list, opts) {
     if(!item || item.kind !== 'bug') return '';
@@ -12952,7 +12977,7 @@ const AgileCalc = (() => {
     return advice;
   }
 
-  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, bugParentError, assigneeError, sprintAssigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, isOpenBug, byPriority, bugQueue, placeBug, compactQueue, bugParentError, assigneeError, sprintAssigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
 })();
 </script>
 
@@ -13778,10 +13803,10 @@ const Agile = (() => {
   const fmt = iso => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}` : ''; };
   const load = () => { const fresh = !items; if(!items) items = DB.get('backlog') || []; if(!sprints) sprints = DB.get('sprints') || []; if(!cfg) cfg = AgileCalc.cfgOf(DB.get('agileConfig')); if(fresh) takeSnap(); };
   const resetCache = () => { items = null; sprints = null; cfg = null; snap = {}; };
-  const saveItems = () => DB.set('backlog', items);
+  const saveItems = () => { AgileCalc.compactQueue(items); DB.set('backlog', items); };
   const saveSprints = () => DB.set('sprints', sprints);
   // ───────── Histórico do card: toda mudança de campo vira "quem, quando, de → para" (alimentado por pushItem, o ponto único de gravação) ─────────
-  const TRACKED = [['title', 'Título'], ['kind', 'Tipo'], ['points', 'Pontos'], ['assignee', 'Responsável'], ['description', 'Descrição'], ['status', 'Situação'], ['sprintId', 'Sprint'], ['parentId', 'Item pai'], ['rank', 'Prioridade (posição no backlog)']];
+  const TRACKED = [['title', 'Título'], ['kind', 'Tipo'], ['points', 'Pontos'], ['assignee', 'Responsável'], ['description', 'Descrição'], ['status', 'Situação'], ['sprintId', 'Sprint'], ['parentId', 'Item pai'], ['bugPriority', 'Prioridade do bug'], ['rank', 'Prioridade (posição no backlog)']];
   const HIST_MAX = 300;
   let snap = {};
   const snapOf = it => { const o = {}; TRACKED.forEach(([k]) => { o[k] = it[k] == null ? '' : it[k]; }); return o; };
@@ -13937,7 +13962,7 @@ const Agile = (() => {
       ? (sp.endOn < todayIso() ? '<span class="badge b-red" title="O prazo da ' + esc(sp.name) + ' passou e o card não foi concluído">atrasado · ' + esc(sp.endOn.split('-').reverse().slice(0, 2).join('/')) + '</span>' : '<span class="chip" title="Fim da ' + esc(sp.name) + '"><i class="ti ti-calendar-time"></i>até ' + esc(sp.endOn.split('-').reverse().slice(0, 2).join('/')) + '</span>') : '';
     const prev = AgileCalc.neighbor(i.status, -1, cfg), next = AgileCalc.neighbor(i.status, 1, cfg);
     const lbl = k => AgileCalc.colLabel(cfg, k), f = cfg.card;
-    const top = [f.id && `<span class="chip">${esc(i.id)}</span>`, f.kind && `<span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>`, f.points && i.points !== '' && i.points != null && `<span class="badge b-acc">${esc(i.points)} pts</span>`].filter(Boolean).join('');
+    const top = [f.id && `<span class="chip">${esc(i.id)}</span>`, f.kind && `<span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>`, f.points && i.points !== '' && i.points != null && `<span class="badge b-acc">${esc(i.points)} pts</span>`, f.bugs && AgileCalc.isOpenBug(i) && Number(i.bugPriority) > 0 && `<span class="badge b-red" title="Posição na fila de prioridade dos bugs (1 = primeiro a corrigir)">P${esc(i.bugPriority)}</span>`].filter(Boolean).join('');
     const kidsAll = AgileCalc.bugsOf(items, i.id), kidsOpen = kidsAll.filter(k => k.status !== 'done');
     const rel = i.kind === 'bug' ? (i.parentId ? `<span class="chip" title="Este bug é filho do item ${esc(i.parentId)}"><i class="ti ti-corner-down-right"></i>de ${esc(i.parentId)}</span>` : '<span class="badge b-amb" title="Bug antigo, sem item pai: abra o cartão e escolha o item">sem item pai</span>') : (kidsAll.length ? `<span class="chip" title="Bugs ligados a este item"><i class="ti ti-bug"></i>${kidsOpen.length}/${kidsAll.length} bug(s)</span>` : '');
     const att = (Array.isArray(i.attachments) && i.attachments.length) ? `<span class="chip" title="Anexos do bug"><i class="ti ti-paperclip"></i>${i.attachments.length}</span>` : '';
@@ -14593,7 +14618,7 @@ const Agile = (() => {
   function applyItemMode(it, full) {
     checkDraft = it ? (Array.isArray(it.checklist) ? it.checklist : []).map(x => ({ text: x.text, done: !!x.done })) : policy().template.map(t => ({ text: t, done: false }));
     renderCheck();
-    ['ai-title', 'ai-kind', 'ai-points', 'ai-assignee', 'ai-sprint', 'ai-parent', 'ai-desc'].forEach(x => { const e = document.getElementById(x); if(e) e.disabled = !full; });
+    ['ai-title', 'ai-kind', 'ai-points', 'ai-assignee', 'ai-sprint', 'ai-parent', 'ai-prio', 'ai-desc'].forEach(x => { const e = document.getElementById(x); if(e) e.disabled = !full; });
     syncSprintLock();
     document.getElementById('ai-del').style.display = it && full ? '' : 'none';
     document.getElementById('ai-work').style.display = (it || full) ? '' : 'none'; // comentário e evidências já na criação, não só depois de salvar
@@ -14661,12 +14686,26 @@ const Agile = (() => {
   function kindChanged() {
     const isBug = document.getElementById('ai-kind').value === 'bug';
     document.getElementById('ai-parent-grp').style.display = isBug ? '' : 'none';
+    document.getElementById('ai-prio-grp').style.display = isBug ? '' : 'none';
+    if(isBug) { load(); const cur = itemCtx ? items.find(x => x.id === itemCtx) : null, ps = document.getElementById('ai-prio'); ps.innerHTML = prioOptions(itemCtx || '', cur && cur.kind === 'bug' ? cur.bugPriority : ''); document.getElementById('ai-prio-q').innerHTML = prioQueueHtml(itemCtx || ''); }
+  }
+  // Fila de prioridade dos bugs: mostra o que já está priorizado para a pessoa decidir onde encaixar
+  const clipPrio = (t, n) => { t = String(t || ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
+  function prioOptions(selfId, selected) {
+    load(); const q = AgileCalc.bugQueue(items.filter(x => x.id !== selfId)), sel = Math.min(Number(selected) || 0, q.length + 1);
+    let h = '<option value="">Sem prioridade (fora da fila)</option>';
+    q.forEach((b, k) => { h += '<option value="' + (k + 1) + '"' + (sel === k + 1 ? ' selected' : '') + '>Posição ' + (k + 1) + ' — hoje é ' + esc(b.id) + ' · ' + esc(clipPrio(b.title, 45)) + ' (ele e os de baixo descem)</option>'; });
+    return h + '<option value="' + (q.length + 1) + '"' + (sel === q.length + 1 ? ' selected' : '') + '>Posição ' + (q.length + 1) + ' — ' + (q.length ? 'última da fila' : 'primeiro bug da fila') + '</option>';
+  }
+  function prioQueueHtml(selfId) {
+    load(); const q = AgileCalc.bugQueue(items.filter(x => x.id !== selfId));
+    return q.length ? '<b>Fila de prioridade hoje (1 = primeiro a corrigir):</b> ' + q.map((b, k) => (k + 1) + '. ' + esc(b.id) + ' ' + esc(clipPrio(b.title, 40))).join(' · ') : 'Nenhum bug está na fila de prioridade ainda.';
   }
   // No cartão de um item de entrega: lista os bugs filhos e permite abrir um novo já ligado a ele
   function renderChildren(it) {
     const el = document.getElementById('ai-children'); if(!el) return;
     if(!it || it.kind === 'bug') { el.style.display = 'none'; el.innerHTML = ''; return; }
-    const kids = AgileCalc.bugsOf(items, it.id), open = kids.filter(k => k.status !== 'done');
+    const kids = AgileCalc.bugsOf(items, it.id).slice().sort(AgileCalc.byPriority), open = kids.filter(k => k.status !== 'done');
     el.style.display = '';
     el.innerHTML = '<div class="field-label"><i class="ti ti-bug"></i> Bugs deste item' + (kids.length ? ' (' + open.length + ' aberto(s) de ' + kids.length + ')' : '') + '</div>'
       + (kids.length ? '<div style="display:flex;flex-direction:column;gap:4px;margin:4px 0">' + kids.map(k => '<button type="button" class="link-a" style="text-align:left" onclick="Agile.openItem(\'' + esc(k.id) + '\')">' + esc(k.id) + ' — ' + esc(k.title) + ' · ' + esc(AgileCalc.colLabel(cfg, k.status)) + '</button>').join('') + '</div>' : '<div style="font-size:12px;color:var(--t3);margin:4px 0">Nenhum bug aberto para este item.</div>')
@@ -14690,7 +14729,10 @@ const Agile = (() => {
     const bug = { id: items.some(x => x.id === d.id) ? AgileCalc.nextId('US', items) : d.id, title: d.title, description: d.description || '', kind: 'bug', status: 'todo', points: '', assignee: '', sprintId: d.sprintId || '', parentId: d.parentId || '', attachments: d.attachments || [], rank: Math.max(0, ...items.map(x => x.rank || 0)) + 1, createdOn: todayIso(), doneOn: '' };
     const bad = AgileCalc.bugParentError(bug, items, { board: isBoardNow() });
     if(bad) { T.show('⚠️ ' + bad); return null; }
-    items.push(bug); saveItems(); pushItem(bug); renderAll();
+    items.push(bug);
+    const pr = parseInt(d.priority, 10) || 0;
+    if(pr) AgileCalc.placeBug(items, bug.id, pr).forEach(oid => { const o = items.find(x => x.id === oid); if(o) snap[oid] = snapOf(o); });
+    saveItems(); pushItem(bug); renderAll();
     Trail.log('Bug relatado: ' + bug.id + ' — ' + bug.title, Auth.getName(), bug.parentId ? 'Filho de ' + bug.parentId : 'Sem item pai', 'b-amb');
     return bug;
   }
@@ -14776,6 +14818,7 @@ const Agile = (() => {
     let it = itemCtx ? items.find(x => x.id === itemCtx) : null;
     const f = { title, kind: val('ai-kind'), points, assignee: val('ai-assignee').trim(), description: val('ai-desc').trim(), sprintId: val('ai-sprint') };
     f.parentId = f.kind === 'bug' ? val('ai-parent') : '';
+    const prio = f.kind === 'bug' ? (parseInt(val('ai-prio'), 10) || 0) : 0;
     const urg = (!itemCtx && urgent) ? urgent : null;
     if(urg) { f.sprintId = urg.sprintId; f.description = (f.description ? f.description + '\n\n' : '') + 'Incluído durante a sprint (mudança de escopo) — motivo: ' + urg.reason; }
     const prevB = itemCtx ? items.find(x => x.id === itemCtx) : null;
@@ -14794,6 +14837,7 @@ const Agile = (() => {
     if(it) { Object.assign(it, f); AgileCalc.moveTo(it, val('ai-status') || it.status, todayIso()); }
     else { it = { id: AgileCalc.nextId('US', items), status: 'todo', rank: (Math.max(0, ...items.map(x => x.rank || 0)) + 1), createdOn: todayIso(), doneOn: '', ...f }; items.push(it); }
     if(!was) { it.checklist = checkNorm(); applyEvidence(it, ev); }
+    AgileCalc.placeBug(items, it.id, (it.kind === 'bug' && it.status !== 'done') ? prio : 0).forEach(oid => { const o = items.find(x => x.id === oid); if(o) snap[oid] = snapOf(o); }); // o banco refaz a fila igual; aqui só espelha
     saveItems(); pushItem(it);
     if(!was) { fireRules({ type: 'created' }, it); if(it.assignee) fireRules({ type: 'assigned' }, it); }
     else { if(it.status !== was.status) fireRules({ type: 'enter', column: it.status }, it); if(it.assignee && it.assignee !== was.assignee) fireRules({ type: 'assigned' }, it); }
@@ -15056,7 +15100,7 @@ const Agile = (() => {
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, checkDates, openRules, closeRules, editRule, ruleField, ruleAct, ruleAddAct, ruleDelAct, ruleCancel, ruleSave, toggleRule, deleteRule, renderDue, openDue, closeDue, dueChoose, runDue, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
     aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, setPolicyMove, setPolicyCol, openImpediments, closeImpediments, resolveImpediment, setPolicyBehalf, addGate, removeGate, setGate, setTemplate, checkToggle, checkAdd, checkDel, openBehalf, closeBehalf, confirmBehalf, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
-    cfgNow: () => { load(); return cfg; }, kindChanged, kindPicked, syncSprintLock, sprintDur, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
+    cfgNow: () => { load(); return cfg; }, kindChanged, prioOptions, prioQueueHtml, kindPicked, syncSprintLock, sprintDur, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
 })();
 </script>
 
@@ -21638,6 +21682,7 @@ const Messaging = (() => {
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px">
         <div><label class="field-label" for="bug-f-parent" id="bug-f-parent-lbl">Entrega (item) em que o bug foi encontrado (obrigatório)</label><select class="input" id="bug-f-parent"></select></div>
         <div><label class="field-label" for="bug-f-sprint">Sprint</label><select class="input" id="bug-f-sprint"></select></div>
+        <div><label class="field-label" for="bug-f-prio">Prioridade na fila de bugs</label><select class="input" id="bug-f-prio"></select><div id="bug-f-prioq" style="font-size:12px;color:var(--t2);margin-top:4px;line-height:1.5"></div></div>
       </div>
       <div><label class="field-label" for="bug-f-title">Resumo do bug (obrigatório)</label><input class="input" id="bug-f-title" maxlength="160" placeholder="Ex.: O botão Importar planilha não abre a janela"></div>
       <div><label class="field-label" for="bug-f-sev">Quanto isso atrapalha?</label><select class="input" id="bug-f-sev" style="max-width:340px"><option value="atrapalha">Atrapalha, mas dá para contornar</option><option value="impede">Não consigo continuar trabalhando</option><option value="detalhe">Detalhe visual ou de texto</option></select></div>

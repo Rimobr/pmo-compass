@@ -84,12 +84,12 @@ const main = async () => { try {
     }
     { process.exitCode = 0; return; }
   }
-  const bugs = await q(`select b.id, b.title, b.status, b.description, b.parent_id, par.title as parent_title, b.sprint_id, s.name as sprint_name, b.attachments, b.created_on
+  const bugs = await q(`select b.id, b.title, b.status, b.description, b.parent_id, par.title as parent_title, b.sprint_id, s.name as sprint_name, b.attachments, b.created_on, b.bug_priority
     from public.backlog_items b
     left join public.backlog_items par on par.project_id = b.project_id and par.id = b.parent_id
     left join public.sprints s on s.project_id = b.project_id and s.id = b.sprint_id
     where b.project_id = ${lit(p.id)} and b.kind = 'bug' ${flag('--all') ? '' : "and b.status <> 'done'"}
-    order by b.created_on desc, b.id`);
+    order by b.bug_priority asc nulls last, b.created_on desc, b.id`);
   const out = outIdx >= 0 ? args[outIdx + 1] : join(root, 'bugs-export', slug(p.name));
   mkdirSync(join(out, 'anexos'), { recursive: true });
 
@@ -113,9 +113,9 @@ const main = async () => { try {
   }
   const STATUS = { todo: 'A fazer', doing: 'Em andamento', review: 'Em revisão', done: 'Concluído' };
   const md = [`# Bugs — ${p.name}${p.client ? ' (' + p.client + ')' : ''}`, '', `Exportado do PMO Compass em ${new Date().toLocaleString('pt-BR')} · ${bugs.length} bug(s)${flag('--all') ? '' : ' em aberto'}.`, '',
-    'Cada bug é filho de uma entrega do projeto. A descrição segue a ordem: caminho no sistema, gravidade, passo a passo, o que se esperava, o que aconteceu e o contexto técnico.', ''];
+    'Os bugs vêm na ORDEM DE PRIORIDADE definida pela gestão (P1 primeiro; sem prioridade por último): corrija nessa ordem. Cada bug é filho de uma entrega do projeto. A descrição segue a ordem: caminho no sistema, gravidade, passo a passo, o que se esperava, o que aconteceu e o contexto técnico.', ''];
   for (const b of bugs) {
-    md.push(`## ${b.id} — ${b.title}`, '', `- **Situação:** ${STATUS[b.status] || b.status}`, `- **Entrega (item pai):** ${b.parent_id ? b.parent_id + ' — ' + (b.parent_title || '') : 'sem item pai (bug antigo)'}`, `- **Sprint:** ${b.sprint_name || 'fora de sprint (backlog)'}`, `- **Registrado em:** ${b.created_on || '—'}`, '', '```text', b.description || '(sem descrição)', '```', '');
+    md.push(`## ${b.id} — ${b.title}`, '', `- **Situação:** ${STATUS[b.status] || b.status}`, `- **Prioridade:** ${b.bug_priority ? 'P' + b.bug_priority + ' (posição ' + b.bug_priority + ' na fila; 1 = corrigir primeiro)' : 'sem prioridade definida'}`, `- **Entrega (item pai):** ${b.parent_id ? b.parent_id + ' — ' + (b.parent_title || '') : 'sem item pai (bug antigo)'}`, `- **Sprint:** ${b.sprint_name || 'fora de sprint (backlog)'}`, `- **Registrado em:** ${b.created_on || '—'}`, '', '```text', b.description || '(sem descrição)', '```', '');
     const an = saved[b.id] || [];
     if (an.length) { md.push('**Anexos:**', ''); an.forEach(a => md.push(`- [${a.name}](${a.rel})`)); md.push(''); }
     else if ((b.attachments || []).length) md.push('_(há anexos, mas não foi possível baixá-los)_', '');

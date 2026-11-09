@@ -182,7 +182,7 @@
     },
     "backlog_items": {
       "domain": "Execução ágil",
-      "desc": "Itens do backlog e do quadro (história, tarefa, bug filho com anexos, lista de tarefas do cartão e histórico).",
+      "desc": "Itens do backlog e do quadro (história, tarefa, bug filho com anexos e posição na fila de prioridade dos bugs, lista de tarefas do cartão e histórico).",
       "scope": "projeto",
       "personal": false,
       "clearProject": "apaga",
