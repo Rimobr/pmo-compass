@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.76.2'
+  version: '2.77.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -445,7 +445,7 @@ html[data-theme="light"] .sidebar{--sb-dark:93%}
 @media(max-width:600px){
   .tb-logo [data-brand="name"]{display:none}
   .tb-logo{border-right:0}
-  #tb-cloud-badge,#tb-role-tag,.tb-actions .ico-btn[title="Configurações"],.tb-actions .ico-btn[title="Novo projeto"],.tb-actions .ico-btn[title^="Trocar tema"]{display:none!important}
+  #tb-cloud-badge,#tb-role-tag,#tb-ver,.tb-actions .ico-btn[title="Configurações"],.tb-actions .ico-btn[title="Novo projeto"],.tb-actions .ico-btn[title^="Trocar tema"]{display:none!important}
   /* Celular: só o que decide ou avisa. O cabeçalho cabe inteiro (menu, projeto, Bússola, avisos, bug e conta); marca e busca saem */
   .tb-logo,.tb-actions .ico-btn[title^="Busca rápida"]{display:none!important}
   .tb-proj-wrap{flex:1 1 auto;min-width:0}
@@ -1033,6 +1033,7 @@ body.icons-failed i[data-fb]::before{
     <span id="tb-cloud-badge" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:999px;background:var(--s2);color:var(--t3)" title="Carregando…"><i class="ti ti-cloud" style="font-size:12px"></i></span>
     <span class="role-badge" id="tb-role-tag" title="O seu perfil de acesso">Administrador</span>
     <button type="button" class="ava" id="tb-avatar" title="Minha conta" aria-label="Minha conta" onclick="Auth.openAccount()" style="cursor:pointer">MR</button>
+    <span class="role-badge" id="tb-ver" title="Versão do sistema" aria-label="Versão do sistema"></span>
   </div>
 </header>
 <div id="preview-bar" class="preview-bar" role="status" hidden>
@@ -10879,6 +10880,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-brand="shortName"]').forEach(el => { el.textContent = BRAND.shortName; });
   document.querySelectorAll('[data-brand="tagline"]').forEach(el => { el.textContent = BRAND.tagline; });
   document.querySelectorAll('[data-brand="version"]').forEach(el => { el.textContent = BRAND.version; });
+  { const v = document.getElementById('tb-ver'); if(v) v.textContent = 'Ver. ' + BRAND.version; }
   if(typeof ToggleSwitch !== 'undefined') ToggleSwitch.applyAll();
 
   Theme.load();

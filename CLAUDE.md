@@ -112,6 +112,9 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - Baixa: `--id <id> --mark US-1,US-2 --note "..."` leva o bug para **Em revisão** e põe no histórico do card "<o que foi feito> — Auto Corrigido!" (a nota tem **até 100 caracteres** (sem contar "Auto Corrigido!", que é somado no fim) e nunca é cortada com reticências: se passar, o script recusa e a IA reescreve mais curta). Nunca vai para Concluído sozinho; é a única gravação do script.
 - Configurações → Inteligência artificial → "Ler os bugs com uma IA" traz o **pedido pronto** ("Analise PMO Compass: <projeto>") com botão Copiar Pedido, e o comando manual.
 
-## Regra 1 — Apresentar antes de criar (regra do dono, 09/11/2026)
-- Quando o pedido for **criar algo** (tela, função, skill, tabela, script, botão, documento, qualquer coisa nova), **antes de iniciar** apresentar ao dono o que será criado (o quê, onde, como fica, o que muda e o que não muda) e **esperar a decisão**. Só depois de um sim claro começar.
-- Vale para o que é novo; correção de erro e ajuste pedido de forma explícita e detalhada seguem sem a apresentação. Na dúvida se é criar ou ajustar, apresentar.
+## Regra 1 — Apresentar antes de criar, só no fluxo da skill Analise PMO Compass (regra do dono, 09/11/2026)
+- Vale **somente** quando o trabalho nasce da skill `analise-pmo-compass` ("Analise PMO Compass"): se, ao ler os bugs, for preciso **criar algo novo** (tela, função, tabela, arquivo, botão), **apresentar ao dono o que será criado e esperar a decisão** antes de iniciar. Correção do que o bug descreve segue sem apresentação.
+- Fora desse fluxo (pedidos normais do dono) **não** há apresentação prévia: fazer.
+
+
+- Cabeçalho: o selo **"Ver. x.y.z"** (versão do sistema, `#tb-ver`) fica ao lado do avatar, no mesmo estilo do selo de perfil; some no celular (pedido do dono, 09/11/2026).

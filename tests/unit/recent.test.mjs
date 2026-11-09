@@ -249,3 +249,8 @@ test('bugs para a IA: pedido pronto, escolha de projeto quando o nome não bate 
   for (const k of ["'--list'", "'--id'", "'--mark'", 'process.exitCode = 3', "to: 'Em revisão'", 'room = 100;', 'Reescreva mais curta', "status = 'review'"]) assert.ok(sc.includes(k), k);
   assert.ok(!/status = 'done'/.test(sc), 'nunca conclui sozinho');
 });
+
+test('cabeçalho mostra a versão do sistema ao lado do avatar e a esconde no celular', () => {
+  for (const k of ['id="tb-ver"', "'Ver. ' + BRAND.version", '#tb-role-tag,#tb-ver,']) assert.ok(html.includes(k), k);
+  assert.ok(html.indexOf('id="tb-avatar"') < html.indexOf('id="tb-ver"'));
+});
