@@ -9,7 +9,7 @@
 //   node scripts/read-bugs.mjs --list                     # lista TODOS os projetos e quadros (id | tipo | nome | bugs em aberto)
 //   node scripts/read-bugs.mjs --id <id-do-projeto>       # escolhe pelo id exato (use depois do --list)
 //   node scripts/read-bugs.mjs --id <id> --mark US-007,BUG-3 --note "texto curto"
-//        # GRAVA: leva os bugs para "Em revisão" e põe no histórico do card o comentário
+//        # GRAVA: leva os bugs para "Em revisão" e acrescenta no fim do campo Descrição e critérios de aceite (o texto original fica) um bloco entre linhas de asteriscos com
 //        # "<o que foi feito> — Auto Corrigido!" (a nota tem até 100 caracteres, sem contar o rótulo, que é somado no fim; se passar, o script recusa)
 //   Se o nome não achar o projeto (ou achar mais de um), sai com código 3 e a lista, para a pessoa escolher.
 //
@@ -68,15 +68,19 @@ const main = async () => { try {
     if (note.length > room) { console.error('A nota tem ' + note.length + ' caracteres; o máximo é ' + room + ' (o rótulo "' + LABEL + '" é somado depois). Reescreva mais curta, sem cortar com reticências.'); process.exitCode = 2; return; }
     const comment = note + SEP + LABEL;
     const now = new Date().toISOString(), by = 'Claude Code (correção automática)';
-    const rows = await q(`select id, status, history from public.backlog_items where project_id = ${lit(p.id)} and kind = 'bug' and id in (${ids.map(lit).join(',')})`);
+    const rows = await q(`select id, status, history, description from public.backlog_items where project_id = ${lit(p.id)} and kind = 'bug' and id in (${ids.map(lit).join(',')})`);
     const miss = ids.filter(i => !rows.find(r => r.id === i)); if (miss.length) console.error('Não é bug deste projeto (ignorado): ' + miss.join(', '));
     for (const row of rows) {
       if (row.status === 'done') { console.error(`  ${row.id}: já concluído, não mexi.`); continue; }
       const hist = (Array.isArray(row.history) ? row.history : []).concat([
         { at: now, by, field: 'Situação', from: ({ todo: 'A fazer', doing: 'Em andamento', review: 'Em revisão' })[row.status] || row.status, to: 'Em revisão' },
-        { at: now, by, field: '', from: '', to: 'Comentário: ' + comment }]).slice(-300); // mesmo formato dos comentários feitos pela tela
-      await q(`update public.backlog_items set status = 'review', done_on = null, history = ${lit(JSON.stringify(hist))}::jsonb, updated_at = now() where project_id = ${lit(p.id)} and id = ${lit(row.id)}`);
-      console.log(`  ${row.id}: movido para Em revisão — "${comment}"`);
+      ]).slice(-300);
+      // O que foi feito entra no campo Descrição e critérios de aceite: o texto original fica e o bloco é somado no fim, entre linhas de asteriscos
+      const bar = '*'.repeat(36), block = bar + '\n' + comment + '\n' + bar;
+      const desc = (row.description ? row.description.replace(/\s+$/, '') + '\n\n' : '') + block;
+      if (desc.length > 2000) { console.error(`  ${row.id}: a descrição ficaria com ${desc.length} caracteres (máximo 2000); não mexi. Reduza o texto do card.`); continue; }
+      await q(`update public.backlog_items set status = 'review', done_on = null, description = ${lit(desc)}, history = ${lit(JSON.stringify(hist))}::jsonb, updated_at = now() where project_id = ${lit(p.id)} and id = ${lit(row.id)}`);
+      console.log(`  ${row.id}: movido para Em revisão; descrição recebeu o bloco: "${comment}"`);
     }
     { process.exitCode = 0; return; }
   }

@@ -109,7 +109,7 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 ## Corrigir os bugs do Kanban em outro sistema, quase automático (pedido do dono, 09/11/2026)
 - Na sessão do **outro projeto** basta escrever **"Analise PMO Compass"**: a habilidade global `analise-pmo-compass` (`~/.claude/skills`, cópia em `D:\Claude\Skill`) roda `scripts/read-bugs.mjs`, lê `bugs.md` e os prints, corrige o código **daquele** projeto, roda os testes e dá a baixa.
 - Nome que não bate (ou bate com vários): o script sai com código 3 e lista **todos os projetos e quadros** (`--list`: id, tipo, nome, bugs em aberto); a habilidade pergunta qual é e roda de novo com `--id`.
-- Baixa: `--id <id> --mark US-1,US-2 --note "..."` leva o bug para **Em revisão** e põe no histórico do card "<o que foi feito> — Auto Corrigido!" (a nota tem **até 100 caracteres** (sem contar "Auto Corrigido!", que é somado no fim) e nunca é cortada com reticências: se passar, o script recusa e a IA reescreve mais curta). Nunca vai para Concluído sozinho; é a única gravação do script.
+- Baixa: `--id <id> --mark US-1,US-2 --note "..."` leva o bug para **Em revisão** e acrescenta no fim do campo **Descrição e critérios de aceite** (o texto original fica) um bloco entre linhas de 36 asteriscos com "<o que foi feito> — Auto Corrigido!" (a nota tem **até 100 caracteres** (sem contar "Auto Corrigido!", que é somado no fim) e nunca é cortada com reticências: se passar, o script recusa e a IA reescreve mais curta). Nunca vai para Concluído sozinho; é a única gravação do script.
 - Configurações → Inteligência artificial → "Ler os bugs com uma IA" traz o **pedido pronto** ("Analise PMO Compass: <projeto>") com botão Copiar Pedido, e o comando manual.
 
 ## Regra 1 — Apresentar antes de criar, só no fluxo da skill Analise PMO Compass (regra do dono, 09/11/2026)
@@ -120,3 +120,5 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - Cabeçalho: o selo **"Ver. x.y.z"** (versão do sistema, `#tb-ver`) fica ao lado do avatar, no mesmo estilo do selo de perfil; some no celular (pedido do dono, 09/11/2026).
 
 - Bug sempre tem **Item pai obrigatório** (projeto e quadro; o banco também exige): sem ele o aviso é "Campo obrigatório não preenchido: Item pai". Se o banco recusar uma regra (erro P0001), o app mostra a mensagem da regra e não "Falha ao sincronizar" (reservado a rede) (09/11/2026).
+
+- Correção: o comentário da baixa **não** vai para o histórico; vai para o campo **Descrição e critérios de aceite**, no fim, preservando o texto original, entre duas linhas de 36 asteriscos (limite de 2000 caracteres da descrição) (09/11/2026).

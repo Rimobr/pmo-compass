@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.77.2'
+  version: '2.77.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1801,7 +1801,7 @@ body.icons-failed i[data-fb]::before{
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin:0 0 10px"><b>É possível, e é só leitura.</b> Cada bug registrado no Backlog (com o passo a passo e as evidências anexadas) vira uma pasta que a IA do <b>outro sistema</b> lê direto. Assim quem testa registra aqui, e quem corrige não precisa copiar nada à mão. O projeto aberto agora é <b id="bugs-ai-proj">—</b>.</p>
     <ol style="font-size:12.5px;color:var(--t1);line-height:1.7;margin:0 0 10px;padding-left:20px">
       <li><b>Abra a IA no sistema a corrigir</b> (por exemplo o Claude Code na pasta do ClãGuard Pro) e cole o <b>pedido pronto</b> abaixo. A habilidade <code>analise-pmo-compass</code> faz o resto: lê os bugs e os prints, corrige o código daquele sistema e roda os testes. Se o nome do projeto ou quadro não bater, ela lista todos e pergunta qual é.</li>
-      <li><b>Acompanhe aqui.</b> Os bugs corrigidos vão sozinhos para <b>Em revisão</b>, com o comentário "<o que foi feito> — Auto Corrigido!" (a descrição tem até 100 caracteres; a frase final é somada) no histórico do card. Revise e conclua você mesmo; cada bug é filho de uma entrega, então o progresso da entrega acompanha.</li>
+      <li><b>Acompanhe aqui.</b> Os bugs corrigidos vão sozinhos para <b>Em revisão</b>, e a descrição do card recebe, no fim, um bloco entre linhas de asteriscos com "<o que foi feito> — Auto Corrigido!" (a descrição tem até 100 caracteres; a frase final é somada) no histórico do card. Revise e conclua você mesmo; cada bug é filho de uma entrega, então o progresso da entrega acompanha.</li>
       <li><b>Sem a habilidade?</b> Use o comando manual do fim: ele exporta a pasta <code>bugs-export/<span id="bugs-ai-slug">projeto</span>/bugs.md</code> e a subpasta <code>anexos</code> com os prints.</li>
     </ol>
     <div class="field-group"><div class="field-label"><label for="bugs-ai-prompt">1 · Pedido pronto (cole na sessão do outro sistema)</label></div><div class="prov-inp-row"><input class="input" id="bugs-ai-prompt" readonly style="font-size:12.5px"><button class="btn btn-sm btn-acc" onclick="BugsAi.copy('prompt')"><i class="ti ti-copy"></i>Copiar Pedido</button></div></div>
