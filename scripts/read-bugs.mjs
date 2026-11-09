@@ -74,7 +74,7 @@ const main = async () => { try {
       if (row.status === 'done') { console.error(`  ${row.id}: já concluído, não mexi.`); continue; }
       const hist = (Array.isArray(row.history) ? row.history : []).concat([
         { at: now, by, field: 'Situação', from: ({ todo: 'A fazer', doing: 'Em andamento', review: 'Em revisão' })[row.status] || row.status, to: 'Em revisão' },
-        { at: now, by, field: '', from: '', to: 'Comentário: ' + comment } // mesmo formato dos comentários feitos pela tela]).slice(-300);
+        { at: now, by, field: '', from: '', to: 'Comentário: ' + comment }]).slice(-300); // mesmo formato dos comentários feitos pela tela
       await q(`update public.backlog_items set status = 'review', done_on = null, history = ${lit(JSON.stringify(hist))}::jsonb, updated_at = now() where project_id = ${lit(p.id)} and id = ${lit(row.id)}`);
       console.log(`  ${row.id}: movido para Em revisão — "${comment}"`);
     }
