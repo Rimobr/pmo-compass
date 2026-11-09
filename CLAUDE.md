@@ -105,3 +105,9 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - Decisão prioritária no celular: sobe para logo abaixo do título do Dashboard, com o título, 3 linhas do texto (ninguém aceita sem ler) e os botões Aceitar e Registrar / Ver todas as decisões.
 - Meu Trabalho no celular: primeiro o que é meu (números e entregas); "Onde estou" e "Meu time" saem. Riscos: a lista vem antes da matriz, sem importar, exportar e legenda. Decisões: só aceitar, adiar e discordar (sem exportar nem excluir). Colaboradores: a equipe primeiro e a alocação entre projetos depois; barras de alocação e de entrega ficam abaixo do nome, em largura total.
 - Meu Trabalho no celular: "Minhas Entregas" vira **cartões** (nome, prazo, falta, avanço e situação; a chance de estourar sai) em vez de tabela com rolagem lateral (`.mw-tbl`, `data-l`).
+
+## Corrigir os bugs do Kanban em outro sistema, quase automático (pedido do dono, 09/11/2026)
+- Na sessão do **outro projeto** basta escrever **"Analise PMO Compass"**: a habilidade global `analise-pmo-compass` (`~/.claude/skills`, cópia em `D:\Claude\Skill`) roda `scripts/read-bugs.mjs`, lê `bugs.md` e os prints, corrige o código **daquele** projeto, roda os testes e dá a baixa.
+- Nome que não bate (ou bate com vários): o script sai com código 3 e lista **todos os projetos e quadros** (`--list`: id, tipo, nome, bugs em aberto); a habilidade pergunta qual é e roda de novo com `--id`.
+- Baixa: `--id <id> --mark US-1,US-2 --note "..."` leva o bug para **Em revisão** e põe no histórico do card "Analisado e Corrigido Automaticamente: <nota>" (**máximo 100 caracteres**). Nunca vai para Concluído sozinho; é a única gravação do script.
+- Configurações → Inteligência artificial → "Ler os bugs com uma IA" traz o **pedido pronto** ("Analise PMO Compass: <projeto>") com botão Copiar Pedido, e o comando manual.

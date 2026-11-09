@@ -6,8 +6,14 @@
 //   node scripts/read-bugs.mjs "ClãGuard"                 # bugs em aberto do projeto cujo nome contém o texto
 //   node scripts/read-bugs.mjs "ClãGuard" --all           # inclui os já concluídos
 //   node scripts/read-bugs.mjs "ClãGuard" --out C:\caminho\pasta
+//   node scripts/read-bugs.mjs --list                     # lista TODOS os projetos e quadros (id | tipo | nome | bugs em aberto)
+//   node scripts/read-bugs.mjs --id <id-do-projeto>       # escolhe pelo id exato (use depois do --list)
+//   node scripts/read-bugs.mjs --id <id> --mark US-007,BUG-3 --note "texto curto"
+//        # GRAVA: leva os bugs para "Em revisão" e põe no histórico do card o comentário
+//        # "Analisado e Corrigido Automaticamente: <nota>" (no máximo 100 caracteres)
+//   Se o nome não achar o projeto (ou achar mais de um), sai com código 3 e a lista, para a pessoa escolher.
 //
-// Gera <pasta>/bugs.md e <pasta>/anexos/*. Credencial: SUPABASE_ACCESS_TOKEN (ambiente ou .env.deploy); nada é gravado no banco.
+// Gera <pasta>/bugs.md e <pasta>/anexos/*. Credencial: SUPABASE_ACCESS_TOKEN (ambiente ou .env.deploy); só o --mark grava (situação e histórico do card).
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,9 +29,10 @@ const ref = process.env.PROJECT_REF || (existsSync(join(root, 'supabase/.temp/pr
 const args = process.argv.slice(2);
 const flag = f => args.includes(f);
 const outIdx = args.indexOf('--out');
-const name = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--out');
+const val = f => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : undefined; };
+const name = args.find((a, i) => !a.startsWith('--') && !['--out', '--id', '--mark', '--note'].includes(args[i - 1]));
 if (!token || !ref) { console.error('Falta SUPABASE_ACCESS_TOKEN ou PROJECT_REF.'); process.exit(2); }
-if (!name) { console.error('Informe o nome (ou parte do nome) do projeto. Ex.: node scripts/read-bugs.mjs "ClãGuard"'); process.exit(2); }
+if (!name && !val('--id') && !flag('--list')) { console.error('Informe o nome (ou parte do nome) do projeto, ou use --list. Ex.: node scripts/read-bugs.mjs "ClãGuard"'); process.exit(2); }
 
 const q = async sql => {
   const r = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ query: sql }) });
@@ -35,11 +42,42 @@ const lit = s => `'${String(s).replace(/'/g, "''")}'`;
 const slug = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'projeto';
 const safe = s => String(s).replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);
 
-try {
-  const projs = await q(`select id, name, client from public.projects where lower(name) like lower(${lit('%' + name + '%')}) order by name`);
-  if (!projs.length) { console.error(`Nenhum projeto com "${name}" no nome.`); process.exit(1); }
-  if (projs.length > 1) { console.error('Mais de um projeto combina; seja mais específico:\n' + projs.map(p => '  - ' + p.name).join('\n')); process.exit(1); }
+const plain = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const allProjects = () => q(`select p.id, p.name, p.client, p.methodology, (select count(*) from public.backlog_items b where b.project_id = p.id and b.kind = 'bug' and b.status <> 'done') as bugs from public.projects p order by p.name`);
+const showList = rows => rows.map(p => `  ${p.id} | ${p.methodology === 'quadro' ? 'Quadro ' : 'Projeto'} | ${p.name}${p.client ? ' (' + p.client + ')' : ''} | ${p.bugs} bug(s) em aberto`).join('\n');
+
+const main = async () => { try {
+  if (flag('--list')) { console.log('Projetos e quadros (id | tipo | nome | bugs em aberto):\n' + showList(await allProjects())); { process.exitCode = 0; return; } }
+  let projs = await allProjects();
+  if (val('--id')) projs = projs.filter(p => p.id === val('--id'));
+  else {
+    const hit = projs.filter(p => plain(p.name).includes(plain(name)));
+    if (hit.length !== 1) {
+      console.error((hit.length ? `Mais de um projeto combina com "${name}"` : `Nenhum projeto com "${name}" no nome`) + '. ESCOLHA qual (id | tipo | nome | bugs em aberto) e rode de novo com --id <id>:\n' + showList(hit.length ? hit : projs));
+      { process.exitCode = 3; return; }
+    }
+    projs = hit;
+  }
+  if (!projs.length) { console.error('Id de projeto não encontrado. Use --list.'); { process.exitCode = 1; return; } }
   const p = projs[0];
+  if (val('--mark')) {
+    const ids = val('--mark').split(',').map(x => x.trim()).filter(Boolean);
+    const LABEL = 'Analisado e Corrigido Automaticamente';
+    const note = String(val('--note') || '').replace(/\s+/g, ' ').trim();
+    const comment = (note ? LABEL + ': ' + note : LABEL).slice(0, 100);
+    const now = new Date().toISOString(), by = 'Claude Code (correção automática)';
+    const rows = await q(`select id, status, history from public.backlog_items where project_id = ${lit(p.id)} and kind = 'bug' and id in (${ids.map(lit).join(',')})`);
+    const miss = ids.filter(i => !rows.find(r => r.id === i)); if (miss.length) console.error('Não é bug deste projeto (ignorado): ' + miss.join(', '));
+    for (const row of rows) {
+      if (row.status === 'done') { console.error(`  ${row.id}: já concluído, não mexi.`); continue; }
+      const hist = (Array.isArray(row.history) ? row.history : []).concat([
+        { at: now, by, field: 'Situação', from: ({ todo: 'A fazer', doing: 'Em andamento', review: 'Em revisão' })[row.status] || row.status, to: 'Em revisão' },
+        { at: now, by, field: 'Comentário', from: '', to: comment }]).slice(-300);
+      await q(`update public.backlog_items set status = 'review', done_on = null, history = ${lit(JSON.stringify(hist))}::jsonb, updated_at = now() where project_id = ${lit(p.id)} and id = ${lit(row.id)}`);
+      console.log(`  ${row.id}: movido para Em revisão — "${comment}"`);
+    }
+    { process.exitCode = 0; return; }
+  }
   const bugs = await q(`select b.id, b.title, b.status, b.description, b.parent_id, par.title as parent_title, b.sprint_id, s.name as sprint_name, b.attachments, b.created_on
     from public.backlog_items b
     left join public.backlog_items par on par.project_id = b.project_id and par.id = b.parent_id
@@ -78,4 +116,5 @@ try {
   }
   writeFileSync(join(out, 'bugs.md'), md.join('\n'));
   console.log(`${bugs.length} bug(s) de "${p.name}" exportados para ${out}${files.length ? ` (${Object.values(saved).flat().length}/${files.length} anexo(s))` : ''}.`);
-} catch (e) { console.error('Falha: ' + String(e.message).slice(0, 300)); process.exitCode = 1; }
+} catch (e) { console.error('Falha: ' + String(e.message).slice(0, 300)); process.exitCode = 1; } };
+await main();

@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.75.4'
+  version: '2.76.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1799,14 +1799,14 @@ body.icons-failed i[data-fb]::before{
     <div class="lbl"><i class="ti ti-bug"></i>Ler os bugs com uma IA (para corrigir outro sistema)<span class="help-q" data-help="Os relatos dos bugs (passo a passo, o que se esperava, o que aconteceu) e os prints anexados podem ser entregues a uma IA, como o Claude Code, que lê, reproduz e corrige o sistema testado. O PMO Compass só fornece a lista, em modo leitura." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin:0 0 10px"><b>É possível, e é só leitura.</b> Cada bug registrado no Backlog (com o passo a passo e as evidências anexadas) vira uma pasta que a IA do <b>outro sistema</b> lê direto. Assim quem testa registra aqui, e quem corrige não precisa copiar nada à mão. O projeto aberto agora é <b id="bugs-ai-proj">—</b>.</p>
     <ol style="font-size:12.5px;color:var(--t1);line-height:1.7;margin:0 0 10px;padding-left:20px">
-      <li><b>Exporte os bugs.</b> No computador onde está a pasta do PMO Compass, abra o terminal nela e rode o comando abaixo. Ele cria <code>bugs-export/<span id="bugs-ai-slug">projeto</span>/bugs.md</code> e a subpasta <code>anexos</code> com os prints.</li>
-      <li><b>Abra a IA no sistema a corrigir</b> (por exemplo o Claude Code na pasta do ClãGuard Pro) e cole a instrução abaixo, já apontando para essa pasta.</li>
-      <li><b>Acompanhe aqui.</b> Quando a IA entregar a correção, marque o bug como concluído no Backlog (cada bug é filho de uma entrega, então o progresso da entrega acompanha).</li>
+      <li><b>Abra a IA no sistema a corrigir</b> (por exemplo o Claude Code na pasta do ClãGuard Pro) e cole o <b>pedido pronto</b> abaixo. A habilidade <code>analise-pmo-compass</code> faz o resto: lê os bugs e os prints, corrige o código daquele sistema e roda os testes. Se o nome do projeto ou quadro não bater, ela lista todos e pergunta qual é.</li>
+      <li><b>Acompanhe aqui.</b> Os bugs corrigidos vão sozinhos para <b>Em revisão</b>, com o comentário "Analisado e Corrigido Automaticamente" (até 100 caracteres) no histórico do card. Revise e conclua você mesmo; cada bug é filho de uma entrega, então o progresso da entrega acompanha.</li>
+      <li><b>Sem a habilidade?</b> Use o comando manual do fim: ele exporta a pasta <code>bugs-export/<span id="bugs-ai-slug">projeto</span>/bugs.md</code> e a subpasta <code>anexos</code> com os prints.</li>
     </ol>
-    <div class="field-group"><div class="field-label"><label for="bugs-ai-cmd">1 · Comando de exportação</label></div><div class="prov-inp-row"><input class="input" id="bugs-ai-cmd" readonly style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm" onclick="BugsAi.copy('cmd')"><i class="ti ti-copy"></i>Copiar</button></div></div>
-    <div class="field-group"><div class="field-label"><label for="bugs-ai-prompt">2 · Instrução para a IA</label></div><textarea class="input" id="bugs-ai-prompt" readonly rows="8" style="font-size:12px;line-height:1.5"></textarea><div class="btn-row" style="margin-top:6px"><button class="btn btn-sm" onclick="BugsAi.copy('prompt')"><i class="ti ti-copy"></i>Copiar Instrução</button></div></div>
+    <div class="field-group"><div class="field-label"><label for="bugs-ai-prompt">1 · Pedido pronto (cole na sessão do outro sistema)</label></div><div class="prov-inp-row"><input class="input" id="bugs-ai-prompt" readonly style="font-size:12.5px"><button class="btn btn-sm btn-acc" onclick="BugsAi.copy('prompt')"><i class="ti ti-copy"></i>Copiar Pedido</button></div></div>
+    <div class="field-group"><div class="field-label"><label for="bugs-ai-cmd">2 · Comando manual de exportação (sem a habilidade)</label></div><div class="prov-inp-row"><input class="input" id="bugs-ai-cmd" readonly style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm" onclick="BugsAi.copy('cmd')"><i class="ti ti-copy"></i>Copiar</button></div></div>
     <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer;margin:8px 0"><input type="checkbox" id="bugs-ai-all" onchange="BugsAi.render()"> Incluir também os bugs já concluídos (<code>--all</code>)</label>
-    <div class="set-sub"><i class="ti ti-shield-lock"></i> <b>Cuidados.</b> Precisa do Node instalado e do token de acesso do Supabase no arquivo <code>.env.deploy</code> (<code>SUPABASE_ACCESS_TOKEN</code>), que só o administrador tem. O comando <b>não grava nada</b> no banco; a chave de serviço só gera links de 5 minutos para baixar os prints. A pasta <code>bugs-export</code> não vai para o repositório nem para o ar, mas pode conter dados pessoais nos prints: não a compartilhe fora de quem corrige.</div>
+    <div class="set-sub"><i class="ti ti-shield-lock"></i> <b>Cuidados.</b> Precisa do Node instalado e do token de acesso do Supabase no arquivo <code>.env.deploy</code> (<code>SUPABASE_ACCESS_TOKEN</code>), que só o administrador tem. A leitura <b>não grava nada</b> no banco; a chave de serviço só gera links de 5 minutos para baixar os prints. A única gravação é a baixa automática: o bug corrigido e testado vai para <b>Em revisão</b> com o comentário no histórico (nunca para Concluído). A pasta <code>bugs-export</code> não vai para o repositório nem para o ar, mas pode conter dados pessoais nos prints: não a compartilhe fora de quem corrige.</div>
   </div>
   </div><!-- /settings-panel-ia -->
 
@@ -16372,9 +16372,7 @@ const BugsAi = (() => {
     return {
       n, folder,
       cmd: 'node scripts/read-bugs.mjs "' + n.replace(/"/g, '') + '"' + (all ? ' --all' : ''),
-      prompt: 'Leia o arquivo ' + folder + '\\bugs.md (os prints estão na subpasta anexos). Cada bug traz o caminho no sistema, a gravidade, o passo a passo, o que se esperava, o que aconteceu e o contexto técnico.\n\n'
-        + 'Reproduza e corrija os bugs deste sistema, um por vez, começando pelos mais graves. Para cada um, explique a causa, o que mudou e como testar.\n\n'
-        + 'A pasta é somente leitura: não altere o PMO Compass. Ao terminar, devolva a lista dos bugs corrigidos com o código de cada um (ex.: US-018), para eu marcar como concluídos no Backlog.'
+      prompt: 'Analise PMO Compass: ' + n.replace(/"/g, '') + (all ? ' (incluir os já concluídos)' : '')
     };
   };
   function render() {
