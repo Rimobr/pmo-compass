@@ -238,3 +238,7 @@ test('celular: Meu Trabalho, Riscos, Decisões e Colaboradores mostram primeiro 
 test('celular: barra de alocação e de entrega vão para baixo do nome, sem sobreposição', () => {
   for (const k of ['.res-row .res-bar{flex:1 1 100%;order:3;min-width:0}', '#mw-root .set-row>div[style*="min-width:130px"]{flex:1 1 100%!important}']) assert.ok(html.includes(k), k);
 });
+
+test('celular: Minhas Entregas vira cartões (sem tabela larga nem rolagem lateral)', () => {
+  for (const k of ['class="mw-tbl"', 'class="mw-main"', 'data-l="Situação"', '.mw-tbl{min-width:0!important}', '.mw-tbl thead{display:none}', '.mw-tbl td::before{content:attr(data-l)']) assert.ok(html.includes(k), k);
+});
