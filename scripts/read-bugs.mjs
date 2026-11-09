@@ -85,7 +85,7 @@ const main = async () => { try {
       ]);
       const back = reporterOf(row);
       if (back && back !== row.assignee) hist.push({ at: now, by, field: 'Responsável', from: row.assignee || '(vazio)', to: back });
-      hist.splice(0, Math.max(0, hist.length - 300));
+      if (hist.length > 300) hist.splice(1, hist.length - 300); // o registro de criação (primeiro) nunca sai do corte
       // O que foi feito entra no campo Descrição e critérios de aceite: o texto original fica e o bloco é somado no fim, entre linhas de asteriscos
       const bar = '*'.repeat(36), block = bar + '\n' + comment + '\n' + bar;
       const desc = (row.description ? row.description.replace(/\s+$/, '') + '\n\n' : '') + block;

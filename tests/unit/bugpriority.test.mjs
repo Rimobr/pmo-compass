@@ -66,3 +66,10 @@ test('gráfico da sprint: tendência é a reta de mínimos quadrados e só exist
   const t = AgileCalc.trendLine([0, 2, 4]); assert.deepEqual(t.map(v => Math.round(v * 100) / 100), [0, 2, 4]);
   assert.ok(AgileCalc.trendLine([3, 0, 0]).every(v => v >= 0));
 });
+
+test('histórico do card: sempre tem o registro "Card criado" como primeiro, e o cabeçalho da coluna fica fixo', () => {
+  assert.ok(html.includes("h.to === 'Card criado' && !h.field"));
+  assert.ok(html.includes('it.history = [it.history[0]].concat('));
+  assert.match(html, /\.kb-hdr\{[^}]*position:sticky;top:0/);
+  assert.ok(readFileSync(join(root, 'scripts/read-bugs.mjs'), 'utf8').includes('hist.splice(1, hist.length - 300)'));
+});

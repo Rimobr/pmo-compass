@@ -143,3 +143,7 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 
 ## Gráfico da sprint no Kanban (pedido do dono, 09/11/2026)
 - Na MESMA linha da faixa da sprint ativa, no espaço livre à direita (`#kb-burn`, `burnChart`; sem acrescentar altura à tela), vai um **mini** gráfico (30 px de altura) simples: **barras translúcidas** (uma cor só, a da marca) com **cards concluídos por dia** e o **número no topo de cada barra** (zero não leva número), **linha de tendência** (reta de mínimos quadrados, só a partir do 3º dia e só até hoje), sem eixos, sem grade, legenda mínima ("tendência"), dica ao passar o mouse e resumo para leitores de tela (aria-label). Dias de folga só entram se houve conclusão. Some no celular (só o que pede decisão). Regras puras em `AgileCalc.doneByDay` e `trendLine`.
+
+## Histórico com criação sempre e cabeçalho da coluna fixo (pedido do dono, 09/11/2026)
+- O histórico de todo card **sempre tem um único registro "Card criado", e é o primeiro** (`track` em `Agile`): card novo recebe na hora da gravação; card antigo sem o registro ganha com a data de criação e o nome de quem aparece primeiro; o corte de 300 linhas nunca o remove. É nele que a baixa da skill se apoia para devolver o card a quem o abriu.
+- No Kanban o cabeçalho de cada coluna (nome e contagem, `.kb-hdr`) fica **fixo no topo ao rolar a tela**, para a pessoa saber em que coluna está o card (no celular o quadro rola de lado e o cabeçalho acompanha a rolagem do próprio quadro).

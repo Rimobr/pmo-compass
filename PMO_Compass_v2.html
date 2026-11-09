@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.80.1'
+  version: '2.80.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2212,7 +2212,7 @@ body.icons-failed i[data-fb]::before{
 .kb-lane-cfg .ln-row{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;margin-top:6px;align-items:center}
 .kb-lane-cfg .ln-row>b{font-size:11.5px;color:var(--t2);min-width:84px}
 .kb-lane-cfg label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
-.kb-hdr{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12.5px;margin-bottom:8px;color:var(--t1)}
+.kb-hdr{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12.5px;margin-bottom:8px;color:var(--t1);position:sticky;top:0;z-index:3;background:var(--s1);padding:6px 0;border-bottom:1px solid var(--b1)}
 .kb-count{font-size:11px;background:var(--s3);border-radius:20px;padding:1px 8px;color:var(--t1)}
 .kb-card{background:var(--s2);border:1px solid var(--b1);border-radius:var(--r8);padding:8px 10px;margin-bottom:8px;cursor:grab}
 .kb-card:hover{border-color:var(--b3)}
@@ -13880,12 +13880,16 @@ const Agile = (() => {
   function track(it) {
     if(!Array.isArray(it.history)) it.history = [];
     const at = new Date().toISOString(), by = (typeof Auth !== 'undefined' && Auth.getName()) || 'Sistema', was = snap[it.id];
-    if(!was) { if(!it.history.length) it.history.push({ at, by, field: '', from: '', to: 'Card criado' }); }
-    else TRACKED.forEach(([k, lbl]) => {
+    if(was) TRACKED.forEach(([k, lbl]) => {
       const a = was[k], b = it[k] == null ? '' : it[k];
       if(String(a) !== String(b)) it.history.push({ at, by, field: lbl, from: shown(it, k, a), to: shown(it, k, b) });
     });
-    if(it.history.length > HIST_MAX) it.history = it.history.slice(-HIST_MAX);
+    // Sempre existe um (e só um) registro "Card criado", e ele é o primeiro: card novo recebe agora; card antigo sem o registro ganha com a data de criação e o nome de quem aparece primeiro no histórico
+    if(!it.history.some(h => h && h.to === 'Card criado' && !h.field)) {
+      const first = it.history[0];
+      it.history.unshift(was ? { at: it.createdOn ? it.createdOn + 'T00:00:00.000Z' : (first && first.at) || at, by: (first && first.by) || by, field: '', from: '', to: 'Card criado' } : { at, by, field: '', from: '', to: 'Card criado' });
+    }
+    if(it.history.length > HIST_MAX) it.history = [it.history[0]].concat(it.history.slice(-(HIST_MAX - 1))); // o registro de criação nunca sai do corte
     snap[it.id] = snapOf(it);
   }
   const pad2 = n => String(n).padStart(2, '0');
