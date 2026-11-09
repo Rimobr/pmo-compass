@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.77.0'
+  version: '2.77.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2342,7 +2342,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
       <button class="btn btn-sm" onclick="Agile.closeItem()">Cancelar</button><button class="btn btn-sm btn-acc" onclick="Agile.saveItem()"><i class="ti ti-check"></i>Salvar</button>
     </div>
     <div class="field-group"><div class="field-label"><label for="ai-title">Título</label></div><input class="input" id="ai-title" maxlength="200" placeholder="Ex: Como cliente, quero consultar meu extrato"></div>
-    <div class="field-group" id="ai-parent-grp" style="display:none"><div class="field-label"><label for="ai-parent">Item (entrega) em que o bug foi encontrado — obrigatório</label></div><select class="input" id="ai-parent"></select></div>
+    <div class="field-group" id="ai-parent-grp" style="display:none"><div class="field-label"><label for="ai-parent" id="ai-parent-lbl">Item (entrega) em que o bug foi encontrado — obrigatório</label></div><select class="input" id="ai-parent"></select></div>
     <div class="g2" style="gap:10px">
       <div class="field-group"><div class="field-label"><label for="ai-kind">Tipo</label></div><select class="input" id="ai-kind" onchange="Agile.kindPicked()"><option value="bug">Bug</option><option value="historia" selected>História</option><option value="tarefa">Tarefa</option></select></div>
       <div class="field-group"><div class="field-label"><label for="ai-points">Pontos</label><span class="help-q" data-help="Estimativa de esforço relativo (1, 2, 3, 5, 8, 13...). Compare com outros itens: um item de 5 dá mais trabalho que um de 2. Deixe vazio se ainda não foi estimado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="ai-points" type="number" min="0" max="100" placeholder="Ex: 5"></div>
@@ -6323,6 +6323,7 @@ const BugReport = (() => {
     files = []; renderFiles();
     const sprints = Agile.sprintRefsAll();
     const cloud = (typeof Cloud !== 'undefined') && Cloud.isSignedIn();
+    $('bug-f-parent-lbl').textContent = 'Entrega (item) em que o bug foi encontrado (' + (board ? 'opcional' : 'obrigatório') + ')';
     $('bug-f-parent').innerHTML = '<option value="">' + (board ? 'Nenhum (opcional)' : 'Escolha o item…') + '</option>' + refs.map(i => '<option value="' + esc(i.id) + '">' + esc(i.id) + ' — ' + esc(i.title) + '</option>').join('');
     $('bug-f-parent').value = parentId || '';
     const fill = () => {
@@ -14651,6 +14652,7 @@ const Agile = (() => {
   // Bug filho: o campo "item pai" só aparece (e é obrigatório) quando o tipo é Bug
   function fillParent(selected, selfId) {
     const el = document.getElementById('ai-parent'); if(!el) return;
+    const lb = document.getElementById('ai-parent-lbl'); if(lb) lb.textContent = 'Item (entrega) em que o bug foi encontrado — ' + (isBoardNow() ? 'opcional' : 'obrigatório');
     el.innerHTML = '<option value="">' + (isBoardNow() ? 'Nenhum (opcional)' : 'Escolha o item…') + '</option>' + AgileCalc.parentOptions(items, selfId).map(x => '<option value="' + esc(x.id) + '">' + esc(x.id) + ' — ' + esc(x.title) + '</option>').join('');
     el.value = selected || '';
   }
@@ -21631,7 +21633,7 @@ const Messaging = (() => {
     <div class="modal-sub" style="line-height:1.6">O bug vira um item do projeto, <strong>filho da entrega</strong> em que foi encontrado. Quanto mais você <strong>descrever e exemplificar</strong>, mais ágil a correção: conte o <strong>caminho no sistema</strong>; o que você <strong>fez</strong> (cliques, mudança de tela, função usada); o que esperava e o que aconteceu — e feche com um <strong>print</strong> do ocorrido.</div>
     <div style="display:flex;flex-direction:column;gap:12px;margin-top:10px">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px">
-        <div><label class="field-label" for="bug-f-parent">Entrega (item) em que o bug foi encontrado (obrigatório)</label><select class="input" id="bug-f-parent"></select></div>
+        <div><label class="field-label" for="bug-f-parent" id="bug-f-parent-lbl">Entrega (item) em que o bug foi encontrado (obrigatório)</label><select class="input" id="bug-f-parent"></select></div>
         <div><label class="field-label" for="bug-f-sprint">Sprint</label><select class="input" id="bug-f-sprint"></select></div>
       </div>
       <div><label class="field-label" for="bug-f-title">Resumo do bug (obrigatório)</label><input class="input" id="bug-f-title" maxlength="160" placeholder="Ex.: O botão Importar planilha não abre a janela"></div>

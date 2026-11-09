@@ -254,3 +254,7 @@ test('cabeçalho mostra a versão do sistema ao lado do avatar e a esconde no ce
   for (const k of ['id="tb-ver"', "'Ver. ' + BRAND.version", '#tb-role-tag,#tb-ver,']) assert.ok(html.includes(k), k);
   assert.ok(html.indexOf('id="tb-avatar"') < html.indexOf('id="tb-ver"'));
 });
+
+test('bug: o rótulo da entrega acompanha a regra (obrigatório no projeto, opcional no quadro)', () => {
+  for (const k of ['id="ai-parent-lbl"', 'id="bug-f-parent-lbl"', "(isBoardNow() ? 'opcional' : 'obrigatório')", "(board ? 'opcional' : 'obrigatório')"]) assert.ok(html.includes(k), k);
+});
