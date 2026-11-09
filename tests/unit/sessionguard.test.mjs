@@ -30,3 +30,8 @@ test('sessão: renova sem recarregar a página e confere a senha de novo', () =>
   assert.match(cloud, /signInWithPassword/); assert.match(cloud, /session_renew/);
   for (const k of ['id="tb-ses"', 'id="sg-refresh"', 'id="sg-session"', 'SessionGuard.render()', 'SessionGuard.policy().refreshMin']) assert.ok(html.includes(k), k);
 });
+
+test('cronômetro: a cor de aviso vence o selo do perfil (senão o administrador não vê a mudança)', () => {
+  assert.match(html, /body\[data-role\] \.ses-timer\.warn/);
+  assert.match(html, /body\[data-role\] \.ses-timer\.crit/);
+});

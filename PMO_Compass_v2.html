@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.80.2'
+  version: '2.80.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -236,9 +236,8 @@ body.is-board [onclick*="openPlanNext"],body.is-board #as-goal-grp,body.is-board
 .sb-more-btn{color:var(--t2)}
 .sb-more-chev{margin-left:auto;font-size:12px;transition:transform .16s ease}
 .sb-proj-area.more .sb-more-chev{transform:rotate(180deg)}
-.kb-barrow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin:0 0 10px}.kb-barrow #kb-sprint-bar{margin:0!important;flex:1 1 auto}
 .kb-burn{display:inline-flex;align-items:center;gap:8px;margin-left:auto;font-size:11px;color:var(--t2);white-space:nowrap}
-.kb-burn svg{display:block;height:30px;width:auto}
+.kb-burn svg{display:block;height:36px;width:auto}
 .kb-burn .kbb-bar{fill:var(--acc);fill-opacity:.28;stroke:var(--acc);stroke-width:1}
 .kb-burn .kbb-v{fill:var(--t1);font-size:11px;font-weight:700;text-anchor:middle}
 .kb-burn .kbb-base{stroke:var(--b2);stroke-width:1}
@@ -2257,10 +2256,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <button class="btn btn-sm" data-perm="manage_backlog" onclick="Agile.openRules()" title="Regras que rodam sozinhas: quando o item muda de coluna, é criado ou recebe responsável, atribui, altera dados ou avisa"><i class="ti ti-bolt"></i>Automações</button>
     <button class="btn btn-sm" data-perm="manage_backlog" onclick="Agile.openBoardCfg()"><i class="ti ti-adjustments"></i>Personalizar quadro<span class="help-q" data-help="Renomeie as colunas, acrescente colunas do seu fluxo (por exemplo Em teste ou Aguardando cliente), defina o limite de itens em andamento de cada uma (WIP) e escolha quais informações aparecem em cada cartão. As colunas A fazer e Concluído são fixas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
     <span id="kb-imp"></span>
+    <div id="kb-burn" class="kb-burn" hidden></div>
   </div>
   <div class="sprint-due-slot"></div>
-  <div class="kb-barrow"><div id="kb-sprint-bar" role="status" aria-live="polite" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;margin:0 0 10px"></div>
-  <div id="kb-burn" class="kb-burn" hidden></div></div>
+  <div id="kb-sprint-bar" role="status" aria-live="polite" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;margin:0 0 10px"></div>
   <div id="kb-root"></div>
 </section>
 
@@ -13955,7 +13954,7 @@ const Agile = (() => {
     if(!days.length) { box.hidden = true; return; }
     const past = days.filter(d => !d.future), trend = AgileCalc.trendLine(past.map(d => d.n));
     const total = past.reduce((a, d) => a + d.n, 0), max = Math.max(1, ...days.map(d => d.n), ...(trend || []).map(v => Math.ceil(v)));
-    const step = 17, W = days.length * step + 4, H = 30, top = 12, base = H - 2, ph = base - top, bw = 10;
+    const step = 17, W = days.length * step + 4, H = 36, top = 14, base = H - 2, ph = base - top, bw = 10;
     const xc = i => 2 + step * i + step / 2, yv = v => base - v / max * ph;
     let g = '<line class="kbb-base" x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '"/>';
     days.forEach((d, i) => {
@@ -16597,8 +16596,10 @@ const UpdateCheck = (() => {
 <!-- ■ MODULE: ui/session-guard ─ Tempo de sessão parametrizado pela organização: cronômetro ao lado do usuário e, nos últimos 30 s, janela para renovar com a senha sem recarregar a página (nada aberto se perde). Sem renovar, sai da conta. -->
 <style data-module="ui/session-guard-css">
 .ses-timer{border:1px solid var(--b2);cursor:pointer;font-variant-numeric:tabular-nums}
-.ses-timer.warn{background:var(--amd);color:var(--amb);border-color:var(--ambb)}
-.ses-timer.crit{background:var(--rd);color:var(--red);border-color:var(--rb)}
+/* mais específico que o selo do perfil (body[data-role="admin"] .role-badge), senão o aviso de cor não aparece para o administrador */
+body[data-role] .ses-timer.warn,.ses-timer.warn{background:var(--amd);color:var(--amb);border-color:var(--ambb)}
+body[data-role] .ses-timer.crit,.ses-timer.crit{background:var(--rd);color:var(--red);border-color:var(--rb)}
+body[data-role] .ses-timer.warn,body[data-role] .ses-timer.crit{font-weight:800}
 .ses-count{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;text-align:center;margin:6px 0 2px}
 .ses-err{color:var(--red);font-size:12.5px;min-height:18px;margin-top:6px}
 </style>
