@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.80.3'
+  version: '2.80.4'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -236,13 +236,18 @@ body.is-board [onclick*="openPlanNext"],body.is-board #as-goal-grp,body.is-board
 .sb-more-btn{color:var(--t2)}
 .sb-more-chev{margin-left:auto;font-size:12px;transition:transform .16s ease}
 .sb-proj-area.more .sb-more-chev{transform:rotate(180deg)}
+.kb-top{position:relative}
 .kb-burn{display:inline-flex;align-items:center;gap:8px;margin-left:auto;font-size:11px;color:var(--t2);white-space:nowrap}
 .kb-burn svg{display:block;height:36px;width:auto}
 .kb-burn .kbb-bar{fill:var(--acc);fill-opacity:.28;stroke:var(--acc);stroke-width:1}
-.kb-burn .kbb-v{fill:var(--t1);font-size:11px;font-weight:700;text-anchor:middle}
+.kb-burn .kbb-v{fill:var(--t1);font-size:11px;font-weight:700;text-anchor:middle;paint-order:stroke;stroke:var(--s1);stroke-width:3px;stroke-linejoin:round}
+.kb-burn .kbb-x{fill:var(--t2);font-size:11px;text-anchor:middle}
 .kb-burn .kbb-base{stroke:var(--b2);stroke-width:1}
 .kb-burn .kbb-trend{fill:none;stroke:var(--t1);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .kb-burn .kbb-lg{display:inline-flex;align-items:center;gap:4px}
+/* tela larga e sem aviso de metodologia: o gráfico ocupa todo o espaço livre à direita, abaixo dos botões do topo, até a linha do seletor de sprint */
+@media(min-width:1180px){.kb-top:not(:has(.m-notice)) .kb-burn{position:absolute;right:0;top:28px;bottom:0;width:clamp(300px,calc(100% - 560px),700px);margin:0;align-items:stretch;gap:10px;white-space:normal}
+.kb-burn .kbb-head{width:118px;flex:none;display:flex;flex-direction:column;justify-content:center;gap:4px;font-size:11px;color:var(--t2);line-height:1.35}}
 @media(max-width:600px){.kb-burn{display:none!important}}
 .sb-board-pick{padding:6px 8px 4px}.sb-board-lbl{display:block;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t2);margin:0 2px 3px}.sb-board-sel{width:100%;font-size:13px;font-weight:700;padding:7px 4px;text-overflow:ellipsis}.sb-board-sel.on{color:var(--acc);border-color:var(--acc);background:color-mix(in srgb,var(--acc) 14%,var(--s1))}.sidebar.collapsed .sb-board-pick{display:none}
 .sb-board-menu{display:none;margin-left:8px;border-left:2px solid color-mix(in srgb,var(--acc) 45%,transparent)}
@@ -2247,6 +2252,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
 
 <!-- ■ MODULE: pages/agile ─ Quadro Kanban, Backlog e Sprints (metodologias Ágil e Híbrido) -->
 <section class="page" id="p-kanban" data-module="pages/kanban">
+  <div class="kb-top">
   <div class="pg-hdr">
     <div><div class="pg-title">Quadro Kanban<span class="help-q" data-help="O trabalho em colunas: A fazer, Em andamento, Em revisão e Concluído. Arraste o cartão ou use as setas ◀ ▶. Cada coluna de trabalho tem um limite (WIP): passar dele avisa que a equipe começou coisa demais antes de terminar o que já está aberto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Veja o que está em andamento, o que trava e o que já foi entregue.</div></div>
     <div class="btn-row" id="kb-actions"></div>
@@ -2257,6 +2263,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <button class="btn btn-sm" data-perm="manage_backlog" onclick="Agile.openBoardCfg()"><i class="ti ti-adjustments"></i>Personalizar quadro<span class="help-q" data-help="Renomeie as colunas, acrescente colunas do seu fluxo (por exemplo Em teste ou Aguardando cliente), defina o limite de itens em andamento de cada uma (WIP) e escolha quais informações aparecem em cada cartão. As colunas A fazer e Concluído são fixas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
     <span id="kb-imp"></span>
     <div id="kb-burn" class="kb-burn" hidden></div>
+  </div>
   </div>
   <div class="sprint-due-slot"></div>
   <div id="kb-sprint-bar" role="status" aria-live="polite" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;margin:0 0 10px"></div>
@@ -13945,7 +13952,8 @@ const Agile = (() => {
       + planned.map(p => '<button class="btn btn-sm"' + mgr + ' onclick="Agile.startSprint(\'' + esc(p.id) + '\')"><i class="ti ti-player-play"></i>Iniciar ' + esc(p.name) + '</button>').join(' ')
       + ' <button class="btn btn-sm btn-acc"' + mgr + ' onclick="Agile.openSprint()"><i class="ti ti-plus"></i>Nova Sprint</button>';
   }
-  // Mini gráfico da sprint ativa (cabe na linha da faixa): barras translúcidas de cards concluídos por dia, número no topo e linha de tendência
+  // Gráfico da sprint ativa: barras translúcidas de cards concluídos por dia, número no topo e linha de tendência.
+  // Cabe no espaço livre: mini (36 px, na linha do seletor) em tela estreita; ocupa todo o espaço à direita em tela larga.
   function burnChart(act) {
     const box = document.getElementById('kb-burn'); if(!box) return;
     if(!act) { box.hidden = true; box.innerHTML = ''; return; }
@@ -13954,21 +13962,30 @@ const Agile = (() => {
     if(!days.length) { box.hidden = true; return; }
     const past = days.filter(d => !d.future), trend = AgileCalc.trendLine(past.map(d => d.n));
     const total = past.reduce((a, d) => a + d.n, 0), max = Math.max(1, ...days.map(d => d.n), ...(trend || []).map(v => Math.ceil(v)));
-    const step = 17, W = days.length * step + 4, H = 36, top = 14, base = H - 2, ph = base - top, bw = 10;
-    const xc = i => 2 + step * i + step / 2, yv = v => base - v / max * ph;
+    box.innerHTML = ''; box.hidden = false;
+    const cw = box.clientWidth, ch = box.clientHeight, big = ch >= 60 && cw >= 300;
+    const resumo = past.map(d => d.date.split('-').reverse().slice(0, 2).join('/') + ': ' + d.n).join('; ');
+    box.title = 'Cards concluídos por dia na ' + act.name + ' (' + total + ' no total)' + (trend ? '. A linha é a tendência.' : '. A tendência aparece a partir do 3º dia.');
+    const lgLine = '<svg viewBox="0 0 14 8" width="14" height="8" aria-hidden="true" style="width:14px;height:8px;flex:none"><line x1="1" y1="4" x2="13" y2="4" class="kbb-trend"/></svg>';
+    let W, H, top, base, step, bw;
+    if(big) { W = cw - 128; H = ch; top = 15; base = H - 16; step = (W - 8) / days.length; bw = Math.max(6, Math.min(30, step * 0.62)); }
+    else { step = 17; W = days.length * step + 4; H = 36; top = 14; base = H - 2; bw = 10; }
+    const ph = base - top, xc = i => 4 + step * i + step / 2, yv = v => base - v / max * ph, rr = Math.min(3, bw / 3);
     let g = '<line class="kbb-base" x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '"/>';
     days.forEach((d, i) => {
+      if(big) g += '<text class="kbb-x" x="' + xc(i) + '" y="' + (base + 13) + '">' + esc(d.date.slice(8)) + '</text>';
       if(d.n <= 0 || d.future) return;
       const h = d.n / max * ph, x = xc(i) - bw / 2, y = base - h;
-      g += '<path class="kbb-bar" d="M' + x + ' ' + base + 'V' + (y + 3) + 'Q' + x + ' ' + y + ' ' + (x + 3) + ' ' + y + 'H' + (x + bw - 3) + 'Q' + (x + bw) + ' ' + y + ' ' + (x + bw) + ' ' + (y + 3) + 'V' + base + 'Z"><title>' + esc(d.date.split('-').reverse().join('/')) + ': ' + d.n + ' card(s) concluído(s)</title></path><text class="kbb-v" x="' + xc(i) + '" y="' + (y - 3) + '">' + d.n + '</text>';
+      g += '<path class="kbb-bar" d="M' + x + ' ' + base + 'V' + (y + rr) + 'Q' + x + ' ' + y + ' ' + (x + rr) + ' ' + y + 'H' + (x + bw - rr) + 'Q' + (x + bw) + ' ' + y + ' ' + (x + bw) + ' ' + (y + rr) + 'V' + base + 'Z"><title>' + esc(d.date.split('-').reverse().join('/')) + ': ' + d.n + ' card(s) concluído(s)</title></path><text class="kbb-v" x="' + xc(i) + '" y="' + (y - 3) + '">' + d.n + '</text>';
     });
     if(trend) g += '<polyline class="kbb-trend" points="' + trend.map((v, i) => xc(i).toFixed(1) + ',' + yv(v).toFixed(1)).join(' ') + '"/>';
-    const resumo = past.map(d => d.date.split('-').reverse().slice(0, 2).join('/') + ': ' + d.n).join('; ');
-    box.hidden = false;
-    box.title = 'Cards concluídos por dia na ' + act.name + ' (' + total + ' no total)' + (trend ? '. A linha é a tendência.' : '. A tendência aparece a partir do 3º dia.');
-    box.innerHTML = '<span>Concluídos por dia</span><svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Cards concluídos por dia na ' + esc(act.name) + '. ' + esc(resumo) + '">' + g + '</svg>'
-      + (trend ? '<span class="kbb-lg"><svg viewBox="0 0 14 8" width="14" height="8" aria-hidden="true" style="height:8px"><line x1="1" y1="4" x2="13" y2="4" class="kbb-trend"/></svg>tendência</span>' : '');
+    const svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" style="width:' + W + 'px;height:' + H + 'px;flex:none" role="img" aria-label="Cards concluídos por dia na ' + esc(act.name) + '. ' + esc(resumo) + '">' + g + '</svg>';
+    box.innerHTML = big
+      ? '<div class="kbb-head"><b style="color:var(--t1);font-size:12px">Cards concluídos por dia</b><span>' + total + ' no total</span>' + (trend ? '<span class="kbb-lg">' + lgLine + 'tendência</span>' : '<span>tendência a partir do 3º dia</span>') + '</div>' + svg
+      : '<span>Concluídos por dia</span>' + svg + (trend ? '<span class="kbb-lg">' + lgLine + 'tendência</span>' : '');
   }
+  let burnT = null;
+  window.addEventListener('resize', () => { clearTimeout(burnT); burnT = setTimeout(() => { try { const pg = document.getElementById('p-kanban'); if(pg && pg.classList.contains('on')) { load(); burnChart(active()); } } catch(e) { /* o gráfico nunca derruba a tela */ } }, 150); });
   function renderKanban() {
     const root = document.getElementById('kb-root'); if(!root) return;
     load();
