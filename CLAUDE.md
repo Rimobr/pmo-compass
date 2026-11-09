@@ -111,3 +111,7 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - Nome que não bate (ou bate com vários): o script sai com código 3 e lista **todos os projetos e quadros** (`--list`: id, tipo, nome, bugs em aberto); a habilidade pergunta qual é e roda de novo com `--id`.
 - Baixa: `--id <id> --mark US-1,US-2 --note "..."` leva o bug para **Em revisão** e põe no histórico do card "Analisado e Corrigido Automaticamente: <nota>" (**máximo 100 caracteres**). Nunca vai para Concluído sozinho; é a única gravação do script.
 - Configurações → Inteligência artificial → "Ler os bugs com uma IA" traz o **pedido pronto** ("Analise PMO Compass: <projeto>") com botão Copiar Pedido, e o comando manual.
+
+## Regra 1 — Apresentar antes de criar (regra do dono, 09/11/2026)
+- Quando o pedido for **criar algo** (tela, função, skill, tabela, script, botão, documento, qualquer coisa nova), **antes de iniciar** apresentar ao dono o que será criado (o quê, onde, como fica, o que muda e o que não muda) e **esperar a decisão**. Só depois de um sim claro começar.
+- Vale para o que é novo; correção de erro e ajuste pedido de forma explícita e detalhada seguem sem a apresentação. Na dúvida se é criar ou ajustar, apresentar.
