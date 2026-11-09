@@ -10,7 +10,7 @@
 //   node scripts/read-bugs.mjs --id <id-do-projeto>       # escolhe pelo id exato (use depois do --list)
 //   node scripts/read-bugs.mjs --id <id> --mark US-007,BUG-3 --note "texto curto"
 //        # GRAVA: leva os bugs para "Em revisão" e põe no histórico do card o comentário
-//        # "<o que foi feito> — Analisado e Corrigido Automaticamente" (no máximo 100 caracteres no total)
+//        # "<o que foi feito> — Auto Corrigido!" (a nota tem até 100 caracteres, sem contar o rótulo, que é somado no fim; se passar, o script recusa)
 //   Se o nome não achar o projeto (ou achar mais de um), sai com código 3 e a lista, para a pessoa escolher.
 //
 // Gera <pasta>/bugs.md e <pasta>/anexos/*. Credencial: SUPABASE_ACCESS_TOKEN (ambiente ou .env.deploy); só o --mark grava (situação e histórico do card).
@@ -62,10 +62,11 @@ const main = async () => { try {
   const p = projs[0];
   if (val('--mark')) {
     const ids = val('--mark').split(',').map(x => x.trim()).filter(Boolean);
-    const LABEL = 'Analisado e Corrigido Automaticamente';
+    const LABEL = 'Auto Corrigido!', SEP = ' — ', room = 100; // a nota usa até 100 caracteres; o rótulo fica fora da conta e é somado no fim
     const note = String(val('--note') || '').replace(/\s+/g, ' ').trim();
-    const room = 100 - LABEL.length - 3; // o que foi feito + Analisado e Corrigido Automaticamente (o rótulo nunca é cortado)
-    const comment = note ? (note.length > room ? note.slice(0, room - 1).trimEnd() + '…' : note) + ' — ' + LABEL : LABEL;
+    if (!note) { console.error('Informe --note com o que foi feito (até ' + room + ' caracteres).'); process.exitCode = 2; return; }
+    if (note.length > room) { console.error('A nota tem ' + note.length + ' caracteres; o máximo é ' + room + ' (o rótulo "' + LABEL + '" é somado depois). Reescreva mais curta, sem cortar com reticências.'); process.exitCode = 2; return; }
+    const comment = note + SEP + LABEL;
     const now = new Date().toISOString(), by = 'Claude Code (correção automática)';
     const rows = await q(`select id, status, history from public.backlog_items where project_id = ${lit(p.id)} and kind = 'bug' and id in (${ids.map(lit).join(',')})`);
     const miss = ids.filter(i => !rows.find(r => r.id === i)); if (miss.length) console.error('Não é bug deste projeto (ignorado): ' + miss.join(', '));
