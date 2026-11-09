@@ -246,6 +246,6 @@ test('celular: Minhas Entregas vira cartões (sem tabela larga nem rolagem later
 test('bugs para a IA: pedido pronto, escolha de projeto quando o nome não bate e baixa para Em revisão', () => {
   for (const k of ["prompt: 'Analise PMO Compass: '", 'Copiar Pedido', 'analise-pmo-compass', 'Analisado e Corrigido Automaticamente']) assert.ok(html.includes(k), k);
   const sc = readFileSync(join(root, 'scripts', 'read-bugs.mjs'), 'utf8');
-  for (const k of ["'--list'", "'--id'", "'--mark'", 'process.exitCode = 3', "to: 'Em revisão'", '.slice(0, 100)', "status = 'review'"]) assert.ok(sc.includes(k), k);
+  for (const k of ["'--list'", "'--id'", "'--mark'", 'process.exitCode = 3', "to: 'Em revisão'", 'const room = 100 - LABEL.length - 3', "' — ' + LABEL", "status = 'review'"]) assert.ok(sc.includes(k), k);
   assert.ok(!/status = 'done'/.test(sc), 'nunca conclui sozinho');
 });

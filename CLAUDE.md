@@ -109,7 +109,7 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 ## Corrigir os bugs do Kanban em outro sistema, quase automático (pedido do dono, 09/11/2026)
 - Na sessão do **outro projeto** basta escrever **"Analise PMO Compass"**: a habilidade global `analise-pmo-compass` (`~/.claude/skills`, cópia em `D:\Claude\Skill`) roda `scripts/read-bugs.mjs`, lê `bugs.md` e os prints, corrige o código **daquele** projeto, roda os testes e dá a baixa.
 - Nome que não bate (ou bate com vários): o script sai com código 3 e lista **todos os projetos e quadros** (`--list`: id, tipo, nome, bugs em aberto); a habilidade pergunta qual é e roda de novo com `--id`.
-- Baixa: `--id <id> --mark US-1,US-2 --note "..."` leva o bug para **Em revisão** e põe no histórico do card "Analisado e Corrigido Automaticamente: <nota>" (**máximo 100 caracteres**). Nunca vai para Concluído sozinho; é a única gravação do script.
+- Baixa: `--id <id> --mark US-1,US-2 --note "..."` leva o bug para **Em revisão** e põe no histórico do card "<o que foi feito> — Analisado e Corrigido Automaticamente" (**máximo 100 caracteres no total**; a nota cabe em cerca de 60). Nunca vai para Concluído sozinho; é a única gravação do script.
 - Configurações → Inteligência artificial → "Ler os bugs com uma IA" traz o **pedido pronto** ("Analise PMO Compass: <projeto>") com botão Copiar Pedido, e o comando manual.
 
 ## Regra 1 — Apresentar antes de criar (regra do dono, 09/11/2026)

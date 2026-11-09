@@ -10,7 +10,7 @@
 //   node scripts/read-bugs.mjs --id <id-do-projeto>       # escolhe pelo id exato (use depois do --list)
 //   node scripts/read-bugs.mjs --id <id> --mark US-007,BUG-3 --note "texto curto"
 //        # GRAVA: leva os bugs para "Em revisão" e põe no histórico do card o comentário
-//        # "Analisado e Corrigido Automaticamente: <nota>" (no máximo 100 caracteres)
+//        # "<o que foi feito> — Analisado e Corrigido Automaticamente" (no máximo 100 caracteres no total)
 //   Se o nome não achar o projeto (ou achar mais de um), sai com código 3 e a lista, para a pessoa escolher.
 //
 // Gera <pasta>/bugs.md e <pasta>/anexos/*. Credencial: SUPABASE_ACCESS_TOKEN (ambiente ou .env.deploy); só o --mark grava (situação e histórico do card).
@@ -64,7 +64,8 @@ const main = async () => { try {
     const ids = val('--mark').split(',').map(x => x.trim()).filter(Boolean);
     const LABEL = 'Analisado e Corrigido Automaticamente';
     const note = String(val('--note') || '').replace(/\s+/g, ' ').trim();
-    const comment = (note ? LABEL + ': ' + note : LABEL).slice(0, 100);
+    const room = 100 - LABEL.length - 3; // o que foi feito + Analisado e Corrigido Automaticamente (o rótulo nunca é cortado)
+    const comment = note ? (note.length > room ? note.slice(0, room - 1).trimEnd() + '…' : note) + ' — ' + LABEL : LABEL;
     const now = new Date().toISOString(), by = 'Claude Code (correção automática)';
     const rows = await q(`select id, status, history from public.backlog_items where project_id = ${lit(p.id)} and kind = 'bug' and id in (${ids.map(lit).join(',')})`);
     const miss = ids.filter(i => !rows.find(r => r.id === i)); if (miss.length) console.error('Não é bug deste projeto (ignorado): ' + miss.join(', '));
