@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.83.2'
+  version: '2.83.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -13291,10 +13291,18 @@ const MyInd = (() => {
   function rows(inp) {
     const set = new Set((inp.names || []).map(key)), today = inp.today, out = [];
     const colLabel = k => { const c = (inp.cols || []).find(x => x.key === k); return c ? c.label : (k === 'done' ? 'Concluído' : k === 'todo' ? 'A fazer' : k); };
-    // Entrega concluída também conta para quem PEGOU o card (levou para Em andamento) ou o LEVOU À REVISÃO, mesmo que a revisão tenha devolvido o card a quem o abriu (o responsável atual passa a ser o revisor)
-    const stepKeys = ['doing', 'review'].map(k => (inp.cols || []).find(c => c.key === k)).filter(Boolean).map(c => c.label);
-    const credited = i => i.status === 'done' && stepKeys.length > 0 && (Array.isArray(i.history) ? i.history : []).some(h => h && h.field === 'Situação' && stepKeys.includes(h.to) && set.has(key(h.by)));
-    (inp.items || []).filter(i => set.has(key(i.assignee)) || credited(i)).forEach(i => {
+    // De quem é a entrega de um card CONCLUÍDO: de quem levou a correção definitiva, isto é, quem o levou a "Em revisão" pela ÚLTIMA vez (só passos para frente; devolver o card não conta; ações do sistema/automação não contam).
+    // Sem passagem pela revisão vale quem o pegou por último em "Em andamento"; sem nenhuma das duas, o responsável atual. Card aberto é de quem é o responsável.
+    const labelOf = k => { const c = (inp.cols || []).find(x => x.key === k); return c ? c.label : null; };
+    const order = (inp.cols || []).map(c => c.label), reviewL = labelOf('review'), doingL = labelOf('doing');
+    const isSystem = by => /^(claude code|sistema)/i.test(String(by || '').trim());
+    const executor = i => {
+      const fwd = (Array.isArray(i.history) ? i.history : []).filter(h => h && h.field === 'Situação' && !isSystem(h.by) && order.indexOf(h.from) >= 0 && order.indexOf(h.to) > order.indexOf(h.from));
+      const last = l => l ? fwd.filter(h => h.to === l).pop() : null;
+      const m = last(reviewL) || last(doingL); return m ? m.by : null;
+    };
+    const owner = i => i.status === 'done' ? (executor(i) || i.assignee) : i.assignee;
+    (inp.items || []).filter(i => set.has(key(owner(i)))).forEach(i => {
       const sp = (inp.sprints || []).find(s => s.id === i.sprintId), done = i.status === 'done', due = (sp && sp.endOn) || '';
       const chk = Array.isArray(i.checklist) ? i.checklist : [];
       const moved = lastMove(i);
