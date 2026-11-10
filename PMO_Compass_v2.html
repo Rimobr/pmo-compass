@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.81.1'
+  version: '2.82.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2381,14 +2381,15 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     </div>
     <div class="field-group" id="ai-status-grp"><div class="field-label"><label for="ai-status">Situação</label></div><select class="input" id="ai-status"><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="review">Em revisão</option><option value="done">Concluído</option></select></div>
     <div class="field-group"><div class="field-label"><label for="ai-desc">Descrição e critérios de aceite</label></div><textarea class="input" id="ai-desc" rows="3" maxlength="2000" style="resize:vertical;font-family:inherit"></textarea></div>
-    <div id="ai-check" style="display:none;margin-top:10px"></div>
     <div id="ai-work" style="display:none;margin-top:10px">
       <div class="g2" style="gap:10px;align-items:start">
       <div class="field-group"><div class="field-label"><label for="ai-note">Comentário da atividade</label><span class="help-q" data-help="O que foi feito e o resultado (ex.: testei os 3 cenários, tudo aprovado). Fica no histórico do cartão com o seu nome e a data. Algumas colunas exigem o comentário para entrar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><textarea class="input" id="ai-note" rows="2" maxlength="500" placeholder="Ex.: Testei os 3 cenários; evidências anexadas. Aprovado." style="resize:vertical;font-family:inherit"></textarea></div>
       <div class="field-group"><div class="field-label"><label for="ai-evid">Evidências (cole o print com Ctrl+V ou anexe prints, PDF, planilha; até 5 MB cada)</label></div><input class="input" id="ai-evid" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/csv,.xlsx"></div>
       </div>
+      <div id="ai-lastnotes" style="display:none;font-size:12px;color:var(--t2);line-height:1.5;margin-top:6px"></div>
       <div class="set-sub" id="ai-work-hint"></div>
     </div>
+    <div id="ai-check" style="display:none;margin-top:10px"></div>
     <div id="ai-children" style="display:none;margin-top:10px"></div>
     <div id="ai-files" style="display:none;margin-top:10px"></div>
     <details id="ai-hist" style="display:none;margin-top:10px">
@@ -12907,6 +12908,8 @@ const AgileCalc = (() => {
     return hit.length === 1 ? hit[0] : '';
   }
   function moveTo(item, status, today) { item.status = status; item.doneOn = status === 'done' ? (item.doneOn || today) : ''; return item; }
+  // Devolver o card = levá-lo para uma coluna ANTERIOR do quadro (inclui sair de Concluído)
+  const isBackward = (cfg, from, to) => { const k = cols(cfg).map(c => c.key), a = k.indexOf(from), b = k.indexOf(to); return a >= 0 && b >= 0 && b < a; };
   function neighbor(status, dir, cfg) { const list = cols(cfg), i = list.findIndex(c => c.key === status) + dir; return list[i] ? list[i].key : null; }
 
   function sprintStats(sprint, items, today) {
@@ -13041,7 +13044,7 @@ const AgileCalc = (() => {
     return advice;
   }
 
-  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, doneByDay, trendLine, isOpenBug, byPriority, bugQueue, placeBug, compactQueue, bugParentError, assigneeError, sprintAssigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, isBackward, doneByDay, trendLine, isOpenBug, byPriority, bugQueue, placeBug, compactQueue, bugParentError, assigneeError, sprintAssigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
 })();
 </script>
 
@@ -14079,8 +14082,9 @@ const Agile = (() => {
       ${bottom ? `<div class="kb-meta">${bottom}</div>` : ''}
       <div class="kb-mv" data-perm="update_own">${prev && canTouch(i, prev, true) ? `<button class="btn btn-sm" aria-label="Mover ${esc(i.id)} para ${lbl(prev)}" onclick="event.stopPropagation();Agile.move('${esc(i.id)}',-1)">◀</button>` : ''}${next && canTouch(i, next, true) ? `<button class="btn btn-sm" aria-label="Mover ${esc(i.id)} para ${lbl(next)}" onclick="event.stopPropagation();Agile.move('${esc(i.id)}',1)">▶</button>` : ''}</div></div>`;
   }
-  function setStatus(it, status) {
+  function setStatus(it, status, why) {
     const was = it.status;
+    if(why) addHist(it, 'Comentário: ' + String(why).slice(0, 300));
     AgileCalc.moveTo(it, status, todayIso());
     saveItems(); pushItem(it);
     const over = AgileCalc.wip(boardItems(), cfg).find(s => s.key === status && s.over);
@@ -14145,20 +14149,22 @@ const Agile = (() => {
     if(pend.length || needBehalf(it)) { openBehalf(it, to, pend); return true; }
     return false;
   }
-  function move(id, dir) {
+  async function move(id, dir) {
     load(); const it = items.find(x => x.id === id); if(!it) return;
     const to = AgileCalc.neighbor(it.status, dir, cfg); if(!to) return;
     if(guardMove(it, to)) return;
-    setStatus(it, to); renderAll();
+    let why = ''; if(AgileCalc.isBackward(cfg, it.status, to)) { why = await askReturn(it, to); if(why === null) return; }
+    setStatus(it, to, why); renderAll();
     const b = document.querySelector(`.kb-card[data-id="${CSS.escape(id)}"]`); if(b) b.focus();
   }
   function dragStart(e, id) { dragId = id; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', id); } catch(x) {} e.currentTarget.classList.add('dragging'); }
   function dragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drop'); }
-  function drop(e, status) {
+  async function drop(e, status) {
     e.preventDefault(); e.currentTarget.classList.remove('drop');
     load(); const it = items.find(x => x.id === dragId); dragId = null; if(!it || it.status === status) return;
     if(guardMove(it, status)) return;
-    setStatus(it, status); renderAll();
+    let why = ''; if(AgileCalc.isBackward(cfg, it.status, status)) { why = await askReturn(it, status); if(why === null) return; }
+    setStatus(it, status, why); renderAll();
   }
   function setBoardSprint(v) { boardSprint = v; renderKanban(); }
   // ───────── Personalizar o quadro (colunas, limites e campos do cartão) ─────────
@@ -14684,7 +14690,7 @@ const Agile = (() => {
     fillSprintSelect(it ? it.sprintId : presetSprint);
     fillParent(it ? it.parentId : '', it ? it.id : '');
     kindChanged();
-    renderChildren(it); renderFiles(it); renderHistory(it);
+    renderChildren(it); renderFiles(it); renderHistory(it); renderLastNotes(it);
     applyItemMode(it, full);
     document.getElementById('modal-agile-item').classList.remove('hidden');
     document.getElementById(full ? 'ai-title' : 'ai-note').focus();
@@ -14693,6 +14699,35 @@ const Agile = (() => {
   let presetSprint = '';
   let checkDraft = [], draftId = ''; // draftId: número do item novo, para o anexo já ir para a pasta certa antes de salvar
   const checkNorm = () => checkDraft.map(x => ({ text: String(x.text).slice(0, 120), done: !!x.done }));
+  // Devolver o card (coluna anterior): janela direta e simples que pede o motivo; ele entra no histórico como comentário
+  function askReturn(it, to) {
+    return new Promise(resolve => {
+      let m = document.getElementById('modal-return');
+      if(!m) {
+        m = document.createElement('div'); m.className = 'modal-ov hidden'; m.id = 'modal-return'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-labelledby', 'rt-title');
+        m.innerHTML = '<div class="modal-box" style="width:440px;max-width:94vw"><div class="modal-title" id="rt-title">Devolver o Card</div><p class="modal-sub" id="rt-sub" style="line-height:1.6"></p>'
+          + '<div class="field-group"><div class="field-label"><label for="rt-why">Motivo da devolução (obrigatório)</label></div><textarea class="input" id="rt-why" rows="4" maxlength="300" style="resize:vertical;font-family:inherit" placeholder="Ex.: Não foi possível validar; faltou o log do caixa"></textarea></div>'
+          + '<div id="rt-err" role="alert" style="color:var(--red);font-size:12.5px;min-height:18px"></div>'
+          + '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn btn-sm" id="rt-cancel">Cancelar</button><button type="button" class="btn btn-sm btn-acc" id="rt-ok"><i class="ti ti-arrow-back-up"></i>Devolver e Salvar</button></div></div>';
+        document.body.appendChild(m);
+      }
+      const ta = document.getElementById('rt-why'), err = document.getElementById('rt-err'), back = document.activeElement;
+      document.getElementById('rt-sub').textContent = it.id + ' — ' + it.title + ': volta de "' + AgileCalc.colLabel(cfg, it.status) + '" para "' + AgileCalc.colLabel(cfg, to) + '". O motivo fica no histórico do card.';
+      ta.value = ''; err.textContent = '';
+      const done = v => { m.classList.add('hidden'); m.onkeydown = null; if(back && back.focus && document.contains(back)) { try { back.focus(); } catch(e) { /* foco perdido */ } } resolve(v); };
+      const ok = () => { const w = ta.value.trim(); if(w.length < 5) { err.textContent = 'Escreva o motivo (mínimo 5 letras).'; ta.focus(); return; } done(w.slice(0, 300)); };
+      document.getElementById('rt-ok').onclick = ok; document.getElementById('rt-cancel').onclick = () => done(null);
+      m.onkeydown = e => { if(e.key === 'Escape') { e.stopPropagation(); done(null); } else if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)) ok(); };
+      m.classList.remove('hidden'); setTimeout(() => ta.focus(), 30);
+    });
+  }
+  // Os últimos comentários do card ficam à vista, logo abaixo do campo de comentário (o histórico completo continua no fim)
+  function renderLastNotes(it) {
+    const el = document.getElementById('ai-lastnotes'); if(!el) return;
+    const list = it && Array.isArray(it.history) ? it.history.filter(h => h && !h.field && String(h.to).startsWith('Comentário: ')).slice(-3).reverse() : [];
+    el.style.display = list.length ? '' : 'none';
+    el.innerHTML = list.length ? '<b style="color:var(--t1)">Últimos comentários</b>' + list.map(h => { const d = new Date(h.at); return '<div>• <b>' + (isNaN(d) ? '' : pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ' · ') + esc(h.by) + '</b>: ' + esc(String(h.to).slice(12)) + '</div>'; }).join('') : '';
+  }
   function addHist(it, text) { if(!Array.isArray(it.history)) it.history = []; it.history.push({ at: new Date().toISOString(), by: (typeof Auth !== 'undefined' && Auth.getName()) || 'Sistema', field: '', from: '', to: text }); }
   function renderCheck() {
     const box = document.getElementById('ai-check'); if(!box) return;
@@ -14772,13 +14807,14 @@ const Agile = (() => {
     const blk = changed ? moveBlock(it.assignee, to) : ''; if(blk) { blockHelp(blk, it.assignee); return; }
     const pend = changed ? BoardRules.pendingFor(policy(), it.status, to, checkDraft) : [];
     if(pend.length) { T.show('☑️ Para sair de "' + AgileCalc.colLabel(cfg, it.status) + '", conclua as tarefas do cartão: ' + pendNames(pend) + '.', 6500); return; }
-    if(changed && policy().noteCols.includes(to) && note.length < 5) { T.show('⚠️ Para passar para "' + AgileCalc.colLabel(cfg, to) + '", escreva o comentário (mínimo 5 letras) e anexe as evidências, se houver.'); document.getElementById('ai-note').focus(); return; }
+    let note2 = note; if(changed && AgileCalc.isBackward(cfg, it.status, to) && note.length < 5) { const w = await askReturn(it, to); if(w === null) return; document.getElementById('ai-note').value = w; note2 = w; }
+    if(changed && policy().noteCols.includes(to) && note2.length < 5) { T.show('⚠️ Para passar para "' + AgileCalc.colLabel(cfg, to) + '", escreva o comentário (mínimo 5 letras) e anexe as evidências, se houver.'); document.getElementById('ai-note').focus(); return; }
     if(!changed && !note && !hasFiles && !checkDirty(it)) { closeItem(); return; }
     const ev = await collectEvidence(); if(ev === false) return;
     load(); it = items.find(x => x.id === itemCtx) || it;
     applyEvidence(it, ev); applyChecklist(it);
     if(changed) setStatus(it, to); else { saveItems(); pushItem(it); }
-    const id = it.id; closeItem(); renderAll(); T.show('✅ ' + id + (changed ? ' foi para "' + AgileCalc.colLabel(cfg, to) + '".' : ' atualizado.'));
+    const id = it.id; closeItem(); renderAll(); T.show('✅ ' + id + (changed ? ' foi para "' + AgileCalc.colLabel(cfg, to) + '".' : ' atualizado.') + (ev && ev.note ? ' Comentário registrado no histórico.' : ''));
   }
   // Bug filho: o campo "item pai" só aparece (e é obrigatório) quando o tipo é Bug
   function fillParent(selected, selfId) {
@@ -14932,6 +14968,7 @@ const Agile = (() => {
     if(f.sprintId && f.sprintId !== (cur00 ? cur00.sprintId || '' : '')) { const sb = AgileCalc.sprintAssigneeError(f.assignee, teamNames()); if(sb) { blockHelp(sb, f.assignee); document.getElementById('ai-assignee').focus(); return; } }
     const cur0 = itemCtx ? items.find(x => x.id === itemCtx) : null, to0 = val('ai-status') || (cur0 && cur0.status);
     const blk0 = cur0 ? moveBlock(f.assignee, to0) : ''; if(blk0) { blockHelp(blk0, f.assignee); document.getElementById('ai-assignee').focus(); return; }
+    if(cur0 && to0 !== cur0.status && AgileCalc.isBackward(cfg, cur0.status, to0) && val('ai-note').trim().length < 5) { const w = await askReturn(cur0, to0); if(w === null) return; document.getElementById('ai-note').value = w; }
     const pend0 = cur0 && to0 !== cur0.status ? BoardRules.pendingFor(policy(), cur0.status, to0, checkDraft) : [], why0 = val('ai-note').trim();
     if(pend0.length && why0.length < 5) { T.show('☑️ Há tarefas pendentes (' + pendNames(pend0) + '). Para mover mesmo assim, escreva o motivo em "Comentário da atividade".', 6500); document.getElementById('ai-note').focus(); return; }
     const ev = await collectEvidence(); if(ev === false) return;
@@ -14947,7 +14984,7 @@ const Agile = (() => {
     else { if(it.status !== was.status) fireRules({ type: 'enter', column: it.status }, it); if(it.assignee && it.assignee !== was.assignee) fireRules({ type: 'assigned' }, it); }
     if(urg) { Trail.log('Item urgente incluído na sprint: ' + it.id + ' — ' + it.title, Auth.getName(), urg.reason, 'b-amb'); T.show('⚠️ ' + it.id + ' entrou na sprint como mudança de escopo (motivo registrado).', 5000); }
     closeItem(); renderAll();
-    T.show(`✅ ${it.id} salvo.`);
+    T.show(`✅ ${it.id} salvo.` + (ev && ev.note ? ' Comentário registrado no histórico.' : ''));
   }
   function deleteItem() {
     if(!Auth.guard('manage_backlog')) return;
@@ -15204,7 +15241,7 @@ const Agile = (() => {
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, checkDates, openRules, closeRules, editRule, ruleField, ruleAct, ruleAddAct, ruleDelAct, ruleCancel, ruleSave, toggleRule, deleteRule, renderDue, openDue, closeDue, dueChoose, runDue, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
     aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, setPolicyMove, setPolicyCol, openImpediments, closeImpediments, resolveImpediment, setPolicyBehalf, addGate, removeGate, setGate, setTemplate, checkToggle, checkAdd, checkDel, openBehalf, closeBehalf, confirmBehalf, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
-    cfgNow: () => { load(); return cfg; }, kindChanged, prioOptions, prioQueueHtml, kindPicked, syncSprintLock, sprintDur, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
+    cfgNow: () => { load(); return cfg; }, kindChanged, prioOptions, prioQueueHtml, askReturn, kindPicked, syncSprintLock, sprintDur, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
 })();
 </script>
 

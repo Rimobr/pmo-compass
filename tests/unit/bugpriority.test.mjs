@@ -87,3 +87,14 @@ test('bug novo vem com a última posição da fila já escolhida', () => {
   assert.ok(html.includes("Agile.prioOptions('', 'ultima')"));
   assert.ok(html.includes("selected === 'ultima' ? q.length + 1"));
 });
+
+test('devolver o card (coluna anterior): regra pura, janela de motivo e comentário logo abaixo da descrição', () => {
+  const cfg = { cols: null };
+  assert.equal(AgileCalc.isBackward(cfg, 'review', 'todo'), true);
+  assert.equal(AgileCalc.isBackward(cfg, 'done', 'review'), true);
+  assert.equal(AgileCalc.isBackward(cfg, 'todo', 'doing'), false);
+  assert.equal(AgileCalc.isBackward(cfg, 'doing', 'doing'), false);
+  for (const k of ['id="modal-return"', 'Motivo da devolução (obrigatório)', 'async function move(id, dir)', 'async function drop(e, status)', 'function renderLastNotes(it)', 'Comentário registrado no histórico']) assert.ok(html.includes(k) || html.includes(k.replace('id="modal-return"', "m.id = 'modal-return'")), k);
+  const a = html.indexOf('id="ai-desc"'), n = html.indexOf('id="ai-note"'), c = html.indexOf('id="ai-check"');
+  assert.ok(a < n && n < c, 'ordem: descrição, comentário, tarefas');
+});
