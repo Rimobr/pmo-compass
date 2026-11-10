@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.81.0'
+  version: '2.81.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -6383,7 +6383,7 @@ const BugReport = (() => {
       sel.value = (p && live.some(x => x.id === p.sprintId)) ? p.sprintId : '';
     };
     $('bug-f-parent').onchange = fill; fill();
-    $('bug-f-prio').innerHTML = Agile.prioOptions('', ''); $('bug-f-prioq').innerHTML = Agile.prioQueueHtml('');
+    $('bug-f-prio').innerHTML = Agile.prioOptions('', 'ultima'); $('bug-f-prioq').innerHTML = Agile.prioQueueHtml('');
     ['title', 'steps', 'exp', 'act'].forEach(k => { $('bug-f-' + k).value = ''; });
     $('bug-f-sev').value = 'atrapalha'; $('bug-f-path').value = suggestPath();
     $('bug-files-hint').textContent = cloud ? 'ou cole o print aqui com Ctrl+V · até 6 arquivos de 5 MB (imagem, PDF, planilha ou texto)' : 'Anexos precisam da conexão com a nuvem. Sem ela, descreva bem o bug e guarde o print para enviar à equipe.';
@@ -14796,7 +14796,7 @@ const Agile = (() => {
   // Fila de prioridade dos bugs: mostra o que já está priorizado para a pessoa decidir onde encaixar
   const clipPrio = (t, n) => { t = String(t || ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
   function prioOptions(selfId, selected) {
-    load(); const q = AgileCalc.bugQueue(items.filter(x => x.id !== selfId)), sel = Math.min(Number(selected) || 0, q.length + 1);
+    load(); const q = AgileCalc.bugQueue(items.filter(x => x.id !== selfId)), sel = selected === 'ultima' ? q.length + 1 : Math.min(Number(selected) || 0, q.length + 1); // 'ultima' = bug novo entra no fim da fila
     let h = '<option value="">Sem prioridade (fora da fila)</option>';
     q.forEach((b, k) => { h += '<option value="' + (k + 1) + '"' + (sel === k + 1 ? ' selected' : '') + '>Posição ' + (k + 1) + ' — hoje é ' + esc(b.id) + ' · ' + esc(clipPrio(b.title, 45)) + ' (ele e os de baixo descem)</option>'; });
     return h + '<option value="' + (q.length + 1) + '"' + (sel === q.length + 1 ? ' selected' : '') + '>Posição ' + (q.length + 1) + ' — ' + (q.length ? 'última da fila' : 'primeiro bug da fila') + '</option>';

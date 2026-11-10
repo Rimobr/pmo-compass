@@ -82,3 +82,8 @@ test('celular: Automações e Personalizar quadro aparecem no Kanban; renovaçã
   assert.ok(!/#p-kanban \.kb-bar \.btn,#kb-actions \.btn/.test(html));
   assert.ok(html.includes("const RKEY = 'pmo_session_renew_v1'"));
 });
+
+test('bug novo vem com a última posição da fila já escolhida', () => {
+  assert.ok(html.includes("Agile.prioOptions('', 'ultima')"));
+  assert.ok(html.includes("selected === 'ultima' ? q.length + 1"));
+});
