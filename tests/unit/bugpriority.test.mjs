@@ -69,9 +69,9 @@ test('gráfico da sprint: tendência é a reta de mínimos quadrados e só exist
 
 test('histórico do card: sempre tem o registro "Card criado" como primeiro, e o cabeçalho da coluna fica fixo', () => {
   assert.ok(html.includes("h.to === 'Card criado' && !h.field"));
-  assert.ok(html.includes('it.history = [it.history[0]].concat('));
+  assert.ok(html.includes('criação e comentários nunca saem do corte (auditoria)'));
   assert.match(html, /\.kb-hdr\{[^}]*position:sticky;top:0/);
-  assert.ok(readFileSync(join(root, 'scripts/read-bugs.mjs'), 'utf8').includes('hist.splice(1, hist.length - 300)'));
+  assert.ok(readFileSync(join(root, 'scripts/read-bugs.mjs'), 'utf8').includes('criação e comentários nunca saem do corte'));
 });
 
 test('backlog: bugs com prioridade vêm primeiro, na ordem da fila, com o selo P1/P2 no lugar das setas', () => {
@@ -97,4 +97,18 @@ test('devolver o card (coluna anterior): regra pura, janela de motivo e comentá
   for (const k of ['id="modal-return"', 'Motivo da devolução (obrigatório)', 'async function move(id, dir)', 'async function drop(e, status)', 'function renderLastNotes(it)', 'Comentário registrado no histórico']) assert.ok(html.includes(k) || html.includes(k.replace('id="modal-return"', "m.id = 'modal-return'")), k);
   const a = html.indexOf('id="ai-desc"'), n = html.indexOf('id="ai-note"'), c = html.indexOf('id="ai-check"');
   assert.ok(a < n && n < c, 'ordem: descrição, comentário, tarefas');
+});
+
+test('cartão: descrição e comentário um abaixo do outro, do mesmo tamanho; evidências viram o ícone do clipe', () => {
+  assert.match(html, /class="input ai-same" id="ai-desc"/); assert.match(html, /class="ai-cm ai-same"/); assert.ok(html.includes('.ai-same{height:150px'));
+  assert.ok(html.includes('id="ai-lastnotes" role="log"') && html.includes('só podem ser acrescentados'));
+  assert.ok(html.includes('id="ai-evid-btn"') && html.includes('ti-paperclip') && /id="ai-evid" type="file" multiple hidden/.test(html));
+  assert.ok(html.includes('function evidCount()'));
+});
+
+test('comentários só de inclusão (auditoria): o banco recusa editar ou apagar e o corte do histórico os preserva', () => {
+  const sql = readFileSync(join(root, 'supabase/migrations/20261110120000_comments_append_only.sql'), 'utf8');
+  for (const k of ['guard_comment_audit', "like 'Comentário: %'", 'só de inclusão', 'before update on public.backlog_items']) assert.ok(sql.includes(k), k);
+  assert.ok(html.includes('criação e comentários nunca saem do corte (auditoria)'));
+  assert.ok(readFileSync(join(root, 'scripts/read-bugs.mjs'), 'utf8').includes('criação e comentários nunca saem do corte'));
 });

@@ -85,7 +85,7 @@ const main = async () => { try {
       ]);
       const back = reporterOf(row);
       if (back && back !== row.assignee) hist.push({ at: now, by, field: 'Responsável', from: row.assignee || '(vazio)', to: back });
-      if (hist.length > 300) hist.splice(1, hist.length - 300); // o registro de criação (primeiro) nunca sai do corte
+      while (hist.length > 300) { const k = hist.findIndex((h, i) => i > 0 && !(h && !h.field && String(h.to).startsWith('Comentário: '))); if (k < 0) break; hist.splice(k, 1); } // criação e comentários nunca saem do corte (auditoria)
       // O que foi feito entra no campo Descrição e critérios de aceite: o texto original fica e o bloco é somado no fim, entre linhas de asteriscos
       const bar = '*'.repeat(36), block = bar + '\n' + comment + '\n' + bar;
       const desc = (row.description ? row.description.replace(/\s+$/, '') + '\n\n' : '') + block;
