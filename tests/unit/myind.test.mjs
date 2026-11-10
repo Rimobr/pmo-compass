@@ -146,3 +146,22 @@ test('entrega concluída é de quem levou a correção definitiva (última ida a
   assert.deepEqual(R(['Ana'], [semHist, aberto]), ['H']); assert.deepEqual(R(['Leandro'], [aberto]), ['O']);
   assert.equal(MyInd.compute(inp({ names: ['João'], cols: cols4, items: [retrabalho] })).kpis.done28, 1);
 });
+
+test('velocidade por semana e tempo até concluir também usam quem levou a correção definitiva (não só o responsável atual)', () => {
+  const cols4 = [{ key: 'todo', label: 'A fazer' }, { key: 'doing', label: 'Em andamento' }, { key: 'review', label: 'Em revisão' }, { key: 'done', label: 'Concluído' }];
+  const h = (by, de, para) => ({ at: '2026-11-03T10:00:00Z', by, field: 'Situação', from: de, to: para });
+  const feito = item('F', { status: 'done', doneOn: '2026-11-03', createdOn: '2026-11-01', assignee: 'Leandro', history: [h('Ana', 'A fazer', 'Em andamento'), h('Ana', 'Em andamento', 'Em revisão'), h('Leandro', 'Em revisão', 'Concluído')] });
+  const ana = inp({ cols: cols4, items: [feito] }), leandro = inp({ names: ['Leandro'], cols: cols4, items: [feito] });
+  assert.equal(MyInd.weekly(ana).weeks.reduce((s, w) => s + w.count, 0), 1);
+  assert.equal(MyInd.weekly(leandro).weeks.reduce((s, w) => s + w.count, 0), 0);
+  assert.ok(MyInd.leadTime(ana) && MyInd.leadTime(ana).n === 1 || MyInd.leadTime(ana) != null);
+  assert.equal(MyInd.leadTime(leandro), null);
+});
+
+test('velocidade: usa pontos só quando todos os cards entregues têm ponto; senão conta itens (semana de cards sem ponto não vira zero)', () => {
+  const mk = (id, pts, doneOn) => item(id, { status: 'done', doneOn, points: pts, assignee: 'Ana', createdOn: '2026-10-01' });
+  const misto = MyInd.weekly(inp({ items: [mk('A', '', '2026-11-02'), mk('B', '', '2026-11-03'), mk('C', 5, '2026-11-04')] }));
+  assert.equal(misto.unit, 'itens'); assert.equal(misto.weeks[5].value, 3);
+  const todos = MyInd.weekly(inp({ items: [mk('A', 2, '2026-11-02'), mk('B', 3, '2026-11-03')] }));
+  assert.equal(todos.unit, 'pts'); assert.equal(todos.weeks[5].value, 5);
+});

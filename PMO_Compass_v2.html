@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.83.3'
+  version: '2.83.4'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -13288,9 +13288,9 @@ const MyInd = (() => {
   }
 
   // Todas as minhas atividades: itens do quadro (prazo = fim da sprint) e tarefas/entregas do cronograma (prazo = término)
-  function rows(inp) {
-    const set = new Set((inp.names || []).map(key)), today = inp.today, out = [];
-    const colLabel = k => { const c = (inp.cols || []).find(x => x.key === k); return c ? c.label : (k === 'done' ? 'Concluído' : k === 'todo' ? 'A fazer' : k); };
+  // De quem é cada card, para todos os indicadores: aberto = responsável atual; CONCLUÍDO = quem levou a correção definitiva (ver abaixo)
+  function ownership(inp) {
+    const set = new Set((inp.names || []).map(key));
     // De quem é a entrega de um card CONCLUÍDO: de quem levou a correção definitiva, isto é, quem o levou a "Em revisão" pela ÚLTIMA vez (só passos para frente; devolver o card não conta; ações do sistema/automação não contam).
     // Sem passagem pela revisão vale quem o pegou por último em "Em andamento"; sem nenhuma das duas, o responsável atual. Card aberto é de quem é o responsável.
     const labelOf = k => { const c = (inp.cols || []).find(x => x.key === k); return c ? c.label : null; };
@@ -13302,7 +13302,12 @@ const MyInd = (() => {
       const m = last(reviewL) || last(doingL); return m ? m.by : null;
     };
     const owner = i => i.status === 'done' ? (executor(i) || i.assignee) : i.assignee;
-    (inp.items || []).filter(i => set.has(key(owner(i)))).forEach(i => {
+    return { set, owner, mine: i => set.has(key(owner(i))) };
+  }
+  function rows(inp) {
+    const { set, mine } = ownership(inp), today = inp.today, out = [];
+    const colLabel = k => { const c = (inp.cols || []).find(x => x.key === k); return c ? c.label : (k === 'done' ? 'Concluído' : k === 'todo' ? 'A fazer' : k); };
+    (inp.items || []).filter(mine).forEach(i => {
       const sp = (inp.sprints || []).find(s => s.id === i.sprintId), done = i.status === 'done', due = (sp && sp.endOn) || '';
       const chk = Array.isArray(i.checklist) ? i.checklist : [];
       const moved = lastMove(i);
@@ -13339,13 +13344,13 @@ const MyInd = (() => {
   // Velocidade: pontos (ou itens, se nada tem ponto) concluídos por semana, nas últimas 6 semanas (a última é a semana corrente)
   function weekly(inp) {
     const set = new Set((inp.names || []).map(key)), today = inp.today, m0 = monday(today);
-    const done = (inp.items || []).filter(i => i.status === 'done' && i.doneOn && set.has(key(i.assignee)));
+    const own = ownership(inp), done = (inp.items || []).filter(i => i.status === 'done' && i.doneOn && own.mine(i));
     const weeks = [];
     for(let w = 5; w >= 0; w--) {
       const from = addDays(m0, -7 * w), to = addDays(from, 6), mine = done.filter(i => i.doneOn >= from && i.doneOn <= to);
       weeks.push({ from, to, count: mine.length, points: mine.reduce((s, i) => s + (Number(i.points) || 0), 0) });
     }
-    const unit = weeks.some(x => x.points > 0) ? 'pts' : 'itens', val = x => unit === 'pts' ? x.points : x.count;
+    const inWin = done.filter(i => i.doneOn >= weeks[0].from && i.doneOn <= weeks[5].to), unit = inWin.length && inWin.every(i => Number(i.points) > 0) ? 'pts' : 'itens', val = x => unit === 'pts' ? x.points : x.count; // pontos só quando TODOS os cards entregues têm ponto; senão uma semana de cards sem ponto apareceria como zero
     weeks.forEach(x => { x.value = val(x); });
     const base = avg(weeks.slice(1, 5).map(val)), recent = avg(weeks.slice(3, 5).map(val)), before = avg(weeks.slice(1, 3).map(val));
     const trend = before === 0 && recent === 0 ? 'sem_dado' : recent > before * 1.25 ? 'subindo' : recent < before * 0.75 ? 'caindo' : 'estavel';
@@ -13355,7 +13360,7 @@ const MyInd = (() => {
   // Tempo médio entre criar e concluir (dias) dos meus itens concluídos nas últimas 8 semanas
   function leadTime(inp) {
     const set = new Set((inp.names || []).map(key));
-    const ds = (inp.items || []).filter(i => i.status === 'done' && i.doneOn && i.createdOn && set.has(key(i.assignee)) && diff(i.doneOn, inp.today) <= 55).map(i => Math.max(0, diff(i.createdOn, i.doneOn)));
+    const own = ownership(inp), ds = (inp.items || []).filter(i => i.status === 'done' && i.doneOn && i.createdOn && own.mine(i) && diff(i.doneOn, inp.today) <= 55).map(i => Math.max(0, diff(i.createdOn, i.doneOn)));
     return ds.length ? { days: round1(avg(ds)), n: ds.length } : null;
   }
   function hours(inp) {
