@@ -426,6 +426,12 @@
       "logout": "apaga",
       "deleteProject": "nao"
     },
+    "pmo_session_renew_v1": {
+      "desc": "Última renovação da sessão (hora e conta), para o cronômetro de tempo logado não voltar ao login original ao recarregar a página.",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
+    },
     "pmo_menu_v2_seen": {
       "desc": "Dica do menu reorganizado já mostrada (aparece uma vez).",
       "kind": "preferência",

@@ -99,7 +99,7 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - O projeto ou quadro selecionado nas listas do menu (`.si.proj-active`) aparece em **destaque**: fonte maior (14px), negrito, cor da marca, fundo tingido, barra à esquerda e um ponto à direita. Vale nos quatro temas.
 
 ## Celular enxuto (pedido do dono, 08/11/2026)
-- Até 600 px a tela mostra **só o que apoia ou pede decisão**: o cabeçalho cabe inteiro (menu, projeto, Bússola, avisos, bug e conta; marca e busca saem), sem trilha de navegação, sem texto explicativo, sem "?" de ajuda e sem aviso de metodologia. Backlog mantém Novo Item e Planejar sprint e os 2 primeiros números; o Kanban esconde Automações e Personalizar (são de gestão no computador).
+- Até 600 px a tela mostra **só o que apoia ou pede decisão**: o cabeçalho cabe inteiro (menu, projeto, Bússola, avisos, bug e conta; marca e busca saem), sem trilha de navegação, sem texto explicativo, sem "?" de ajuda e sem aviso de metodologia. Backlog mantém Novo Item e Planejar sprint e os 2 primeiros números; o Kanban **mostra** Automações e Personalizar quadro também no celular (pedido do dono, 09/11/2026: antes ficavam escondidos; só a gestão os vê).
 - Tela nova: pensar primeiro no celular (o que a pessoa decide ali?) e esconder o resto por CSS no bloco `@media(max-width:600px)`. `test:a11y` confere que nenhum botão do cabeçalho fica fora da tela em 375 px.
 - Dashboard no celular: abre só com "Prazo e cronograma" aberto (farol e decisões críticas); os demais grupos de números ficam recolhidos, cada um com o seu farol no cabeçalho (`KG.compactForPhone`, uma vez por carga; o que a pessoa abrir depois é respeitado).
 - Decisão prioritária no celular: sobe para logo abaixo do título do Dashboard, com o título, 3 linhas do texto (ninguém aceita sem ler) e os botões Aceitar e Registrar / Ver todas as decisões.
@@ -147,3 +147,9 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 ## Histórico com criação sempre e cabeçalho da coluna fixo (pedido do dono, 09/11/2026)
 - O histórico de todo card **sempre tem um único registro "Card criado", e é o primeiro** (`track` em `Agile`): card novo recebe na hora da gravação; card antigo sem o registro ganha com a data de criação e o nome de quem aparece primeiro; o corte de 300 linhas nunca o remove. É nele que a baixa da skill se apoia para devolver o card a quem o abriu.
 - No Kanban o cabeçalho de cada coluna (nome e contagem, `.kb-hdr`) fica **fixo no topo ao rolar a tela**, para a pessoa saber em que coluna está o card (no celular o quadro rola de lado e o cabeçalho acompanha a rolagem do próprio quadro).
+
+## Evoluções de 09/11/2026 (Backlog, celular, renovação SSO)
+- **Backlog**: os bugs com prioridade vêm **primeiro, na ordem da fila** (selo "P1", "P2"… no lugar das setas ▲▼; a posição se muda no cartão do bug); depois vem o resto na ordem de sempre.
+- **Celular**: Automações e Personalizar quadro voltam a aparecer no Kanban. O cabeçalho fixo das colunas funciona no computador; no celular o quadro rola de lado dentro da própria caixa e por isso o cabeçalho acompanha só essa caixa (sem rolagem aninhada).
+- **Renovação da sessão** fica guardada em `pmo_session_renew_v1` (hora e conta), então quem renovou (SSO ou senha) e recarrega a página não volta ao login original.
+- **Menu de projetos**: a lista de projetos não aparece no menu (o seletor é só o chip do topo); só os Quadros têm a caixa "Quadro Aberto".

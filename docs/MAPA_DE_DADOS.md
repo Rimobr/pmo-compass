@@ -137,6 +137,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 | `pmo_report_scope_v1` | Escopo escolhido no relatório. | preferência | apaga | nao |
 | `pmo_sb_area_v1` | Se a área de projeto do menu está recolhida. | preferência | apaga | nao |
 | `pmo_digest_v1` | Resumo de entrada (Meus Cards): data do último aviso e quantos cards havia, para mostrar uma vez por dia. | preferência | apaga | nao |
+| `pmo_session_renew_v1` | Última renovação da sessão (hora e conta), para o cronômetro de tempo logado não voltar ao login original ao recarregar a página. | preferência | apaga | nao |
 | `pmo_menu_v2_seen` | Dica do menu reorganizado já mostrada (aparece uma vez). | preferência | apaga | nao |
 | `pmo_show_all_screens` | Mostrar todas as telas, mesmo as que o método esconde. | preferência | apaga | nao |
 | `pmo_sidebar_collapsed_v1` | Menu lateral recolhido. | preferência | apaga | nao |

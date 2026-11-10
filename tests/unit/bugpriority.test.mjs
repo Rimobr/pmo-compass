@@ -73,3 +73,12 @@ test('histórico do card: sempre tem o registro "Card criado" como primeiro, e o
   assert.match(html, /\.kb-hdr\{[^}]*position:sticky;top:0/);
   assert.ok(readFileSync(join(root, 'scripts/read-bugs.mjs'), 'utf8').includes('hist.splice(1, hist.length - 300)'));
 });
+
+test('backlog: bugs com prioridade vêm primeiro, na ordem da fila, com o selo P1/P2 no lugar das setas', () => {
+  assert.ok(html.includes("const inQueue = i => AgileCalc.isOpenBug(i) && Number(i.bugPriority) > 0"));
+  assert.ok(html.includes('Posição ${esc(i.bugPriority)} na fila de prioridade dos bugs'));
+});
+test('celular: Automações e Personalizar quadro aparecem no Kanban; renovação de sessão fica guardada no navegador', () => {
+  assert.ok(!/#p-kanban \.kb-bar \.btn,#kb-actions \.btn/.test(html));
+  assert.ok(html.includes("const RKEY = 'pmo_session_renew_v1'"));
+});

@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.80.4'
+  version: '2.81.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -470,7 +470,7 @@ html[data-theme="light"] .sidebar{--sb-dark:93%}
   .pg-breadcrumb,.m-notice,.help-q{display:none!important}
   .pg-hdr .pg-sub:not(:has(.pg-sub-link)):not(:has(#dec-pending-count)){display:none}
   .pg-title{font-size:19px}
-  #p-backlog .pg-hdr .btn-row .btn:not(.btn-acc):not([onclick*="openPlanNext"]),#p-kanban .kb-bar .btn,#kb-actions .btn,#p-kanban .kb-hint{display:none!important}
+  #p-backlog .pg-hdr .btn-row .btn:not(.btn-acc):not([onclick*="openPlanNext"]),#kb-actions .btn,#p-kanban .kb-hint{display:none!important}
   #bl-kpis>*:nth-child(n+3),#sp-kpis>*:nth-child(n+3){display:none}
   /* Dashboard: a decisão que espera a pessoa sobe para logo abaixo do título, com o título, 3 linhas do texto (ninguém aceita sem ler) e os botões */
   #p-dashboard .pg-hdr{order:-2}
@@ -14287,12 +14287,13 @@ const Agile = (() => {
       + kpi('Sem estimativa', fc.unestimated, fc.unestimated ? 'defina os pontos antes de planejar' : 'tudo estimado', fc.unestimated ? 'sdot-amb' : 'sdot-grn')
       + (document.body.classList.contains('is-board') ? '' : kpi('Previsão', fc.sprints == null ? '—' : fc.sprints + ' sprint(s)', fc.sprints == null ? 'precisa de sprints encerradas' : `no ritmo de ${vel.avg} pts por sprint`)); // quadro de tarefas não tem sprint, logo não tem previsão em sprints
     const q = query.trim().toLowerCase();
-    const list = items.filter(i => (showDone || i.status !== 'done') && (!q || (i.title + ' ' + i.assignee + ' ' + i.id).toLowerCase().includes(q))).sort(sortByRank);
+    const inQueue = i => AgileCalc.isOpenBug(i) && Number(i.bugPriority) > 0; // bug com prioridade: a posição vem da fila (altere no cartão do bug)
+    const list = items.filter(i => (showDone || i.status !== 'done') && (!q || (i.title + ' ' + i.assignee + ' ' + i.id).toLowerCase().includes(q))).sort((a, b) => (inQueue(b) - inQueue(a)) || (inQueue(a) && inQueue(b) ? Number(a.bugPriority) - Number(b.bugPriority) : sortByRank(a, b)));
     if(!items.length) { root.innerHTML = '<div class="rk-empty">O backlog está vazio. Use “Novo item” para começar.</div>'; return; }
     if(!list.length) { root.innerHTML = '<div class="rk-empty">Nenhum item com esse filtro.</div>'; return; }
     const spOpts = sel => '<option value="">Sem sprint</option>' + sprints.filter(s => s.state !== 'encerrada').map(s => `<option value="${esc(s.id)}"${s.id === sel ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
     root.innerHTML = list.map(i => `<div class="ag-row"${i.status === 'done' ? ' style="opacity:1;background:transparent"' : ''}>
-      <div class="ag-rank" data-perm="manage_backlog"><button class="btn btn-sm" aria-label="Subir prioridade de ${esc(i.id)}" onclick="Agile.rank('${esc(i.id)}',-1)">▲</button><button class="btn btn-sm" aria-label="Descer prioridade de ${esc(i.id)}" onclick="Agile.rank('${esc(i.id)}',1)">▼</button></div>
+      <div class="ag-rank" data-perm="manage_backlog">${inQueue(i) ? `<span class="badge b-red" title="Posição ${esc(i.bugPriority)} na fila de prioridade dos bugs (1 = primeiro a corrigir). Para mudar, abra o cartão do bug.">P${esc(i.bugPriority)}</span>` : `<button class="btn btn-sm" aria-label="Subir prioridade de ${esc(i.id)}" onclick="Agile.rank('${esc(i.id)}',-1)">▲</button><button class="btn btn-sm" aria-label="Descer prioridade de ${esc(i.id)}" onclick="Agile.rank('${esc(i.id)}',1)">▼</button>`}</div>
       <div class="ag-main"><div class="ag-title">${esc(i.title)}</div><div class="kb-meta" style="margin-top:3px"><span class="chip">${esc(i.id)}</span><span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>${i.points !== '' && i.points != null ? `<span class="badge b-acc">${esc(i.points)} pts</span>` : '<span class="chip c-wa">sem estimativa</span>'}<span class="chip">${esc(AgileCalc.colLabel(cfg, i.status))}</span>${i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : ''}</div></div>
       <select class="input" data-perm="manage_backlog" aria-label="Sprint do item ${esc(i.id)}" onchange="Agile.setSprintOf('${esc(i.id)}', this.value)"${i.status === 'done' ? ' disabled' : ''}>${spOpts(i.sprintId)}</select>
       <button class="btn btn-sm" aria-label="Editar ${esc(i.id)}" data-perm="manage_backlog" onclick="Agile.openItem('${esc(i.id)}')"><i class="ti ti-edit"></i></button></div>`).join('');
@@ -16637,9 +16638,12 @@ const SessionGuard = (() => {
   const policy = () => clean(typeof OrgSettings !== 'undefined' ? OrgSettings.get(ORG) : null);
   const label = m => m === 0 ? 'Sem limite' : m < 60 ? m + ' minutos' : m === 60 ? '1 hora' : (m / 60) + ' horas';
 
+  const RKEY = 'pmo_session_renew_v1';
+  const loadRenewed = () => { try { const o = JSON.parse(localStorage.getItem(RKEY) || 'null'); return o && o.uid === (typeof Cloud !== 'undefined' && Cloud.getUserId && Cloud.getUserId()) ? Number(o.at) || 0 : 0; } catch(e) { return 0; } };
+  const saveRenewed = at => { try { localStorage.setItem(RKEY, JSON.stringify({ uid: Cloud.getUserId && Cloud.getUserId(), at })); } catch(e) { /* sem armazenamento: vale só nesta aba */ } };
   let renewedAt = 0, timer = null, opened = false, restoreEl = null, busy = false, loadExpired = false, checkedLoad = false;
   const $ = id => document.getElementById(id);
-  const start = () => Math.max(Cloud.sessionStart() || 0, renewedAt);
+  const start = () => { if(!renewedAt) renewedAt = loadRenewed(); return Math.max(Cloud.sessionStart() || 0, renewedAt); };
   const left = () => remainingSec(start(), policy().sessionMin, Date.now());
 
   function ensureModal() {
@@ -16677,7 +16681,7 @@ const SessionGuard = (() => {
     if(busy) return; busy = true; const err = $('ses-err'); err.textContent = ''; $('ses-ok').disabled = true;
     try {
       const res = await Cloud.renewSession($('ses-pw').value);
-      if(res.ok) { renewedAt = Date.now(); loadExpired = false; close(); paint(); T.show('✅ Sessão renovada.'); }
+      if(res.ok) { renewedAt = Date.now(); saveRenewed(renewedAt); loadExpired = false; close(); paint(); T.show('✅ Sessão renovada.'); }
       else { err.textContent = res.msg || 'Não consegui renovar.'; const p = $('ses-pw'); if(p && p.select) p.select(); }
     } finally { busy = false; $('ses-ok').disabled = false; }
   }
