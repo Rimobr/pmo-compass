@@ -2,6 +2,141 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.81.1 — 2026-11-10
+- Bug novo entra na ultima posicao da fila
+
+## 2.81.0 — 2026-11-09
+- Backlog ordenado pela prioridade dos bugs; Automacoes e Personalizar no celular; renovacao de sessao guardada no navegador
+
+## 2.80.4 — 2026-11-09
+- Grafico da sprint ocupa todo o espaco livre a direita em tela larga, com dias no eixo
+
+## 2.80.3 — 2026-11-09
+- Mini grafico na linha do seletor de sprint; cronometro de sessao muda de cor tambem para o administrador
+
+## 2.80.2 — 2026-11-09
+- Historico sempre com o registro Card criado; cabecalho das colunas do Kanban fixo ao rolar
+
+## 2.80.1 — 2026-11-09
+- Renovar sessao: botao Fechar e Esc; grafico da sprint vira mini grafico na linha da faixa
+
+## 2.80.0 — 2026-11-09
+- Kanban: grafico de barras translucidas dos cards concluidos por dia da sprint ativa, com linha de tendencia
+
+## 2.79.0 — 2026-11-09
+- Menu de Quadros com caixa de selecao; atualizacao e sessao parametrizaveis com cronometro e renovacao por senha
+
+## 2.78.1 — 2026-11-09
+- Atualizacao automatica dos dados a cada 10 minutos; baixa de bug devolve o card a quem o abriu
+
+## 2.78.0 — 2026-11-09
+- Bug: fila de prioridade (posicao 1 = primeiro a corrigir), com encaixe, regra no banco e leitura dos bugs na ordem
+
+## 2.77.3 — 2026-11-09
+- Baixa de bug: o que foi feito vai para a Descricao e criterios de aceite, em bloco entre asteriscos, sem apagar o texto original
+
+## 2.77.2 — 2026-11-09
+- Bug: item pai obrigatorio tambem no quadro com aviso claro; recusa de regra do banco nao vira 'falha ao sincronizar'
+
+## 2.77.1 — 2026-11-09
+- Bug: rotulo da entrega diz opcional no quadro e obrigatorio no projeto
+
+## 2.77.0 — 2026-11-09
+- Cabecalho: selo Ver. x.y.z ao lado do avatar (some no celular); Regra 1 so no fluxo da skill Analise PMO Compass
+
+## 2.76.2 — 2026-11-09
+- Bugs do Kanban: rotulo Auto Corrigido! fora da conta; descricao ate 100 caracteres sem cortar
+
+## 2.76.1 — 2026-11-09
+- Bugs do Kanban: comentario vira 'o que foi feito + Analisado e Corrigido Automaticamente' e a escolha mostra o tipo
+
+## 2.76.0 — 2026-11-09
+- Regra 1: apresentar antes de criar
+- Bugs do Kanban para outro sistema: pedido pronto, escolha do projeto e baixa para Em revisao
+
+## 2.75.4 — 2026-11-09
+- Celular: Minhas Entregas vira cartoes, sem tabela larga
+
+## 2.75.3 — 2026-11-08
+- Celular: Meu Trabalho, Riscos, Decisoes e Colaboradores mostram primeiro o que decide; barras sem sobreposicao
+
+## 2.75.2 — 2026-11-08
+- Celular: decisao prioritaria sobe para logo abaixo do titulo do Dashboard, com 3 linhas do texto e os botoes
+
+## 2.75.1 — 2026-11-08
+- Celular: Dashboard abre so com Prazo e cronograma (farol e decisoes); demais grupos recolhidos com o farol no cabecalho
+
+## 2.75.0 — 2026-11-08
+- Celular enxuto: cabecalho cabe inteiro (sem marca e busca) e telas so com o que apoia decisao; teste de 375 px confere o cabecalho
+
+## 2.74.1 — 2026-11-08
+- Menu: projeto ou quadro selecionado em destaque (fonte maior, negrito, cor da marca, barra e ponto)
+
+## 2.74.0 — 2026-11-07
+- Diagnostico PMO: Salvar em PDF / Imprimir em documento proprio para mostrar ao cliente; Quadro sem cobertura de documentos de projeto
+
+## 2.73.2 — 2026-11-07
+- Menu: Gestao do Projeto e Quadros / Kanban com fundo mais escuro para separar os blocos de trabalho
+
+## 2.73.1 — 2026-11-07
+- Diagnostico PMO (Dr. PMO): aponte os arquivos e receba veredito quadro ou projeto, metodologia, riscos, buracos e por que usar o Compass; nada e gravado
+
+## 2.72.1 — 2026-11-07
+- Bussola como porta unica da IA: ferramentas por permissao (projetos, documentos, Raio-X, estimar, rascunhar, What-If), botao para quem tem qualquer uma, consulta dos Arquivos passa por ela
+
+## 2.71.1 — 2026-11-07
+- Cartao do quadro: a gestao escolhe tambem prazo, bugs ligados, anexos e tarefas do cartao
+
+## 2.71.0 — 2026-11-06
+- Pessoa unica: quem sou eu cai no nome do cadastro, Entrar na Equipe com um clique e renome do colaborador leva os cards
+
+## 2.70.2 — 2026-11-06
+- Sprint do card novo: pelo Quadro Kanban vem escolhida e travada (responsavel obrigatorio); pelo Backlog o campo e livre e comeca em Sem sprint
+
+## 2.70.0 — 2026-11-06
+- Quadro com sprint simples: janela de tempo de 2 semanas, prazo em cada card, faixa com encerrar e transbordo; sem planejamento por pontos, meta nem capacidade
+
+## 2.69.1 — 2026-11-06
+- Sino separa Pendencias do dia de Avisos das automacoes; texto da tela de Automacoes explica quando o aviso chega
+
+## 2.69.0 — 2026-11-06
+- Quatro temas: Branco, Cinza, Preto e Verde (identidade Vigilae); botao da barra passa ao seguinte; axe e 375 px nos quatro
+
+## 2.68.3 — 2026-11-06
+- Resumo de entrada: coluna criada no quadro entra na soma como outras colunas
+
+## 2.68.2 — 2026-11-06
+- Resumo de entrada sem espera, so com OK registrado na auditoria de cada projeto; aviso da gestao para cards sem responsavel cadastrado; sino soma os pendentes
+
+## 2.68.0 — 2026-11-06
+- Resumo de entrada: ao logar, a pessoa ve quantos cards estao com ela; parametro da organizacao (diario por padrao, a cada login ou desligado) ja gravado
+
+## 2.67.9 — 2026-11-06
+- Cartao: Excluir, Cancelar e Salvar no cabecalho fixo; Incluir na Equipe inclui sozinho quando acha a conta com esse nome
+
+## 2.67.8 — 2026-11-06
+- Responsavel fora da equipe: gestor ve por que pode resolver e escolhe incluir na equipe (abre Pessoas e Acesso filtrado) ou passar para outro; mensagens dizem 'nome nao cadastrado'
+
+## 2.67.5 — 2026-11-06
+- Item so entra numa sprint com responsavel cadastrado: campo Sprint travado ate escolher a pessoa; backlog, planejamento, importacao e banco respeitam a regra
+
+## 2.67.4 — 2026-11-06
+- Responsavel: nome antigo do cartao e ligado ao cadastro quando so uma pessoa tem o mesmo primeiro nome
+
+## 2.67.3 — 2026-11-06
+- Responsavel sem acesso: gestor e levado a Pessoas e Acesso, demais veem gerente e administradores com e-mail; a propria pessoa pode ser responsavel; verificador de SQL aceita funcoes que devolvem tabela
+
+## 2.67.1 — 2026-11-06
+- Colaboradores: botao Adicionar Colaborador (tambem no Quadro, que nao tem Burnout Radar) e lista atualizada ao salvar
+
+## 2.67.0 — 2026-11-06
+- Banco impoe a regra do responsavel do cartao (vazio so na primeira coluna; depois, alguem da equipe do projeto)
+- Responsavel do cartao: lista da equipe do projeto; vazio so na primeira coluna, obrigatorio da segunda em diante (edicao, botao, arrasto e automacao)
+
+## 2.66.0 — 2026-11-06
+- Guia do Testador (pagina para compartilhar e PDF)
+- Feedback do Leandro: Bug no quadro nao fecha a janela (item pai opcional no quadro; no projeto sem itens explica e mantem o cartao); comentario e evidencias ja ao criar o item; Ctrl+V de print no cartao
+
 ## 2.65.1 — 2026-11-05
 - Ajuda: menu em blocos, Quadros, nuvem por padrao e janelas de exclusao
 
