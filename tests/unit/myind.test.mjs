@@ -124,3 +124,16 @@ test('menu em três níveis: Meu Dia, Visão Geral, Este Projeto com itens do di
   for (const p of ['dashboard', 'kanban', 'backlog', 'wbs', 'risks', 'decisions', 'resources']) assert.ok(html.indexOf('data-p="' + p + '"', html.indexOf('id="sb-proj-area"')) < a, p + ' fica à vista, antes de Mais Telas');
   for (const g of ['sbg-agil', 'sbg-planejamento', 'sbg-decisao', 'sbg-equipe', 'sbg-conhecimento']) assert.ok(html.includes('class="sb-group sb-more-group" id="' + g + '"'), g);
 });
+
+test('entrega concluída conta também para quem pegou o card ou o levou à revisão, mesmo com o responsável atual sendo o revisor', () => {
+  const cols4 = [{ key: 'todo', label: 'A fazer' }, { key: 'doing', label: 'Em andamento' }, { key: 'review', label: 'Em revisão' }, { key: 'done', label: 'Concluído' }];
+  const hist = (by, de, para) => ({ at: '2026-11-03T10:00:00Z', by, field: 'Situação', from: de, to: para });
+  const feito = item('F', { status: 'done', doneOn: '2026-11-03', assignee: 'Leandro', history: [hist('Ana', 'A fazer', 'Em andamento'), hist('Ana', 'Em andamento', 'Em revisão'), hist('Leandro', 'Em revisão', 'Concluído')] });
+  const soValidou = item('V', { status: 'done', doneOn: '2026-11-03', assignee: 'Beto', history: [hist('Beto', 'A fazer', 'Em andamento'), hist('Ana', 'Em revisão', 'Concluído')] });
+  const aberto = item('O', { status: 'doing', assignee: 'Leandro', history: [hist('Ana', 'A fazer', 'Em andamento')] });
+  const ana = MyInd.rows(inp({ cols: cols4, items: [feito, soValidou, aberto] }));
+  assert.deepEqual(ana.map(x => x.ref), ['F']); // só o concluído que ela pegou/levou à revisão; quem apenas validou não ganha a entrega; card aberto de outro não vira dela
+  const leandro = MyInd.rows(inp({ names: ['Leandro'], cols: cols4, items: [feito, soValidou, aberto] }));
+  assert.deepEqual(leandro.map(x => x.ref), ['F', 'O']); // o revisor continua vendo o que é dele
+  assert.equal(MyInd.compute(inp({ cols: cols4, items: [feito] })).kpis.done28, 1);
+});

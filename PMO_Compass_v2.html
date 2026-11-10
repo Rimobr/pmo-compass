@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.83.1'
+  version: '2.83.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -13291,7 +13291,10 @@ const MyInd = (() => {
   function rows(inp) {
     const set = new Set((inp.names || []).map(key)), today = inp.today, out = [];
     const colLabel = k => { const c = (inp.cols || []).find(x => x.key === k); return c ? c.label : (k === 'done' ? 'Concluído' : k === 'todo' ? 'A fazer' : k); };
-    (inp.items || []).filter(i => set.has(key(i.assignee))).forEach(i => {
+    // Entrega concluída também conta para quem PEGOU o card (levou para Em andamento) ou o LEVOU À REVISÃO, mesmo que a revisão tenha devolvido o card a quem o abriu (o responsável atual passa a ser o revisor)
+    const stepKeys = ['doing', 'review'].map(k => (inp.cols || []).find(c => c.key === k)).filter(Boolean).map(c => c.label);
+    const credited = i => i.status === 'done' && stepKeys.length > 0 && (Array.isArray(i.history) ? i.history : []).some(h => h && h.field === 'Situação' && stepKeys.includes(h.to) && set.has(key(h.by)));
+    (inp.items || []).filter(i => set.has(key(i.assignee)) || credited(i)).forEach(i => {
       const sp = (inp.sprints || []).find(s => s.id === i.sprintId), done = i.status === 'done', due = (sp && sp.endOn) || '';
       const chk = Array.isArray(i.checklist) ? i.checklist : [];
       const moved = lastMove(i);
