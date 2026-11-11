@@ -2,7 +2,26 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.83.4 — 2026-11-10
+- Meus Indicadores: velocidade e tempo ate concluir usam a mesma regra de entrega; pontos so quando todos os cards tem ponto
+
+## 2.83.3 — 2026-11-10
+- Entrega concluida e de quem levou a correcao definitiva a Em revisao (so passos para frente)
+
+## 2.83.2 — 2026-11-10
+- Meus Indicadores: entrega concluida conta para quem pegou o card ou o levou a revisao
+
+## 2.83.1 — 2026-11-10
+- Descricao e comentario do cartao podem ser expandidos na vertical
+
+## 2.83.0 — 2026-11-10
+- Comentario dentro do campo, so de inclusao (banco recusa editar/apagar), descricao e comentario do mesmo tamanho, evidencias em icone
+
+## 2.82.0 — 2026-11-10
+- Comentario logo abaixo da descricao, ultimos comentarios a vista e janela de motivo ao devolver o card
+
 ## 2.81.1 — 2026-11-10
+- Changelog das versoes 2.77 a 2.81
 - Bug novo entra na ultima posicao da fila
 
 ## 2.81.0 — 2026-11-09

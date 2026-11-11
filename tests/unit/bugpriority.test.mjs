@@ -112,3 +112,23 @@ test('comentários só de inclusão (auditoria): o banco recusa editar ou apagar
   assert.ok(html.includes('criação e comentários nunca saem do corte (auditoria)'));
   assert.ok(readFileSync(join(root, 'scripts/read-bugs.mjs'), 'utf8').includes('criação e comentários nunca saem do corte'));
 });
+
+test('épico: progresso calculado das histórias ligadas e tipo novo no cartão, no banco e no Backlog', () => {
+  const l = [{ id: 'H1', epicId: 'EP-001', status: 'done' }, { id: 'H2', epicId: 'EP-001', status: 'todo' }, { id: 'H3', epicId: 'EP-002', status: 'done' }, { id: 'H4', epicId: '', status: 'done' }];
+  assert.deepEqual(AgileCalc.epicStats(l, 'EP-001'), { total: 2, done: 1, pct: 50 });
+  assert.deepEqual(AgileCalc.epicStats(l, 'EP-009'), { total: 0, done: 0, pct: 0 });
+  assert.equal(AgileCalc.KINDS.epico, 'Épico');
+  for (const k of ['<option value="epico">Épico</option>', 'id="ai-epic"', 'function saveEpic()', 'const epicHead = e =>', "items = all.filter(i => i.kind !== 'epico')", 'body.is-board .btn-epic{display:none!important}', "epic_id:(x.kind!=='bug' && x.kind!=='epico' && x.epicId)?x.epicId:null"]) assert.ok(html.includes(k), k);
+  const sql = readFileSync(join(root, 'supabase/migrations/20261111120000_epic.sql'), 'utf8');
+  for (const k of ["'epico'", 'epic_id', 'guard_epic', 'epic_unlink']) assert.ok(sql.includes(k), k);
+});
+
+test('conflito de regras: épico nunca entra nas consultas de cards em aberto (resumo de entrada, cards sem responsável)', () => {
+  const n = (html.match(/\.neq\('kind', 'epico'\)/g) || []).length;
+  assert.ok(n >= 2, 'as duas consultas de backlog_items em aberto filtram o épico (' + n + ')');
+});
+
+test('conflito de regras: o banco não aceita bug ligado a épico (o bug vai na entrega em que foi achado)', () => {
+  const sql = readFileSync(join(root, 'supabase/migrations/20261111130000_bug_parent_not_epic.sql'), 'utf8');
+  assert.ok(sql.includes("p.kind = 'epico'") && sql.includes('Um bug não pode ser filho de um épico'));
+});

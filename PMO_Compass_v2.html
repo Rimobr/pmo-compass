@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.83.4'
+  version: '2.84.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -249,6 +249,10 @@ body.is-board [onclick*="openPlanNext"],body.is-board #as-goal-grp,body.is-board
 @media(min-width:1180px){.kb-top:not(:has(.m-notice)) .kb-burn{position:absolute;right:0;top:28px;bottom:0;width:clamp(300px,calc(100% - 560px),700px);margin:0;align-items:stretch;gap:10px;white-space:normal}
 .kb-burn .kbb-head{width:118px;flex:none;display:flex;flex-direction:column;justify-content:center;gap:4px;font-size:11px;color:var(--t2);line-height:1.35}}
 @media(max-width:600px){.kb-burn{display:none!important}}
+body.is-board .btn-epic{display:none!important}
+.ag-epic{background:var(--s2);border-left:3px solid var(--acc);margin-top:6px}
+.ag-epic-bar{height:5px;border-radius:3px;background:var(--s3);margin-top:5px;max-width:320px}.ag-epic-bar i{display:block;height:5px;border-radius:3px;background:var(--acc)}
+.ag-epic-h{font-size:12px;font-weight:600;color:var(--t2);margin:10px 4px 2px}
 .ai-same{height:150px;min-height:90px;resize:vertical}
 .ai-cm{display:flex;flex-direction:column;border:1px solid var(--b2);border-radius:var(--r8);background:var(--s2);overflow:hidden}
 .ai-cm:focus-within{border-color:var(--acc)}
@@ -2281,6 +2285,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div><div class="pg-title">Backlog<span class="help-q" data-help="A lista de tudo que o produto ainda precisa receber, em ordem de prioridade (o de cima é o mais importante). Use ▲ ▼ para priorizar e o campo Sprint para colocar o item no próximo ciclo. Pontos são uma estimativa de esforço relativo, não horas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Itens em ordem de prioridade.<span class="ai-sprint-grp"> Coloque os mais importantes na próxima sprint.</span></div></div>
     <div class="btn-row">
       <button class="btn btn-sm btn-acc" data-perm="manage_backlog" onclick="Agile.openItem()"><i class="ti ti-plus"></i>Novo Item</button>
+      <button class="btn btn-sm btn-epic" data-perm="manage_backlog" onclick="Agile.openItem(null,'epico')" title="Épico: grupo grande de histórias (por exemplo, Relatórios)"><i class="ti ti-bolt"></i>Novo Épico</button>
       <button class="btn btn-sm" data-perm="manage_backlog" onclick="ImportUi.open('backlog')"><i class="ti ti-table-import"></i>Importar planilha<span class="help-q" data-help="Traz vários itens de uma vez de uma planilha Excel ou CSV (inclusive exportada do Jira ou Trello). Colunas reconhecidas: título, tipo, pontos, responsável, situação, sprint, prioridade e descrição. Você vê uma prévia e confere antes de importar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
       <button class="btn btn-sm" data-perm="manage_backlog" onclick="Agile.aiEstimate()"><i class="ti ti-sparkles"></i>Estimar com IA<span class="help-q" data-help="A IA estima os pontos dos itens sem estimativa e sugere dividir os itens grandes (acima de 8 pontos), comparando com o que o seu próprio time já entregou. Cada sugestão cita o item parecido usado como referência. Você revisa e escolhe o que aplicar; nada muda sozinho." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
       <button class="btn btn-sm" data-perm="manage_backlog" onclick="Agile.openPlanNext()"><i class="ti ti-wand"></i>Planejar sprint<span class="help-q" data-help="O sistema monta a próxima sprint para você: pega os itens estimados do topo do backlog, na ordem de prioridade, até encher a capacidade (pontos), deixando uma reserva para imprevistos. Ele compara com o ritmo real do time e avisa o que não coube e por quê. Você revisa antes de aplicar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
@@ -2378,13 +2383,14 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div class="field-group" id="ai-parent-grp" style="display:none"><div class="field-label"><label for="ai-parent" id="ai-parent-lbl">Item (entrega) em que o bug foi encontrado — obrigatório</label></div><select class="input" id="ai-parent"></select></div>
     <div class="field-group" id="ai-prio-grp" style="display:none"><div class="field-label"><label for="ai-prio">Prioridade do bug na fila</label></div><select class="input" id="ai-prio"></select><div id="ai-prio-q" style="font-size:12px;color:var(--t2);margin-top:4px;line-height:1.5"></div></div>
     <div class="g2" style="gap:10px">
-      <div class="field-group"><div class="field-label"><label for="ai-kind">Tipo</label></div><select class="input" id="ai-kind" onchange="Agile.kindPicked()"><option value="bug">Bug</option><option value="historia" selected>História</option><option value="tarefa">Tarefa</option></select></div>
+      <div class="field-group"><div class="field-label"><label for="ai-kind">Tipo</label></div><select class="input" id="ai-kind" onchange="Agile.kindPicked()"><option value="bug">Bug</option><option value="epico">Épico</option><option value="historia" selected>História</option><option value="tarefa">Tarefa</option></select></div>
       <div class="field-group"><div class="field-label"><label for="ai-points">Pontos</label><span class="help-q" data-help="Estimativa de esforço relativo (1, 2, 3, 5, 8, 13...). Compare com outros itens: um item de 5 dá mais trabalho que um de 2. Deixe vazio se ainda não foi estimado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><input class="input" id="ai-points" type="number" min="0" max="100" placeholder="Ex: 5"></div>
     </div>
     <div class="g2" style="gap:10px">
       <div class="field-group"><div class="field-label"><label for="ai-assignee">Responsável</label></div><select class="input" id="ai-assignee" onchange="Agile.syncSprintLock()"></select></div>
       <div class="field-group ai-sprint-grp"><div class="field-label"><label for="ai-sprint">Sprint</label></div><select class="input" id="ai-sprint"></select></div>
     </div>
+    <div class="field-group" id="ai-epic-grp" style="display:none"><div class="field-label"><label for="ai-epic">Épico</label><span class="help-q" data-help="O épico é um grupo grande de entregas (por exemplo, Relatórios). A história ou tarefa escolhe aqui o épico a que pertence; o progresso do épico é calculado das histórias ligadas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><select class="input" id="ai-epic"></select></div>
     <div class="field-group" id="ai-status-grp"><div class="field-label"><label for="ai-status">Situação</label></div><select class="input" id="ai-status"><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="review">Em revisão</option><option value="done">Concluído</option></select></div>
     <div class="field-group"><div class="field-label"><label for="ai-desc">Descrição e critérios de aceite</label></div><textarea class="input ai-same" id="ai-desc" rows="4" maxlength="2000" style="font-family:inherit"></textarea></div>
     <div id="ai-work" style="display:none;margin-top:10px">
@@ -4326,8 +4332,8 @@ const Cloud = (() => {
       local: 'baselines'
     },
     backlog_items: {
-      toDb: (x, pid) => ({ project_id:pid, id:x.id, title:x.title, description:x.description||null, kind:x.kind||'historia', status:x.status||'todo', points:(x.points===''||x.points==null)?null:x.points, assignee:x.assignee||null, sprint_id:x.sprintId||null, rank:x.rank||0, created_on:x.createdOn||null, done_on:x.doneOn||null, parent_id:(x.kind==='bug' && x.parentId)?x.parentId:null, bug_priority:(x.kind==='bug' && x.status!=='done' && Number(x.bugPriority)>0)?Number(x.bugPriority):null, attachments:Array.isArray(x.attachments)?x.attachments:[], history:Array.isArray(x.history)?x.history.slice(-300):[], checklist:Array.isArray(x.checklist)?x.checklist.slice(0,20).map(c=>({text:String(c&&c.text||'').slice(0,120),done:!!(c&&c.done)})):[], updated_at:new Date().toISOString() }),
-      fromDb: r => ({ id:r.id, title:r.title, description:r.description||'', kind:r.kind, status:r.status, points:r.points==null?'':r.points, assignee:r.assignee||'', sprintId:r.sprint_id||'', rank:r.rank||0, createdOn:r.created_on||'', doneOn:r.done_on||'', parentId:r.parent_id||'', bugPriority:r.bug_priority||'', attachments:Array.isArray(r.attachments)?r.attachments:[], history:Array.isArray(r.history)?r.history:[], checklist:Array.isArray(r.checklist)?r.checklist:[] }),
+      toDb: (x, pid) => ({ project_id:pid, id:x.id, title:x.title, description:x.description||null, kind:x.kind||'historia', status:x.status||'todo', points:(x.points===''||x.points==null)?null:x.points, assignee:x.assignee||null, sprint_id:x.sprintId||null, rank:x.rank||0, created_on:x.createdOn||null, done_on:x.doneOn||null, parent_id:(x.kind==='bug' && x.parentId)?x.parentId:null, epic_id:(x.kind!=='bug' && x.kind!=='epico' && x.epicId)?x.epicId:null, bug_priority:(x.kind==='bug' && x.status!=='done' && Number(x.bugPriority)>0)?Number(x.bugPriority):null, attachments:Array.isArray(x.attachments)?x.attachments:[], history:Array.isArray(x.history)?x.history.slice(-300):[], checklist:Array.isArray(x.checklist)?x.checklist.slice(0,20).map(c=>({text:String(c&&c.text||'').slice(0,120),done:!!(c&&c.done)})):[], updated_at:new Date().toISOString() }),
+      fromDb: r => ({ id:r.id, title:r.title, description:r.description||'', kind:r.kind, status:r.status, points:r.points==null?'':r.points, assignee:r.assignee||'', sprintId:r.sprint_id||'', rank:r.rank||0, createdOn:r.created_on||'', doneOn:r.done_on||'', parentId:r.parent_id||'', bugPriority:r.bug_priority||'', epicId:r.epic_id||'', attachments:Array.isArray(r.attachments)?r.attachments:[], history:Array.isArray(r.history)?r.history:[], checklist:Array.isArray(r.checklist)?r.checklist:[] }),
       local: 'backlog'
     },
     sprints: {
@@ -4913,14 +4919,14 @@ const Cloud = (() => {
     const links = await listTeamLinks([session.user.id]);
     const names = [...new Set([...(links || []).map(l => l.name), (typeof Auth !== 'undefined' ? Auth.getName() : '')].filter(Boolean))];
     if(!names.length) return [];
-    const { data, error } = await client.from('backlog_items').select('project_id,id,title,status,assignee').in('assignee', names).neq('status', 'done').limit(200);
+    const { data, error } = await client.from('backlog_items').select('project_id,id,title,status,assignee').in('assignee', names).neq('status', 'done').neq('kind', 'epico').limit(200);
     if(error) { console.warn('Supabase: falha ao ler os cards da pessoa', error); return []; }
     return data || [];
   }
   // Gestão: cards em aberto de todos os projetos que a pessoa acessa + quem está ligado a uma conta em cada projeto (para achar responsável não cadastrado)
   async function openItemsForManagers() {
     if(!client || !session) return null;
-    const a = await client.from('backlog_items').select('project_id,id,title,status,assignee').neq('status', 'done').limit(600);
+    const a = await client.from('backlog_items').select('project_id,id,title,status,assignee').neq('status', 'done').neq('kind', 'epico').limit(600) // épico é agrupador: nunca é card sem responsável;
     if(a.error) { console.warn('Supabase: falha ao ler os cards em aberto', a.error); return null; }
     const b = await client.from('team_members').select('project_id,name,user_id').not('user_id', 'is', null).limit(2000);
     let profileNames = [];
@@ -12776,7 +12782,9 @@ const Risks = (() => {
 <script data-module="services/agile-calc">
 const AgileCalc = (() => {
   const COLS = [{ key:'todo', label:'A fazer' }, { key:'doing', label:'Em andamento' }, { key:'review', label:'Em revisão' }, { key:'done', label:'Concluído' }];
-  const KINDS = { bug:'Bug', historia:'História', tarefa:'Tarefa' };
+  const KINDS = { bug:'Bug', historia:'História', tarefa:'Tarefa', epico:'Épico' };
+  // Épico (nível acima da História): o progresso é calculado das histórias/tarefas ligadas a ele
+  const epicStats = (list, epicId) => { const k = list.filter(x => x.epicId === epicId), done = k.filter(x => x.status === 'done').length; return { total: k.length, done, pct: k.length ? Math.round(done / k.length * 100) : 0 }; };
   // Bug "filho": todo bug está ligado ao item (entrega) em que foi encontrado; o item pai nunca é outro bug
   const bugsOf = (list, parentId) => list.filter(x => x.kind === 'bug' && x.parentId === parentId);
   const parentOptions = (list, selfId) => list.filter(x => x.kind !== 'bug' && x.id !== selfId);
@@ -13048,7 +13056,7 @@ const AgileCalc = (() => {
     return advice;
   }
 
-  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, isBackward, doneByDay, trendLine, isOpenBug, byPriority, bugQueue, placeBug, compactQueue, bugParentError, assigneeError, sprintAssigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, epicStats, isBackward, doneByDay, trendLine, isOpenBug, byPriority, bugQueue, placeBug, compactQueue, bugParentError, assigneeError, sprintAssigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
 })();
 </script>
 
@@ -13883,17 +13891,19 @@ const BoardRules = (() => {
 <!-- ■ MODULE: pages/agile-js ─ Quadro Kanban, Backlog e Sprints -->
 <script data-module="pages/agile-js">
 const Agile = (() => {
-  let items = null, sprints = null, cfg = null;
+  let items = null, epics = [], sprints = null, cfg = null;
   let boardSprint = '__auto', query = '', showDone = false, itemCtx = null, sprintCtx = null, dragId = null;
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const todayIso = () => Clock.iso(Clock.today());
   const fmt = iso => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}` : ''; };
-  const load = () => { const fresh = !items; if(!items) items = DB.get('backlog') || []; if(!sprints) sprints = DB.get('sprints') || []; if(!cfg) cfg = AgileCalc.cfgOf(DB.get('agileConfig')); if(fresh) takeSnap(); };
-  const resetCache = () => { items = null; sprints = null; cfg = null; snap = {}; };
-  const saveItems = () => { AgileCalc.compactQueue(items); DB.set('backlog', items); };
+  const load = () => { const fresh = !items; if(!items) { const all = DB.get('backlog') || []; items = all.filter(i => i.kind !== 'epico'); epics = all.filter(i => i.kind === 'epico'); } if(!sprints) sprints = DB.get('sprints') || []; if(!cfg) cfg = AgileCalc.cfgOf(DB.get('agileConfig')); if(fresh) takeSnap(); };
+  const resetCache = () => { items = null; epics = []; sprints = null; cfg = null; snap = {}; };
+  const findAny = id => items.find(x => x.id === id) || epics.find(x => x.id === id);
+  const epicOf = id => epics.find(e => e.id === id);
+  const saveItems = () => { AgileCalc.compactQueue(items); DB.set('backlog', items.concat(epics)); };
   const saveSprints = () => DB.set('sprints', sprints);
   // ───────── Histórico do card: toda mudança de campo vira "quem, quando, de → para" (alimentado por pushItem, o ponto único de gravação) ─────────
-  const TRACKED = [['title', 'Título'], ['kind', 'Tipo'], ['points', 'Pontos'], ['assignee', 'Responsável'], ['description', 'Descrição'], ['status', 'Situação'], ['sprintId', 'Sprint'], ['parentId', 'Item pai'], ['bugPriority', 'Prioridade do bug'], ['rank', 'Prioridade (posição no backlog)']];
+  const TRACKED = [['title', 'Título'], ['kind', 'Tipo'], ['points', 'Pontos'], ['assignee', 'Responsável'], ['description', 'Descrição'], ['status', 'Situação'], ['sprintId', 'Sprint'], ['parentId', 'Item pai'], ['bugPriority', 'Prioridade do bug'], ['epicId', 'Épico'], ['rank', 'Prioridade (posição no backlog)']];
   const HIST_MAX = 300;
   let snap = {};
   const snapOf = it => { const o = {}; TRACKED.forEach(([k]) => { o[k] = it[k] == null ? '' : it[k]; }); return o; };
@@ -14088,7 +14098,7 @@ const Agile = (() => {
       ? (sp.endOn < todayIso() ? '<span class="badge b-red" title="O prazo da ' + esc(sp.name) + ' passou e o card não foi concluído">atrasado · ' + esc(sp.endOn.split('-').reverse().slice(0, 2).join('/')) + '</span>' : '<span class="chip" title="Fim da ' + esc(sp.name) + '"><i class="ti ti-calendar-time"></i>até ' + esc(sp.endOn.split('-').reverse().slice(0, 2).join('/')) + '</span>') : '';
     const prev = AgileCalc.neighbor(i.status, -1, cfg), next = AgileCalc.neighbor(i.status, 1, cfg);
     const lbl = k => AgileCalc.colLabel(cfg, k), f = cfg.card;
-    const top = [f.id && `<span class="chip">${esc(i.id)}</span>`, f.kind && `<span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>`, f.points && i.points !== '' && i.points != null && `<span class="badge b-acc">${esc(i.points)} pts</span>`, f.bugs && AgileCalc.isOpenBug(i) && Number(i.bugPriority) > 0 && `<span class="badge b-red" title="Posição na fila de prioridade dos bugs (1 = primeiro a corrigir)">P${esc(i.bugPriority)}</span>`].filter(Boolean).join('');
+    const top = [f.id && `<span class="chip">${esc(i.id)}</span>`, f.kind && `<span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>`, f.points && i.points !== '' && i.points != null && `<span class="badge b-acc">${esc(i.points)} pts</span>`, f.bugs && AgileCalc.isOpenBug(i) && Number(i.bugPriority) > 0 && `<span class="badge b-red" title="Posição na fila de prioridade dos bugs (1 = primeiro a corrigir)">P${esc(i.bugPriority)}</span>`, i.epicId && epicOf(i.epicId) && `<span class="chip" title="Épico ${esc(epicOf(i.epicId).id)} — ${esc(epicOf(i.epicId).title)}"><i class="ti ti-bolt"></i>${esc(clipPrio(epicOf(i.epicId).title, 18))}</span>`].filter(Boolean).join('');
     const kidsAll = AgileCalc.bugsOf(items, i.id), kidsOpen = kidsAll.filter(k => k.status !== 'done');
     const rel = i.kind === 'bug' ? (i.parentId ? `<span class="chip" title="Este bug é filho do item ${esc(i.parentId)}"><i class="ti ti-corner-down-right"></i>de ${esc(i.parentId)}</span>` : '<span class="badge b-amb" title="Bug antigo, sem item pai: abra o cartão e escolha o item">sem item pai</span>') : (kidsAll.length ? `<span class="chip" title="Bugs ligados a este item"><i class="ti ti-bug"></i>${kidsOpen.length}/${kidsAll.length} bug(s)</span>` : '');
     const att = (Array.isArray(i.attachments) && i.attachments.length) ? `<span class="chip" title="Anexos do bug"><i class="ti ti-paperclip"></i>${i.attachments.length}</span>` : '';
@@ -14315,14 +14325,21 @@ const Agile = (() => {
     const q = query.trim().toLowerCase();
     const inQueue = i => AgileCalc.isOpenBug(i) && Number(i.bugPriority) > 0; // bug com prioridade: a posição vem da fila (altere no cartão do bug)
     const list = items.filter(i => (showDone || i.status !== 'done') && (!q || (i.title + ' ' + i.assignee + ' ' + i.id).toLowerCase().includes(q))).sort((a, b) => (inQueue(b) - inQueue(a)) || (inQueue(a) && inQueue(b) ? Number(a.bugPriority) - Number(b.bugPriority) : sortByRank(a, b)));
-    if(!items.length) { root.innerHTML = '<div class="rk-empty">O backlog está vazio. Use “Novo item” para começar.</div>'; return; }
-    if(!list.length) { root.innerHTML = '<div class="rk-empty">Nenhum item com esse filtro.</div>'; return; }
+    if(!items.length && !epics.length) { root.innerHTML = '<div class="rk-empty">O backlog está vazio. Use “Novo item” para começar.</div>'; return; }
+    if(!list.length && !(epics.length && !q)) { root.innerHTML = '<div class="rk-empty">Nenhum item com esse filtro.</div>'; return; }
     const spOpts = sel => '<option value="">Sem sprint</option>' + sprints.filter(s => s.state !== 'encerrada').map(s => `<option value="${esc(s.id)}"${s.id === sel ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
-    root.innerHTML = list.map(i => `<div class="ag-row"${i.status === 'done' ? ' style="opacity:1;background:transparent"' : ''}>
+    const rowHtml = i => `<div class="ag-row"${i.status === 'done' ? ' style="opacity:1;background:transparent"' : ''}>
       <div class="ag-rank" data-perm="manage_backlog">${inQueue(i) ? `<span class="badge b-red" title="Posição ${esc(i.bugPriority)} na fila de prioridade dos bugs (1 = primeiro a corrigir). Para mudar, abra o cartão do bug.">P${esc(i.bugPriority)}</span>` : `<button class="btn btn-sm" aria-label="Subir prioridade de ${esc(i.id)}" onclick="Agile.rank('${esc(i.id)}',-1)">▲</button><button class="btn btn-sm" aria-label="Descer prioridade de ${esc(i.id)}" onclick="Agile.rank('${esc(i.id)}',1)">▼</button>`}</div>
-      <div class="ag-main"><div class="ag-title">${esc(i.title)}</div><div class="kb-meta" style="margin-top:3px"><span class="chip">${esc(i.id)}</span><span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>${i.points !== '' && i.points != null ? `<span class="badge b-acc">${esc(i.points)} pts</span>` : '<span class="chip c-wa">sem estimativa</span>'}<span class="chip">${esc(AgileCalc.colLabel(cfg, i.status))}</span>${i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : ''}</div></div>
+      <div class="ag-main"><div class="ag-title">${esc(i.title)}</div><div class="kb-meta" style="margin-top:3px"><span class="chip">${esc(i.id)}</span><span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>${i.points !== '' && i.points != null ? `<span class="badge b-acc">${esc(i.points)} pts</span>` : '<span class="chip c-wa">sem estimativa</span>'}<span class="chip">${esc(AgileCalc.colLabel(cfg, i.status))}</span>${i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : ''}${i.epicId && epicOf(i.epicId) ? `<span class="chip" title="Épico ${esc(epicOf(i.epicId).title)}"><i class="ti ti-bolt"></i>${esc(clipPrio(epicOf(i.epicId).title, 22))}</span>` : ''}</div></div>
       <select class="input" data-perm="manage_backlog" aria-label="Sprint do item ${esc(i.id)}" onchange="Agile.setSprintOf('${esc(i.id)}', this.value)"${i.status === 'done' ? ' disabled' : ''}>${spOpts(i.sprintId)}</select>
-      <button class="btn btn-sm" aria-label="Editar ${esc(i.id)}" data-perm="manage_backlog" onclick="Agile.openItem('${esc(i.id)}')"><i class="ti ti-edit"></i></button></div>`).join('');
+      <button class="btn btn-sm" aria-label="Editar ${esc(i.id)}" data-perm="manage_backlog" onclick="Agile.openItem('${esc(i.id)}')"><i class="ti ti-edit"></i></button></div>`;
+    const epicHead = e => { const k = AgileCalc.epicStats(items, e.id), ok = k.total > 0 && k.done === k.total;
+      return `<div class="ag-row ag-epic"><div class="ag-main"><div class="ag-title"><i class="ti ti-bolt" style="color:var(--acc)"></i> ${esc(e.title)}</div><div class="kb-meta" style="margin-top:3px"><span class="chip">${esc(e.id)}</span><span class="chip">Épico</span><span class="badge ${ok ? 'b-grn' : 'b-acc'}">${k.done} de ${k.total} história(s) concluída(s)${ok ? ' · épico concluído' : ''}</span></div><div class="ag-epic-bar" role="img" aria-label="${k.pct}% concluído"><i style="width:${k.pct}%"></i></div></div><button class="btn btn-sm" aria-label="Editar ${esc(e.id)}" data-perm="manage_backlog" onclick="Agile.openItem('${esc(e.id)}')"><i class="ti ti-edit"></i></button></div>`; };
+    if(!q && epics.length) {
+      const queued = list.filter(inQueue), rest = list.filter(i => !inQueue(i));
+      const free = rest.filter(i => !epics.some(e => e.id === i.epicId));
+      root.innerHTML = queued.map(rowHtml).join('') + epics.slice().sort(sortByRank).map(e => epicHead(e) + rest.filter(i => i.epicId === e.id).map(rowHtml).join('')).join('') + (free.length ? '<div class="ag-epic-h">Sem épico</div>' + free.map(rowHtml).join('') : '');
+    } else root.innerHTML = list.map(rowHtml).join('');
   }
   function rank(id, dir) {
     if(!Auth.guard('manage_backlog')) return;
@@ -14690,13 +14707,13 @@ const Agile = (() => {
   function fillSprintSelect(sel) {
     document.getElementById('ai-sprint').innerHTML = '<option value="">Sem sprint</option>' + sprints.filter(s => s.state !== 'encerrada' || s.id === sel).map(s => `<option value="${esc(s.id)}"${s.id === sel ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
   }
-  function openItem(id) {
+  function openItem(id, preset) {
     const full = Auth.can('manage_backlog');
     if(!full && !(id && Auth.can('update_own'))) { Auth.guard('manage_backlog'); return; }
-    load(); const it = id ? items.find(x => x.id === id) : null; itemCtx = it ? it.id : null; draftId = it ? '' : AgileCalc.nextId('US', items);
-    document.getElementById('ai-title-h').textContent = it ? it.id + (full ? ' — editar item' : ' — atualizar atividade') : 'Novo item';
+    load(); const it = id ? findAny(id) : null; itemCtx = it ? it.id : null; draftId = it ? '' : AgileCalc.nextId('US', items);
+    document.getElementById('ai-title-h').textContent = it ? it.id + (it.kind === 'epico' ? ' — editar épico' : full ? ' — editar item' : ' — atualizar atividade') : (preset === 'epico' ? 'Novo épico' : 'Novo item');
     document.getElementById('ai-title').value = it ? it.title : '';
-    document.getElementById('ai-kind').value = it ? it.kind : 'historia';
+    document.getElementById('ai-kind').value = it ? it.kind : (preset === 'epico' && !isBoardNow() ? 'epico' : 'historia');
     document.getElementById('ai-points').value = it ? it.points : '';
     document.getElementById('ai-desc').value = it ? it.description : '';
     // a lista de Situação é a do quadro (inclui as colunas criadas em Personalizar quadro); item numa coluna que não existe mais mostra a primeira
@@ -14712,6 +14729,8 @@ const Agile = (() => {
     kindChanged();
     renderChildren(it); renderFiles(it); renderHistory(it); renderLastNotes(it);
     applyItemMode(it, full);
+    if(it && it.kind === 'epico' || (!it && preset === 'epico' && !isBoardNow())) ['ai-work', 'ai-check'].forEach(id => { const e = document.getElementById(id); if(e) e.style.display = 'none'; }); // o épico não tem comentário nem lista de tarefas
+    { const ks = document.getElementById('ai-kind'); Array.from(ks.options).forEach(o => { if(o.value === 'epico') o.hidden = o.disabled = isBoardNow() || (!!it && it.kind !== 'epico'); }); if(it && it.kind === 'epico') ks.disabled = true; } // épico só se cria novo (não se converte) e não existe no Quadro
     document.getElementById('modal-agile-item').classList.remove('hidden');
     document.getElementById(full ? 'ai-title' : 'ai-note').focus();
   }
@@ -14794,7 +14813,7 @@ const Agile = (() => {
   // Comentário e evidências do cartão: envia os arquivos antes de gravar (devolve false e avisa se algo impede)
   async function collectEvidence() {
     const note = val('ai-note').trim(), el = document.getElementById('ai-evid'), files = el && el.files ? [...el.files] : [];
-    const cid = itemCtx || draftId, cur = items.find(x => x.id === itemCtx), have = cur && Array.isArray(cur.attachments) ? cur.attachments.length : 0;
+    const cid = itemCtx || draftId, cur = findAny(itemCtx), have = cur && Array.isArray(cur.attachments) ? cur.attachments.length : 0;
     if(have + files.length > 6) { T.show('⚠️ Cada cartão aceita até 6 anexos (este já tem ' + have + ').'); return false; }
     const big = files.find(x => x.size > 5242880); if(big) { T.show('⚠️ "' + big.name + '" passa de 5 MB.'); return false; }
     if(files.length && !(typeof Cloud !== 'undefined' && Cloud.getUserId && Cloud.getUserId())) { T.show('⚠️ Os anexos ficam na nuvem: entre com a sua conta.'); return false; }
@@ -14822,7 +14841,7 @@ const Agile = (() => {
   }
   // O time registra a atividade: situação (nas colunas que pode), comentário e evidências
   async function saveWork() {
-    load(); let it = items.find(x => x.id === itemCtx); if(!it) return;
+    load(); let it = findAny(itemCtx); if(!it) return;
     const to = val('ai-status') || it.status, changed = to !== it.status, note = val('ai-note').trim(), hasFiles = !!(document.getElementById('ai-evid').files || []).length;
     if(changed && !canTouch(it, to)) return;
     const blk = changed ? moveBlock(it.assignee, to) : ''; if(blk) { blockHelp(blk, it.assignee); return; }
@@ -14832,7 +14851,7 @@ const Agile = (() => {
     if(changed && policy().noteCols.includes(to) && note2.length < 5) { T.show('⚠️ Para passar para "' + AgileCalc.colLabel(cfg, to) + '", escreva o comentário (mínimo 5 letras) e anexe as evidências, se houver.'); document.getElementById('ai-note').focus(); return; }
     if(!changed && !note && !hasFiles && !checkDirty(it)) { closeItem(); return; }
     const ev = await collectEvidence(); if(ev === false) return;
-    load(); it = items.find(x => x.id === itemCtx) || it;
+    load(); it = findAny(itemCtx) || it;
     applyEvidence(it, ev); applyChecklist(it);
     if(changed) setStatus(it, to); else { saveItems(); pushItem(it); }
     const id = it.id; closeItem(); renderAll(); T.show('✅ ' + id + (changed ? ' foi para "' + AgileCalc.colLabel(cfg, to) + '".' : ' atualizado.') + (ev && ev.note ? ' Comentário registrado no histórico.' : ''));
@@ -14848,7 +14867,30 @@ const Agile = (() => {
     const isBug = document.getElementById('ai-kind').value === 'bug';
     document.getElementById('ai-parent-grp').style.display = isBug ? '' : 'none';
     document.getElementById('ai-prio-grp').style.display = isBug ? '' : 'none';
-    if(isBug) { load(); const cur = itemCtx ? items.find(x => x.id === itemCtx) : null, ps = document.getElementById('ai-prio'); ps.innerHTML = prioOptions(itemCtx || '', cur && cur.kind === 'bug' ? cur.bugPriority : ''); document.getElementById('ai-prio-q').innerHTML = prioQueueHtml(itemCtx || ''); }
+    const kind = document.getElementById('ai-kind').value, isEpic = kind === 'epico', board = isBoardNow();
+    ['ai-points', 'ai-assignee', 'ai-sprint'].forEach(id => { const e = document.getElementById(id), g = e && (e.closest('.field-group') || e); if(g) g.style.display = isEpic ? 'none' : ''; });
+    document.getElementById('ai-status-grp').style.display = (isEpic || !itemCtx) ? 'none' : '';
+    document.getElementById('ai-epic-grp').style.display = (!isEpic && !board && (kind === 'historia' || kind === 'tarefa')) ? '' : 'none';
+    if(!isEpic && !board && (kind === 'historia' || kind === 'tarefa')) { load(); const cur = itemCtx ? findAny(itemCtx) : null; fillEpic(cur ? cur.epicId : ''); }
+    const wk = document.getElementById('ai-work'), ck = document.getElementById('ai-check');
+    if(isEpic) { if(wk) wk.style.display = 'none'; if(ck) ck.style.display = 'none'; epicHid = true; }
+    else if(epicHid) { epicHid = false; if(wk && (itemCtx || Auth.can('manage_backlog'))) wk.style.display = ''; renderCheck(); }
+    if(isBug) { load(); const cur = itemCtx ? findAny(itemCtx) : null, ps = document.getElementById('ai-prio'); ps.innerHTML = prioOptions(itemCtx || '', cur && cur.kind === 'bug' ? cur.bugPriority : ''); document.getElementById('ai-prio-q').innerHTML = prioQueueHtml(itemCtx || ''); }
+  }
+  let epicHid = false;
+  function fillEpic(selected) {
+    const el = document.getElementById('ai-epic'); if(!el) return;
+    el.innerHTML = '<option value="">Sem épico</option>' + epics.map(e => '<option value="' + esc(e.id) + '">' + esc(e.id) + ' — ' + esc(e.title) + '</option>').join('');
+    el.value = epics.some(e => e.id === selected) ? selected : '';
+  }
+  // Salva um ÉPICO (agrupador): só título e descrição; não tem responsável, pontos, sprint nem situação
+  function saveEpic() {
+    load(); const title = val('ai-title').trim();
+    if(title.length < 2) { T.show('⚠️ Dê um título ao épico (mínimo 2 letras).'); document.getElementById('ai-title').focus(); return; }
+    let it = itemCtx ? epics.find(x => x.id === itemCtx) : null; const desc = val('ai-desc').trim();
+    if(it) { it.title = title; it.description = desc; }
+    else { it = { id: AgileCalc.nextId('EP', epics), title, description: desc, kind: 'epico', status: 'todo', points: '', assignee: '', sprintId: '', rank: Math.max(0, ...items.concat(epics).map(x => x.rank || 0)) + 1, createdOn: todayIso(), doneOn: '', parentId: '', epicId: '', attachments: [], history: [], checklist: [] }; epics.push(it); }
+    saveItems(); pushItem(it); const id = it.id; closeItem(); renderAll(); T.show('✅ Épico ' + id + ' salvo.');
   }
   // Fila de prioridade dos bugs: mostra o que já está priorizado para a pessoa decidir onde encaixar
   const clipPrio = (t, n) => { t = String(t || ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
@@ -14865,6 +14907,12 @@ const Agile = (() => {
   // No cartão de um item de entrega: lista os bugs filhos e permite abrir um novo já ligado a ele
   function renderChildren(it) {
     const el = document.getElementById('ai-children'); if(!el) return;
+    if(it && it.kind === 'epico') {
+      const st = items.filter(x => x.epicId === it.id), k = AgileCalc.epicStats(items, it.id);
+      el.style.display = '';
+      el.innerHTML = '<div class="field-label"><i class="ti ti-bolt"></i> Histórias deste épico (' + k.done + ' de ' + k.total + ' concluída(s))</div>' + (st.length ? '<div style="display:flex;flex-direction:column;gap:4px;margin:4px 0">' + st.map(x => '<button type="button" class="link-a" style="text-align:left" onclick="Agile.openItem(\'' + esc(x.id) + '\')">' + esc(x.id) + ' — ' + esc(x.title) + ' · ' + esc(AgileCalc.colLabel(cfg, x.status)) + '</button>').join('') + '</div>' : '<div class="set-sub">Nenhuma história ligada ainda. Abra uma história e escolha este épico no campo Épico.</div>');
+      return;
+    }
     if(!it || it.kind === 'bug') { el.style.display = 'none'; el.innerHTML = ''; return; }
     const kids = AgileCalc.bugsOf(items, it.id).slice().sort(AgileCalc.byPriority), open = kids.filter(k => k.status !== 'done');
     el.style.display = '';
@@ -14973,27 +15021,29 @@ const Agile = (() => {
   async function saveItem() {
     if(!Auth.can('manage_backlog')) return saveWork();
     load();
+    if(val('ai-kind') === 'epico') return saveEpic();
     const title = val('ai-title').trim();
     if(title.length < 2) { T.show('⚠️ Dê um título ao item (mínimo 2 letras).'); document.getElementById('ai-title').focus(); return; }
     const p = val('ai-points').trim(), points = p === '' ? '' : Math.max(0, Math.min(100, parseInt(p, 10) || 0));
-    let it = itemCtx ? items.find(x => x.id === itemCtx) : null;
+    let it = itemCtx ? findAny(itemCtx) : null;
     const f = { title, kind: val('ai-kind'), points, assignee: val('ai-assignee').trim(), description: val('ai-desc').trim(), sprintId: val('ai-sprint') };
     f.parentId = f.kind === 'bug' ? val('ai-parent') : '';
+    f.epicId = ((f.kind === 'historia' || f.kind === 'tarefa') && !isBoardNow()) ? val('ai-epic') : '';
     const prio = f.kind === 'bug' ? (parseInt(val('ai-prio'), 10) || 0) : 0;
     const urg = (!itemCtx && urgent) ? urgent : null;
     if(urg) { f.sprintId = urg.sprintId; f.description = (f.description ? f.description + '\n\n' : '') + 'Incluído durante a sprint (mudança de escopo) — motivo: ' + urg.reason; }
-    const prevB = itemCtx ? items.find(x => x.id === itemCtx) : null;
+    const prevB = itemCtx ? findAny(itemCtx) : null;
     const bad = (prevB && prevB.kind === 'bug' && !prevB.parentId && !f.parentId) ? '' : AgileCalc.bugParentError({ ...f, id: itemCtx || '' }, items);
     if(bad) { T.show('⚠️ ' + bad); document.getElementById('ai-parent').focus(); return; }
-    const cur00 = itemCtx ? items.find(x => x.id === itemCtx) : null;
+    const cur00 = itemCtx ? findAny(itemCtx) : null;
     if(f.sprintId && f.sprintId !== (cur00 ? cur00.sprintId || '' : '')) { const sb = AgileCalc.sprintAssigneeError(f.assignee, teamNames()); if(sb) { blockHelp(sb, f.assignee); document.getElementById('ai-assignee').focus(); return; } }
-    const cur0 = itemCtx ? items.find(x => x.id === itemCtx) : null, to0 = val('ai-status') || (cur0 && cur0.status);
+    const cur0 = itemCtx ? findAny(itemCtx) : null, to0 = val('ai-status') || (cur0 && cur0.status);
     const blk0 = cur0 ? moveBlock(f.assignee, to0) : ''; if(blk0) { blockHelp(blk0, f.assignee); document.getElementById('ai-assignee').focus(); return; }
     if(cur0 && to0 !== cur0.status && AgileCalc.isBackward(cfg, cur0.status, to0) && val('ai-note').trim().length < 5) { const w = await askReturn(cur0, to0); if(w === null) return; document.getElementById('ai-note').value = w; }
     const pend0 = cur0 && to0 !== cur0.status ? BoardRules.pendingFor(policy(), cur0.status, to0, checkDraft) : [], why0 = val('ai-note').trim();
     if(pend0.length && why0.length < 5) { T.show('☑️ Há tarefas pendentes (' + pendNames(pend0) + '). Para mover mesmo assim, escreva o motivo em "Comentário da atividade".', 6500); document.getElementById('ai-note').focus(); return; }
     const ev = await collectEvidence(); if(ev === false) return;
-    load(); it = itemCtx ? items.find(x => x.id === itemCtx) : null;
+    load(); it = itemCtx ? findAny(itemCtx) : null;
     if(it) { applyEvidence(it, ev); applyChecklist(it); if(pend0.length) addHist(it, 'Movido com ' + pend0.length + ' tarefa(s) pendente(s) — motivo: ' + why0.slice(0, 300)); }
     const was = it ? { status: it.status, assignee: it.assignee || '' } : null;
     if(it) { Object.assign(it, f); AgileCalc.moveTo(it, val('ai-status') || it.status, todayIso()); }
@@ -15009,13 +15059,15 @@ const Agile = (() => {
   }
   function deleteItem() {
     if(!Auth.guard('manage_backlog')) return;
-    load(); const it = items.find(x => x.id === itemCtx); if(!it) return;
+    load(); const it = findAny(itemCtx); if(!it) return;
+    const isEpic = it.kind === 'epico', stories = isEpic ? items.filter(x => x.epicId === it.id) : [];
     const kids = AgileCalc.bugsOf(items, it.id);
     if(kids.length) { T.show('⚠️ ' + it.id + ' tem ' + kids.length + ' bug(s) ligado(s) (' + kids.map(k => k.id).join(', ') + '). Exclua ou religue os bugs antes.', 6000); return; }
-    if(!confirm(`Excluir ${it.id}? Isso remove o item do backlog e do quadro.`)) return;
-    items = items.filter(x => x.id !== it.id); saveItems();
+    if(!confirm(isEpic ? 'Excluir o épico ' + it.id + '? ' + (stories.length ? 'As ' + stories.length + ' história(s) dele ficam sem épico (não são apagadas).' : '') : `Excluir ${it.id}? Isso remove o item do backlog e do quadro.`)) return;
+    if(isEpic) { stories.forEach(x => { x.epicId = ''; pushItem(x); }); epics = epics.filter(x => x.id !== it.id); } else items = items.filter(x => x.id !== it.id);
+    saveItems();
     if(typeof Cloud !== 'undefined') Cloud.deleteRow('backlog_items', it.id);
-    closeItem(); renderAll(); T.show('🗑️ Item excluído.');
+    closeItem(); renderAll(); T.show(isEpic ? '🗑️ Épico excluído.' : '🗑️ Item excluído.');
   }
   function openSprint(id) {
     if(!Auth.guard('manage_backlog')) return;
@@ -15262,7 +15314,7 @@ const Agile = (() => {
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, checkDates, openRules, closeRules, editRule, ruleField, ruleAct, ruleAddAct, ruleDelAct, ruleCancel, ruleSave, toggleRule, deleteRule, renderDue, openDue, closeDue, dueChoose, runDue, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
     aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, setPolicyMove, setPolicyCol, openImpediments, closeImpediments, resolveImpediment, setPolicyBehalf, addGate, removeGate, setGate, setTemplate, checkToggle, checkAdd, checkDel, openBehalf, closeBehalf, confirmBehalf, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
-    cfgNow: () => { load(); return cfg; }, kindChanged, prioOptions, prioQueueHtml, askReturn, evidCount, kindPicked, syncSprintLock, sprintDur, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
+    cfgNow: () => { load(); return cfg; }, kindChanged, prioOptions, prioQueueHtml, askReturn, epicList: () => { load(); return epics.slice(); }, evidCount, kindPicked, syncSprintLock, sprintDur, openBugFor, itemRefs, openUrgent, nextBugId, sprintRefsAll, createBug, openFile };
 })();
 </script>
 

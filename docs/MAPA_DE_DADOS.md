@@ -98,7 +98,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 
 | Tabela | Para que serve | Escopo | Dado pessoal | Apagar dados do projeto | Apagar toda a base | Campos |
 |---|---|---|---|---|---|---|
-| `backlog_items` | Itens do backlog e do quadro (história, tarefa, bug filho com anexos e posição na fila de prioridade dos bugs, lista de tarefas do cartão e histórico). | projeto | não | apaga | apaga | `project_id`, `id`, `title`, `description`, `kind`, `status`, `points`, `assignee`, `sprint_id`, `rank`, `created_on`, `done_on`, `updated_at`, `parent_id`, `attachments`, `history`, `checklist`, `bug_priority` |
+| `backlog_items` | Itens do backlog e do quadro (épico que agrupa histórias, história, tarefa, bug filho com anexos e posição na fila de prioridade dos bugs, lista de tarefas do cartão e histórico). | projeto | não | apaga | apaga | `project_id`, `id`, `title`, `description`, `kind`, `status`, `points`, `assignee`, `sprint_id`, `rank`, `created_on`, `done_on`, `updated_at`, `parent_id`, `attachments`, `history`, `checklist`, `bug_priority`, `epic_id` |
 | `sprints` | Sprints, capacidade e o que voltou ao backlog. | projeto | não | apaga | apaga | `project_id`, `id`, `name`, `goal`, `start_on`, `end_on`, `capacity`, `state`, `closed_on`, `updated_at`, `availability`, `carried`, `extensions` |
 | `sprint_rites` | Ritos da sprint (planejamento, revisão, retrospectiva). | projeto | não | apaga | apaga | `project_id`, `id`, `sprint_id`, `kind`, `held_on`, `attendees`, `notes`, `data`, `updated_at` |
 | `impediments` | Impedimentos da sprint. | projeto | não | apaga | apaga | `project_id`, `id`, `title`, `owner_name`, `sprint_id`, `status`, `note`, `created_on`, `resolved_on`, `updated_at` |
