@@ -6,8 +6,8 @@ import http from 'node:http'; import { readFileSync } from 'node:fs';
 const res = []; const ok = (c, m, extra) => { res.push([c, m]); console.log(c ? 'OK   ' : 'FALHA', m, c ? '' : (extra || '')); };
 const srv = http.createServer((q, r) => { r.setHeader('Content-Type', 'text/html; charset=utf-8'); r.end(readFileSync(ROOT + 'PMO_Compass_v2.html')); }).listen(0);
 const b = await chromium.launch();
-const page = async (w = 1280, h = 900) => { const p = await (await b.newContext({ viewport: { width: w, height: h } })).newPage(); await p.addInitScript(() => { try { localStorage.setItem('pmo_cloud_v1', JSON.stringify({ localOnly: true })); } catch (e) {} }); p.errs = []; p.on('pageerror', e => p.errs.push(e.message)); p.on('dialog', d => d.accept()); await p.goto('http://localhost:' + srv.address().port + '/'); await p.waitForTimeout(1400); return p; };
-const seed = async (p, items, team) => { await p.evaluate(([it, tm]) => { if (tm) DB.set('team', [...(DB.get('team') || []), ...tm]); DB.set('sprints', []); DB.set('backlog', it); }, [items, team || null]); await p.reload(); await p.waitForTimeout(1400); await p.evaluate(() => { document.querySelectorAll('[id^="modal-"]').forEach(e => e.classList.add('hidden')); }); };
+const page = async (w = 1280, h = 900) => { const p = await (await b.newContext({ viewport: { width: w, height: h } })).newPage(); await p.addInitScript(() => { try { localStorage.setItem('pmo_cloud_v1', JSON.stringify({ localOnly: true })); } catch (e) {} }); p.errs = []; p.on('pageerror', e => p.errs.push(e.message)); p.on('dialog', d => d.accept()); await p.goto('http://localhost:' + srv.address().port + '/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(1400); return p; };
+const seed = async (p, items, team) => { await p.evaluate(([it, tm]) => { if (tm) DB.set('team', [...(DB.get('team') || []), ...tm]); DB.set('sprints', []); DB.set('backlog', it); }, [items, team || null]); await p.reload({ waitUntil: 'domcontentloaded' }); await p.waitForTimeout(1400); await p.evaluate(() => { document.querySelectorAll('[id^="modal-"]').forEach(e => e.classList.add('hidden')); }); };
 const base = (o) => ({ kind: 'tarefa', status: 'todo', points: 1, assignee: '', sprintId: '', rank: 1, createdOn: '2026-11-01', doneOn: '', parentId: '', epicId: '', bugPriority: '', attachments: [], history: [{ at: '2026-11-01T00:00:00Z', by: 'Leandro', field: '', from: '', to: 'Card criado' }], checklist: [], ...o });
 
 // 1) Épico x Bug: o bug só se liga a uma entrega (nunca a um épico); fila de bugs e épicos convivem
@@ -67,6 +67,31 @@ r = await p.evaluate(async () => {
 });
 ok(r.aberta && r.refresh === false && r.pulls === 0, 'janela de renovação aberta bloqueia a atualização automática', JSON.stringify(r));
 ok(r.pol.refreshMin === 10 && r.pol.sessionMin === 480, 'política inválida volta ao padrão (10 min / 8 h)');
+await p.close();
+
+// 6) Épico x regra do responsável: só ligar ao épico passa num card sem responsável; outra mudança continua barrada
+p = await page();
+await seed(p, [base({ id: 'EP-001', title: 'Relatórios', kind: 'epico', points: '', description: '' }), base({ id: 'US-020', title: 'Concluída sem responsável', kind: 'historia', status: 'done', doneOn: '2026-11-04', description: '' })]);
+await p.evaluate(() => { R.go('backlog'); Agile.openItem('US-020'); }); await p.waitForTimeout(300);
+await p.selectOption('#ai-epic', 'EP-001'); await p.evaluate(() => Agile.saveItem()); await p.waitForTimeout(400);
+r = await p.evaluate(() => DB.get('backlog').find(x => x.id === 'US-020').epicId);
+ok(r === 'EP-001', 'ligar a um épico um card concluído sem responsável (única mudança) é permitido', r);
+await p.evaluate(() => { const l = DB.get('backlog'); l.find(x => x.id === 'US-020').epicId = ''; DB.set('backlog', l); }); await p.reload({ waitUntil: 'domcontentloaded' }); await p.waitForTimeout(1300);
+await p.evaluate(() => { document.querySelectorAll('[id^="modal-"]').forEach(e => e.classList.add('hidden')); R.go('backlog'); Agile.openItem('US-020'); }); await p.waitForTimeout(300);
+await p.selectOption('#ai-epic', 'EP-001'); await p.fill('#ai-title', 'Concluída (editada)'); await p.evaluate(() => Agile.saveItem()); await p.waitForTimeout(400);
+r = await p.evaluate(() => DB.get('backlog').find(x => x.id === 'US-020').title);
+ok(r === 'Concluída sem responsável', 'épico + outra mudança num card sem responsável continua barrado (regra antiga preservada)', r);
+await p.close();
+
+// 7) Resumo da revisão da sprint por pessoa, igual à regra de entrega de Meus Indicadores
+p = await page();
+const h2 = (by, de, para) => ({ at: '2026-11-09T10:00:00Z', by, field: 'Situação', from: de, to: para });
+await p.evaluate(() => { DB.set('sprints', [{ id: 'S1', name: 'Sprint 1', goal: '', startOn: '2026-11-02', endOn: '2026-11-13', state: 'ativa', capacity: 10 }]); });
+await seed(p, [base({ id: 'US-030', title: 'A', kind: 'historia', status: 'done', doneOn: '2026-11-05', assignee: 'Leandro R', sprintId: 'S1', description: '', history: [h2('Ricardo M', 'A fazer', 'Em andamento'), h2('Ricardo M', 'Em andamento', 'Em revisão'), h2('Leandro', 'Em revisão', 'Concluído')] })]);
+await p.evaluate(() => DB.set('sprints', [{ id: 'S1', name: 'Sprint 1', goal: '', startOn: '2026-11-02', endOn: '2026-11-13', state: 'ativa', capacity: 10 }])); await p.reload({ waitUntil: 'domcontentloaded' }); await p.waitForTimeout(1300);
+await p.evaluate(() => { document.querySelectorAll('[id^="modal-"]').forEach(e => e.classList.add('hidden')); R.go('ritos'); Rites.setSprint('S1'); Rites.select('revisao'); }); await p.waitForTimeout(500);
+r = await p.evaluate(() => document.querySelector('#p-ritos').innerText);
+ok(/Quem entregou/.test(r) && /Ricardo M · 1 item/.test(r) && !/Leandro R · 1 item/.test(r), 'revisão da sprint: a entrega aparece para quem levou à revisão (Ricardo M), não para o responsável atual', r.slice(r.indexOf('Quem entregou'), r.indexOf('Quem entregou') + 80));
 await p.close();
 
 await b.close(); srv.close();

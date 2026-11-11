@@ -106,3 +106,15 @@ test('exportação em Excel tem cabeçalho e linhas legíveis', () => {
   const r = ModelsCalc.excelRows('swot', { data: sw }); assert.equal(r[0].length, 4); assert.equal(r.length, 3); assert.equal(r[2][0], 'Cliente engajado');
   const h = ModelsCalc.create('handover'); assert.equal(ModelsCalc.excelRows('handover', { data: h })[0][0], 'Seção');
 });
+
+test('resumo da revisão: separa as entregas por pessoa na ordem alfabética, "sem responsável" por último, e sem a regra não separa', () => {
+  const sp = { id: 'S1' };
+  const items = [{ id: 'A', sprintId: 'S1', status: 'done', points: 2 }, { id: 'B', sprintId: 'S1', status: 'done', points: 3 }, { id: 'C', sprintId: 'S1', status: 'done', points: '' }, { id: 'D', sprintId: 'S1', status: 'done', points: 1 }, { id: 'E', sprintId: 'S1', status: 'todo', points: 5 }];
+  const dono = { A: 'Ricardo M', B: 'Ana', C: 'Ricardo M', D: '' };
+  const r = AgileRites.reviewSummary(sp, items, i => dono[i.id]);
+  assert.deepEqual(r.byPerson, [{ name: 'Ana', count: 1, points: 3 }, { name: 'Ricardo M', count: 2, points: 2 }, { name: '(sem responsável)', count: 1, points: 1 }]);
+  assert.equal(r.who(items[0]), 'Ricardo M'); assert.equal(r.who(items[3]), '(sem responsável)');
+  assert.equal(r.delivered.length, 4); assert.equal(r.committed, 11); // os totais da sprint não mudam
+  const sem = AgileRites.reviewSummary(sp, items);
+  assert.deepEqual(sem.byPerson, []); assert.equal(sem.who, null);
+});

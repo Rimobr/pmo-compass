@@ -96,7 +96,7 @@ test('feedback do Leandro: escolher Bug não fecha a janela à toa, comentário/
 });
 
 test('Responsável do cartão é lista da equipe e a regra vale na edição, no botão, no arrasto e na automação', () => {
-  for (const k of ['<select class="input" id="ai-assignee" onchange="Agile.syncSprintLock()"></select>', 'function fillAssignee(cur)', 'const blk0 = cur0 ? moveBlock(f.assignee, to0) : \'\';', 'const blk = moveBlock(it.assignee, to);', '!moveBlock(it.assignee, a.column)', '(não cadastrado)']) assert.ok(html.includes(k), k);
+  for (const k of ['<select class="input" id="ai-assignee" onchange="Agile.syncSprintLock()"></select>', 'function fillAssignee(cur)', 'const blk0 = cur0 && !onlyEpic ? moveBlock(f.assignee, to0) : \'\';', 'const blk = moveBlock(it.assignee, to);', '!moveBlock(it.assignee, a.column)', '(não cadastrado)']) assert.ok(html.includes(k), k);
   assert.ok(!html.includes('id="ai-people"'));
 });
 

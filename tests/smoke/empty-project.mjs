@@ -22,7 +22,7 @@ const ctx = await b.newContext({ viewport: { width: 1300, height: 900 } });
 await ctx.addInitScript(() => { try { localStorage.setItem('pmo_cloud_v1', JSON.stringify({ url: '', anonKey: '', localOnly: true })); } catch (e) {} });
 const pg = await ctx.newPage();
 const errs = []; pg.on('pageerror', e => errs.push(e.message));
-await pg.goto(`http://localhost:${port}/`); await pg.waitForTimeout(900);
+await pg.goto(`http://localhost:${port}/`, { waitUntil: "domcontentloaded" }); await pg.waitForTimeout(900);
 await pg.evaluate(() => { document.getElementById('modal-onboarding').classList.add('hidden'); });
 
 // 1) o app começa com o demo na memória (é o que acontece antes de o login terminar)

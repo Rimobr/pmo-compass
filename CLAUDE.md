@@ -177,3 +177,9 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - **Sessão de 8 horas continua o padrão** (`sessionPolicy.sessionMin = 480`); "sem limite" só se o administrador escolher em Configurações → Atualização e Sessão.
 - **Cabeçalho fixo das colunas no celular**: fica como está (só vale no computador); sem rolagem aninhada.
 - **Ajuda e manuais ficam por último**: só se atualizam **depois de tudo implementado** ou **quando o dono pedir**; não entram em cada entrega.
+
+## Revisão da sprint por pessoa, épico em card concluído e progresso do épico (pedido do dono, 11/11/2026)
+- **Revisão da sprint (item "Quem entregou")**: o resumo de entregas mostra, por pessoa e em ordem alfabética ("(sem responsável)" por último), quantos itens e pontos cada uma entregou, e cada linha concluída traz o nome de quem entregou. Usa a **mesma regra de entrega** de Meus Indicadores (`MyInd.ownerOf`, quem levou a correção definitiva à revisão); os totais da sprint não mudam (`AgileRites.reviewSummary(sprint, items, ownerOf)`).
+- **Ligar a um épico um card que já está concluído e sem responsável**: permitido quando o épico é a **única mudança** do cartão (`onlyEpic` em `saveItem`; o banco já só cobra responsável na mudança de coluna, de responsável ou na entrada em sprint). Qualquer outra mudança nesse card continua exigindo o responsável.
+- **Progresso do épico mais visível**: o cartão do Kanban e a linha do Backlog mostram a etiqueta do épico com o progresso ("Relatórios · 2/3", verde quando todas as histórias estão concluídas, `epicChip`), e o cabeçalho do épico no Backlog traz barra mais grossa, porcentagem e fica verde ao concluir.
+- O cartão não mostra mais "undefined" na descrição de um card sem esse campo.

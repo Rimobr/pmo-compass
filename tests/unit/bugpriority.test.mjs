@@ -132,3 +132,7 @@ test('conflito de regras: o banco não aceita bug ligado a épico (o bug vai na 
   const sql = readFileSync(join(root, 'supabase/migrations/20261111130000_bug_parent_not_epic.sql'), 'utf8');
   assert.ok(sql.includes("p.kind = 'epico'") && sql.includes('Um bug não pode ser filho de um épico'));
 });
+
+test('épico: etiqueta com progresso no cartão e no Backlog; ligar a um épico não exige responsável quando é a única mudança', () => {
+  for (const k of ['const epicChip = i =>', 'i.epicId && epicChip(i)', "${i.epicId ? epicChip(i) : ''}", 'const onlyEpic = !!cur0', 'const blk0 = cur0 && !onlyEpic ?', '.ag-epic-ok .ag-epic-bar i', 'MyInd.ownerOf(i, cols)', 'Quem entregou:']) assert.ok(html.includes(k), k);
+});

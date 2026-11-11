@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.84.0 — 2026-11-11
+- Epico (nivel acima da Historia) com progresso e Backlog agrupado; ciclos de teste de conflito entre regras; corrige epico como card sem responsavel e bug ligado a epico
+
 ## 2.83.4 — 2026-11-10
 - Meus Indicadores: velocidade e tempo ate concluir usam a mesma regra de entrega; pontos so quando todos os cards tem ponto
 

@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.84.0'
+  version: '2.85.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -251,7 +251,7 @@ body.is-board [onclick*="openPlanNext"],body.is-board #as-goal-grp,body.is-board
 @media(max-width:600px){.kb-burn{display:none!important}}
 body.is-board .btn-epic{display:none!important}
 .ag-epic{background:var(--s2);border-left:3px solid var(--acc);margin-top:6px}
-.ag-epic-bar{height:5px;border-radius:3px;background:var(--s3);margin-top:5px;max-width:320px}.ag-epic-bar i{display:block;height:5px;border-radius:3px;background:var(--acc)}
+.ag-epic-bar{height:8px;border-radius:4px;background:var(--s3);margin-top:6px;max-width:360px}.ag-epic-bar i{display:block;height:8px;border-radius:4px;background:var(--acc)}.ag-epic-ok .ag-epic-bar i{background:var(--grn)}
 .ag-epic-h{font-size:12px;font-weight:600;color:var(--t2);margin:10px 4px 2px}
 .ai-same{height:150px;min-height:90px;resize:vertical}
 .ai-cm{display:flex;flex-direction:column;border:1px solid var(--b2);border-radius:var(--r8);background:var(--s2);overflow:hidden}
@@ -13419,7 +13419,9 @@ const MyInd = (() => {
     };
     return { rows: list, kpis: k, weekly: wk, hours: hr, lead, advice: advice({ ...inp, win }, list, k, wk, hr, { impediments }) };
   }
-  return { WINDOWS, MODES, STALL_DAYS, WIP_MAX, compute, rows, filterRows, sortRows, weekly, leadTime, hours, lastMove, monday, addDays, diff };
+  // Quem entregou um card (a regra única de entrega): usada em Meus Indicadores e no resumo da revisão da sprint
+  const ownerOf = (item, cols) => ownership({ names: [], cols }).owner(item) || '';
+  return { WINDOWS, MODES, STALL_DAYS, WIP_MAX, ownerOf, compute, rows, filterRows, sortRows, weekly, leadTime, hours, lastMove, monday, addDays, diff };
 })();
 </script>
 
@@ -13589,10 +13591,14 @@ const AgileRites = (() => {
     return out;
   }
   // Resumo para a revisão: o que foi entregue e se a meta foi atingida
-  function reviewSummary(sprint, items) {
+  // ownerOf (opcional): devolve quem entregou o card concluído (a regra de Meus Indicadores); sem ela o resumo não separa por pessoa
+  function reviewSummary(sprint, items, ownerOf) {
     const mine = items.filter(i => i.sprintId === sprint.id), done = mine.filter(i => i.status === 'done');
     const pts = l => l.reduce((s, i) => s + (Number(i.points) || 0), 0);
-    return { delivered: done, notDone: mine.filter(i => i.status !== 'done'), points: pts(done), committed: pts(mine), pct: mine.length ? Math.round(done.length / mine.length * 100) : 0 };
+    const who = i => (ownerOf && String(ownerOf(i) || '').trim()) || '(sem responsável)', map = {};
+    if(ownerOf) done.forEach(i => { const n = who(i); (map[n] = map[n] || { name: n, count: 0, points: 0 }); map[n].count++; map[n].points += Number(i.points) || 0; });
+    const byPerson = Object.values(map).sort((a, b) => (a.name === '(sem responsável)') - (b.name === '(sem responsável)') || a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+    return { delivered: done, notDone: mine.filter(i => i.status !== 'done'), points: pts(done), committed: pts(mine), pct: mine.length ? Math.round(done.length / mine.length * 100) : 0, byPerson, who: ownerOf ? who : null };
   }
   const clean = (s, n) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, n);
   // Dados da retrospectiva: nunca aceita lixo (tamanhos e quantidades limitados)
@@ -13900,6 +13906,12 @@ const Agile = (() => {
   const resetCache = () => { items = null; epics = []; sprints = null; cfg = null; snap = {}; };
   const findAny = id => items.find(x => x.id === id) || epics.find(x => x.id === id);
   const epicOf = id => epics.find(e => e.id === id);
+  // Etiqueta do épico no cartão e no Backlog, com o progresso (1/3) e verde quando todas as histórias estão concluídas
+  const epicChip = i => {
+    const e = epicOf(i.epicId); if(!e) return '';
+    const k = AgileCalc.epicStats(items, e.id), ok = k.total > 0 && k.done === k.total;
+    return '<span class="' + (ok ? 'badge b-grn' : 'chip') + '" title="Épico ' + esc(e.id) + ' — ' + esc(e.title) + ': ' + k.done + ' de ' + k.total + ' história(s) concluída(s)"><i class="ti ti-bolt"></i>' + esc(clipPrio(e.title, 16)) + ' · ' + k.done + '/' + k.total + '</span>';
+  };
   const saveItems = () => { AgileCalc.compactQueue(items); DB.set('backlog', items.concat(epics)); };
   const saveSprints = () => DB.set('sprints', sprints);
   // ───────── Histórico do card: toda mudança de campo vira "quem, quando, de → para" (alimentado por pushItem, o ponto único de gravação) ─────────
@@ -14098,7 +14110,7 @@ const Agile = (() => {
       ? (sp.endOn < todayIso() ? '<span class="badge b-red" title="O prazo da ' + esc(sp.name) + ' passou e o card não foi concluído">atrasado · ' + esc(sp.endOn.split('-').reverse().slice(0, 2).join('/')) + '</span>' : '<span class="chip" title="Fim da ' + esc(sp.name) + '"><i class="ti ti-calendar-time"></i>até ' + esc(sp.endOn.split('-').reverse().slice(0, 2).join('/')) + '</span>') : '';
     const prev = AgileCalc.neighbor(i.status, -1, cfg), next = AgileCalc.neighbor(i.status, 1, cfg);
     const lbl = k => AgileCalc.colLabel(cfg, k), f = cfg.card;
-    const top = [f.id && `<span class="chip">${esc(i.id)}</span>`, f.kind && `<span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>`, f.points && i.points !== '' && i.points != null && `<span class="badge b-acc">${esc(i.points)} pts</span>`, f.bugs && AgileCalc.isOpenBug(i) && Number(i.bugPriority) > 0 && `<span class="badge b-red" title="Posição na fila de prioridade dos bugs (1 = primeiro a corrigir)">P${esc(i.bugPriority)}</span>`, i.epicId && epicOf(i.epicId) && `<span class="chip" title="Épico ${esc(epicOf(i.epicId).id)} — ${esc(epicOf(i.epicId).title)}"><i class="ti ti-bolt"></i>${esc(clipPrio(epicOf(i.epicId).title, 18))}</span>`].filter(Boolean).join('');
+    const top = [f.id && `<span class="chip">${esc(i.id)}</span>`, f.kind && `<span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>`, f.points && i.points !== '' && i.points != null && `<span class="badge b-acc">${esc(i.points)} pts</span>`, f.bugs && AgileCalc.isOpenBug(i) && Number(i.bugPriority) > 0 && `<span class="badge b-red" title="Posição na fila de prioridade dos bugs (1 = primeiro a corrigir)">P${esc(i.bugPriority)}</span>`, i.epicId && epicChip(i)].filter(Boolean).join('');
     const kidsAll = AgileCalc.bugsOf(items, i.id), kidsOpen = kidsAll.filter(k => k.status !== 'done');
     const rel = i.kind === 'bug' ? (i.parentId ? `<span class="chip" title="Este bug é filho do item ${esc(i.parentId)}"><i class="ti ti-corner-down-right"></i>de ${esc(i.parentId)}</span>` : '<span class="badge b-amb" title="Bug antigo, sem item pai: abra o cartão e escolha o item">sem item pai</span>') : (kidsAll.length ? `<span class="chip" title="Bugs ligados a este item"><i class="ti ti-bug"></i>${kidsOpen.length}/${kidsAll.length} bug(s)</span>` : '');
     const att = (Array.isArray(i.attachments) && i.attachments.length) ? `<span class="chip" title="Anexos do bug"><i class="ti ti-paperclip"></i>${i.attachments.length}</span>` : '';
@@ -14330,11 +14342,11 @@ const Agile = (() => {
     const spOpts = sel => '<option value="">Sem sprint</option>' + sprints.filter(s => s.state !== 'encerrada').map(s => `<option value="${esc(s.id)}"${s.id === sel ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
     const rowHtml = i => `<div class="ag-row"${i.status === 'done' ? ' style="opacity:1;background:transparent"' : ''}>
       <div class="ag-rank" data-perm="manage_backlog">${inQueue(i) ? `<span class="badge b-red" title="Posição ${esc(i.bugPriority)} na fila de prioridade dos bugs (1 = primeiro a corrigir). Para mudar, abra o cartão do bug.">P${esc(i.bugPriority)}</span>` : `<button class="btn btn-sm" aria-label="Subir prioridade de ${esc(i.id)}" onclick="Agile.rank('${esc(i.id)}',-1)">▲</button><button class="btn btn-sm" aria-label="Descer prioridade de ${esc(i.id)}" onclick="Agile.rank('${esc(i.id)}',1)">▼</button>`}</div>
-      <div class="ag-main"><div class="ag-title">${esc(i.title)}</div><div class="kb-meta" style="margin-top:3px"><span class="chip">${esc(i.id)}</span><span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>${i.points !== '' && i.points != null ? `<span class="badge b-acc">${esc(i.points)} pts</span>` : '<span class="chip c-wa">sem estimativa</span>'}<span class="chip">${esc(AgileCalc.colLabel(cfg, i.status))}</span>${i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : ''}${i.epicId && epicOf(i.epicId) ? `<span class="chip" title="Épico ${esc(epicOf(i.epicId).title)}"><i class="ti ti-bolt"></i>${esc(clipPrio(epicOf(i.epicId).title, 22))}</span>` : ''}</div></div>
+      <div class="ag-main"><div class="ag-title">${esc(i.title)}</div><div class="kb-meta" style="margin-top:3px"><span class="chip">${esc(i.id)}</span><span class="chip">${esc(AgileCalc.KINDS[i.kind] || i.kind)}</span>${i.points !== '' && i.points != null ? `<span class="badge b-acc">${esc(i.points)} pts</span>` : '<span class="chip c-wa">sem estimativa</span>'}<span class="chip">${esc(AgileCalc.colLabel(cfg, i.status))}</span>${i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : ''}${i.epicId ? epicChip(i) : ''}</div></div>
       <select class="input" data-perm="manage_backlog" aria-label="Sprint do item ${esc(i.id)}" onchange="Agile.setSprintOf('${esc(i.id)}', this.value)"${i.status === 'done' ? ' disabled' : ''}>${spOpts(i.sprintId)}</select>
       <button class="btn btn-sm" aria-label="Editar ${esc(i.id)}" data-perm="manage_backlog" onclick="Agile.openItem('${esc(i.id)}')"><i class="ti ti-edit"></i></button></div>`;
     const epicHead = e => { const k = AgileCalc.epicStats(items, e.id), ok = k.total > 0 && k.done === k.total;
-      return `<div class="ag-row ag-epic"><div class="ag-main"><div class="ag-title"><i class="ti ti-bolt" style="color:var(--acc)"></i> ${esc(e.title)}</div><div class="kb-meta" style="margin-top:3px"><span class="chip">${esc(e.id)}</span><span class="chip">Épico</span><span class="badge ${ok ? 'b-grn' : 'b-acc'}">${k.done} de ${k.total} história(s) concluída(s)${ok ? ' · épico concluído' : ''}</span></div><div class="ag-epic-bar" role="img" aria-label="${k.pct}% concluído"><i style="width:${k.pct}%"></i></div></div><button class="btn btn-sm" aria-label="Editar ${esc(e.id)}" data-perm="manage_backlog" onclick="Agile.openItem('${esc(e.id)}')"><i class="ti ti-edit"></i></button></div>`; };
+      return `<div class="ag-row ag-epic${ok ? ' ag-epic-ok' : ''}"><div class="ag-main"><div class="ag-title"><i class="ti ti-bolt" style="color:var(--acc)"></i> ${esc(e.title)}</div><div class="kb-meta" style="margin-top:3px"><span class="chip">${esc(e.id)}</span><span class="chip">Épico</span><span class="badge ${ok ? 'b-grn' : 'b-acc'}">${k.done} de ${k.total} história(s) concluída(s) · ${k.pct}%${ok ? ' · épico concluído' : ''}</span></div><div class="ag-epic-bar" role="img" aria-label="${k.pct}% concluído"><i style="width:${k.pct}%"></i></div></div><button class="btn btn-sm" aria-label="Editar ${esc(e.id)}" data-perm="manage_backlog" onclick="Agile.openItem('${esc(e.id)}')"><i class="ti ti-edit"></i></button></div>`; };
     if(!q && epics.length) {
       const queued = list.filter(inQueue), rest = list.filter(i => !inQueue(i));
       const free = rest.filter(i => !epics.some(e => e.id === i.epicId));
@@ -14715,7 +14727,7 @@ const Agile = (() => {
     document.getElementById('ai-title').value = it ? it.title : '';
     document.getElementById('ai-kind').value = it ? it.kind : (preset === 'epico' && !isBoardNow() ? 'epico' : 'historia');
     document.getElementById('ai-points').value = it ? it.points : '';
-    document.getElementById('ai-desc').value = it ? it.description : '';
+    document.getElementById('ai-desc').value = it ? (it.description || '') : '';
     // a lista de Situação é a do quadro (inclui as colunas criadas em Personalizar quadro); item numa coluna que não existe mais mostra a primeira
     const stCols = AgileCalc.cols(cfg), stSel = document.getElementById('ai-status');
     stSel.innerHTML = stCols.map(c => '<option value="' + esc(c.key) + '">' + esc(c.label) + '</option>').join('');
@@ -15038,7 +15050,8 @@ const Agile = (() => {
     const cur00 = itemCtx ? findAny(itemCtx) : null;
     if(f.sprintId && f.sprintId !== (cur00 ? cur00.sprintId || '' : '')) { const sb = AgileCalc.sprintAssigneeError(f.assignee, teamNames()); if(sb) { blockHelp(sb, f.assignee); document.getElementById('ai-assignee').focus(); return; } }
     const cur0 = itemCtx ? findAny(itemCtx) : null, to0 = val('ai-status') || (cur0 && cur0.status);
-    const blk0 = cur0 ? moveBlock(f.assignee, to0) : ''; if(blk0) { blockHelp(blk0, f.assignee); document.getElementById('ai-assignee').focus(); return; }
+    const onlyEpic = !!cur0 && f.title === cur0.title && f.kind === cur0.kind && String(f.points) === String(cur0.points == null ? '' : cur0.points) && f.assignee === (cur0.assignee || '') && f.description === (cur0.description || '') && f.sprintId === (cur0.sprintId || '') && (f.parentId || '') === (cur0.parentId || '') && to0 === cur0.status && (f.epicId || '') !== (cur0.epicId || '');
+    const blk0 = cur0 && !onlyEpic ? moveBlock(f.assignee, to0) : ''; if(blk0) { blockHelp(blk0, f.assignee); document.getElementById('ai-assignee').focus(); return; }
     if(cur0 && to0 !== cur0.status && AgileCalc.isBackward(cfg, cur0.status, to0) && val('ai-note').trim().length < 5) { const w = await askReturn(cur0, to0); if(w === null) return; document.getElementById('ai-note').value = w; }
     const pend0 = cur0 && to0 !== cur0.status ? BoardRules.pendingFor(policy(), cur0.status, to0, checkDraft) : [], why0 = val('ai-note').trim();
     if(pend0.length && why0.length < 5) { T.show('☑️ Há tarefas pendentes (' + pendNames(pend0) + '). Para mover mesmo assim, escreva o motivo em "Comentário da atividade".', 6500); document.getElementById('ai-note').focus(); return; }
@@ -15451,11 +15464,12 @@ const Rites = (() => {
   }
   // 3. Revisão
   function review(s) {
-    const sum = AgileRites.reviewSummary(s, items()), d = (rec('revisao') || {}).data || {}, fb = d.feedback || [];
+    const cols = AgileCalc.cols(Agile.cfgNow()), sum = AgileRites.reviewSummary(s, items(), i => MyInd.ownerOf(i, cols)), d = (rec('revisao') || {}).data || {}, fb = d.feedback || [];
     const goal = d.goal || '';
     return `<div class="card"><div class="lbl"><i class="ti ti-presentation"></i>O Que Foi Entregue</div>
       <div class="kb-meta" style="margin-bottom:8px"><span class="badge ${sum.pct >= 80 ? 'b-grn' : sum.pct >= 50 ? 'b-amb' : 'b-red'}">${sum.delivered.length} de ${sum.delivered.length + sum.notDone.length} item(ns) concluídos (${sum.pct}%)</span><span class="chip">${sum.points} de ${sum.committed} pts</span></div>
-      ${sum.delivered.length ? sum.delivered.map(i => `<div class="ag-row"><div class="ag-main"><div class="ag-title">${esc(i.title)}</div></div><span class="chip">${esc(i.id)}</span>${i.points !== '' && i.points != null ? `<span class="badge b-acc">${esc(i.points)} pts</span>` : ''}</div>`).join('') : '<div class="rk-empty" style="padding:10px">Nada concluído nesta sprint ainda.</div>'}
+      ${sum.byPerson.length ? `<div class="kb-meta" style="margin-bottom:8px"><span style="font-size:12px;color:var(--t2)">Quem entregou:</span>${sum.byPerson.map(p => `<span class="chip"><i class="ti ti-user"></i>${esc(p.name)} · ${p.count} item(ns)${p.points ? ' · ' + p.points + ' pts' : ''}</span>`).join('')}</div>` : ''}
+      ${sum.delivered.length ? sum.delivered.map(i => `<div class="ag-row"><div class="ag-main"><div class="ag-title">${esc(i.title)}</div></div>${sum.who ? `<span class="chip" title="Quem levou a correção definitiva"><i class="ti ti-user"></i>${esc(sum.who(i))}</span>` : ''}<span class="chip">${esc(i.id)}</span>${i.points !== '' && i.points != null ? `<span class="badge b-acc">${esc(i.points)} pts</span>` : ''}</div>`).join('') : '<div class="rk-empty" style="padding:10px">Nada concluído nesta sprint ainda.</div>'}
       ${sum.notDone.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12.5px;color:var(--t2)">${sum.notDone.length} item(ns) não concluído(s)</summary>${sum.notDone.map(i => `<div style="font-size:12.5px;color:var(--t2);padding:3px 0">• ${esc(i.title)} <span class="chip">${esc(i.id)}</span></div>`).join('')}</details>` : ''}</div>
       <div class="card"><div class="lbl"><i class="ti ti-flag"></i>A meta da sprint foi atingida?</div>
       <div style="font-size:12.5px;color:var(--t2);margin-bottom:6px">Meta: ${esc(s.goal || 'não definida')}</div>
