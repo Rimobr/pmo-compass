@@ -28,6 +28,8 @@ const SCENES = [
   ['Personalizar quadro (janela)', `Agile.openBoardCfg()`, 'modal-agile-board'],
   ['Mover em nome de outra pessoa (janela)', `Agile.openBehalf(DB.get('backlog')[2], 'doing', [])`, 'modal-agile-behalf'],
   ['Novo épico (janela)', `Agile.openItem(null, 'epico')`, 'modal-agile-item'],
+  ['Burnout Radar com carga automática', `DB.set('team', [{ id: 'tmX', name: 'Ana', role: 'Dev', allocationPct: 100, workloadPct: null, signals: [], recommendation: '', actionPage: '' }]); Burnout.resetCache(); Burnout.render(); R.go('burnout')`, null],
+  ['Colaborador (janela, botões no cabeçalho)', `Burnout.openEdit('tmX')`, 'modal-burnout'],
   ['Devolver o card (janela)', `Agile.askReturn(DB.get('backlog')[2], 'todo')`, 'modal-return'],
   ['Renovar a sessão (janela)', `window.__restoreCloud = (o => () => { Object.assign(Cloud, o); window.__restoreCloud = null; })({ isSignedIn: Cloud.isSignedIn, sessionStart: Cloud.sessionStart, authProvider: Cloud.authProvider }); Cloud.isSignedIn = () => true; Cloud.sessionStart = () => Date.now() - 479 * 60000; Cloud.authProvider = () => 'email'; SessionGuard.open()`, 'modal-session'],
   ['Rascunho da IA (janela)', `await Models.createWithAi()`, 'modal-models-ai'],

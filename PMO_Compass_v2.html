@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.85.0'
+  version: '2.86.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1322,7 +1322,7 @@ body.icons-failed i[data-fb]::before{
   <div class="pg-hdr"><div><div class="pg-title">Burnout Radar — Saúde da equipe<span class="help-q" data-help="Mostra quem da equipe está sobrecarregado, antes que isso vire atraso no projeto ou alguém pedir pra sair." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">IA detecta padrões de sobrecarga antes que virem queda de produtividade.</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Burnout.openAdd()"><i class="ti ti-plus"></i>Adicionar Colaborador</button><button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('team')"><i class="ti ti-table-import"></i>Importar Planilha</button></div></div>
   <div class="fi-note" style="margin-bottom:14px">
     <i class="ti ti-shield-lock"></i>
-    <div>Este painel <strong style="color:var(--t1)">não monitora atividade, tela ou comunicação</strong> de ninguém automaticamente — os percentuais de carga são lançados manualmente pelo gestor do projeto (alocação/horas por pessoa). Base legal: legítimo interesse do controlador na gestão de carga de trabalho (LGPD art. 7º, IX). Cada colaborador cadastrado tem o direito de saber que está sendo monitorado aqui e de solicitar a exclusão do próprio registro.</div>
+    <div>Este painel <strong style="color:var(--t1)">não monitora atividade, tela ou comunicação</strong> de ninguém automaticamente — a carga é calculada pelo sistema a partir dos cards, prazos e horas que já estão registrados (ninguém precisa lançar percentual; o gerente só ajusta se quiser). Base legal: legítimo interesse do controlador na gestão de carga de trabalho (LGPD art. 7º, IX). Cada colaborador cadastrado tem o direito de saber que está sendo monitorado aqui e de solicitar a exclusão do próprio registro.</div>
   </div>
   <div id="burnout-alert-root"></div>
   <div id="burnout-list-root"></div>
@@ -9415,7 +9415,7 @@ const ContextBuilder = (() => {
       : '(nenhuma decisão pendente)';
 
     const teamLines = team.length
-      ? team.map(m => `- ${m.name} (${m.role}): ${m.workloadPct === null || m.workloadPct === undefined || m.workloadPct === '' ? 'carga não informada' : m.workloadPct + '% de carga'}${(m.signals&&m.signals.length) ? ' — ' + m.signals.join('; ') : ''}`).join('\n')
+      ? team.map(m => `- ${m.name} (${m.role}): ${(p => p == null || p === '' ? 'carga ainda sem dados' : p + '% de carga')(typeof Burnout !== 'undefined' ? Burnout.effectivePct(m) : m.workloadPct)}${(typeof Burnout !== 'undefined' ? Burnout.signalsOf(m) : (m.signals || [])).length ? ' — ' + (typeof Burnout !== 'undefined' ? Burnout.signalsOf(m) : m.signals).join('; ') : ''}`).join('\n')
       : '(nenhum colaborador cadastrado)';
 
     const scopeLines = scope.length
@@ -11420,11 +11420,13 @@ const Dashboard = (() => {
 
     const P = (typeof Prefs !== 'undefined') ? Prefs : { get: () => true };
     if(P.get('autoBurnoutRadar')) {
-      team.filter(m => (m.workloadPct||0) >= 80).forEach(m => {
-        alerts.push({ sev: m.workloadPct>=90?'Crítico':'Alto', cls: m.workloadPct>=90?'b-red':'b-amb',
-          title: `${m.name} — burnout iminente (${m.workloadPct}%)`,
-          sub: (m.signals||[]).join(' · ') || 'Sobrecarga acima do limite saudável',
-          page:'burnout', label:'Ver Burnout Radar', act: Auth.can('business') && m.id ? "Burnout.openEdit('" + m.id + "')" : '', actLabel: 'Informar a Carga' });
+      const lp = m => (typeof Burnout !== 'undefined' ? Burnout.effectivePct(m) : (Number(m.workloadPct) || null));
+      team.filter(m => (lp(m) || 0) >= 80).forEach(m => {
+        const pct = lp(m);
+        alerts.push({ sev: pct>=90?'Crítico':'Alto', cls: pct>=90?'b-red':'b-amb',
+          title: `${m.name} — burnout iminente (${pct}%)`,
+          sub: ((typeof Burnout !== 'undefined' ? Burnout.signalsOf(m) : m.signals) || []).join(' · ') || 'Sobrecarga acima do limite saudável',
+          page:'burnout', label:'Ver Burnout Radar', act: '', actLabel: '' });
       });
     }
     // Alocação real entre projetos (casada por nome via DB.computePortfolioAllocation) —
@@ -11539,9 +11541,10 @@ const Dashboard = (() => {
       bodyEl.innerHTML = '<div class="kpi" style="grid-column:1/-1"><div class="kpi-lbl">Nenhum colaborador cadastrado ainda</div></div>';
       return;
     }
-    const emRisco = team.filter(m => (m.workloadPct||0) >= 80);
-    const comCarga = team.filter(m => m.workloadPct !== null && m.workloadPct !== undefined && m.workloadPct !== '' && isFinite(Number(m.workloadPct)));
-    const mediaCarga = comCarga.length ? Math.round(comCarga.reduce((s,m) => s + Number(m.workloadPct), 0) / comCarga.length) : null; // sem carga informada = sem dados, não 0%
+    const lp = m => (typeof Burnout !== 'undefined' ? Burnout.effectivePct(m) : (m.workloadPct === '' ? null : Number(m.workloadPct)));
+    const emRisco = team.filter(m => (lp(m) || 0) >= 80);
+    const comCarga = team.filter(m => { const p = lp(m); return p !== null && p !== undefined && isFinite(Number(p)); });
+    const mediaCarga = comCarga.length ? Math.round(comCarga.reduce((s,m) => s + Number(lp(m)), 0) / comCarga.length) : null; // sem carga informada = sem dados, não 0%
     const teamNames = new Set(team.map(m => (m.name||'').trim().toLowerCase()).filter(Boolean));
     const conflitos = DB.computePortfolioAllocation().filter(p => p.overallocated && teamNames.has(p.name.trim().toLowerCase())).length;
     const today = Clock.today();
@@ -12094,7 +12097,7 @@ const SheetImport = (() => {
         if(seen.has(SheetParse.norm(name))) { warn(i, `"${name}" já existe na equipe — não duplicado.`); return; }
         seen.add(SheetParse.norm(name));
         const al = SheetParse.parseNumber(raw(r, map, 'allocation')), wl = SheetParse.parseNumber(raw(r, map, 'workload'));
-        out.push({ name, role: safeText(cell(r, map, 'role')), allocationPct: al == null ? 100 : clampInt(al, 0, 200), workloadPct: wl == null ? 50 : clampInt(wl, 0, 200), signals: [], recommendation: '', actionPage: '' });
+        out.push({ name, role: safeText(cell(r, map, 'role')), allocationPct: al == null ? 100 : clampInt(al, 0, 200), workloadPct: wl == null ? null : clampInt(wl, 0, 200), signals: [], recommendation: '', actionPage: '' });
       });
     }
 
@@ -14760,7 +14763,7 @@ const Agile = (() => {
           + '<div class="field-group"><div class="field-label"><label for="rt-why">Motivo da devolução (obrigatório)</label></div><textarea class="input" id="rt-why" rows="4" maxlength="300" style="resize:vertical;font-family:inherit" placeholder="Ex.: Não foi possível validar; faltou o log do caixa"></textarea></div>'
           + '<div id="rt-err" role="alert" style="color:var(--red);font-size:12.5px;min-height:18px"></div>'
           + '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn btn-sm" id="rt-cancel">Cancelar</button><button type="button" class="btn btn-sm btn-acc" id="rt-ok"><i class="ti ti-arrow-back-up"></i>Devolver e Salvar</button></div></div>';
-        document.body.appendChild(m);
+        document.body.appendChild(m); if(typeof ModalPin !== 'undefined') ModalPin.pin(m);
       }
       const ta = document.getElementById('rt-why'), err = document.getElementById('rt-err'), back = document.activeElement;
       document.getElementById('rt-sub').textContent = it.id + ' — ' + it.title + ': volta de "' + AgileCalc.colLabel(cfg, it.status) + '" para "' + AgileCalc.colLabel(cfg, to) + '". O motivo fica no histórico do card.';
@@ -16780,7 +16783,7 @@ const SessionGuard = (() => {
       + '<div class="field-group" id="ses-pw-grp"><div class="field-label"><label for="ses-pw">Senha</label></div><input class="input" id="ses-pw" type="password" autocomplete="current-password"></div>'
       + '<div class="ses-err" id="ses-err" role="alert"></div>'
       + '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px"><button type="button" class="btn btn-sm" id="ses-out">Sair Agora</button><button type="button" class="btn btn-sm" id="ses-close" aria-label="Fechar esta janela e voltar para a tela">Fechar</button><button type="button" class="btn btn-sm btn-acc" id="ses-ok"><i class="ti ti-refresh"></i>Renovar Sessão</button></div></div>';
-    document.body.appendChild(d);
+    document.body.appendChild(d); if(typeof ModalPin !== 'undefined') ModalPin.pin(d);
     $('ses-ok').addEventListener('click', renew); $('ses-out').addEventListener('click', () => leave('Você saiu. Os dados deste usuário foram removidos do navegador.'));
     $('ses-pw').addEventListener('keydown', e => { if(e.key === 'Enter') renew(); });
     $('ses-close').addEventListener('click', () => { if(left() > WARN_S) close(); });
@@ -16838,6 +16841,127 @@ const SessionGuard = (() => {
   const setSession = v => save({ sessionMin: Number(v) }, Number(v) === 0 ? 'Sessão sem limite de tempo.' : 'Tempo máximo logado: ' + label(Number(v)) + '.');
   if(typeof document !== 'undefined') { if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', begin); else begin(); }
   return { clean, remainingSec, fmt, stage, policy, label, open, render, setRefresh, setSession, renew, REFRESH_OPTS, SESSION_OPTS, DEFAULT, WARN_S };
+})();
+</script>
+
+<!-- ■ MODULE: services/workload ─ Carga de trabalho calculada pelo sistema (Burnout Radar): ninguém precisa lançar percentual. Lê cards, sprint, prazos, horas apontadas e impedimentos que já existem e devolve a carga estimada, os sinais, a confiança e a sugestão de ação. Lógica pura, sem DOM. -->
+<script data-module="services/workload">
+const WorkloadCalc = (() => {
+  const WIP_NORM = 3, HOURS_DAY = 8, WINDOW = 14, FALLBACK_OPEN = 6; // 3 cards ao mesmo tempo; 8 h por dia; janela de 14 dias; sem outra evidência, 6 cards abertos = 100%
+  const key = s => String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const ms = d => Date.parse(d + 'T00:00:00Z'), diff = (a, b) => Math.round((ms(b) - ms(a)) / 86400000);
+  const addDays = (d, n) => new Date(ms(d) + n * 86400000).toISOString().slice(0, 10);
+  const num = v => Number(v) || 0, r1 = v => Math.round(v * 10) / 10, pl = (n, a, b) => n + ' ' + (n === 1 ? a : b);
+  const isWork = d => { const w = new Date(ms(d)).getUTCDay(); return w >= 1 && w <= 5; };
+  const level = pct => pct == null ? 'sem_dado' : pct >= 85 ? 'critico' : pct >= 60 ? 'atencao' : 'saudavel';
+
+  // ctx: { items, sprints, hours, imps, today, capacity: { nome: pontos na sprint ativa } (opcional) }
+  function compute(m, ctx) {
+    const me = key(m.name), today = ctx.today, alloc = Math.max(0, Math.min(150, m.allocationPct == null || m.allocationPct === '' ? 100 : num(m.allocationPct))) / 100;
+    const mine = (ctx.items || []).filter(i => key(i.assignee) === me && i.kind !== 'epico');
+    const open = mine.filter(i => i.status !== 'done'), doing = open.filter(i => i.status === 'doing' || i.status === 'review');
+    const sprints = ctx.sprints || [], active = sprints.find(s => s.state === 'ativa') || null;
+    const sprintOf = i => sprints.find(s => s.id === i.sprintId);
+    const overdue = open.filter(i => { const s = sprintOf(i); return s && s.endOn && s.endOn < today; });
+    const inSprint = active ? open.filter(i => i.sprintId === active.id) : [];
+    const pts = inSprint.reduce((t, i) => t + num(i.points), 0);
+    const cap = ctx.capacity && ctx.capacity[m.name] != null ? num(ctx.capacity[m.name]) : null;
+    const pointsRatio = active && cap != null && cap > 0 && (pts > 0 || inSprint.length) ? pts / cap : null;
+    // horas apontadas na janela
+    const from = addDays(today, -(WINDOW - 1));
+    const ent = (ctx.hours || []).filter(e => key(e.person) === me && e.date >= from && e.date <= today);
+    const hSum = ent.reduce((t, e) => t + num(e.hours), 0), extra = ent.reduce((t, e) => t + num(e.extra), 0);
+    let workdays = 0; for (let d = from; d <= today; d = addDays(d, 1)) if(isWork(d)) workdays++;
+    const expected = workdays * HOURS_DAY * alloc, hoursRatio = hSum > 0 && expected > 0 ? hSum / expected : null;
+    const days = new Set(ent.map(e => e.date));
+    let streak = 0; { let d = days.has(today) ? today : addDays(today, -1); while(days.has(d)) { streak++; d = addDays(d, -1); } }
+    const imps = (ctx.imps || []).filter(i => i.status === 'aberto' && key(i.owner) === me).length;
+    // carga: média das evidências fortes (horas e pontos × capacidade); sem elas, a quantidade de cards em aberto (confiança baixa)
+    const parts = [];
+    if(hoursRatio != null) parts.push({ v: hoursRatio, w: 0.5 });
+    if(pointsRatio != null) parts.push({ v: pointsRatio, w: 0.5 });
+    let basis = null, confidence = null;
+    if(parts.length) { basis = parts.reduce((t, p) => t + p.v * p.w, 0) / parts.reduce((t, p) => t + p.w, 0); confidence = parts.length === 2 ? 'alta' : 'média'; }
+    else if(open.length) { basis = open.length / FALLBACK_OPEN; confidence = 'baixa'; }
+    const signals = [];
+    if(inSprint.length) signals.push(pl(inSprint.length, 'card', 'cards') + ' na sprint ativa' + (pts ? ' (' + pts + ' pts' + (cap != null && cap > 0 ? ' para uma capacidade de ' + r1(cap) + ' pts' : '') + ')' : ''));
+    else if(open.length) signals.push(pl(open.length, 'card em aberto', 'cards em aberto') + ' (fora de sprint)');
+    if(doing.length > WIP_NORM) signals.push(doing.length + ' cards em andamento ao mesmo tempo (o ideal é até ' + WIP_NORM + ')');
+    if(overdue.length) signals.push(pl(overdue.length, 'card com prazo vencido', 'cards com prazo vencido'));
+    if(hSum > 0) signals.push('média de ' + r1(hSum / Math.max(1, days.size)).toString().replace('.', ',') + ' h por dia lançado nos últimos ' + WINDOW + ' dias');
+    if(streak >= 7) signals.push(streak + ' dias seguidos com horas lançadas, sem folga');
+    if(extra >= 6) signals.push(r1(extra).toString().replace('.', ',') + ' h extras nos últimos ' + WINDOW + ' dias');
+    if(imps) signals.push(pl(imps, 'impedimento aberto sob sua responsabilidade', 'impedimentos abertos sob sua responsabilidade'));
+    if(basis == null) {
+      return { pct: null, level: 'sem_dado', confidence: null, signals: ['Sem cards em aberto nem horas lançadas para calcular a carga'], parts: {}, open: 0, doing: 0, overdue: 0, source: 'auto' };
+    }
+    const pressure = Math.min(18, overdue.length * 6) + Math.min(15, Math.max(0, doing.length - WIP_NORM) * 5) + (streak >= 7 ? 8 : 0) + (extra >= 6 ? 6 : 0) + Math.min(10, imps * 5);
+    const pct = Math.max(0, Math.min(150, Math.round(basis * 100 + pressure)));
+    return { pct, level: level(pct), confidence, signals, source: 'auto', open: open.length, doing: doing.length, overdue: overdue.length, points: pts, capacity: cap,
+      parts: { hoursRatio: hoursRatio == null ? null : Math.round(hoursRatio * 100), pointsRatio: pointsRatio == null ? null : Math.round(pointsRatio * 100), pressure } };
+  }
+
+  // Calcula a equipe toda e acrescenta a sugestão de ação (redistribuir de quem está no limite para quem tem folga)
+  function all(team, ctx) {
+    const out = {}; (team || []).forEach(m => { out[m.id] = compute(m, ctx); });
+    const named = (team || []).map(m => ({ m, r: out[m.id] })).filter(x => x.r.pct != null);
+    const slack = named.filter(x => x.r.pct < 60).sort((a, b) => a.r.pct - b.r.pct);
+    (team || []).forEach(m => {
+      const r = out[m.id]; if(r.pct == null) return;
+      const me = key(m.name);
+      if(r.pct >= 85) {
+        const cand = (ctx.items || []).filter(i => key(i.assignee) === me && i.kind !== 'epico' && i.status === 'todo').sort((a, b) => (b.rank || 0) - (a.rank || 0))[0];
+        const to = slack.find(x => x.m.id !== m.id);
+        if(cand && to) r.suggestion = { text: 'Redistribuir: passe ' + cand.id + ' — ' + cand.title + (num(cand.points) ? ' (' + cand.points + ' pts)' : '') + ' para ' + to.m.name + ', que está com ' + to.r.pct + '% de carga.', cardId: cand.id, toName: to.m.name };
+        else if(r.overdue) r.suggestion = { text: 'Renegocie o prazo ou o escopo dos ' + r.overdue + ' card(s) vencido(s) e não puxe novos cards até aliviar.' };
+        else r.suggestion = { text: 'Sem folga na equipe para redistribuir: renegocie escopo ou prazo, ou inclua mais uma pessoa na sprint.' };
+      } else if(r.pct >= 60) r.suggestion = { text: 'Evite novos cards para ' + m.name + ' nesta sprint e acompanhe os prazos.' };
+      else if(r.pct < 40 && named.some(x => x.r.pct >= 85)) r.suggestion = { text: m.name + ' tem folga e pode receber cards de quem está no limite.' };
+    });
+    return out;
+  }
+  return { compute, all, level, key, WIP_NORM, HOURS_DAY, WINDOW };
+})();
+</script>
+
+<!-- ■ MODULE: ui/modal-pin ─ Janelas de cadastro: os botões de ação (Excluir, Cancelar, Salvar…) ficam SEMPRE no cabeçalho fixo da janela, nunca no rodapé que obriga rolar até o fim. Move o rodapé existente para o cabeçalho, sem mudar o que cada botão faz. -->
+<style data-module="ui/modal-pin-css">
+.mh-bar{position:sticky;top:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;background:var(--s1);margin:0 0 8px;padding:0 0 8px;border-bottom:1px solid var(--b1)}
+.mh-bar .modal-title{margin:0;flex:1 1 180px;min-width:0}
+.mh-act{display:inline-flex!important;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin:0!important;padding:0!important}
+.mh-act span{display:inline-flex;gap:6px;flex-wrap:wrap}
+.mh-act .btn{white-space:nowrap}
+</style>
+<script data-module="ui/modal-pin">
+const ModalPin = (() => {
+  // Modais de entrada/identificação e janelas pequenas de confirmação mantêm o rodapé (o botão fica ao lado do conteúdo)
+  const SKIP = new Set(['modal-auth', 'modal-firstpw', 'modal-firstprofile', 'modal-onboarding', 'modal-privacy', 'modal-cmdk', 'modal-notices', 'modal-compass']);
+  const ACTION = /(salvar|cancelar|excluir|criar|adicionar|aplicar|importar|confirmar|registrar|enviar|gerar|concluir|decidir|renovar|devolver|sair agora|fechar)/i;
+  // Linha de ações no rodapé: o último bloco do modal que só tem botões (e, no máximo, um agrupador de botões), sem campos
+  function isFooter(d) {
+    if(!d.querySelector('button') || d.querySelector('input,select,textarea,div,table,ul,p') || d.nextElementSibling || d.closest('.mh-bar')) return false;
+    const clone = d.cloneNode(true); clone.querySelectorAll('button').forEach(b => b.remove());
+    return ACTION.test(d.textContent) && clone.textContent.trim().length < 40;
+  }
+  const findFooter = box => [...box.querySelectorAll('div')].reverse().find(isFooter);
+  function pin(ov) {
+    if(!ov || ov.dataset.pinned || SKIP.has(ov.id)) return false;
+    const box = ov.querySelector('.modal-box'); if(!box) return false;
+    const title = box.querySelector('.modal-title'), foot = findFooter(box);
+    if(!title || !foot) return false;
+    let bar = title.parentElement;
+    if(bar === box) { bar = document.createElement('div'); title.before(bar); bar.appendChild(title); } // título solto: ganha a barra do cabeçalho
+    bar.classList.add('mh-bar');
+    foot.removeAttribute('style'); foot.classList.add('mh-act');
+    foot.querySelectorAll('button').forEach(b => b.classList.add('btn-sm'));
+    const closeBtn = [...bar.children].find(c => c !== title && c.tagName === 'BUTTON'); // o X de fechar fica por último
+    if(closeBtn) bar.insertBefore(foot, closeBtn); else bar.appendChild(foot);
+    ov.dataset.pinned = '1'; return true;
+  }
+  function all() { return [...document.querySelectorAll('.modal-ov')].map(pin).filter(Boolean).length; }
+  function start() { if(typeof document !== 'undefined') all(); }
+  if(typeof document !== 'undefined') { if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start(); }
+  return { pin, all };
 })();
 </script>
 
@@ -18226,23 +18350,46 @@ const Burnout = (() => {
   function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function genId() { return 'tm' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
   function ensureLoaded() { if(!data) data = DB.get('team'); return data; }
-  function resetCache() { data = null; }
-  function persist() { DB.set('team', data); }
+  function resetCache() { data = null; autoCache = null; }
+  function persist() { DB.set('team', data); autoCache = null; }
+  // Carga CALCULADA pelo sistema (cards, prazos, horas e impedimentos que já existem): ninguém precisa lançar percentual.
+  // O ajuste manual do gerente, se existir, vale no lugar do cálculo; sem ele vale sempre o automático.
+  let autoCache = null, autoAt = 0;
+  function autoMap() {
+    if(autoCache && Date.now() - autoAt < 1500) return autoCache;
+    const team = ensureLoaded() || [], items = DB.get('backlog') || [], sprints = DB.get('sprints') || [], active = sprints.find(s => s.state === 'ativa');
+    let capacity = null;
+    try { if(active && typeof AgileCalc !== 'undefined') { capacity = {}; AgileCalc.teamCapacity(active, team, {}, AgileCalc.personRhythm(sprints, items), AgileCalc.velocity(sprints, items).avg).rows.forEach(r => { capacity[r.name] = r.capacity; }); } } catch(e) { capacity = null; }
+    autoCache = WorkloadCalc.all(team, { items, sprints, hours: DB.get('timeEntries') || [], imps: DB.get('impediments') || [], today: Clock.iso(Clock.today()), capacity });
+    autoAt = Date.now(); return autoCache;
+  }
+  function effOf(m, auto) { if(hasLoad(m.workloadPct)) return { pct: Number(m.workloadPct), source: 'manual', r: (auto || autoMap())[m.id] || null }; const r = (auto || autoMap())[m.id] || null; return { pct: r ? r.pct : null, source: 'auto', r }; }
+  const effectivePct = m => { const e = effOf(m); return e.pct; };
+  const signalsOf = m => { const e = effOf(m); return e.source === 'manual' ? (m.signals || []) : (e.r ? e.r.signals : []); };
+  function useAuto(id) {
+    if(!Auth.guard('business')) return;
+    ensureLoaded(); const m = data.find(x => x.id === id); if(!m) return;
+    m.workloadPct = null; autoCache = null; persist();
+    if(typeof Cloud !== 'undefined') Cloud.pushTeamMember(m);
+    render(); T.show('✅ ' + m.name + ' voltou para a carga calculada pelo sistema.');
+  }
   function initials(name) { return (name||'').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase() || '??'; }
   // Carga não informada é "sem dados": nunca verde nem "OK" (a carga é lançada à mão pelo gerente; colaborador novo nasce sem ela)
   const hasLoad = p => p !== null && p !== undefined && p !== '' && isFinite(Number(p));
   function statusOf(pct) { return !hasLoad(pct) ? 'sem_dado' : pct >= 85 ? 'critico' : (pct >= 60 ? 'atencao' : 'saudavel'); }
   function colorOf(status) { return { critico:'var(--red)', atencao:'var(--amb)', saudavel:'var(--grn)', sem_dado:'var(--t3)' }[status]; }
   function bgOf(status) { return { critico:'var(--rd)', atencao:'var(--amd)', saudavel:'var(--gd)', sem_dado:'var(--s2)' }[status]; }
-  function labelOf(status, pct) { return { critico:`${pct}% — Crítico`, atencao:`${pct}% — Atenção`, saudavel:`${pct}% — OK`, sem_dado:'Carga não informada' }[status]; }
+  function labelOf(status, pct) { return { critico:`${pct}% — Crítico`, atencao:`${pct}% — Atenção`, saudavel:`${pct}% — OK`, sem_dado:'Sem dados para calcular' }[status]; }
 
+  const CONF = { alta: 'Confiança alta: usa horas lançadas e pontos × capacidade da sprint.', média: 'Confiança média: usa só uma fonte (horas lançadas ou pontos × capacidade). Lançar horas e estimar pontos melhora o cálculo.', baixa: 'Confiança baixa: estimado só pela quantidade de cards em aberto. Estime pontos e lance horas para calcular melhor.' };
   function render() {
-    ensureLoaded();
+    ensureLoaded(); autoCache = null;
+    const auto = autoMap(), rows = data.map(m => ({ m, e: effOf(m, auto) }));
     const alertRoot = document.getElementById('burnout-alert-root');
-    const criticalMembers = data.filter(m => statusOf(m.workloadPct) === 'critico');
+    const critical = rows.filter(x => statusOf(x.e.pct) === 'critico');
     if(alertRoot) {
-      alertRoot.innerHTML = criticalMembers.length
-        ? `<div class="card card-danger"><div style="display:flex;align-items:center;gap:12px"><i class="ti ti-alert-triangle" style="color:var(--red);font-size:22px;flex-shrink:0"></i><div><div style="font-size:14px;font-weight:600">${criticalMembers.length} colaborador(es) em zona crítica</div><div style="font-size:12px;color:var(--t2);margin-top:2px">${criticalMembers.map(m=>escapeHtml(m.name)).join(', ')} — carga de trabalho acima de 85%.</div></div></div></div>`
+      alertRoot.innerHTML = critical.length
+        ? `<div class="card card-danger"><div style="display:flex;align-items:center;gap:12px"><i class="ti ti-alert-triangle" style="color:var(--red);font-size:22px;flex-shrink:0"></i><div><div style="font-size:14px;font-weight:600">${critical.length} colaborador(es) em zona crítica</div><div style="font-size:12px;color:var(--t2);margin-top:2px">${critical.map(x => escapeHtml(x.m.name)).join(', ')} — carga de trabalho acima de 85%.</div></div></div></div>`
         : '';
     }
     const listRoot = document.getElementById('burnout-list-root');
@@ -18251,24 +18398,29 @@ const Burnout = (() => {
       listRoot.innerHTML = `<div style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12.5px">Nenhum colaborador cadastrado ainda.</div>`;
       return;
     }
-    const sorted = [...data].sort((a,b) => (hasLoad(b.workloadPct) ? Number(b.workloadPct) : -1) - (hasLoad(a.workloadPct) ? Number(a.workloadPct) : -1));
-    listRoot.innerHTML = sorted.map(m => {
-      const status = statusOf(m.workloadPct);
-      const color = colorOf(status);
-      const sigs = (m.signals||[]).map(s => `<span class="badge ${status==='critico'?'b-red':(status==='atencao'?'b-amb':(status==='sem_dado'?'b-neu':'b-grn'))}">${escapeHtml(s)}</span>`).join('');
+    const sorted = rows.slice().sort((a, b) => (hasLoad(b.e.pct) ? Number(b.e.pct) : -1) - (hasLoad(a.e.pct) ? Number(a.e.pct) : -1));
+    listRoot.innerHTML = sorted.map(({ m, e }) => {
+      const status = statusOf(e.pct), color = colorOf(status), r = e.r;
+      const sigList = e.source === 'manual' ? (m.signals || []) : (r ? r.signals : []);
+      const sigs = sigList.map(s => `<span class="badge ${status==='critico'?'b-red':(status==='atencao'?'b-amb':(status==='sem_dado'?'b-neu':'b-grn'))}">${escapeHtml(s)}</span>`).join('');
       const border = status === 'critico' ? 'border-color:var(--rb)' : '';
+      const origem = e.source === 'manual' ? '<span class="badge b-neu" title="O gerente informou este valor; ele vale no lugar do cálculo automático.">ajuste manual</span>' : (status === 'sem_dado' ? '' : '<span class="badge b-acc" title="Calculado pelo sistema a partir dos cards, prazos e horas já registrados.">calculado pelo sistema</span>');
+      const reco = (m.recommendation || '').trim() || (r && r.suggestion ? r.suggestion.text : '');
+      const como = r && r.parts && r.confidence ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:var(--t2)">Como foi calculado</summary><ul style="font-size:12px;color:var(--t2);line-height:1.6;margin:4px 0 0 18px">${r.parts.hoursRatio != null ? `<li>Horas lançadas: ${r.parts.hoursRatio}% do esperado nos últimos 14 dias</li>` : ''}${r.parts.pointsRatio != null ? `<li>Pontos na sprint ativa: ${r.parts.pointsRatio}% da capacidade</li>` : ''}${r.parts.hoursRatio == null && r.parts.pointsRatio == null ? `<li>${r.open} card(s) em aberto (referência: 6 cards = 100%)</li>` : ''}<li>Pressão de prazo, andamento e impedimentos: +${r.parts.pressure} pontos</li><li>${escapeHtml(CONF[r.confidence])}</li></ul></details>` : '';
       return `<div class="burn-card" style="${border}">
         <div class="burn-ava" style="background:${bgOf(status)};color:${color}">${initials(m.name)}</div>
         <div style="flex:1">
-          <div class="burn-name">${escapeHtml(m.name)}</div>
+          <div class="burn-name">${escapeHtml(m.name)} ${origem}</div>
           <div class="burn-role">${escapeHtml(m.role)}</div>
-          <div class="burn-track"><div class="burn-fill" style="width:${status==='sem_dado'?0:Math.min(m.workloadPct,100)}%;background:${color}"></div></div>
-          <div class="burn-leg"><span>Saudável</span><span style="color:${color};font-weight:${status==='critico'?600:400}">${labelOf(status,m.workloadPct)}</span></div>
-          ${status==='sem_dado' ? '<div class="set-sub" style="margin-top:4px"><i class="ti ti-info-circle"></i> Informe a carga em Editar (lápis) para acompanhar o risco de burnout desta pessoa.</div>' : ''}
+          <div class="burn-track"><div class="burn-fill" style="width:${status==='sem_dado'?0:Math.min(e.pct,100)}%;background:${color}"></div></div>
+          <div class="burn-leg"><span>Saudável</span><span style="color:${color};font-weight:${status==='critico'?600:400}">${labelOf(status,e.pct)}</span></div>
+          ${status==='sem_dado' ? '<div class="set-sub" style="margin-top:4px"><i class="ti ti-info-circle"></i> Ainda não há cards em aberto nem horas lançadas para esta pessoa: assim que houver, o sistema calcula a carga sozinho.</div>' : ''}
           ${sigs ? `<div class="burn-sigs">${sigs}</div>` : ''}
-          ${m.recommendation ? `<p style="font-size:12px;color:var(--t2);margin-top:9px;line-height:1.55">${escapeHtml(m.recommendation)}</p>` : ''}
+          ${reco ? `<p style="font-size:12px;color:var(--t2);margin-top:9px;line-height:1.55"><i class="ti ti-bulb" style="color:var(--acc)"></i> ${escapeHtml(reco)}</p>` : ''}
+          ${como}
           <div class="btn-row" style="margin-top:6px">
             ${m.actionPage ? `<button class="link-a" onclick="R.go('${m.actionPage}')"><i class="ti ti-arrow-right"></i>Ver colaboradores</button>` : ''}
+            ${e.source === 'manual' ? `<button class="link-a" data-perm="business" onclick="Burnout.useAuto('${m.id}')"><i class="ti ti-wand"></i>Voltar ao cálculo automático</button>` : ''}
             <button class="wbs-ic-btn" data-perm="business" title="Editar" onclick="Burnout.openEdit('${m.id}')"><i class="ti ti-edit"></i></button>
           </div>
         </div>
@@ -18296,7 +18448,6 @@ const Burnout = (() => {
     document.getElementById('burnout-f-role').value = role || '';
     document.getElementById('burnout-f-alloc').value = (alloc===undefined||alloc===null) ? '' : alloc;
     document.getElementById('burnout-f-pct').value = (pct===undefined||pct===null) ? '' : pct;
-    document.getElementById('burnout-f-signals').value = (signals||[]).join(', ');
     document.getElementById('burnout-f-rec').value = rec || '';
   }
 
@@ -18329,8 +18480,8 @@ const Burnout = (() => {
     const name = document.getElementById('burnout-f-name').value.trim();
     const role = document.getElementById('burnout-f-role').value.trim();
     const alloc = Math.max(0, parseInt(document.getElementById('burnout-f-alloc').value, 10) || 0);
-    const pct = Math.max(0, parseInt(document.getElementById('burnout-f-pct').value, 10) || 0);
-    const signals = document.getElementById('burnout-f-signals').value.split(',').map(s=>s.trim()).filter(Boolean);
+    const pctRaw = document.getElementById('burnout-f-pct').value.trim(), pct = pctRaw === '' ? null : Math.max(0, parseInt(pctRaw, 10) || 0); // vazio = carga automática (nunca vira 0%)
+    const signals = (modalCtx.mode === 'edit' && modalCtx.snapshot) ? (modalCtx.snapshot.signals || []) : [];
     const rec = document.getElementById('burnout-f-rec').value.trim();
     if(!name) { T.show('⚠️ Dê um nome para o colaborador.'); return; }
 
@@ -18395,7 +18546,7 @@ const Burnout = (() => {
     T.show('🗑️ Colaborador removido.');
   }
 
-  return { render, openAdd, openEdit, saveFromModal, deleteFromModal, closeModal, resetCache };
+  return { render, openAdd, openEdit, saveFromModal, deleteFromModal, closeModal, resetCache, effectivePct, signalsOf, useAuto };
 })();
 </script>
 
@@ -22083,14 +22234,13 @@ const Messaging = (() => {
       <div class="modal-title" id="burnout-modal-title">Novo Colaborador</div>
       <button class="btn btn-sm" aria-label="Fechar" onclick="Burnout.closeModal()"><i class="ti ti-x"></i></button>
     </div>
-    <div class="modal-sub">Carga de trabalho e sinais de sobrecarga</div>
+    <div class="modal-sub">A carga de trabalho é calculada pelo sistema (cards, prazos e horas já registrados). O ajuste manual é opcional.</div>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><div class="field-label">Nome</div><input class="input" id="burnout-f-name" placeholder="Ex: Ana Souza"></div>
       <div><div class="field-label">Papel</div><input class="input" id="burnout-f-role" placeholder="Ex: Desenvolvedor Sênior"></div>
       <div><div class="field-label">Alocação neste projeto (%)</div><input class="input" type="number" min="0" max="150" id="burnout-f-alloc" placeholder="Ex: 100 (tempo integral)"><div style="font-size:11px;color:var(--t3);margin-top:4px">Usado para calcular alocação real entre projetos em <a href="#" onclick="R.go('resources');return false" style="color:var(--acc)">Colaboradores</a> — casa pelo nome em todos os projetos deste navegador.</div></div>
-      <div><div class="field-label">Carga de trabalho / burnout (%)</div><input class="input" type="number" min="0" max="150" id="burnout-f-pct" placeholder="0-150"><div style="font-size:11px;color:var(--t3);margin-top:4px">Indicador subjetivo de esgotamento — pode ser maior ou menor que a alocação (ex: 100% alocado mas trabalhando tranquilo = carga baixa).</div></div>
-      <div><div class="field-label">Sinais de alerta (separados por vírgula)</div><input class="input" id="burnout-f-signals" placeholder="Ex: 14 dias sem folga, +3h extras/dia"></div>
-      <div><div class="field-label">Recomendação da IA</div><textarea class="input" id="burnout-f-rec" rows="2" style="resize:vertical;font-family:inherit" placeholder="Ex: Redistribuir tarefa X para Y"></textarea></div>
+      <div><div class="field-label"><label for="burnout-f-pct">Ajuste manual da carga (%) — opcional</label></div><input class="input" type="number" min="0" max="150" id="burnout-f-pct" placeholder="Deixe vazio: o sistema calcula"><div style="font-size:11px;color:var(--t3);margin-top:4px">Só preencha se souber algo que o sistema não enxerga (por exemplo, trabalho fora do Compass). Vazio = carga automática; o ajuste pode ser desfeito a qualquer momento.</div></div>
+      <div><div class="field-label">Observação do gerente (opcional)</div><textarea class="input" id="burnout-f-rec" rows="2" style="resize:vertical;font-family:inherit" placeholder="Vazio: o sistema sugere a ação sozinho"></textarea></div>
       <div data-perm="admin" id="burnout-f-account-wrap" style="display:none"><div class="field-label"><label for="burnout-f-account">Conta de login vinculada</label></div><select class="input" id="burnout-f-account"><option value="">Sem conta vinculada</option></select><div style="font-size:11px;color:var(--t3);margin-top:4px">Liga esta pessoa à conta dela: ela passa a ver e mexer só nos itens em que é a responsável e a apontar as próprias horas. Só o Administrador vincula.</div></div>
     </div>
     <div class="btn-row" style="margin-top:18px;justify-content:flex-end">

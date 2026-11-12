@@ -12,7 +12,7 @@ return { statusOf, labelOf, hasLoad };`)();
 
 test('carga não informada é "sem dados": nunca "OK", nunca "null%"', () => {
   for (const v of [null, undefined, '', 'abc']) { assert.equal(hasLoad(v), false); assert.equal(statusOf(v), 'sem_dado'); }
-  assert.equal(labelOf('sem_dado', null), 'Carga não informada');
+  assert.equal(labelOf('sem_dado', null), 'Sem dados para calcular');
   assert.ok(!/null|undefined/.test(labelOf('sem_dado', null)));
 });
 test('zero é um valor de verdade (carga 0%) e as faixas continuam as mesmas', () => {
@@ -21,6 +21,6 @@ test('zero é um valor de verdade (carga 0%) e as faixas continuam as mesmas', (
   assert.equal(labelOf('saudavel', 40), '40% — OK');
 });
 test('as telas que mostram a carga tratam "não informada" (Burnout, Colaboradores, Dashboard, IA e exportação)', () => {
-  for (const k of ['Informe a carga em Editar', "carga/burnout ${hasW ? m.workloadPct + '%' : 'não informada'}", "mediaCarga==null?'—':mediaCarga", "'carga não informada' : m.workloadPct + '% de carga'", "r.workloadPct === null || r.workloadPct === undefined"]) assert.ok(html.includes(k), k);
+  for (const k of ['o sistema calcula a carga sozinho', "carga/burnout ${hasW ? m.workloadPct + '%' : 'não informada'}", "mediaCarga==null?'—':mediaCarga", "'carga ainda sem dados' : p + '% de carga'", "r.workloadPct === null || r.workloadPct === undefined"]) assert.ok(html.includes(k), k);
   assert.ok(!html.includes('${m.workloadPct||0}%'), 'não mostra 0% quando a carga não foi informada');
 });

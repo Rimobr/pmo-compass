@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.85.0 — 2026-11-11
+- Revisao da sprint por pessoa; epico em card concluido sem responsavel; progresso do epico no Kanban e no Backlog
+
 ## 2.84.0 — 2026-11-11
 - Epico (nivel acima da Historia) com progresso e Backlog agrupado; ciclos de teste de conflito entre regras; corrige epico como card sem responsavel e bug ligado a epico
 
