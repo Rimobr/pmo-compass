@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.86.0 — 2026-11-12
+- Burnout Radar com carga calculada pelo sistema (sem lancar percentual); botoes de acao sempre no cabecalho das janelas
+
 ## 2.85.0 — 2026-11-11
 - Revisao da sprint por pessoa; epico em card concluido sem responsavel; progresso do epico no Kanban e no Backlog
 

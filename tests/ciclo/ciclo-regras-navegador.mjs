@@ -94,6 +94,38 @@ r = await p.evaluate(() => document.querySelector('#p-ritos').innerText);
 ok(/Quem entregou/.test(r) && /Ricardo M · 1 item/.test(r) && !/Leandro R · 1 item/.test(r), 'revisão da sprint: a entrega aparece para quem levou à revisão (Ricardo M), não para o responsável atual', r.slice(r.indexOf('Quem entregou'), r.indexOf('Quem entregou') + 80));
 await p.close();
 
+// 8) Automáticos × regras: horas sugeridas pela atividade passam pelas regras de lançamento e alimentam a carga do Burnout; WBS automática × ajuste manual
+p = await page();
+const eu8 = await p.evaluate(() => Auth.getName());
+await p.evaluate(([nome]) => {
+  const hoje = Clock.iso(Clock.today()); const dia = n => { const x = new Date(hoje + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() - n); return x.toISOString().slice(0, 10); };
+  const util = n => { let d = dia(n); while ([0, 6].includes(new Date(d + 'T12:00:00Z').getUTCDay())) { n++; d = dia(n); } return d; };
+  const h = d => ({ at: d + 'T15:00:00Z', by: nome, field: 'Situação', from: 'A fazer', to: 'Em andamento' });
+  DB.set('team', [{ id: 'tmE', name: nome, role: 'Dev', allocationPct: 100, workloadPct: null, signals: [], recommendation: '', actionPage: '' }]);
+  DB.set('sprints', []); DB.set('timeEntries', []); DB.set('wbs', []); DB.set('hoursRules', {});
+  DB.set('backlog', [{ id: 'US-1', title: 'Relatório de vendas', kind: 'historia', status: 'doing', points: 3, assignee: nome, sprintId: '', rank: 1, createdOn: '2026-11-01', doneOn: '', description: '', attachments: [], history: [h(util(1)), h(util(2))], checklist: [] }]);
+}, [eu8]);
+await p.reload({ waitUntil: 'domcontentloaded' }); await p.waitForTimeout(1400);
+await p.evaluate(() => { document.querySelectorAll('[id^="modal-"]').forEach(e => e.classList.add('hidden')); R.go('hours'); }); await p.waitForTimeout(400);
+r = await p.evaluate(() => { const antes = Burnout.effectivePct(DB.get('team')[0]); Hours.suggestApply(''); Burnout.resetCache(); return { antes, lancadas: DB.get('timeEntries').length, depois: Burnout.effectivePct(DB.get('team')[0]), conf: WorkloadCalc.compute(DB.get('team')[0], { items: DB.get('backlog'), sprints: [], hours: DB.get('timeEntries'), imps: [], today: Clock.iso(Clock.today()), capacity: null }).confidence }; });
+ok(r.lancadas >= 2 && r.depois != null && r.depois !== r.antes, 'horas sugeridas pela atividade são lançadas e mudam a carga calculada do Burnout', JSON.stringify(r));
+// período fechado: a sugestão passa pelas mesmas regras e não lança
+await p.evaluate(() => { DB.set('timeEntries', []); const mes = Clock.iso(Clock.today()).slice(0, 7), ant = new Date(Clock.iso(Clock.today()) + 'T12:00:00Z'); ant.setUTCDate(ant.getUTCDate() - 12); DB.set('hoursRules', { closedPeriods: [...new Set([mes, ant.toISOString().slice(0, 7)])].map(p => ({ period: p, by: 'teste', at: '' })) }); });
+await p.reload({ waitUntil: 'domcontentloaded' }); await p.waitForTimeout(1400);
+await p.evaluate(() => { document.querySelectorAll('[id^="modal-"]').forEach(e => e.classList.add('hidden')); R.go('hours'); Hours.suggestApply(''); }); await p.waitForTimeout(300);
+r = await p.evaluate(() => DB.get('timeEntries').length);
+ok(r === 0, 'sugestão de horas respeita o período fechado (nada é lançado)', String(r));
+// WBS automática × ajuste manual
+await p.evaluate(() => { DB.set('wbs', [{ id: 'wmA', label: 'Entrega A', status: 'amb', pct: 0, start: '2026-11-02', end: '2026-12-20', startActual: null, endActual: null, responsavel: '', critical: false, predecessors: [], children: [{ id: 'wtA', label: 'T1', status: 'grn', start: '2026-11-02', end: '2026-11-06', predecessors: [] }, { id: 'wtB', label: 'T2', status: 'neu', start: '2026-11-09', end: '2026-11-13', predecessors: [] }] }]); WBS.resetCache(); R.go('wbs'); });
+await p.waitForTimeout(300);
+await p.evaluate(() => WBS.updateField('task', 'wmA', 'wtB', 'status', 'grn')); await p.waitForTimeout(300);
+r = await p.evaluate(() => DB.get('wbs')[0].pct);
+ok(r === 100, 'WBS no automático: concluir a última subtarefa leva a entrega a 100%', String(r));
+await p.evaluate(() => { const l = DB.get('wbs'); l[0].pct = 70; DB.set('wbs', l); WBS.resetCache(); WBS.updateField('task', 'wmA', 'wtA', 'status', 'amb'); }); await p.waitForTimeout(300);
+r = await p.evaluate(() => DB.get('wbs')[0].pct);
+ok(r === 70, 'WBS com ajuste manual do gerente (70%): o automático não sobrescreve', String(r));
+await p.close();
+
 await b.close(); srv.close();
 const falhas = res.filter(x => !x[0]).length;
 console.log('\nRESULTADO: ' + (res.length - falhas) + ' de ' + res.length + ' verificações OK' + (falhas ? ' — ' + falhas + ' FALHA(S)' : ''));

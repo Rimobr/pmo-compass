@@ -84,7 +84,7 @@ test('celular: Automações e Personalizar quadro aparecem no Kanban; renovaçã
 });
 
 test('bug novo vem com a última posição da fila já escolhida', () => {
-  assert.ok(html.includes("Agile.prioOptions('', 'ultima')"));
+  assert.ok(html.includes("Agile.prioFor($('bug-f-sev').value)")); // a posição inicial do bug novo vem da gravidade (fila vazia = primeira = também a última)
   assert.ok(html.includes("selected === 'ultima' ? q.length + 1"));
 });
 
@@ -135,4 +135,26 @@ test('conflito de regras: o banco não aceita bug ligado a épico (o bug vai na 
 
 test('épico: etiqueta com progresso no cartão e no Backlog; ligar a um épico não exige responsável quando é a única mudança', () => {
   for (const k of ['const epicChip = i =>', 'i.epicId && epicChip(i)', "${i.epicId ? epicChip(i) : ''}", 'const onlyEpic = !!cur0', 'const blk0 = cur0 && !onlyEpic ?', '.ag-epic-ok .ag-epic-bar i', 'MyInd.ownerOf(i, cols)', 'Quem entregou:']) assert.ok(html.includes(k), k);
+});
+
+test('sugestões do cartão: pontos por cards parecidos já entregues, épico pelo vocabulário e posição do bug pela gravidade', () => {
+  const done = (id, title, pts, kind = 'historia') => ({ id, title, kind, status: 'done', points: pts });
+  const list = [done('A', 'Relatório de agendamentos por profissional', 5), done('B', 'Relatório de vendas por período', 5), done('C', 'Cadastro de cliente', 2), done('D', 'Login com senha', 1)];
+  let s = AgileCalc.suggestPoints(list, 'Relatório de comissões por profissional', 'historia');
+  assert.equal(s.basis, 'parecidos'); assert.equal(s.points, 5); assert.ok(s.n >= 1);
+  s = AgileCalc.suggestPoints(list, 'Algo totalmente diferente xyz', 'historia'); assert.equal(s.basis, 'tipo'); assert.equal(s.points, 3); // mediana (1,2,5,5)=3,5 -> 3 (número de Fibonacci mais próximo)
+  assert.equal(AgileCalc.suggestPoints(list.slice(0, 2), 'Coisa nova qualquer', 'historia'), null); // poucos dados: não inventa
+  assert.equal(AgileCalc.suggestPoints(list, 'Relatório novo', 'bug'), null); // bug não leva pontos
+  const epics = [{ id: 'EP-001', title: 'Relatórios do sistema' }, { id: 'EP-002', title: 'Acesso e segurança' }];
+  const stories = [{ id: 'U1', title: 'Relatório de vendas', epicId: 'EP-001' }, { id: 'U2', title: 'Login com senha', epicId: 'EP-002' }];
+  assert.equal(AgileCalc.suggestEpic(epics, stories, 'Relatório de agendamentos', '').id, 'EP-001');
+  assert.equal(AgileCalc.suggestEpic(epics, stories, 'Recuperar senha esquecida', '').id, 'EP-002');
+  assert.equal(AgileCalc.suggestEpic(epics, stories, 'Pintar a parede da sala', ''), null);
+  const q = (id, pos, d) => ({ id, kind: 'bug', status: 'todo', bugPriority: pos, description: d });
+  const fila = [q('B1', 1, 'Gravidade: Não consigo continuar trabalhando'), q('B2', 2, 'Gravidade: Atrapalha, mas dá para contornar'), q('B3', 3, 'Gravidade: Detalhe visual ou de texto')];
+  assert.equal(AgileCalc.suggestBugPosition(fila, 0), 2); // impede: depois dos que já impedem, antes do resto
+  assert.equal(AgileCalc.suggestBugPosition(fila, 1), 3); // atrapalha: depois de impede e atrapalha
+  assert.equal(AgileCalc.suggestBugPosition(fila, 2), 4); // detalhe: no fim
+  assert.equal(AgileCalc.suggestBugPosition([], 0), 1);
+  for (const k of ['function sugRender()', 'function sugUse(what, v)', 'id="ai-sug-asg"', 'id="ai-sug-pts"', 'id="ai-sug-epic"', 'const prioFor = sev =>', "Agile.prioFor($('bug-f-sev').value)"]) assert.ok(html.includes(k), k);
 });
