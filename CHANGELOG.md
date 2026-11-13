@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.87.1 — 2026-11-12
+- Sistemico x Real: horas sugeridas viram estimativa (so confirmar vira apontado), painel Estimado x Apontado por card, WBS esperado x real sempre visivel
+
 ## 2.87.0 — 2026-11-12
 - Automatico primeiro (Fase 1): horas sugeridas, sugestoes no cartao, WBS automatica, rascunho de risco e historico de estimativas; ciclo ampliado
 

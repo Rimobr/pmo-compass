@@ -205,3 +205,9 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - Todo dado automático é a **referência de como deveríamos estar** (estimativa/esperado do sistema) e **nunca substitui o real**: o real é o que a pessoa apontou ou o que aconteceu. A tela mostra os dois lado a lado e a diferença é o sinal de atraso ou desvio ("Estimado × Apontado", "esperado hoje × real").
 - Hoje: Horas (a sugestão é estimativa; só "Confirmar Como Apontado" vira real; painel `EffortCompare`: horas por ponto medidas nos concluídos × apontado por card, mínimo 3 cards, senão "sem dados"), WBS (esperado pelo prazo × real das subtarefas, sempre visível), Estimativas (planejado × dias reais) e Burnout (carga calculada × ajuste manual).
 - Tela ou função nova pergunta: **qual é o dado sistêmico (como deveria estar) e qual é o real?** Sem um dos dois, mostrar "sem dados".
+
+## Sistêmico × Real — itens 1 a 7 (pedido do dono, 12/11/2026)
+- **Sprint**: `AgileCalc.sprintReading` mostra, sob o burndown, onde a linha ideal manda estar hoje × onde está e quando termina no ritmo atual (sem pontos concluídos = sem projeção).
+- **Custo**: `HoursCost` (tela Orçamento): custo apurado pelas horas (valor da hora = orçamento ÷ total de horas previsto, de Horas → Regras) × custo lançado; sem uma das bases = "sem dados". O lançado continua sendo o real.
+- **Linha de base**: `BaselineCalc.readiness` diz se o plano já está pronto (entregas com datas, orçamento) e oferece "Salvar Linha de Base Agora"; a foto continua sendo decisão da pessoa.
+- **Impedimentos, decisões da diretoria, revisão de riscos e contato com partes interessadas**: `PlanVsReal` (módulo `services/plan-vs-real`). Esperado = mediana do próprio histórico (mínimo 3) ou regra explícita (impedimento e decisão 3 dias; contato a cada 14/30/60 dias por influência alta/média/baixa; risco: data de revisão). Cor: dentro do esperado, até 50% acima, mais que isso.

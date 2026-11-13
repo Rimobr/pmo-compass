@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.87.1'
+  version: '2.88.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2056,6 +2056,7 @@ body.icons-failed i[data-fb]::before{
     <div class="kpi"><div class="kpi-lbl"><span class="sdot" id="bud-kpi-eac-dot"></span><span id="bud-eac-lbl">EAC</span><span id="bud-eac-help" class="help-q" data-help="Estimativa no Término — previsão de quanto o projeto vai custar no final, se o ritmo de gasto de agora continuar do jeito que está." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="kpi-val" style="font-size:17px" id="bud-kpi-eac">—</div><div class="kpi-delta" id="bud-kpi-eac-sub"></div></div>
   </div>
   <div id="bud-note-root" style="font-size:11.5px;color:var(--t3);margin:8px 0 14px"></div>
+  <div id="bud-hours-root"></div>
 
   <div class="g2">
     <div class="card">
@@ -3221,7 +3222,10 @@ const Baselines = (() => {
     el('bl-empty').style.display = b ? 'none' : '';
     el('bl-main').style.display = b ? '' : 'none';
     if(!b) {
-      el('bl-empty').innerHTML = '<div style="font-size:12.5px;color:var(--t2);line-height:1.65"><i class="ti ti-info-circle"></i> Este projeto ainda não tem linha de base. Quando o plano estiver aprovado (entregas, datas e orçamento cadastrados), clique em <strong>Salvar linha de base</strong>: a foto do plano fica guardada e todo replanejamento passa a ser medido contra ela.</div>';
+      const rd = BaselineCalc.readiness(DB.get('wbs') || [], DB.get('budgetLines') || []);
+      el('bl-empty').innerHTML = '<div style="font-size:12.5px;color:var(--t2);line-height:1.65"><i class="ti ti-info-circle"></i> Este projeto ainda não tem linha de base: sem a foto do plano, o sistema não sabe "como deveríamos estar" para comparar com o real. '
+        + (rd.ready ? '<b>O plano já está pronto</b>: ' + rd.entregas + ' entrega(s) com datas' + (rd.orcado > 0 ? ' e R$' + Math.round(rd.orcado).toLocaleString('pt-BR') + ' orçados' : '') + '. Se ele está aprovado, salve agora; depois todo replanejamento é medido contra a foto.' : 'Falta: ' + rd.missing.join('; ') + '.') + '</div>'
+        + (rd.ready ? '<div class="btn-row" style="margin-top:8px"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Baselines.openSave()"><i class="ti ti-camera"></i>Salvar Linha de Base Agora</button></div>' : '');
       return;
     }
     el('bl-sel').innerHTML = list.slice().reverse().map(x => `<option value="${esc(x.id)}"${x.id === b.id ? ' selected' : ''}>${esc(x.id)} · ${esc(x.name)} · ${fmtDate(x.createdOn)}</option>`).join('');
@@ -11211,15 +11215,16 @@ const Stakeholders = (() => {
         listRoot.innerHTML = `<div style="text-align:center;padding:30px 10px;color:var(--t3);font-size:12.5px">Nenhum stakeholder mapeado ainda.</div>`;
       } else {
         const sorted = [...data].sort((a,b) => (daysSince(b.lastContact)||0) - (daysSince(a.lastContact)||0));
+        const pvr = {}; PlanVsReal.stakeholders(data, Clock.iso(Clock.today())).forEach(x => { pvr[x.id] = x; });
         listRoot.innerHTML = sorted.map(s => {
           const e = ENGAGEMENT[s.engagement] || ENGAGEMENT.saudavel;
-          const d = daysSince(s.lastContact);
+          const d = daysSince(s.lastContact), pv = pvr[s.id];
           return `<div class="sh-card">
             <div class="sh-ava" style="background:${e.ring};color:${e.ringColor}">${initials(s.name)}</div>
             <div style="flex:1">
               <div class="sh-name">${escapeHtml(s.name)}${s.origin==='ia' ? ' <span class="badge" style="background:var(--s2);color:var(--t3)" title="Mapeado a partir de um documento pelo Raio-X do Projeto"><i class="ti ti-sparkles"></i> IA</span>' : ''}</div>
               <div class="sh-role">${escapeHtml(s.role)}</div>
-              <div class="sh-meta"><span class="badge ${e.cls}">${d===null?'Sem data':'Último contato: '+d+' dias'}</span><span class="badge ${e.cls}">${e.badge}</span></div>
+              <div class="sh-meta"><span class="badge ${e.cls}">${d===null?'Sem data':'Último contato: '+d+' dias'}</span><span class="badge ${e.cls}">${e.badge}</span>${pv ? `<span class="badge" style="background:var(--s2);color:var(--${pv.level})" title="${escapeHtml(pv.basis)}">esperado a cada ${pv.expected} dias${pv.late ? ' · ' + pv.late + ' de atraso' : ''}</span>` : ''}</div>
               ${s.notes ? `<div style="font-size:11px;color:var(--t3);margin-top:4px">${escapeHtml(s.notes)}</div>` : ''}
             </div>
             <button class="wbs-ic-btn" data-perm="business" title="Editar" onclick="Stakeholders.openEdit('${s.id}')"><i class="ti ti-edit"></i></button>
@@ -13079,6 +13084,15 @@ const AgileCalc = (() => {
     return { committed, done, remaining: committed - done, pct: committed ? Math.round(done / committed * 100) : 0, total, daysLeft: Math.max(0, diffDays(today, sprint.endOn)),
       series, behind, overCapacity: sprint.capacity !== '' && sprint.capacity != null && Number(sprint.capacity) > 0 && committed > Number(sprint.capacity), count: mine.length };
   }
+  // Sistêmico × real da sprint: onde a linha ideal manda estar hoje × onde está, e quando termina no ritmo atual
+  function sprintReading(sprint, st, today) {
+    if(!sprint || !st || !st.committed) return null;
+    const p = st.series.filter(x => x.real != null).pop(); if(!p) return null;
+    const elapsed = Math.max(1, diffDays(sprint.startOn, p.date) + 1), pace = st.done / elapsed, gap = Math.round((p.real - p.ideal) * 10) / 10;
+    let eta = null, etaLate = null;
+    if(st.remaining <= 0) { eta = p.date; etaLate = 0; } else if(pace > 0) { eta = addDays(today, Math.ceil(st.remaining / pace)); etaLate = Math.max(0, diffDays(sprint.endOn, eta)); }
+    return { ideal: p.ideal, real: p.real, gap, behind: gap > 0.5, pace: Math.round(pace * 10) / 10, eta, etaLate, level: gap <= 0.5 ? 'grn' : (etaLate != null && etaLate <= 1) ? 'amb' : 'red' };
+  }
   // Velocidade = pontos concluídos em cada sprint encerrada; média das últimas 3
   function velocity(sprints, items) {
     const closed = sprints.filter(s => s.state === 'encerrada').sort((a, b) => a.startOn.localeCompare(b.startOn));
@@ -13194,7 +13208,7 @@ const AgileCalc = (() => {
     return advice;
   }
 
-  return { setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, epicStats, suggestPoints, suggestEpic, bugSevRank, suggestBugPosition, isBackward, doneByDay, trendLine, isOpenBug, byPriority, bugQueue, placeBug, compactQueue, bugParentError, assigneeError, sprintAssigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+  return { sprintReading, setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, epicStats, suggestPoints, suggestEpic, bugSevRank, suggestBugPosition, isBackward, doneByDay, trendLine, isOpenBug, byPriority, bugQueue, placeBug, compactQueue, bugParentError, assigneeError, sprintAssigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
 })();
 </script>
 
@@ -14226,9 +14240,9 @@ const Agile = (() => {
   const impediments = () => DB.get('impediments') || [];
   // Os impedimentos abertos aparecem aqui mesmo, no quadro; quem pode, resolve ou vai ao rito; o time registra novos na Sprint atual
   function openImpediments() {
-    const list = impediments().filter(x => x.status === 'aberto'), box = document.getElementById('im-list');
+    const list = impediments().filter(x => x.status === 'aberto'), box = document.getElementById('im-list'), ag = {}; PlanVsReal.impediments(impediments(), Clock.iso(Clock.today())).forEach(a => { ag[a.id] = a; });
     box.innerHTML = list.length ? list.map(i => '<div class="ag-row"><div class="ag-main"><div class="ag-title">' + esc(i.title) + '</div><div class="kb-meta" style="margin-top:3px"><span class="chip">' + esc(i.id) + '</span>'
-      + (i.owner ? '<span class="chip"><i class="ti ti-user"></i>' + esc(i.owner) + '</span>' : '<span class="chip c-wa">sem responsável</span>') + '<span class="chip">aberto em ' + esc(String(i.createdOn || '').slice(0, 10).split('-').reverse().join('/')) + '</span></div>'
+      + (i.owner ? '<span class="chip"><i class="ti ti-user"></i>' + esc(i.owner) + '</span>' : '<span class="chip c-wa">sem responsável</span>') + '<span class="chip">aberto em ' + esc(String(i.createdOn || '').slice(0, 10).split('-').reverse().join('/')) + '</span>' + (ag[i.id] ? '<span class="chip" style="color:var(--' + ag[i.id].level + ')" title="Esperado: ' + ag[i.id].expected + ' dia(s) — ' + esc(ag[i.id].basis) + '">há ' + ag[i.id].age + ' dia(s) · esperado ' + ag[i.id].expected + (ag[i.id].late ? ' · ' + ag[i.id].late + ' de atraso' : '') + '</span>' : '') + '</div>'
       + (i.note ? '<div class="set-sub" style="margin-top:4px">' + esc(i.note) + '</div>' : '') + '</div>'
       + '<span data-perm="run_rites"><button class="btn btn-sm btn-grn" onclick="Agile.resolveImpediment(\'' + esc(i.id) + '\')"><i class="ti ti-check"></i>Resolvido</button></span></div>').join('') : '<div class="rk-empty">Nenhum impedimento aberto.</div>';
     document.getElementById('im-rites').style.display = Auth.canOpen('ritos') ? '' : 'none';
@@ -14548,7 +14562,9 @@ const Agile = (() => {
       kpi('Pontos na sprint', a ? `${st.done}/${st.committed}` : '—', a ? (st.overCapacity ? `acima da capacidade (${a.capacity})` : st.behind ? 'abaixo do ritmo ideal' : 'no ritmo') : 'concluídos / comprometidos', a && (st.overCapacity || st.behind) ? 'sdot-amb' : 'sdot-grn') +
       kpi('Velocidade média', vel.avg == null ? '—' : vel.avg + ' pts', vel.list.length ? `últimas ${Math.min(3, vel.list.length)} sprint(s)` : 'precisa de sprint encerrada') +
       kpi('Backlog restante', fc.sprints == null ? fc.remaining + ' pts' : fc.sprints + ' sprint(s)', fc.sprints == null ? 'sem velocidade para prever' : `${fc.remaining} pts no ritmo atual`);
-    document.getElementById('sp-burn').innerHTML = a ? lineChart(st.series) + `<div style="font-size:12px;color:var(--t2);margin-top:6px">${esc(a.goal || 'Sem meta definida.')}</div>` : '<div class="rk-empty">Nenhuma sprint ativa. Crie uma sprint e use “Iniciar” para ver o burndown.</div>';
+    const rd = a ? AgileCalc.sprintReading(a, st, today) : null;
+    const rdHtml = rd ? `<div style="font-size:12.5px;line-height:1.6;margin-top:8px;padding:8px 10px;border:1px solid var(--bd);border-radius:8px"><b>Sistema × Real:</b> pela linha ideal hoje deveriam faltar <b>${rd.ideal} pts</b>; faltam <b>${rd.real} pts</b> ${rd.gap > 0.5 ? `(<span style="color:var(--${rd.level})">${rd.gap} pts atrás</span>)` : '(no ritmo ou à frente)'}. ${rd.eta ? (rd.etaLate ? `No ritmo atual (${String(rd.pace).replace('.', ',')} pt/dia) termina em ${rd.eta.split('-').reverse().slice(0, 2).join('/')}, ${rd.etaLate} dia(s) depois do fim da sprint.` : 'No ritmo atual termina dentro do prazo da sprint.') : 'Ainda sem pontos concluídos: não há ritmo para projetar.'}</div>` : '';
+    document.getElementById('sp-burn').innerHTML = a ? lineChart(st.series) + rdHtml + `<div style="font-size:12px;color:var(--t2);margin-top:6px">${esc(a.goal || 'Sem meta definida.')}</div>` : '<div class="rk-empty">Nenhuma sprint ativa. Crie uma sprint e use “Iniciar” para ver o burndown.</div>';
     document.getElementById('sp-vel').innerHTML = vel.list.length ? barChart(vel.list) : '<div class="rk-empty">Ainda não há sprint encerrada. A velocidade aparece depois da primeira.</div>';
     if(!sprints.length) { list.innerHTML = '<div class="rk-empty">Nenhuma sprint cadastrada. Use “Nova sprint”.</div>'; return; }
     const badge = { planejada: 'b-neu', ativa: 'b-grn', encerrada: 'b-acc' };
@@ -17238,7 +17254,15 @@ const BaselineCalc = (() => {
       budget: { baseBAC, curBAC, bacVar: curBAC - baseBAC, bacVarPct: baseBAC > 0 ? Math.round((curBAC - baseBAC) / baseBAC * 1000) / 10 : null, baseReserve, curReserve, changedLines }
     };
   }
-  return { capture, compare, diff };
+  // O plano já está pronto para virar linha de base? O sistema confere o que existe e diz o que falta
+  function readiness(wbs, budgetLines) {
+    const mods = wbs || [], dated = mods.filter(m => ISO.test(m.start || '') && ISO.test(m.end || '')), orc = sum((budgetLines || []).filter(l => !l.isReserve), l => l.plannedValue);
+    const missing = [];
+    if(!mods.length) missing.push('cadastrar as entregas na WBS'); else if(dated.length < mods.length) missing.push((mods.length - dated.length) + ' entrega(s) sem início/fim planejado');
+    if(!(orc > 0)) missing.push('orçamento planejado (opcional, mas sem ele a foto não mede custo)');
+    return { entregas: mods.length, comData: dated.length, orcado: orc, ready: dated.length > 0 && dated.length === mods.length, missing };
+  }
+  return { capture, compare, diff, readiness };
 })();
 </script>
 
@@ -18265,6 +18289,64 @@ const ImportUi = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: services/plan-vs-real ─ Sistêmico × real da gestão: para cada coisa que tem prazo de tratamento (impedimento, decisão, revisão de risco, contato com parte interessada) o sistema calcula o que seria o esperado e compara com o que realmente aconteceu. O esperado vem do histórico do próprio projeto (mediana) ou de uma regra explícita; sem base, "sem dados". Lógica pura, sem DOM. -->
+<script data-module="services/plan-vs-real">
+const PlanVsReal = (() => {
+  const ISO = /^\d{4}-\d{2}-\d{2}/;
+  const iso = v => ISO.test(String(v || '')) ? String(v).slice(0, 10) : '';
+  const days = (a, b) => (iso(a) && iso(b)) ? Math.round((Date.parse(iso(b) + 'T12:00:00Z') - Date.parse(iso(a) + 'T12:00:00Z')) / 86400000) : null;
+  const median = l => { const a = l.slice().sort((x, y) => x - y), m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
+  // nível: dentro do esperado (grn), passou até 50% do esperado (amb) ou mais (red)
+  const level = (age, exp) => age <= exp ? 'grn' : age <= exp * 1.5 ? 'amb' : 'red';
+  const pack = (age, exp, basis, extra) => Object.assign({ age, expected: exp, basis, late: Math.max(0, age - exp), level: level(age, exp) }, extra || {});
+
+  // Impedimentos: esperado = mediana dos já resolvidos (mínimo 3) ou 3 dias (regra padrão)
+  function impediments(imps, today) {
+    const res = (imps || []).filter(i => i.status === 'resolvido' && days(i.createdOn, i.resolvedOn) != null).map(i => days(i.createdOn, i.resolvedOn));
+    const exp = res.length >= 3 ? Math.max(1, Math.round(median(res))) : 3, basis = res.length >= 3 ? 'mediana dos ' + res.length + ' resolvidos' : 'regra padrão de 3 dias';
+    return (imps || []).filter(i => i.status === 'aberto' && iso(i.createdOn)).map(i => pack(Math.max(0, days(i.createdOn, today)), exp, basis, { id: i.id, title: i.title, owner: i.owner || '' }));
+  }
+  // Decisões da diretoria: esperado = mediana do tempo até decidir nas já decididas (mínimo 3) ou 3 dias
+  function decisions(rows, today) {
+    const dec = (rows || []).filter(r => r.boardDecision && days(r.aiGeneratedAt, r.decidedAt) != null).map(r => days(r.aiGeneratedAt, r.decidedAt));
+    const exp = dec.length >= 3 ? Math.max(1, Math.round(median(dec))) : 3, basis = dec.length >= 3 ? 'mediana de ' + dec.length + ' decisões' : 'regra padrão de 3 dias';
+    return (rows || []).filter(r => !r.boardDecision && iso(r.aiGeneratedAt)).map(r => pack(Math.max(0, days(r.aiGeneratedAt, today)), exp, basis, { id: r.id, title: r.aiSuggestion || 'Decisão' }));
+  }
+  // Riscos: a revisão esperada é a data de revisão; atrasada se já passou e o risco segue aberto
+  function riskReviews(risks, today) {
+    return (risks || []).filter(r => (r.status === 'aberto' || r.status === 'mitigando') && iso(r.reviewOn)).map(r => {
+      const late = days(r.reviewOn, today); return { id: r.id, title: r.title, owner: r.owner || '', reviewOn: iso(r.reviewOn), late: Math.max(0, late), level: late <= 0 ? 'grn' : late <= 7 ? 'amb' : 'red' };
+    });
+  }
+  // Partes interessadas: contato esperado a cada 14 (alta), 30 (média) ou 60 dias (baixa influência)
+  const EVERY = { alta: 14, media: 30, baixa: 60 };
+  function stakeholders(list, today) {
+    return (list || []).filter(x => iso(x.lastContact)).map(x => {
+      const exp = EVERY[x.influence] || 30, age = Math.max(0, days(x.lastContact, today)); return pack(age, exp, 'influência ' + (x.influence || 'média') + ': contato a cada ' + exp + ' dias', { id: x.id, title: x.name });
+    });
+  }
+  return { impediments, decisions, riskReviews, stakeholders, days, median };
+})();
+</script>
+
+<!-- ■ MODULE: services/hours-cost ─ Custo pelas horas: o sistema converte as horas apontadas em custo (valor da hora = orçamento ÷ total de horas previsto) e compara com o custo realmente lançado. Sem as duas bases, "sem dados". Lógica pura, sem DOM. -->
+<script data-module="services/hours-cost">
+const HoursCost = (() => {
+  // inp: { bac, hoursTotal, entries, ac, pvPct }  (pvPct = % do plano que já deveria estar feito hoje, opcional)
+  function compute(inp) {
+    const bac = Number(inp.bac) || 0, total = Number(inp.hoursTotal) || 0;
+    if(!(bac > 0) || !(total > 0)) return { rate: null, reason: bac > 0 ? 'Informe o total de horas do projeto (Horas → Regras) para o sistema calcular o valor da hora.' : 'Sem orçamento planejado para calcular o valor da hora.' };
+    const rate = bac / total, hours = (inp.entries || []).filter(e => e.status !== 'reprovado').reduce((a, e) => a + (Number(e.hours) || 0), 0);
+    const apurado = Math.round(hours * rate), ac = Number(inp.ac) || 0;
+    const expected = inp.pvPct == null ? null : Math.round(bac * inp.pvPct / 100);
+    const gap = ac > 0 ? ac - apurado : null; // real lançado − apurado pelas horas
+    const level = gap == null || apurado <= 0 ? 'sem_dado' : Math.abs(gap) / apurado <= 0.1 ? 'ok' : gap > 0 ? 'atencao' : 'atencao';
+    return { rate: Math.round(rate * 100) / 100, hours, apurado, ac, gap, expected, level };
+  }
+  return { compute };
+})();
+</script>
+
 <!-- ■ MODULE: pages/budget-js -->
 <script data-module="pages/budget-js">
 const Budget = (() => {
@@ -18347,8 +18429,26 @@ const Budget = (() => {
   function render() {
     ensureLoaded();
     renderKpis();
+    renderHoursCost();
     renderLines();
     renderActuals();
+  }
+  // Sistêmico (horas apontadas × valor da hora) × real (custo lançado)
+  function renderHoursCost() {
+    const box = document.getElementById('bud-hours-root'); if(!box) return;
+    let m, hr;
+    try { m = computeMetrics(); hr = (DB.get('hoursRules') || {}).budget || {}; } catch(e) { box.innerHTML = ''; return; }
+    const entries = DB.get('timeEntries') || [];
+    if(!entries.length && !(hr.total > 0)) { box.innerHTML = ''; return; }
+    const r = HoursCost.compute({ bac: m.BAC, hoursTotal: hr.total, entries, ac: m.AC });
+    const money = n => 'R$' + Math.round(n || 0).toLocaleString('pt-BR');
+    if(r.rate == null) { box.innerHTML = '<div class="card" style="margin-bottom:12px"><div class="lbl"><i class="ti ti-clock-dollar"></i>Custo Pelas Horas × Custo Lançado</div><div class="set-sub">' + escapeHtml(r.reason) + '</div></div>'; return; }
+    const h = n => String(Math.round(n * 10) / 10).replace('.', ',') + ' h';
+    box.innerHTML = '<div class="card" style="margin-bottom:12px"><div class="lbl"><i class="ti ti-clock-dollar"></i>Custo Pelas Horas × Custo Lançado <span class="badge b-acc">automático</span></div>'
+      + '<div class="g3" style="margin:6px 0"><div class="kpi"><div class="kpi-lbl">Apurado pelas horas</div><div class="kpi-val">' + money(r.apurado) + '</div><div class="kpi-delta">' + h(r.hours) + ' × ' + money(r.rate) + '/h</div></div>'
+      + '<div class="kpi"><div class="kpi-lbl">Lançado (real)</div><div class="kpi-val">' + (r.ac > 0 ? money(r.ac) : '—') + '</div><div class="kpi-delta">' + (r.ac > 0 ? 'notas, faturas e pagamentos' : 'nada lançado ainda') + '</div></div>'
+      + '<div class="kpi"><div class="kpi-lbl">Diferença</div><div class="kpi-val">' + (r.gap == null ? '—' : (r.gap > 0 ? '+' : '') + money(r.gap)) + '</div><div class="kpi-delta">' + (r.gap == null ? 'sem custo lançado' : r.gap > 0 ? 'lançado acima do que as horas indicam' : 'lançado abaixo do que as horas indicam (falta lançar custo?)') + '</div></div></div>'
+      + '<p style="font-size:12px;color:var(--t2);line-height:1.6">Valor da hora = orçamento planejado (' + money(m.BAC) + ') ÷ total de horas previsto (' + h(hr.total) + ') = ' + money(r.rate) + '. É só a régua do sistema: o custo real continua sendo o que foi lançado. Diferença grande pede conferência de lançamento ou de horas.</p></div>';
   }
 
   // Projeto ágil: o custo se mede pelos pontos concluídos do backlog (a WBS não manda), não por CPI/SPI de entregas
