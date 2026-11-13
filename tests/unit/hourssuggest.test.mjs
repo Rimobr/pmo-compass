@@ -41,5 +41,5 @@ test('sugestão de horas: a divisão em quartos de hora sempre fecha no total', 
   for (const [t, w] of [[8, [1, 1, 1]], [8, [5, 3, 1]], [6, [2, 2, 2, 2, 2]], [4.5, [7, 1]]]) { const h = H.split(t, w); assert.equal(h.reduce((a, b) => a + b, 0), t); assert.ok(h.every(x => x * 4 === Math.round(x * 4))); }
 });
 test('sugestão de horas: ligada à tela de horas e ao formulário, passando pelas regras de lançamento (addMany)', () => {
-  for (const k of ['id="hr-suggest-root"', 'function renderSuggest()', 'function suggestApply(date)', 'const n = addMany(items);', 'Sugestão do Sistema — suas horas pelas suas atividades', "suggestions()[0]"]) assert.ok(html.includes(k), k);
+  for (const k of ['id="hr-suggest-root"', 'function renderSuggest()', 'function suggestApply(date)', 'const n = addMany(items);', 'Estimativa do Sistema — suas horas pelas suas atividades', "suggestions()[0]"]) assert.ok(html.includes(k), k);
 });

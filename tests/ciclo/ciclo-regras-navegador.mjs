@@ -124,6 +124,17 @@ ok(r === 100, 'WBS no automático: concluir a última subtarefa leva a entrega a
 await p.evaluate(() => { const l = DB.get('wbs'); l[0].pct = 70; DB.set('wbs', l); WBS.resetCache(); WBS.updateField('task', 'wmA', 'wtA', 'status', 'amb'); }); await p.waitForTimeout(300);
 r = await p.evaluate(() => DB.get('wbs')[0].pct);
 ok(r === 70, 'WBS com ajuste manual do gerente (70%): o automático não sobrescreve', String(r));
+// Estimado pelo sistema × apontado: o card aberto estoura quando o apontado passa do estimado
+await p.evaluate(() => {
+  const mk = (n, st, pts) => ({ id: 'US-' + n, title: 'Item ' + n, kind: 'historia', status: st, points: pts, assignee: 'Ana', sprintId: '', rank: n, createdOn: '2026-11-01', doneOn: '', description: '', attachments: [], history: [], checklist: [] });
+  DB.set('backlog', [mk(1, 'done', 2), mk(2, 'done', 3), mk(3, 'done', 5), mk(9, 'doing', 3)]);
+  const e = (id, t, h, i) => ({ id: 'te' + i, person: 'Ana', date: '2026-11-0' + (i + 1), hours: h, wbsRef: id + ' — ' + t, note: '', status: 'aprovado' });
+  DB.set('timeEntries', [e('US-1', 'Item 1', 8, 1), e('US-2', 'Item 2', 12, 2), e('US-3', 'Item 3', 20, 3), e('US-9', 'Item 9', 14, 4)]);
+  Hours.resetCache(); R.go('hours'); Hours.render();
+});
+await p.waitForTimeout(300);
+r = await p.evaluate(() => (document.getElementById('hr-effort-root') || {}).innerText || '');
+ok(/Estourou/.test(r) && /12/.test(r) && /14/.test(r), 'horas: card aberto com apontado acima do estimado pelo sistema aparece como "Estourou"', r.slice(0, 160));
 await p.close();
 
 await b.close(); srv.close();

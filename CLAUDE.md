@@ -200,3 +200,8 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - **Risco**: rascunho de categoria, probabilidade, impacto, resposta, revisão, responsável, mitigação e plano B a partir do texto e dos sinais do projeto (`RiskSuggest`); só preenche campos vazios.
 - **Estimativas**: histórico "dias planejados × reais" nasce da WBS concluída com datas reais e responsável (`EstimateAuto`); o que foi lançado à mão fica intocado (chave `estimateHistory`, só neste navegador).
 - Ciclo de conflitos cobre horas sugeridas × carga do Burnout, período fechado e WBS automática × manual.
+
+## Sistêmico × Real (regra do dono, 12/11/2026; vale para todos os produtos)
+- Todo dado automático é a **referência de como deveríamos estar** (estimativa/esperado do sistema) e **nunca substitui o real**: o real é o que a pessoa apontou ou o que aconteceu. A tela mostra os dois lado a lado e a diferença é o sinal de atraso ou desvio ("Estimado × Apontado", "esperado hoje × real").
+- Hoje: Horas (a sugestão é estimativa; só "Confirmar Como Apontado" vira real; painel `EffortCompare`: horas por ponto medidas nos concluídos × apontado por card, mínimo 3 cards, senão "sem dados"), WBS (esperado pelo prazo × real das subtarefas, sempre visível), Estimativas (planejado × dias reais) e Burnout (carga calculada × ajuste manual).
+- Tela ou função nova pergunta: **qual é o dado sistêmico (como deveria estar) e qual é o real?** Sem um dos dois, mostrar "sem dados".

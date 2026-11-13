@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.87.0'
+  version: '2.87.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2604,6 +2604,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     </div>
   </div>
   <div id="hr-suggest-root"></div>
+  <div id="hr-effort-root"></div>
   <div class="rk-toolbar">
     <select class="input" id="hr-f-period" aria-label="Período" onchange="Hours.setFilter('period', this.value)">
       <option value="semana">Esta semana</option><option value="mes">Este mês</option><option value="passada">Semana passada</option><option value="tudo">Todo o período</option>
@@ -17438,6 +17439,32 @@ const HoursRules = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: services/effort-compare ─ Estimativa sistêmica × apontado real: para cada card o sistema estima as horas (pontos × horas por ponto medidas nos cards parecidos já concluídos) e compara com as horas realmente apontadas. A estimativa nunca vira apontado; serve de régua para saber se a entrega está atrasada. Lógica pura, sem DOM. -->
+<script data-module="services/effort-compare">
+const EffortCompare = (() => {
+  const refOf = i => i.id + ' — ' + i.title;
+  const sumFor = (entries, i) => (entries || []).filter(e => e.status !== 'reprovado' && String(e.wbsRef || '') && (String(e.wbsRef) === refOf(i) || String(e.wbsRef).indexOf(i.id + ' ') === 0)).reduce((a, e) => a + (Number(e.hours) || 0), 0);
+  // Horas por ponto: mediana dos cards concluídos que têm ponto e horas apontadas (mínimo de 3 cards; senão não há base)
+  function hoursPerPoint(items, entries) {
+    const r = (items || []).filter(i => i.kind !== 'epico' && i.status === 'done' && Number(i.points) > 0).map(i => ({ h: sumFor(entries, i), p: Number(i.points) })).filter(x => x.h > 0).map(x => x.h / x.p).sort((a, b) => a - b);
+    if(r.length < 3) return null;
+    const m = r.length >> 1; return Math.round((r.length % 2 ? r[m] : (r[m - 1] + r[m]) / 2) * 100) / 100;
+  }
+  // Linhas dos cards abertos com ponto: estimado (sistema), apontado (real), consumo e leitura
+  function rows(items, entries) {
+    const hpp = hoursPerPoint(items, entries); if(hpp == null) return { hpp: null, list: [] };
+    const list = (items || []).filter(i => i.kind !== 'epico' && i.status !== 'done' && Number(i.points) > 0).map(i => {
+      const est = Math.round(Number(i.points) * hpp * 4) / 4, real = Math.round(sumFor(entries, i) * 4) / 4, pct = est > 0 ? Math.round(real / est * 100) : null;
+      const level = pct == null ? 'neu' : pct > 100 ? 'red' : pct >= 80 ? 'amb' : 'grn';
+      const why = level === 'red' ? 'já apontou mais horas do que o estimado e o card não está concluído' : level === 'amb' ? 'consumiu ' + pct + '% do estimado e ainda não terminou' : real === 0 ? 'ainda sem horas apontadas' : 'dentro do estimado';
+      return { id: i.id, title: i.title, assignee: i.assignee || '', est, real, pct, level, why };
+    }).filter(r => r.est > 0).sort((a, b) => (b.pct || 0) - (a.pct || 0) || a.id.localeCompare(b.id));
+    return { hpp, list };
+  }
+  return { hoursPerPoint, rows, sumFor };
+})();
+</script>
+
 <!-- ■ MODULE: services/hours-suggest ─ Sugestão automática de horas: o sistema olha o que a pessoa mexeu nos cards em cada dia e monta o apontamento (jornada do projeto × alocação, dividida pela atividade em cada card). A pessoa só confirma. Lógica pura, sem DOM. -->
 <script data-module="services/hours-suggest">
 const HoursSuggest = (() => {
@@ -17603,23 +17630,35 @@ const Hours = (() => {
     const box = document.getElementById('hr-suggest-root'); if(!box) return;
     const list = Auth.can('log_hours') ? suggestions() : [];
     if(!list.length) { box.innerHTML = ''; return; }
-    box.innerHTML = '<div class="card" style="border-color:var(--acc);margin-bottom:12px"><div class="lbl"><i class="ti ti-wand"></i>Sugestão do Sistema — suas horas pelas suas atividades <span class="badge b-acc">automático</span></div>'
-      + '<p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:8px">O sistema viu o que você mexeu nos cards e já montou as horas. Confira e lance com um clique; valem as mesmas regras de aprovação, prazo e período fechado.</p>'
-      + list.map(d => '<div class="set-row" style="gap:10px;flex-wrap:wrap;align-items:flex-start"><div style="flex:1 1 320px;min-width:0"><div><b>' + esc(fmtDay(d.date)) + '</b> · ' + esc(fmtH(d.total)) + ' <span class="set-sub">em ' + d.rows.length + ' card(s)</span></div><div class="kb-meta" style="margin-top:4px">' + d.rows.map(x => '<span class="chip" title="' + esc(x.ref) + '">' + esc(x.ref.length > 46 ? x.ref.slice(0, 45) + '…' : x.ref) + ' · ' + esc(fmtH(x.hours)) + '</span>').join('') + '</div></div><button class="btn btn-sm btn-acc" onclick="Hours.suggestApply(\'' + d.date + '\')"><i class="ti ti-check"></i>Lançar Este Dia</button></div>').join('')
-      + '<div class="btn-row" style="margin-top:8px">' + (list.length > 1 ? '<button class="btn btn-sm" onclick="Hours.suggestApply(\'\')"><i class="ti ti-checks"></i>Lançar Todos os Dias</button>' : '') + '<button class="btn btn-sm" onclick="Hours.openAdd()"><i class="ti ti-edit"></i>Ajustar no Formulário</button></div>'
+    box.innerHTML = '<div class="card" style="border-color:var(--acc);margin-bottom:12px"><div class="lbl"><i class="ti ti-wand"></i>Estimativa do Sistema — suas horas pelas suas atividades <span class="badge b-acc">estimado</span></div>'
+      + '<p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:8px">O sistema viu o que você mexeu nos cards e estimou as horas. Isto é só a estimativa: ao confirmar, vira o seu apontado real (e fica marcado como vindo da estimativa). valem as mesmas regras de aprovação, prazo e período fechado.</p>'
+      + list.map(d => '<div class="set-row" style="gap:10px;flex-wrap:wrap;align-items:flex-start"><div style="flex:1 1 320px;min-width:0"><div><b>' + esc(fmtDay(d.date)) + '</b> · ' + esc(fmtH(d.total)) + ' <span class="set-sub">em ' + d.rows.length + ' card(s)</span></div><div class="kb-meta" style="margin-top:4px">' + d.rows.map(x => '<span class="chip" title="' + esc(x.ref) + '">' + esc(x.ref.length > 46 ? x.ref.slice(0, 45) + '…' : x.ref) + ' · ' + esc(fmtH(x.hours)) + '</span>').join('') + '</div></div><button class="btn btn-sm btn-acc" onclick="Hours.suggestApply(\'' + d.date + '\')"><i class="ti ti-check"></i>Confirmar Como Apontado</button></div>').join('')
+      + '<div class="btn-row" style="margin-top:8px">' + (list.length > 1 ? '<button class="btn btn-sm" onclick="Hours.suggestApply(\'\')"><i class="ti ti-checks"></i>Confirmar Todos Como Apontado</button>' : '') + '<button class="btn btn-sm" onclick="Hours.openAdd()"><i class="ti ti-edit"></i>Ajustar no Formulário</button></div>'
       + '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;color:var(--t2)">Como foi calculado</summary><p style="font-size:12px;color:var(--t2);line-height:1.6;margin-top:4px">Para cada dia útil sem horas lançadas, nos últimos 7 dias, o sistema soma a jornada do projeto (' + esc(fmtH(rules().dailyNormal)) + ') pela sua alocação e divide entre os cards em que você mexeu naquele dia (mover, comentar, anexar, alterar), em proporção à atividade em cada um. Nada é lançado sem o seu clique.</p></details></div>';
+  }
+  // Estimado (sistema) × apontado (real) por card: a régua para saber se a entrega está atrasada
+  function renderEffort() {
+    const box = document.getElementById('hr-effort-root'); if(!box) return;
+    ensureLoaded(); const r = EffortCompare.rows(DB.get('backlog') || [], data);
+    if(!r.list.length) { box.innerHTML = ''; return; }
+    const COL = { red: 'var(--red)', amb: 'var(--amb)', grn: 'var(--grn)', neu: 'var(--t3)' }, LBL = { red: 'Estourou', amb: 'Atenção', grn: 'No ritmo', neu: 'Sem dados' };
+    box.innerHTML = '<div class="card" style="margin-bottom:12px"><div class="lbl"><i class="ti ti-scale"></i>Estimado pelo Sistema × Apontado <span class="badge b-acc">automático</span></div>'
+      + '<p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:8px">Cada card aberto tem uma estimativa de horas calculada pelo sistema (' + String(r.hpp).replace('.', ',') + ' h por ponto, medido nos cards já concluídos). A estimativa <b>não</b> é apontamento: só o que você lança vale como real. Quando o apontado passa do estimado e o card não terminou, a entrega está atrasada.</p>'
+      + '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Card</th><th>Responsável</th><th>Estimado</th><th>Apontado</th><th>Consumo</th><th>Leitura</th></tr></thead><tbody>'
+      + r.list.slice(0, 15).map(x => '<tr><td title="' + esc(x.why) + '">' + esc(x.id) + ' — ' + esc(x.title.length > 48 ? x.title.slice(0, 47) + '…' : x.title) + '</td><td>' + esc(x.assignee || '—') + '</td><td>' + esc(fmtH(x.est)) + '</td><td>' + esc(fmtH(x.real)) + '</td><td>' + (x.pct == null ? '—' : x.pct + '%') + '</td><td style="color:' + COL[x.level] + ';font-weight:600">' + LBL[x.level] + ' <span class="set-sub" style="font-weight:400">· ' + esc(x.why) + '</span></td></tr>').join('')
+      + '</tbody></table></div></div>';
   }
   function suggestApply(date) {
     if(!Auth.guard('log_hours')) return;
     const items = [], me = Auth.getName();
-    suggestions().filter(d => !date || d.date === date).forEach(d => d.rows.forEach(x => items.push({ person: me, date: d.date, hours: x.hours, wbsRef: x.ref, note: 'Sugestão automática pela atividade nos cards' })));
+    suggestions().filter(d => !date || d.date === date).forEach(d => d.rows.forEach(x => items.push({ person: me, date: d.date, hours: x.hours, wbsRef: x.ref, note: 'Confirmado a partir da estimativa do sistema (atividade nos cards)' })));
     if(!items.length) return;
     const n = addMany(items);
     if(n) T.show('✅ ' + n + ' apontamento(s) lançado(s) pela sugestão do sistema.', 5000);
   }
   function render() {
     fillPersonFilter();
-    renderSuggest();
+    renderSuggest(); renderEffort();
     const list = filtered();
     renderKpis(list); renderLoad(); renderList(list);
     renderBudget();
@@ -20769,7 +20808,7 @@ const WBS = (() => {
       const gap = expected != null ? m.pct - expected : null;
       const atrasado = gap != null && gap < -5;
       const mRange = fmtRange(m.start, m.end, m.startActual, m.endActual);
-      const mSubParts = [mRange, m.responsavel ? escapeHtml(m.responsavel) : '', atrasado ? `<span style="color:var(--amb)"><i class="ti ti-alert-triangle"></i> esperado ${expected}% hoje, real ${m.pct}% — ${Math.abs(gap)}pp atrasado</span>` : ''].filter(Boolean);
+      const mSubParts = [mRange, m.responsavel ? escapeHtml(m.responsavel) : '', expected != null ? (atrasado ? `<span style="color:var(--amb)"><i class="ti ti-alert-triangle"></i> esperado ${expected}% hoje, real ${m.pct}% — ${Math.abs(gap)}pp atrasado</span>` : `<span style="color:var(--grn)"><i class="ti ti-check"></i> esperado ${expected}% hoje, real ${m.pct}%</span>`) : ''].filter(Boolean);
       html += `<div class="wbs-row wbs-l1" style="${i>0?'margin-top:4px':''}">
         <i class="ti ${open?'ti-chevron-down':'ti-chevron-right'}" style="font-size:12px;color:var(--t3);transition:transform .15s;cursor:pointer" onclick="WBS.toggle('${m.id}')"></i>
         <div style="cursor:pointer;flex:1;min-width:0" onclick="WBS.toggle('${m.id}')">
