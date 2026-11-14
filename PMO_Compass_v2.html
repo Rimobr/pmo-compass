@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.94.1'
+  version: '2.94.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -8278,6 +8278,8 @@ const Nav = (() => {
   function initArea() { let v = null; try { v = localStorage.getItem(AREA_KEY); } catch(e){} setArea(v !== 'closed', false); }
   function expandGroupFor(pageId) {
     let groupId = FLAT.includes(pageId) ? '' : GROUP_OF[pageId];
+    // Quadro ativo: as telas do menu do quadro (Arquivos, Colaboradores, Meu Trabalho…) ficam dentro de "Quadros / Kanban"; o grupo delas no projeto não existe no menu do quadro e fechava tudo
+    try { if(typeof DB !== 'undefined' && typeof Methodology !== 'undefined' && Methodology.isBoard(DB.getActiveProjectId()) && Methodology.BOARD_OK.includes(pageId)) groupId = 'sbg-quadros'; } catch(e) { /* sem quadro: vale o mapa */ }
     // Com um quadro ativo, o grupo "Quadros / Kanban" (onde está o menu do quadro) não fecha ao abrir o Kanban ou outra tela solta
     if(!groupId) { try { if(typeof DB !== 'undefined' && typeof Methodology !== 'undefined' && Methodology.isBoard(DB.getActiveProjectId())) groupId = 'sbg-quadros'; } catch(e) {} }
     const tg = groupId && document.getElementById(groupId), area = document.getElementById('sb-proj-area');

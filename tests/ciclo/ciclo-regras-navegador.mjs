@@ -259,6 +259,15 @@ r = await p.evaluate(async () => {
   return w;
 });
 ok(r.length === 2 && r.some(x => x.t === 'Ana Souza' && !x.sys && Number(x.peso) >= 700 && x.fundo !== 'rgba(0, 0, 0, 0)') && r.some(x => /Claude Code/.test(x.t) && x.sys), 'Logs: quem alterou aparece em negrito com fundo (pessoa) e neutro (sistema)', JSON.stringify(r));
+// Menu do quadro: Arquivos, Colaboradores e Meu Trabalho não fecham o grupo "Quadros / Kanban"
+r = await p.evaluate(async () => {
+  const keep = Methodology.isBoard; Methodology.isBoard = () => true; document.body.classList.add('is-board');
+  const out = {};
+  for (const pg of ['repository', 'resources', 'mywork', 'backlog', 'kanban']) { R.go(pg); await new Promise(x => setTimeout(x, 150)); const g = document.getElementById('sbg-quadros'); out[pg] = !!g && g.classList.contains('open'); }
+  Methodology.isBoard = keep; document.body.classList.remove('is-board');
+  return out;
+});
+ok(Object.values(r).every(Boolean), 'Menu do quadro: Arquivos, Colaboradores, Meu Trabalho, Backlog e Kanban mantêm o grupo Quadros / Kanban aberto', JSON.stringify(r));
 await p.close();
 
 await b.close(); srv.close();
