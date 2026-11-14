@@ -135,6 +135,21 @@ await p.evaluate(() => {
 await p.waitForTimeout(300);
 r = await p.evaluate(() => (document.getElementById('hr-effort-root') || {}).innerText || '');
 ok(/Estourou/.test(r) && /12/.test(r) && /14/.test(r), 'horas: card aberto com apontado acima do estimado pelo sistema aparece como "Estourou"', r.slice(0, 160));
+// Bugs de 14/11: criar o item pai na hora, excluir anexo do cartão e levar o texto ao trocar para Bug
+await p.evaluate(() => { R.go('kanban'); });
+await p.waitForTimeout(300);
+r = await p.evaluate(async () => {
+  const novo = Agile.quickItem('Tela de relatórios');
+  const it = DB.get('backlog').find(x => x.id === novo);
+  const att = [1, 2, 3, 4, 5, 6].map(n => ({ path: 'p/' + n, name: 'a' + n + '.png', type: 'image/png' }));
+  const l = DB.get('backlog'); l.find(x => x.id === novo).attachments = att; DB.set('backlog', l); Agile.resetCache && Agile.resetCache();
+  Dlg.ask = async () => true;
+  Agile.openItem ? Agile.openItem(novo) : null;
+  await Agile.removeFile('p/3');
+  const dep = DB.get('backlog').find(x => x.id === novo);
+  return { novo, kind: it && it.kind, sem: !!dep && dep.attachments.length, hist: dep && dep.history && dep.history.some(h => /Anexo removido: a3.png/.test(h.to || '')) };
+});
+ok(r.novo && (r.kind === 'historia' || r.kind === 'tarefa') && r.sem === 5 && r.hist === true, 'bug: item pai criado na hora e anexo excluído do cartão (6 → 5, com registro no histórico)', JSON.stringify(r));
 await p.close();
 
 await b.close(); srv.close();

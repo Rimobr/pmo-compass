@@ -43,3 +43,13 @@ test('sugestão de horas: a divisão em quartos de hora sempre fecha no total', 
 test('sugestão de horas: ligada à tela de horas e ao formulário, passando pelas regras de lançamento (addMany)', () => {
   for (const k of ['id="hr-suggest-root"', 'function renderSuggest()', 'function suggestApply(date)', 'const n = addMany(items);', 'Estimativa do Sistema — suas horas pelas suas atividades', "suggestions()[0]"]) assert.ok(html.includes(k), k);
 });
+
+test('cadência: esperado pela jornada × apontado, dias sem lançamento e excesso', () => {
+  const entries = [{ person: 'Ana', date: '2026-11-11', hours: 8 }, { person: 'Ana', date: '2026-11-10', hours: 11 }, { person: 'Ana', date: '2026-11-09', hours: 8, status: 'reprovado' }];
+  const r = H.cadence({ people: [{ name: 'Ana', allocationPct: 100 }, { name: 'Zé', allocationPct: 0 }], entries, today: '2026-11-11', days: 3, dailyNormal: 8 });
+  assert.equal(r.length, 1); // alocação 0: nada esperado
+  assert.equal(r[0].expected, 24); assert.equal(r[0].logged, 19); assert.equal(r[0].missing, 1); assert.equal(r[0].extra, 1); assert.equal(r[0].pct, 79); assert.equal(r[0].level, 'amb');
+  const off = H.cadence({ people: [{ name: 'Ana' }], entries, today: '2026-11-11', days: 3, dailyNormal: 8, isOff: d => d === '2026-11-09' });
+  assert.equal(off[0].expected, 16); assert.equal(off[0].missing, 0);
+});
+test('cadência: ligada à tela de horas', () => { for (const k of ['id="hr-cadence-root"', 'function renderCadence()', 'Jornada Esperada × Horas Apontadas']) assert.ok(html.includes(k), k); });

@@ -211,3 +211,16 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - **Custo**: `HoursCost` (tela Orçamento): custo apurado pelas horas (valor da hora = orçamento ÷ total de horas previsto, de Horas → Regras) × custo lançado; sem uma das bases = "sem dados". O lançado continua sendo o real.
 - **Linha de base**: `BaselineCalc.readiness` diz se o plano já está pronto (entregas com datas, orçamento) e oferece "Salvar Linha de Base Agora"; a foto continua sendo decisão da pessoa.
 - **Impedimentos, decisões da diretoria, revisão de riscos e contato com partes interessadas**: `PlanVsReal` (módulo `services/plan-vs-real`). Esperado = mediana do próprio histórico (mínimo 3) ou regra explícita (impedimento e decisão 3 dias; contato a cada 14/30/60 dias por influência alta/média/baixa; risco: data de revisão). Cor: dentro do esperado, até 50% acima, mais que isso.
+
+## Sistêmico × Real — itens 8 a 12 (pedido do dono, 12/11/2026)
+- **Escopo**: a janela da mudança sugere dias e R$ (mediana das aprovadas parecidas, ou de todas se houver 3+) e o resumo compara o declarado nas aprovadas com o desvio real do término contra a linha de base (`PlanVsReal.scopeSuggest/scopeReality`).
+- **Ata**: "Preencher Com o Que Aconteceu" monta o rascunho desde a última reunião (cards concluídos, impedimentos, riscos, escopo) e os participantes ativos (`PlanVsReal.meetingDigest`); só preenche campo vazio.
+- **Estimativas**: `EstimateAuto.factors` = fator de correção por pessoa (mediana real ÷ planejado, mínimo 3 entregas), na tela de Estimativas e como aviso ao planejar uma entrega na WBS.
+- **Horas**: `HoursSuggest.cadence` = jornada esperada × apontado (14 dias), dias sem lançamento e com excesso. **Dashboard**: `PlanVsReal.pace` = ritmo esperado × real das entregas, no cartão de entregas atrasadas.
+
+## Correções dos bugs do Kanban de 14/11/2026
+- **Anexo do cartão**: cada anexo tem um X para excluir (`Agile.removeFile`, com confirmação e o registro "Anexo removido" no histórico); a recusa dos 6 anexos diz como seguir e não perde o texto.
+- **Bug sem item pai**: o combo "Escolha o item…" (formulário do bug e cartão) traz "➕ Criar um item novo…" e pede só o título (`Agile.quickItem`: História no projeto, Tarefa no Quadro).
+- **Trocar o tipo para Bug** num item novo leva o título e a descrição escritos para o formulário do bug.
+- **Responsável fora da equipe**: depois de "Incluir na Equipe" a equipe é relida da nuvem antes de preencher o campo (senão aparecia "(não cadastrado)"); sem conta única com o nome, a mensagem explica.
+- **Resumo de entrada**: aparece **uma vez por login** (`pmo_digest_sess_v1` em sessionStorage, apagada ao sair da conta) e, no modo diário, uma vez por dia; não volta mais ao navegar, sincronizar ou quando chega card novo (o sino mostra os pendentes).

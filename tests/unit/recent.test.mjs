@@ -126,7 +126,7 @@ test('janela do cartão: Excluir, Cancelar e Salvar ficam no cabeçalho fixo; "I
 
 test('resumo de entrada: já vem ligado (uma vez por dia), é parâmetro da organização e mostra só os cards da própria pessoa', () => {
   const m = html.match(/<script data-module="ui\/my-digest">([\s\S]*?)<\/script>/)[1];
-  for (const k of ["const mode = () =>", "MODES.includes(o.mode) ? o.mode : 'diario'", "OrgSettings.set(ORG, { mode: v })", "Cloud.myOpenItems()", "Auth.getRole() !== 'admin'", 'state.mine.length > (st.n || 0)', 'onlyOk: true', "okLabel: 'OK, Li e Entendi'", 'function acknowledge(action, label, list, m)', "'digest_ack'"]) assert.ok(m.includes(k), k);
+  for (const k of ["const mode = () =>", "MODES.includes(o.mode) ? o.mode : 'diario'", "OrgSettings.set(ORG, { mode: v })", "Cloud.myOpenItems()", "Auth.getRole() !== 'admin'", "!shownMine && !sessGet('mine') && (m === 'login' || st.day !== today)", 'onlyOk: true', "okLabel: 'OK, Li e Entendi'", 'function acknowledge(action, label, list, m)', "'digest_ack'"]) assert.ok(m.includes(k), k);
   for (const k of ['id="digest-mode"', 'MyDigest.setMode(this.value)', 'Resumo de Entrada (Meus Cards)', 'async function myOpenItems()', ".in('assignee', names).neq('status', 'done')"]) assert.ok(html.includes(k), k);
   assert.ok(readFileSync(join(root, 'docs', 'mapa-de-dados.json'), 'utf8').includes('"pmo_digest_v1"'));
 });
@@ -258,4 +258,8 @@ test('cabeçalho mostra a versão do sistema ao lado do avatar e a esconde no ce
 test('bug: item pai obrigatório também no quadro, com aviso claro; recusa do banco não vira falha de rede', () => {
   for (const k of ['Campo obrigatório não preenchido: Item pai', "err.code === 'P0001'", 'A nuvem não aceitou a mudança']) assert.ok(html.includes(k), k);
   assert.ok(!html.includes('Nenhum (opcional)'));
+});
+
+test('bugs do Kanban (14/11): excluir anexo, criar item pai no combo, levar o texto ao trocar para Bug, equipe relida e resumo uma vez por login', () => {
+  for (const k of ['async function removeFile(path)', 'Agile.removeFile(', 'Anexo removido: ', 'Exclua um pelo X na lista', 'function quickItem(title)', '➕ Criar um item novo…', 'id="bug-f-newitem"', 'function parentPicked()', 'BugReport.open(\'\', carry)', 'await Cloud.pullAll()', "sessionStorage.removeItem('pmo_digest_sess_v1')"]) assert.ok(html.includes(k), k);
 });

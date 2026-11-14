@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.88.0 — 2026-11-12
+- Sistemico x Real (itens 1 a 7): leitura da sprint, custo pelas horas, prontidao da linha de base, impedimentos, decisoes, riscos e partes interessadas
+
 ## 2.87.1 — 2026-11-12
 - Sistemico x Real: horas sugeridas viram estimativa (so confirmar vira apontado), painel Estimado x Apontado por card, WBS esperado x real sempre visivel
 

@@ -30,3 +30,11 @@ test('histórico automático: sincroniza sem tocar no que foi lançado à mão e
 test('histórico automático: ligado à tela de estimativas', () => {
   for (const k of ['function syncAuto()', 'id="estimates-auto-note"', 'EstimateAuto.sync(data, EstimateAuto.fromWbs(', 'A WBS já alimenta este histórico sozinha']) assert.ok(html.includes(k), k);
 });
+
+test('fator de correção por pessoa: mediana de real ÷ planejado, mínimo de 3 entregas', () => {
+  const h = (m, p, a) => ({ member: m, planned: p, actual: a });
+  const fx = E.factors([h('Ana', 5, 7), h('Ana', 10, 14), h('Ana', 4, 5), h('Bia', 5, 5), h('Bia', 5, 6)]);
+  assert.equal(fx['ana'].factor, 1.4); assert.equal(fx['ana'].n, 3);
+  assert.equal(fx['bia'], undefined); // só 2 entregas: sem base
+});
+test('fator de correção: ligado à WBS e à tela de estimativas', () => { for (const k of ['EstimateAuto.factors(DB.get(\'estimateHistory\')', 'Fator de correção por pessoa', 'costuma levar <b>']) assert.ok(html.includes(k), k); });
