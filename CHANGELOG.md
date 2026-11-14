@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.94.0 — 2026-11-14
+- Logs: quem alterou em negrito com fundo proprio (pessoa) e neutro (sistema), no card, nas horas e na trilha
+
 ## 2.93.0 — 2026-11-14
 - Kanban so da sprint ativa e card sem sprint nao se movimenta; relatorios de todos ou de projetos escolhidos
 

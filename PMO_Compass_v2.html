@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.94.0'
+  version: '2.94.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2520,8 +2520,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div class="lbl">Autonomia do Time<span class="help-q" data-help="O time ágil responde pelas suas atividades: ao terminar, registra o comentário e as evidências e passa o cartão para a próxima coluna. Aqui o gerente, o Scrum Master, o PO ou o administrador definem quem pode mover os cartões, quais colunas ficam só com a gestão (ex.: Concluído) e quais exigem comentário para entrar (ex.: Em revisão). Quem gere o backlog nunca é limitado. O servidor confere as mesmas regras." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <select class="input" id="ab-move" aria-label="Quem pode mover os cartões" onchange="Agile.setPolicyMove(this.value)" style="margin-bottom:8px"></select>
     <div id="ab-policy" style="margin-bottom:12px"></div>
-    <div class="lbl">Como os itens entram no quadro<span class="help-q" data-help="Scrum (padrão): todo item nasce no Backlog, é estimado e priorizado, e só entra no quadro quando entra numa sprint (Planejar sprint). O quadro mostra apenas a sprint ativa. Kanban contínuo: sem sprints; os itens são criados e importados direto no quadro, e o limite de itens em andamento controla o fluxo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
-    <select class="input" id="ab-entry" aria-label="Como os itens entram no quadro" style="margin-bottom:12px"><option value="scrum">Scrum — pelo Backlog e pela sprint (recomendado)</option><option value="kanban">Kanban contínuo — direto no quadro, sem sprints</option></select>
+    <div class="lbl">Como os itens entram no quadro<span class="help-q" data-help="Scrum (padrão): todo item nasce no Backlog, é estimado e priorizado, e só entra no quadro quando entra numa sprint (Planejar sprint). O quadro mostra apenas a sprint ativa. Kanban contínuo: os itens são criados e importados direto no quadro, e o limite de itens em andamento controla o fluxo. Se o quadro tiver sprints (como o Quadro de tarefas, em que a sprint é só uma janela de tempo), vale a mesma regra: o quadro mostra a sprint ativa e só se movimenta o card que está numa sprint." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <select class="input" id="ab-entry" aria-label="Como os itens entram no quadro" style="margin-bottom:12px"><option value="scrum">Scrum — pelo Backlog e pela sprint (recomendado)</option><option value="kanban">Kanban contínuo — itens criados direto no quadro (a sprint, se houver, é só a janela de tempo)</option></select>
     <div class="lbl">Informações Que Aparecem no Cartão<span class="help-q" data-help="Cartões mais enxutos deixam o quadro mais limpo; o título sempre aparece. Quem decide é a gestão (gerente do projeto, Scrum Master, PO ou administrador). Os dados continuam salvos no item mesmo escondidos." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div id="ab-card" style="display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--t1)"></div>
     <div class="btn-row" style="margin-top:14px;justify-content:space-between">
