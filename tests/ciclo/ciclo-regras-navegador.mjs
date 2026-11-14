@@ -250,6 +250,15 @@ r = await p.evaluate(async () => {
 });
 console.log('   projetos no ciclo: ' + r.n);
 ok(r.n < 2 || (r.caixas === r.n && r.cab0 === 'Projeto' && r.cabTodos0 === 'Projeto'), 'Relatórios: escolher projetos (caixas) ou todos acrescenta a coluna Projeto', JSON.stringify(r));
+// Logs: quem alterou em destaque
+r = await p.evaluate(async () => {
+  const l = DB.get('backlog'); const it = l.find(x => x.id === 'US-A'); it.history = [{ at: '2026-11-14T10:00:00Z', by: 'Ana Souza', field: 'Pontos', from: '1', to: '2' }, { at: '2026-11-14T11:00:00Z', by: 'Claude Code (correção automática)', field: 'Situação', from: 'A fazer', to: 'Em revisão' }]; DB.set('backlog', l);
+  Agile.resetCache && Agile.resetCache(); R.go('kanban'); Agile.openItem('US-A'); await new Promise(x => setTimeout(x, 300));
+  const w = [...document.querySelectorAll('#ai-hist-list .who')].map(e => ({ t: e.textContent, peso: getComputedStyle(e).fontWeight, sys: e.classList.contains('sys'), fundo: getComputedStyle(e).backgroundColor }));
+  document.getElementById('modal-agile-item').classList.add('hidden');
+  return w;
+});
+ok(r.length === 2 && r.some(x => x.t === 'Ana Souza' && !x.sys && Number(x.peso) >= 700 && x.fundo !== 'rgba(0, 0, 0, 0)') && r.some(x => /Claude Code/.test(x.t) && x.sys), 'Logs: quem alterou aparece em negrito com fundo (pessoa) e neutro (sistema)', JSON.stringify(r));
 await p.close();
 
 await b.close(); srv.close();

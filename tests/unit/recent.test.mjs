@@ -268,3 +268,7 @@ test('telas unificadas (14/11): um item de menu por junção e as telas viram ab
   for (const k of ['aria-label="Diagnóstico de documentos"', 'aria-label="Visão do portfólio"', 'aria-label="Diretoria"', 'Diagnóstico de Documentos</button>', "({ xray: 'drpmo', pfkpi: 'pmoview', execview: 'board' })[id] || id"]) assert.ok(html.includes(k), k);
   for (const k of ['<button class="si" data-p="xray"', '<button class="si" data-p="execview"', '<button class="si" data-p="pfkpi"', '<button class="ntab" data-p="execview"']) assert.ok(!html.includes(k), 'não deve mais existir: ' + k);
 });
+
+test('logs: quem alterou aparece em negrito com fundo próprio (pessoa) ou neutro e itálico (sistema), no card, nas horas e na trilha', () => {
+  for (const k of ['.who{font-weight:700', '.who.sys{', 'function histRow(h)', 'const whoHtml = n =>', '<span class="who${/^(claude code|sistema)/i.test(h.by', '<div class="tl-by"><span class="who']) assert.ok(html.includes(k), k);
+});

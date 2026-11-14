@@ -246,3 +246,6 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 
 ## Relatórios de vários projetos (pedido do dono, 14/11/2026)
 - Na Central de Relatórios o escopo tem **Só o projeto aberto**, **Todos os projetos e quadros** e **Escolher projetos…** (caixas de marcação, Marcar todos, Limpar). Com mais de um projeto o relatório ganha a coluna **Projeto** (e o agrupamento por projeto) e o PDF lista os projetos. A pessoa só vê o que o acesso dela permite (a nuvem entrega só os projetos dela).
+
+## Quem alterou, em destaque nos logs (pedido do dono, 14/11/2026)
+- No histórico do card, no histórico do lançamento de horas e na trilha do projeto o **nome de quem alterou** aparece em **negrito com fundo próprio** (`.who`); ações do sistema e da correção automática ("Claude Code…", "Sistema") aparecem em itálico com fundo neutro (`.who.sys`), para separar de pessoa de relance. A pesquisa do histórico continua achando pelo nome.
