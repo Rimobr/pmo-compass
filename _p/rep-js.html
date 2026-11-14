@@ -1,0 +1,204 @@
+<!-- ■ MODULE: pages/reports-js ─ Lógica da Central de Relatórios e do Construtor (Configurações). Modelos ficam em org_settings (chave reportModels): o administrador grava, todos leem; o motor confere cada campo com a permissão de quem pede. -->
+<script data-module="pages/reports-js">
+const Reports = (() => {
+  const MODELS_KEY = 'reportModels', MAX_MODELS = 100;
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const $ = id => document.getElementById(id);
+  const can = p => (typeof Auth === 'undefined') ? true : Auth.can(p);
+  const today = () => Clock.iso(Clock.today()).slice(0, 10);
+  const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const models = () => { const l = OrgSettings.get(MODELS_KEY); return Array.isArray(l) ? l : []; };
+  const visibleModels = () => models().filter(m => m && m.def && (m.compartilhar === 'todos' || can('manage_settings')));
+  // Relatórios que já existem nas telas (continuam lá): atalhos
+  const SCREENS = [['report', 'file-analytics', 'Relatório Executivo (leitura rápida e PDF)'], ['pmoview', 'binoculars', 'Visão do PMO · Estimado × Real'], ['pfkpi', 'chart-donut-3', 'Indicadores do Portfólio'], ['board', 'presentation-analytics', 'Painel da Diretoria'], ['budget', 'coin', 'Orçamento e Custos'], ['hours', 'clock', 'Horas (exportar Excel)'], ['risks', 'shield-exclamation', 'Riscos (matriz e exportação)'], ['statusmsg', 'message-report', 'Mensagem de Status']];
+  let sel = null, scope = 'ativo', per = { inicio: '', fim: '' }, last = null, lastDef = null;
+
+  function projects() {
+    let all = []; try { all = DB.listProjects() || []; } catch(e) { all = []; }
+    const act = DB.getActiveProjectId();
+    if(scope === 'todos') { const l = all.filter(p => p.methodology !== 'quadro' || p.id === act); return l.length ? l : [{ id: act, name: 'Projeto atual' }]; }
+    const p = all.find(x => x.id === act); return [{ id: act, name: p ? p.name : 'Projeto atual' }];
+  }
+  function ctx() {
+    return { projects: projects(), get: (pid, t) => DB.getForProject(pid, t) || [], can, today: today(), me: (typeof Auth !== 'undefined' && Auth.getName()) || '', load: m => (typeof Burnout !== 'undefined' ? Burnout.effectivePct(m) : null) };
+  }
+  function defOf(s) {
+    if(!s) return null;
+    if(s.type === 'padrao') { const p = ReportEngine.PADROES.find(x => x.id === s.id); return p ? ReportEngine.usable(p, can) : null; }
+    const m = models().find(x => x.id === s.id); return m ? Object.assign({ nome: m.nome }, m.def) : null;
+  }
+  function nameOf(s) { if(!s) return ''; if(s.type === 'padrao') { const p = ReportEngine.PADROES.find(x => x.id === s.id); return p ? p.nome : ''; } const m = models().find(x => x.id === s.id); return m ? m.nome : ''; }
+  const hasPeriod = d => !!(d && d.periodoCampo);
+
+  function renderList() {
+    const root = $('rpt-list'); if(!root) return;
+    const groups = {}; ReportEngine.PADROES.forEach(p => { if(ReportEngine.usable(p, can)) (groups[p.grupo] = groups[p.grupo] || []).push(p); });
+    const item = (type, id, nome, sub) => '<button class="rpt-item' + (sel && sel.type === type && sel.id === id ? ' on' : '') + '" onclick="Reports.open(\'' + type + '\',\'' + esc(id) + '\')">' + esc(nome) + (sub ? '<span class="set-sub">' + esc(sub) + '</span>' : '') + '</button>';
+    const openFor = g => sel && sel.type === 'padrao' && groups[g].some(p => p.id === sel.id);
+    let html = Object.keys(groups).map((g, i) => '<details' + (openFor(g) || (!sel && i === 0) ? ' open' : '') + '><summary>' + esc(g) + '</summary>' + groups[g].map(p => item('padrao', p.id, p.nome)).join('') + '</details>').join('');
+    const mm = visibleModels();
+    html += '<details' + (sel && sel.type === 'modelo' ? ' open' : '') + '><summary>Meus Modelos (do Construtor)</summary>' + (mm.length ? mm.map(m => item('modelo', m.id, m.nome, (ReportEngine.ENTITIES[m.def.ent] || {}).l || '')).join('') : '<div class="set-sub" style="padding:8px 12px;border-top:1px solid var(--b1)">Nenhum modelo ainda. O administrador cria em Configurações › Relatórios.</div>') + '</details>';
+    const sc = SCREENS.filter(s => typeof Auth === 'undefined' || Auth.canOpen(s[0]));
+    html += '<details><summary>Já nas Telas</summary>' + sc.map(s => '<button class="rpt-item" onclick="R.go(\'' + s[0] + '\')"><i class="ti ti-' + s[1] + '"></i> ' + esc(s[2]) + '</button>').join('') + '</details>';
+    root.innerHTML = html;
+  }
+  function renderCtl() {
+    const box = $('rpt-ctl'), out = $('rpt-out'); if(!box) return;
+    const d = defOf(sel);
+    if(!d) { box.innerHTML = '<div class="rk-empty">Escolha um relatório na lista ao lado.</div>'; if(out) out.innerHTML = ''; return; }
+    const desc = sel.type === 'padrao' ? ((ReportEngine.PADROES.find(x => x.id === sel.id) || {}).desc || '') : 'Modelo criado no Construtor de Relatórios.';
+    const canAll = (() => { try { return (DB.listProjects() || []).filter(p => p.methodology !== 'quadro').length > 1; } catch(e) { return false; } })();
+    box.innerHTML = '<div class="lbl"><i class="ti ti-file-analytics"></i>' + esc(nameOf(sel)) + '</div><p style="font-size:12.5px;color:var(--t2);line-height:1.6">' + esc(desc) + '</p><div class="rpt-ctl">'
+      + (canAll ? '<div><label for="rpt-scope">Projetos</label><select class="input" id="rpt-scope" onchange="Reports.setScope(this.value)"><option value="ativo"' + (scope === 'ativo' ? ' selected' : '') + '>Só o projeto aberto</option><option value="todos"' + (scope === 'todos' ? ' selected' : '') + '>Todos os projetos</option></select></div>' : '')
+      + (hasPeriod(d) ? '<div><label for="rpt-ini">De</label><input class="input" type="date" id="rpt-ini" value="' + esc(per.inicio) + '" onchange="Reports.setPer()"></div><div><label for="rpt-fim">Até</label><input class="input" type="date" id="rpt-fim" value="' + esc(per.fim) + '" onchange="Reports.setPer()"></div><div class="btn-row"><button class="btn btn-sm" onclick="Reports.quick(7)">7 dias</button><button class="btn btn-sm" onclick="Reports.quick(30)">30 dias</button><button class="btn btn-sm" onclick="Reports.quick(90)">90 dias</button></div>' : '')
+      + '<div class="btn-row"><button class="btn btn-sm btn-acc" onclick="Reports.run()"><i class="ti ti-player-play"></i>Gerar</button></div></div>';
+    if(out && !last) out.innerHTML = '<div class="rk-empty">Toque em Gerar para ver o relatório.</div>';
+  }
+  function tableHtml(res) {
+    const tot = ReportEngine.totals(res), head = res.colunas.map(c => '<th scope="col"' + (ReportEngine.isNum(c.type) ? ' class="num"' : '') + '>' + esc(c.label) + '</th>').join('');
+    const body = res.linhas.slice(0, 500).map(l => '<tr>' + l.map((v, i) => '<td' + (ReportEngine.isNum(res.colunas[i].type) ? ' class="num"' : '') + '>' + esc(ReportEngine.fmt(v, res.colunas[i].type)) + '</td>').join('') + '</tr>').join('');
+    const foot = tot ? '<tr class="rpt-tot">' + tot.map((v, i) => '<td' + (ReportEngine.isNum(res.colunas[i].type) ? ' class="num"' : '') + '>' + (v == null ? '' : esc(typeof v === 'number' ? ReportEngine.fmt(v, res.colunas[i].type) : v)) + '</td>').join('') + '</tr>' : '';
+    return '<div style="overflow-x:auto"><table class="hr-tbl"><thead><tr>' + head + '</tr></thead><tbody>' + body + foot + '</tbody></table></div>'
+      + '<div class="set-sub" style="margin-top:6px">' + res.linhas.length + ' linha(s)' + (res.linhas.length > 500 ? ' (a tela mostra as 500 primeiras; a exportação leva todas)' : '') + (res.truncado ? ' · mostrando só os primeiros resultados (sem linha de total)' : '') + ' · de ' + res.total + ' registro(s) lidos.</div>';
+  }
+  function showResult(res, def, target) {
+    const box = $(target || 'rpt-out'); if(!box) return;
+    if(!res.linhas.length) { box.innerHTML = '<div class="rk-empty">Nenhum registro neste relatório com os filtros e o período escolhidos.</div>'; return; }
+    box.innerHTML = '<div class="card">' + tableHtml(res) + '<div class="btn-row" style="margin-top:10px"><button class="btn btn-sm" onclick="Reports.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Excel</button><button class="btn btn-sm" onclick="Reports.exportCsv()"><i class="ti ti-download"></i>CSV</button><button class="btn btn-sm" onclick="Reports.pdf()"><i class="ti ti-printer"></i>Salvar em PDF / Imprimir</button></div></div>';
+  }
+  function exec(def, target) {
+    const d = Object.assign({}, def); if(hasPeriod(d) && target !== 'rpb-out') { d.inicio = per.inicio; d.fim = per.fim; }
+    let res; try { res = ReportEngine.run(d, ctx()); } catch(e) { const box = $(target || 'rpt-out'); if(box) box.innerHTML = '<div class="rk-empty">' + esc(e.message || 'Não foi possível gerar o relatório.') + '</div>'; last = null; return null; }
+    last = res; lastDef = d; showResult(res, d, target); return res;
+  }
+  function run() { const d = defOf(sel); if(!d) return; if(hasPeriod(d) && (!per.inicio || !per.fim)) { quick(30, true); } exec(d, 'rpt-out'); }
+  function open(type, id) { sel = { type, id }; last = null; if(!per.inicio) quick(30, true); renderList(); renderCtl(); }
+  function quick(n, silent) { per.fim = today(); per.inicio = addDays(per.fim, -(n - 1)); if(!silent) { renderCtl(); } }
+  function setPer() { per.inicio = ($('rpt-ini') || {}).value || ''; per.fim = ($('rpt-fim') || {}).value || ''; }
+  function setScope(v) { scope = v === 'todos' ? 'todos' : 'ativo'; last = null; renderCtl(); }
+  function render() { renderList(); renderCtl(); if($('rpb-root')) builderRender(); }
+
+  // ── saída: Excel, CSV e PDF (a mesma tabela que está na tela, todas as linhas) ──
+  function sheetRows() {
+    const res = last; if(!res) return null;
+    const rows = [res.colunas.map(c => c.label)].concat(res.linhas.map(l => l.map((v, i) => ReportEngine.fmt(v, res.colunas[i].type, true))));
+    const tot = ReportEngine.totals(res); if(tot) rows.push(tot.map((v, i) => v == null ? '' : (typeof v === 'number' ? v : v)));
+    return rows;
+  }
+  const stampName = () => (nameOf(sel) || (lastDef && lastDef.nome) || 'relatorio').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'relatorio';
+  function exportXlsx() { const rows = sheetRows(); if(!rows) return; XlsxExport.download(stampName() + '-' + XlsxExport.stamp() + '.xlsx', [{ name: (nameOf(sel) || 'Relatório').slice(0, 31), rows }]); }
+  function exportCsv() {
+    const rows = sheetRows(); if(!rows) return;
+    const q = v => { let s = String(v == null ? '' : v); if(typeof v === 'number') s = String(v).replace('.', ','); if(/^[=+\-@\t\r]/.test(s) && typeof v !== 'number') s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
+    const blob = new Blob(['﻿' + rows.map(l => l.map(q).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = stampName() + '-' + today() + '.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    T.show('📥 CSV exportado.');
+  }
+  function pdf() {
+    if(!last) return;
+    const old = $('rpt-print-frame'); if(old) old.remove();
+    const per2 = (lastDef && lastDef.inicio) ? ' · período de ' + ReportEngine.fmt(lastDef.inicio, 'data') + ' a ' + ReportEngine.fmt(lastDef.fim, 'data') : '';
+    const proj = projects().map(p => p.name).join(', '), tot = ReportEngine.totals(last);
+    const th = last.colunas.map(c => '<th' + (ReportEngine.isNum(c.type) ? ' class="n"' : '') + '>' + esc(c.label) + '</th>').join('');
+    const tr = last.linhas.map(l => '<tr>' + l.map((v, i) => '<td' + (ReportEngine.isNum(last.colunas[i].type) ? ' class="n"' : '') + '>' + esc(ReportEngine.fmt(v, last.colunas[i].type)) + '</td>').join('') + '</tr>').join('');
+    const tf = tot ? '<tr class="t">' + tot.map((v, i) => '<td' + (ReportEngine.isNum(last.colunas[i].type) ? ' class="n"' : '') + '>' + (v == null ? '' : esc(typeof v === 'number' ? ReportEngine.fmt(v, last.colunas[i].type) : v)) + '</td>').join('') + '</tr>' : '';
+    const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>' + esc(nameOf(sel) || 'Relatório') + '</title><style>@page{size:A4;margin:14mm}body{font:12px/1.45 Arial,sans-serif;color:#111;background:#fff}h1{font-size:18px;margin:0 0 2px}.s{color:#555;font-size:11px;margin-bottom:12px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #bbb;padding:4px 6px;text-align:left;vertical-align:top}th{background:#eee}.n{text-align:right}tr{page-break-inside:avoid}.t td{font-weight:700;border-top:2px solid #333}.f{margin-top:10px;color:#666;font-size:10px}</style></head><body><h1>' + esc(nameOf(sel) || 'Relatório') + '</h1><div class="s">' + esc(proj) + esc(per2) + ' · gerado em ' + esc(ReportEngine.fmt(today(), 'data')) + ' por ' + esc((typeof Auth !== 'undefined' && Auth.getName()) || '') + '</div><table><thead><tr>' + th + '</tr></thead><tbody>' + tr + tf + '</tbody></table><div class="f">' + last.linhas.length + ' linha(s). Números calculados pelo sistema a partir dos dados do projeto.</div></body></html>';
+    const fr = document.createElement('iframe'); fr.id = 'rpt-print-frame'; fr.title = 'Relatório para impressão'; fr.setAttribute('aria-hidden', 'true'); fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+    fr.onload = () => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch(e) { T.show('⚠️ Não consegui abrir a impressão.'); } };
+    fr.srcdoc = html; document.body.appendChild(fr);
+  }
+
+  // ═══ Construtor (Configurações › Relatórios) ═══
+  let B = null, buildMsg = '';
+  const blank = () => ({ editId: '', nome: '', compartilhar: 'todos', def: { ent: 'cards', campos: [], grupos: [], medidas: [], filtros: [], ordem: '', dir: 'asc', top: 0, periodoCampo: '' }, modo: 'lista' });
+  const cat = () => ReportEngine.catalog(can);
+  function builderRender() {
+    const root = $('rpb-root'); if(!root) return;
+    if(!B) B = blank();
+    const c = cat(), e = c[B.def.ent] || c[Object.keys(c)[0]]; if(e && !c[B.def.ent]) B.def.ent = e.id;
+    if(!e) { root.innerHTML = '<div class="rk-empty">Sem permissão para nenhuma fonte de dados.</div>'; return; }
+    const fOpts = (types, sel2, blankTxt) => '<option value="">' + (blankTxt || 'Escolha…') + '</option>' + e.fields.filter(f => !types || types.includes(f.t)).map(f => '<option value="' + esc(f.k) + '"' + (f.k === sel2 ? ' selected' : '') + '>' + esc(f.l) + '</option>').join('');
+    const d = B.def, agr = B.modo === 'agrupar';
+    const groups = {}; e.fields.forEach(f => { (groups[f.g] = groups[f.g] || []).push(f); });
+    const colsPicked = d.campos.map((k, i) => { const f = e.fields.find(x => x.k === k); return f ? '<span class="rpt-chip">' + esc(f.l) + '<button title="Mover para antes" aria-label="Mover ' + esc(f.l) + ' para antes" onclick="Reports.bMove(' + i + ',-1)">↑</button><button title="Mover para depois" aria-label="Mover ' + esc(f.l) + ' para depois" onclick="Reports.bMove(' + i + ',1)">↓</button><button title="Tirar" aria-label="Tirar ' + esc(f.l) + '" onclick="Reports.bToggle(\'' + esc(k) + '\')">✕</button></span>' : ''; }).join('');
+    const gSel = [0, 1, 2].map(i => '<select class="input" aria-label="Agrupar por ' + (i + 1) + '" onchange="Reports.bGroup(' + i + ',this.value)">' + fOpts(['texto', 'data'], d.grupos[i], i ? 'Depois por…' : 'Agrupar por…') + '</select>').join('');
+    const mRows = d.medidas.map((m, i) => '<div class="rpt-row"><select class="input" aria-label="Cálculo ' + (i + 1) + '" onchange="Reports.bMeasure(' + i + ',\'fn\',this.value)">' + Object.keys(ReportEngine.FN).map(k => '<option value="' + k + '"' + (k === m.fn ? ' selected' : '') + '>' + ReportEngine.FN[k] + '</option>').join('') + '</select><span>de</span><select class="input" aria-label="Campo do cálculo ' + (i + 1) + '" onchange="Reports.bMeasure(' + i + ',\'campo\',this.value)"><option value="*"' + (m.campo === '*' ? ' selected' : '') + '>* (quantidade de registros)</option>' + e.fields.filter(f => ReportEngine.isNum(f.t) || m.fn === 'count').map(f => '<option value="' + esc(f.k) + '"' + (f.k === m.campo ? ' selected' : '') + '>' + esc(f.l) + '</option>').join('') + '</select><button class="btn btn-sm" onclick="Reports.bMeasureDel(' + i + ')" aria-label="Tirar cálculo ' + (i + 1) + '"><i class="ti ti-x"></i></button></div>').join('');
+    const fRows = d.filtros.map((x, i) => '<div class="rpt-row"><select class="input" aria-label="Campo do filtro ' + (i + 1) + '" onchange="Reports.bFilter(' + i + ',\'campo\',this.value)">' + fOpts(null, x.campo) + '</select><select class="input" aria-label="Condição do filtro ' + (i + 1) + '" onchange="Reports.bFilter(' + i + ',\'op\',this.value)">' + Object.keys(ReportEngine.OPS).map(k => '<option value="' + k + '"' + (k === x.op ? ' selected' : '') + '>' + ReportEngine.OPS[k] + '</option>').join('') + '</select><input class="input" aria-label="Valor do filtro ' + (i + 1) + '" value="' + esc(x.valor) + '" oninput="Reports.bFilter(' + i + ',\'valor\',this.value,true)"><button class="btn btn-sm" onclick="Reports.bFilterDel(' + i + ')" aria-label="Tirar filtro ' + (i + 1) + '"><i class="ti ti-x"></i></button></div>').join('');
+    const ordOpts = (agr ? ['<option value="">Por agrupamento</option>'].concat(d.medidas.map(m => '<option value="' + esc(m.fn + ':' + m.campo) + '"' + (d.ordem === m.fn + ':' + m.campo ? ' selected' : '') + '>' + esc(ReportEngine.FN[m.fn] + ' de ' + (m.campo === '*' ? 'registros' : ((e.fields.find(f => f.k === m.campo) || {}).l || m.campo))) + '</option>')).concat(d.grupos.filter(Boolean).map(k => '<option value="' + esc(k) + '"' + (d.ordem === k ? ' selected' : '') + '>' + esc((e.fields.find(f => f.k === k) || {}).l || k) + '</option>')).join('') : '<option value="">Sem ordem</option>' + d.campos.map(k => '<option value="' + esc(k) + '"' + (d.ordem === k ? ' selected' : '') + '>' + esc((e.fields.find(f => f.k === k) || {}).l || k) + '</option>').join(''));
+    const saved = models().map(m => '<tr><td>' + esc(m.nome) + '</td><td>' + esc((ReportEngine.ENTITIES[m.def.ent] || {}).l || m.def.ent) + '</td><td>' + (m.compartilhar === 'todos' ? 'Todos que abrem Relatórios' : 'Só administradores') + '</td><td><div class="btn-row"><button class="btn btn-sm" onclick="Reports.bEdit(\'' + esc(m.id) + '\')">Editar</button><button class="btn btn-sm" onclick="Reports.bCode(\'' + esc(m.id) + '\')">Código</button><button class="btn btn-sm btn-red" onclick="Reports.bDelete(\'' + esc(m.id) + '\')">Remover</button></div></td></tr>').join('');
+    root.innerHTML = '<div class="rpt-bld">'
+      + '<div class="card"><div class="lbl"><i class="ti ti-tools"></i>' + (B.editId ? 'Editando o modelo' : 'Novo modelo de relatório') + '</div>'
+      + '<div class="rpt-row"><div><label class="field-label" for="rpb-nome">Nome do relatório</label><input class="input" id="rpb-nome" maxlength="80" value="' + esc(B.nome) + '" oninput="Reports.bName(this.value)" placeholder="Ex.: Horas por pessoa no mês"></div>'
+      + '<div><label class="field-label" for="rpb-ent">O que listar</label><select class="input" id="rpb-ent" onchange="Reports.bEnt(this.value)">' + Object.keys(c).map(k => '<option value="' + k + '"' + (k === d.ent ? ' selected' : '') + '>' + esc(c[k].l) + '</option>').join('') + '</select></div>'
+      + '<div><label class="field-label" for="rpb-modo">Como mostrar</label><select class="input" id="rpb-modo" onchange="Reports.bModo(this.value)"><option value="lista"' + (!agr ? ' selected' : '') + '>Lista linha a linha</option><option value="agrupar"' + (agr ? ' selected' : '') + '>Agrupar e somar</option></select></div></div>'
+      + (agr ? '<div class="field-label">Agrupar (até 3)</div><div class="rpt-row">' + gSel + '</div><div class="field-label">Cálculos (até 10)</div>' + mRows + '<button class="btn btn-sm" onclick="Reports.bMeasureAdd()"><i class="ti ti-plus"></i>Cálculo</button>'
+        : '<div class="field-label">Colunas (clique para incluir; use ↑ ↓ para a ordem)</div>' + Object.keys(groups).map(g => '<div class="rpt-row"><b style="font-size:11.5px;color:var(--t2);min-width:110px">' + esc(g) + '</b>' + groups[g].map(f => '<label style="font-size:12.5px;display:inline-flex;gap:4px;align-items:center"><input type="checkbox" ' + (d.campos.includes(f.k) ? 'checked ' : '') + 'onchange="Reports.bToggle(\'' + esc(f.k) + '\')">' + esc(f.l) + '</label>').join('') + '</div>').join('') + '<div class="rpt-row" aria-label="Colunas escolhidas">' + (colsPicked || '<span class="set-sub">Nenhuma coluna escolhida.</span>') + '</div>')
+      + '<div class="field-label" style="margin-top:8px">Filtros (até 5)</div>' + fRows + '<button class="btn btn-sm" onclick="Reports.bFilterAdd()"><i class="ti ti-plus"></i>Filtro</button>'
+      + '<div class="rpt-row" style="margin-top:10px"><div><label class="field-label" for="rpb-per">Período por</label><select class="input" id="rpb-per" onchange="Reports.bPer(this.value)">' + fOpts(['data'], d.periodoCampo, 'Sem período') + '</select></div>'
+      + '<div><label class="field-label" for="rpb-ord">Ordenar por</label><select class="input" id="rpb-ord" onchange="Reports.bOrd(this.value)">' + ordOpts + '</select></div>'
+      + '<div><label class="field-label" for="rpb-dir">Sentido</label><select class="input" id="rpb-dir" onchange="Reports.bDir(this.value)"><option value="asc"' + (d.dir !== 'desc' ? ' selected' : '') + '>Crescente</option><option value="desc"' + (d.dir === 'desc' ? ' selected' : '') + '>Decrescente</option></select></div>'
+      + (agr ? '<div><label class="field-label" for="rpb-top">Mostrar só os primeiros</label><input class="input" id="rpb-top" type="number" min="0" max="20000" style="width:110px" value="' + (d.top || '') + '" oninput="Reports.bTop(this.value)" placeholder="todos"></div>' : '') + '</div>'
+      + '<div class="rpt-row"><div><label class="field-label" for="rpb-comp">Quem abre na Central</label><select class="input" id="rpb-comp" onchange="Reports.bShare(this.value)"><option value="todos"' + (B.compartilhar === 'todos' ? ' selected' : '') + '>Todos que abrem Relatórios (cada um vê só os campos que o perfil permite)</option><option value="admin"' + (B.compartilhar === 'admin' ? ' selected' : '') + '>Só administradores</option></select></div></div>'
+      + '<div class="btn-row"><button class="btn btn-sm" onclick="Reports.bPreview()"><i class="ti ti-eye"></i>Prévia</button><button class="btn btn-sm btn-acc" onclick="Reports.bSave()"><i class="ti ti-device-floppy"></i>Salvar Modelo</button><button class="btn btn-sm" onclick="Reports.bNew()">Novo</button><button class="btn btn-sm" onclick="Reports.bImport()"><i class="ti ti-file-import"></i>Importar Código</button></div>'
+      + '<div id="rpb-msg" class="set-sub" role="status" style="margin-top:6px">' + esc(buildMsg) + '</div><div id="rpb-out" style="margin-top:8px"></div></div>'
+      + '<div class="card"><div class="lbl"><i class="ti ti-list-details"></i>Modelos salvos (' + models().length + ' de ' + MAX_MODELS + ')</div>' + (saved ? '<div style="overflow-x:auto"><table class="hr-tbl"><thead><tr><th scope="col">Nome</th><th scope="col">O que lista</th><th scope="col">Quem abre</th><th scope="col">Ações</th></tr></thead><tbody>' + saved + '</tbody></table></div>' : '<div class="rk-empty">Nenhum modelo salvo. Monte um acima e toque em Salvar Modelo: ele aparece na Central de Relatórios.</div>') + '</div></div>';
+  }
+  const bd = () => { B = B || blank(); return B.def; };
+  const msg = t => { buildMsg = t; const m = $('rpb-msg'); if(m) m.textContent = t; };
+  function bName(v) { (B = B || blank()).nome = v; }
+  function bEnt(v) { const s = blank(); s.nome = B.nome; s.compartilhar = B.compartilhar; s.editId = B.editId; s.def.ent = v; B = s; builderRender(); }
+  function bModo(v) { B.modo = v === 'agrupar' ? 'agrupar' : 'lista'; const d = bd(); d.ordem = ''; if(B.modo === 'agrupar') { d.campos = []; if(!d.medidas.length) d.medidas = [{ campo: '*', fn: 'count' }]; } else { d.grupos = []; d.medidas = []; } builderRender(); }
+  function bToggle(k) { const d = bd(), i = d.campos.indexOf(k); if(i >= 0) d.campos.splice(i, 1); else d.campos.push(k); builderRender(); }
+  function bMove(i, s) { const d = bd(), j = i + s; if(j < 0 || j >= d.campos.length) return; const t = d.campos[i]; d.campos[i] = d.campos[j]; d.campos[j] = t; builderRender(); }
+  function bGroup(i, v) { const d = bd(); const g = d.grupos.slice(); g[i] = v; d.grupos = g.filter(Boolean).filter((x, ix, a) => a.indexOf(x) === ix); builderRender(); }
+  function bMeasure(i, k, v) { const m = bd().medidas[i]; if(!m) return; m[k] = v; if(k === 'fn' && v !== 'count' && m.campo === '*') m.campo = ''; builderRender(); }
+  function bMeasureAdd() { const d = bd(); if(d.medidas.length >= 10) return msg('No máximo 10 cálculos.'); d.medidas.push({ campo: '*', fn: 'count' }); builderRender(); }
+  function bMeasureDel(i) { bd().medidas.splice(i, 1); builderRender(); }
+  function bFilterAdd() { const d = bd(); if(d.filtros.length >= 5) return msg('No máximo 5 filtros.'); d.filtros.push({ campo: '', op: 'igual', valor: '' }); builderRender(); }
+  function bFilter(i, k, v, noRender) { const f = bd().filtros[i]; if(!f) return; f[k] = v; if(!noRender) builderRender(); }
+  function bFilterDel(i) { bd().filtros.splice(i, 1); builderRender(); }
+  function bPer(v) { bd().periodoCampo = v; }
+  function bOrd(v) { bd().ordem = v; }
+  function bDir(v) { bd().dir = v === 'desc' ? 'desc' : 'asc'; }
+  function bTop(v) { bd().top = Math.max(0, Math.min(20000, parseInt(v, 10) || 0)); }
+  function bShare(v) { B.compartilhar = v === 'admin' ? 'admin' : 'todos'; }
+  function cleanDef() { const d = JSON.parse(JSON.stringify(bd())); d.filtros = d.filtros.filter(f => f.campo); if(B.modo === 'lista') { d.grupos = []; d.medidas = []; } else d.campos = []; if(d.ordem && B.modo === 'lista' && !d.campos.includes(d.ordem)) d.ordem = ''; return d; }
+  function bPreview() {
+    const d = cleanDef(), bad = ReportEngine.validate(d, can); if(bad) { msg(bad); const o = $('rpb-out'); if(o) o.innerHTML = ''; return; }
+    msg('');
+    const t = today(); if(d.periodoCampo) { d.inicio = addDays(t, -29); d.fim = t; msg('Prévia com os últimos 30 dias (na Central o período é escolhido por quem gera).'); }
+    const saveScope = scope; scope = 'ativo'; const keep = last, keepDef = lastDef;
+    let res = null; try { res = ReportEngine.run(d, ctx()); } catch(e) { msg(e.message); }
+    scope = saveScope; last = keep; lastDef = keepDef;
+    const o = $('rpb-out'); if(o && res) o.innerHTML = res.linhas.length ? tableHtml(Object.assign({}, res, { linhas: res.linhas.slice(0, 50) })) : '<div class="rk-empty">Sem registros com esses filtros neste projeto.</div>';
+  }
+  function bSave() {
+    if(!can('manage_settings')) return T.show('🔒 Só o administrador salva modelos de relatório.');
+    const nome = String(B.nome || '').trim(); if(nome.length < 3) return msg('Dê um nome ao relatório (mínimo 3 letras).');
+    const d = cleanDef(), bad = ReportEngine.validate(d, can); if(bad) return msg(bad);
+    const list = models().slice(), dup = list.find(m => m.nome.toLowerCase() === nome.toLowerCase() && m.id !== B.editId); if(dup) return msg('Já existe um modelo com esse nome.');
+    const row = { id: B.editId || 'rm' + Date.now().toString(36), nome, compartilhar: B.compartilhar, def: Object.assign({}, d, { nome }), by: (typeof Auth !== 'undefined' && Auth.getName()) || '', at: new Date().toISOString() };
+    const i = list.findIndex(m => m.id === row.id);
+    if(i >= 0) list[i] = row; else { if(list.length >= MAX_MODELS) return msg('Limite de ' + MAX_MODELS + ' modelos.'); list.push(row); }
+    OrgSettings.set(MODELS_KEY, list); B.editId = row.id; msg('✅ Modelo salvo. Ele já aparece na Central de Relatórios.'); T.show('✅ Modelo "' + nome + '" salvo.'); builderRender(); renderList();
+  }
+  function bNew() { B = blank(); buildMsg = ''; builderRender(); }
+  function bEdit(id) { const m = models().find(x => x.id === id); if(!m) return; const d = JSON.parse(JSON.stringify(m.def)); delete d.nome; B = { editId: m.id, nome: m.nome, compartilhar: m.compartilhar || 'todos', def: Object.assign({ ent: 'cards', campos: [], grupos: [], medidas: [], filtros: [], ordem: '', dir: 'asc', top: 0, periodoCampo: '' }, d), modo: (d.grupos && d.grupos.length) ? 'agrupar' : 'lista' }; buildMsg = ''; builderRender(); const n = $('rpb-nome'); if(n) n.scrollIntoView({ block: 'center' }); }
+  async function bDelete(id) {
+    if(!can('manage_settings')) return T.show('🔒 Só o administrador remove modelos.');
+    const m = models().find(x => x.id === id); if(!m) return;
+    const ok = await Dlg.ask({ title: 'Remover o modelo?', body: '"' + m.nome + '" deixa de aparecer na Central de Relatórios. Os dados do projeto não mudam.', okLabel: 'Remover Modelo', danger: true }); if(!ok) return;
+    OrgSettings.set(MODELS_KEY, models().filter(x => x.id !== id)); if(B && B.editId === id) B = blank(); T.show('Modelo removido.'); builderRender(); renderList();
+  }
+  function bCode(id) { const m = models().find(x => x.id === id); if(!m) return; const code = ReportEngine.toCode(Object.assign({ nome: m.nome }, m.def)); const done = () => T.show('📋 Código copiado: cole em Importar Código, em outra organização.', 5000); if(navigator.clipboard) navigator.clipboard.writeText(code).then(done, () => msg(code)); else msg(code); }
+  function bImport() {
+    const code = (prompt('Cole o código do modelo (ele leva só a definição, nunca dados):') || '').trim(); if(!code) return;
+    const d = ReportEngine.fromCode(code); if(!d) return msg('Código inválido.');
+    const bad = ReportEngine.validate(d, can); if(bad) return msg('Este modelo não vale aqui: ' + bad);
+    const nome = d.nome; delete d.nome; B = { editId: '', nome, compartilhar: 'todos', def: d, modo: (d.grupos && d.grupos.length) ? 'agrupar' : 'lista' }; msg('Modelo importado: confira e toque em Salvar Modelo.'); builderRender();
+  }
+  function openBuilder() { R.go('settings'); SettingsTabs.show('relat'); }
+  return { render, open, run, quick, setPer, setScope, exportXlsx, exportCsv, pdf, openBuilder, builderRender, bName, bEnt, bModo, bToggle, bMove, bGroup, bMeasure, bMeasureAdd, bMeasureDel, bFilterAdd, bFilter, bFilterDel, bPer, bOrd, bDir, bTop, bShare, bPreview, bSave, bNew, bEdit, bDelete, bCode, bImport };
+})();
+</script>
+

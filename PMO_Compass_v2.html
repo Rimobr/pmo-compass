@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.91.0'
+  version: '2.92.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1090,6 +1090,13 @@ body.icons-failed i[data-fb]::before{
     </div>
   </div>
 
+  <div class="sb-group" id="sbg-relatorios">
+    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-relatorios')" title="Relatórios padrão, modelos do Construtor e atalhos dos relatórios das telas"><i class="ti ti-file-analytics sb-gico"></i>Relatórios<i class="ti ti-chevron-right sb-gchev"></i></button>
+    <div class="sb-group-body">
+      <button class="si" data-p="reports" onclick="R.go('reports')"><i class="ti ti-file-analytics"></i>Central de Relatórios</button>
+    </div>
+  </div>
+
   <div class="sb-group" id="sbg-indicadores">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-indicadores')"><i class="ti ti-chart-donut-3 sb-gico"></i>Portfólio e Relatórios<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
@@ -1707,6 +1714,7 @@ body.icons-failed i[data-fb]::before{
     <button class="settings-tab on" id="stab-pmo" onclick="SettingsTabs.show('pmo')"><i class="ti ti-route"></i>Projeto &amp; organização</button>
     <button class="settings-tab" id="stab-acesso" onclick="SettingsTabs.show('acesso')"><i class="ti ti-users"></i>Pessoas &amp; acesso</button>
     <button class="settings-tab" id="stab-ia" onclick="SettingsTabs.show('ia')"><i class="ti ti-cpu"></i>Inteligência Artificial</button>
+    <button class="settings-tab" id="stab-relat" onclick="SettingsTabs.show('relat')"><i class="ti ti-tools"></i>Relatórios</button>
     <button class="settings-tab" id="stab-comunic" onclick="SettingsTabs.show('comunic')"><i class="ti ti-bell"></i>Comunicação</button>
     <button class="settings-tab" id="stab-dados" onclick="SettingsTabs.show('dados')"><i class="ti ti-cloud"></i>Nuvem &amp; dados</button>
   </div>
@@ -1851,6 +1859,15 @@ body.icons-failed i[data-fb]::before{
     <div class="set-sub"><i class="ti ti-shield-lock"></i> <b>Cuidados.</b> Precisa do Node instalado e do token de acesso do Supabase no arquivo <code>.env.deploy</code> (<code>SUPABASE_ACCESS_TOKEN</code>), que só o administrador tem. A leitura <b>não grava nada</b> no banco; a chave de serviço só gera links de 5 minutos para baixar os prints. A única gravação é a baixa automática: o bug corrigido e testado vai para <b>Em revisão</b> com o comentário no histórico (nunca para Concluído). A pasta <code>bugs-export</code> não vai para o repositório nem para o ar, mas pode conter dados pessoais nos prints: não a compartilhe fora de quem corrige.</div>
   </div>
   </div><!-- /settings-panel-ia -->
+
+  <div id="settings-panel-relat" style="display:none">
+    <div class="card">
+      <div class="lbl"><i class="ti ti-tools"></i>Construtor de Relatórios</div>
+      <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:10px">Monte relatórios próprios com os campos que quiser (colunas, filtros, agrupar e somar), salve como modelo e escolha quem abre. Os modelos aparecem na Central de Relatórios, junto dos relatórios padrão. O sistema só mostra a cada pessoa os campos que o perfil dela permite (custos exigem <b>ver custos</b>; horas de outras pessoas exigem <b>ver horas de todos</b>).</p>
+      <div class="btn-row"><button class="btn btn-sm" onclick="R.go('reports')"><i class="ti ti-file-analytics"></i>Abrir a Central de Relatórios</button></div>
+    </div>
+    <div id="rpb-root" style="margin-top:12px"></div>
+  </div><!-- /settings-panel-relat -->
 
   <div id="settings-panel-comunic" style="display:none">
   <div class="card">
@@ -3599,6 +3616,39 @@ const PmoViews = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: pages/reports ─ Central de Relatórios: relatórios padrão agrupados, modelos criados no Construtor (Configurações) e atalhos para os relatórios que já existem nas telas -->
+<style data-module="pages/reports-css">
+.rpt-wrap{display:grid;grid-template-columns:270px minmax(0,1fr);gap:14px;align-items:start}
+.rpt-side{position:sticky;top:8px;max-height:calc(100vh - 120px);overflow:auto;padding:4px 2px}
+.rpt-side details{border:1px solid var(--b1);border-radius:var(--r10);background:var(--s1);margin-bottom:8px}
+.rpt-side summary{cursor:pointer;padding:8px 12px;font-size:12px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em}
+.rpt-item{display:block;width:100%;text-align:left;border:none;background:transparent;color:var(--t1);font-size:12.5px;padding:7px 12px;cursor:pointer;border-top:1px solid var(--b1);border-left:3px solid transparent}
+.rpt-item:hover{background:var(--s2)}
+.rpt-item.on{background:var(--s2);border-left-color:var(--acc);color:var(--acc);font-weight:600}
+.rpt-item .set-sub{display:block;font-size:11px;color:var(--t3);font-weight:400}
+.rpt-ctl{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:10px}
+.rpt-ctl label{font-size:11.5px;color:var(--t2);display:block;margin-bottom:3px}
+.rpt-tot td{font-weight:700;border-top:2px solid var(--b2)}
+.rpt-bld{display:grid;gap:12px}
+.rpt-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.rpt-chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--b2);border-radius:20px;padding:2px 4px 2px 10px;font-size:12px;background:var(--s2)}
+.rpt-chip button{border:none;background:transparent;color:var(--t2);cursor:pointer;padding:2px 4px;font-size:12px}
+@media(max-width:860px){.rpt-wrap{grid-template-columns:1fr}.rpt-side{position:static;max-height:none}}
+</style>
+<section class="page" id="p-reports" data-module="pages/reports">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Relatórios<span class="help-q" data-help="Aqui ficam os relatórios padrão do sistema, agrupados por assunto, e os modelos que o administrador monta no Construtor de Relatórios (Configurações). Escolha um, informe o período quando houver e gere; exporte em Excel, CSV ou PDF. Cada pessoa só vê os campos que o perfil dela permite. Os relatórios que já existem nas telas continuam lá e também aparecem em &quot;Já nas telas&quot;." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Escolha o relatório, o período e gere. Exporte em Excel, CSV ou PDF.</div></div>
+    <div class="btn-row"><button class="btn btn-sm" data-perm="settings" onclick="Reports.openBuilder()"><i class="ti ti-tools"></i>Construtor de Relatórios</button></div>
+  </div>
+  <div class="rpt-wrap">
+    <nav class="rpt-side" id="rpt-list" aria-label="Lista de relatórios"></nav>
+    <div>
+      <div class="card" id="rpt-ctl"></div>
+      <div id="rpt-out" style="margin-top:12px"></div>
+    </div>
+  </div>
+</section>
+
 <!-- ■ MODULE: pages/pmoview -->
 <section class="page" id="p-pmoview" data-module="pages/pmoview">
   <div class="pg-tabs" role="tablist" aria-label="Visão do portfólio"><button class="pg-tab" role="tab" aria-selected="true" onclick="R.go('pmoview')"><i class="ti ti-binoculars"></i>Visão do PMO</button><button class="pg-tab" role="tab" aria-selected="false" onclick="R.go('pfkpi')"><i class="ti ti-chart-donut-3"></i>Indicadores do Portfólio</button></div>
@@ -5202,6 +5252,7 @@ const Cloud = (() => {
           org.data.forEach(r => { if(r.key) OrgSettings.setLocal(r.key, r.value); });
           if(typeof PmoProfiles !== 'undefined') PmoProfiles.render();
           if(typeof MyDigest !== 'undefined') MyDigest.render();
+          if(typeof Reports !== 'undefined') Reports.render();
           if(typeof SessionGuard !== 'undefined') SessionGuard.render();
         }
       } catch(e) { /* sem org_settings: usa o valor local */ }
@@ -8112,7 +8163,7 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','raci','kanban','backlog','sprints','ritos','modelos','mywork','myind','help','xray','drpmo','account','sprintnow','noproject'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','raci','kanban','backlog','sprints','ritos','modelos','mywork','myind','help','xray','drpmo','account','sprintnow','noproject','reports'];
   function go(id) {
     // Base nova (ou conta sem projeto): só configurações, conta e ajuda existem; o resto convida a criar o primeiro projeto
     if(typeof DB !== 'undefined' && DB.isEmpty() && !['settings', 'account', 'help', 'noproject', 'drpmo'].includes(id)) id = 'noproject';
@@ -8140,6 +8191,7 @@ const R = (() => {
     if(id === 'risks' && typeof Risks !== 'undefined') Risks.render();
     if(id === 'pfkpi' && typeof PfKpi !== 'undefined') PfKpi.render();
     if(id === 'pmoview' && typeof PmoView !== 'undefined') PmoView.render();
+    if(id === 'reports' && typeof Reports !== 'undefined') Reports.render();
     if(id === 'baseline' && typeof Baselines !== 'undefined') Baselines.render();
     if(id === 'statusmsg' && typeof StatusMsg !== 'undefined') StatusMsg.render();
     if(id === 'hours' && typeof Hours !== 'undefined') Hours.render();
@@ -8186,7 +8238,7 @@ const R = (() => {
 const Nav = (() => {
   // Mapa página → grupo, usado para abrir automaticamente o grupo certo ao navegar
   const GROUP_OF = {
-    pfkpi:'sbg-indicadores', portfolio:'sbg-indicadores', prioritization:'sbg-indicadores', report:'sbg-indicadores',
+    pfkpi:'sbg-indicadores', portfolio:'sbg-indicadores', prioritization:'sbg-indicadores', report:'sbg-indicadores', reports:'sbg-relatorios',
     settings:'sbg-sistema', help:'sbg-sistema', account:'sbg-sistema',
     decisions:'sbg-decisao', loop:'sbg-decisao', trail:'sbg-decisao', statusmsg:'sbg-decisao',
     kanban:'sbg-agil', backlog:'sbg-agil', sprints:'sbg-agil', ritos:'sbg-agil', sprintnow:'sbg-agil', modelos:'sbg-conhecimento',
@@ -8320,7 +8372,7 @@ const Nav = (() => {
   });
 
   const GROUP_LABEL = {
-    sbg_indicadores: 'Portfólio e Relatórios', sbg_visao: 'Visão Geral', sbg_sistema: 'Sistema',
+    sbg_indicadores: 'Portfólio e Relatórios', sbg_relatorios: 'Relatórios', sbg_visao: 'Visão Geral', sbg_sistema: 'Sistema',
     sbg_decisao: 'Decisões', sbg_agil: 'Execução ágil', sbg_planejamento: 'Planejamento',
     sbg_equipe: 'Equipe', sbg_conhecimento: 'Conhecimento', sbg_projetos: 'Projetos'
   };
@@ -8331,7 +8383,7 @@ const Nav = (() => {
     wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores', pmoview:'Visão do PMO', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint', modelos:'Modelos', mywork:'Meu trabalho', myind:'Meus Indicadores',
     burnout:'Burnout Radar', resources:'Colaboradores', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
-    portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', account:'Minha conta', sprintnow:'Sprint atual', help:'Ajuda', xray:'Raio-X do Projeto'
+    reports:'Central de Relatórios', portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', account:'Minha conta', sprintnow:'Sprint atual', help:'Ajuda', xray:'Raio-X do Projeto'
   };
 
   function renderBreadcrumb(pageId) {
@@ -8367,9 +8419,9 @@ const Nav = (() => {
 })();
 
 const SettingsTabs = (() => {
-  const TABS = ['pmo','acesso','ia','comunic','dados'];
+  const TABS = ['pmo','acesso','ia','relat','comunic','dados'];
   // Cada aba exige ao menos uma destas permissões
-  const NEED = { pmo:['view_management'], acesso:['edit_plan','manage_settings'], ia:['view_management','manage_settings'], comunic:['manage_settings'], dados:['view_management','manage_settings'] };
+  const NEED = { pmo:['view_management'], acesso:['edit_plan','manage_settings'], ia:['view_management','manage_settings'], relat:['manage_settings'], comunic:['manage_settings'], dados:['view_management','manage_settings'] };
   const allowed = t => typeof Auth === 'undefined' || Auth.canOpen('settings') && (NEED[t] || []).some(p => Auth.can(p));
   let current = 'pmo';
   function show(tab) {
@@ -8378,6 +8430,7 @@ const SettingsTabs = (() => {
     const bar = document.querySelector('.settings-tabs'); if(bar) bar.style.display = ok.length ? '' : 'none';
     TABS.forEach(t => { const b = document.getElementById('stab-' + t); if(b) b.style.display = allowed(t) ? '' : 'none'; });
     if(tab === 'comunic' && typeof Messaging !== 'undefined') Messaging.render();
+    if(tab === 'relat' && typeof Reports !== 'undefined') Reports.builderRender();
     TABS.forEach(t => {
       const panel = document.getElementById('settings-panel-' + t);
       const btn = document.getElementById('stab-' + t);
@@ -13336,7 +13389,7 @@ const AccessProfiles = (() => {
   // Cada tela exige uma permissão; tela que não está aqui é de todos que têm acesso ao projeto (Meu trabalho, Kanban, Backlog, Sprints, Ritos, WBS, Horas, Matriz RACI, Lições, Ajuda).
   const PAGE_NEEDS = {
     board: 'view_portfolio', execview: 'view_portfolio', pmoview: 'view_portfolio', pfkpi: 'view_portfolio', portfolio: 'view_portfolio', prioritization: 'view_portfolio',
-    xray: 'view_management', drpmo: 'view_management', dashboard: 'view_management', report: 'view_management', baseline: 'view_management', estimates: 'view_management', whatif: 'view_management',
+    reports: 'view_management', xray: 'view_management', drpmo: 'view_management', dashboard: 'view_management', report: 'view_management', baseline: 'view_management', estimates: 'view_management', whatif: 'view_management',
     decisions: 'view_management', loop: 'view_management', trail: 'view_management', statusmsg: 'view_management', scope: 'view_management', stakeholders: 'view_management',
     meetings: 'view_management', repository: 'view_management', chat: 'view_management', modelos: 'view_management', risks: 'view_management',
     burnout: 'view_team_load', resources: 'view_team_load', budget: 'view_costs',
@@ -16135,6 +16188,7 @@ const OrgSettings = (() => {
 .m-opt i{font-size:18px;color:var(--acc);flex-shrink:0;margin-top:1px}
 .m-opt b{font-size:12.5px}
 .m-opt .m-sub{display:block;font-size:12px;color:var(--t2);margin-top:2px;line-height:1.5}
+.m-opt[aria-checked="true"] .m-sub,.m-opt[aria-checked="true"] .m-hide{color:var(--t1)}
 .m-opt .m-hide{display:block;font-size:11.5px;color:var(--t3);margin-top:4px}
 .m-notice{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 12px;border:1px solid var(--ab);background:var(--ad);border-radius:var(--r8);font-size:12.5px;color:var(--t1)}
 .m-notice i{color:var(--acc);flex-shrink:0}
@@ -18525,6 +18579,429 @@ const PlanVsReal = (() => {
     return { cells, red: vals.filter(c => c.level === 'red').length, amb: vals.filter(c => c.level === 'amb').length, known: vals.length, worst: vals.reduce((m, c) => Math.max(m, WORST[c.level] || 0), 0) };
   }
   return { impediments, decisions, riskReviews, stakeholders, scopeSuggest, scopeReality, meetingDigest, pace, projectRow, days, median };
+})();
+</script>
+
+<!-- ■ MODULE: services/report-engine ─ Motor de relatórios: um catálogo único de entidades e campos (com a permissão exigida por campo), a execução de uma definição (filtrar, agrupar, somar, ordenar, limitar, totalizar), os relatórios padrão e o código de exportação do modelo. A tela só manda a definição; tudo é conferido contra o catálogo. Lógica pura, sem DOM. -->
+<script data-module="services/report-engine">
+const ReportEngine = (() => {
+  const MAX_ROWS = 20000, MAX_GROUPS = 3, MAX_MEASURES = 10, MAX_FILTERS = 5;
+  const ISO = /^\d{4}-\d{2}-\d{2}/;
+  const iso = v => ISO.test(String(v || '')) ? String(v).slice(0, 10) : '';
+  const num = v => { const n = Number(v); return isFinite(n) ? n : 0; };
+  const dayDiff = (a, b) => (iso(a) && iso(b)) ? Math.round((Date.parse(iso(b) + 'T12:00:00Z') - Date.parse(iso(a) + 'T12:00:00Z')) / 86400000) : null;
+  const STATUS = { todo: 'A fazer', doing: 'Em andamento', review: 'Em revisão', done: 'Concluído' };
+  const KIND = { historia: 'História', tarefa: 'Tarefa', bug: 'Bug', epico: 'Épico' };
+  const WBS_ST = { grn: 'Concluída', amb: 'Em andamento', red: 'Com risco', neu: 'Não iniciada' };
+  const RISK_ST = { aberto: 'Aberto', mitigando: 'Mitigando', encerrado: 'Encerrado', ocorreu: 'Ocorreu' };
+  const SCOPE_ST = { pending: 'Pendente', analysis: 'Em análise', approved: 'Aprovada', rejected: 'Rejeitada' };
+  const INFL = { alta: 'Alta', media: 'Média', baixa: 'Baixa' };
+  const lbl = (map, v) => map[v] || (v == null || v === '' ? '' : String(v));
+  const F = (k, l, t, g, f, perm) => ({ k, l, t, g, f, perm: perm || null });
+
+  // Cada entidade: rótulo, grupo, permissão da entidade, campo de data usado no período e as linhas (uma por registro do projeto)
+  const ENTITIES = {
+    cards: { l: 'Cards (backlog e quadro)', perm: null, date: 'criado',
+      rows: (pid, c) => { const sp = {}; c.get(pid, 'sprints').forEach(s => { sp[s.id] = s.name; }); return c.get(pid, 'backlog').map(i => Object.assign({}, i, { _sprint: sp[i.sprintId] || '' })); },
+      fields: [F('id', 'Código', 'texto', 'Identificação', r => r.id), F('titulo', 'Título', 'texto', 'Identificação', r => r.title), F('tipo', 'Tipo', 'texto', 'Identificação', r => lbl(KIND, r.kind)),
+        F('situacao', 'Situação', 'texto', 'Andamento', r => lbl(STATUS, r.status)), F('responsavel', 'Responsável', 'texto', 'Andamento', r => r.assignee || ''), F('sprint', 'Sprint', 'texto', 'Andamento', r => r._sprint),
+        F('pontos', 'Pontos', 'numero', 'Andamento', r => (r.points === '' || r.points == null) ? null : num(r.points)), F('prioridade_bug', 'Posição na fila de bugs', 'numero', 'Andamento', r => r.bugPriority ? num(r.bugPriority) : null),
+        F('item_pai', 'Item pai (bug)', 'texto', 'Ligações', r => r.parentId || ''), F('epico', 'Épico', 'texto', 'Ligações', r => r.epicId || ''),
+        F('criado', 'Criado em', 'data', 'Datas', r => iso(r.createdOn)), F('concluido', 'Concluído em', 'data', 'Datas', r => iso(r.doneOn))] },
+    riscos: { l: 'Riscos', perm: null, date: 'identificado',
+      rows: (pid, c) => c.get(pid, 'risks'),
+      fields: [F('id', 'Código', 'texto', 'Identificação', r => r.id), F('titulo', 'Título', 'texto', 'Identificação', r => r.title), F('categoria', 'Categoria', 'texto', 'Identificação', r => r.category || ''),
+        F('probabilidade', 'Probabilidade (1 a 5)', 'numero', 'Avaliação', r => num(r.probability)), F('impacto', 'Impacto (1 a 5)', 'numero', 'Avaliação', r => num(r.impact)), F('nivel', 'Nível (probabilidade × impacto)', 'numero', 'Avaliação', r => num(r.probability) * num(r.impact)),
+        F('status', 'Situação', 'texto', 'Tratamento', r => lbl(RISK_ST, r.status)), F('resposta', 'Resposta', 'texto', 'Tratamento', r => r.response || ''), F('responsavel', 'Responsável', 'texto', 'Tratamento', r => r.owner || ''),
+        F('identificado', 'Identificado em', 'data', 'Datas', r => iso(r.identifiedOn)), F('revisao', 'Próxima revisão', 'data', 'Datas', r => iso(r.reviewOn))] },
+    entregas: { l: 'Entregas e subtarefas (WBS)', perm: null, date: 'fim',
+      rows: (pid, c) => { const out = []; c.get(pid, 'wbs').forEach(m => { out.push(Object.assign({ _nivel: 'Entrega', _entrega: m.label }, m)); (m.children || []).forEach(t => out.push(Object.assign({ _nivel: 'Subtarefa', _entrega: m.label }, t))); }); return out; },
+      fields: [F('nivel', 'Nível', 'texto', 'Identificação', r => r._nivel), F('entrega', 'Entrega', 'texto', 'Identificação', r => r._entrega), F('nome', 'Nome', 'texto', 'Identificação', r => r.label),
+        F('responsavel', 'Responsável', 'texto', 'Andamento', r => r.responsavel || ''), F('status', 'Situação', 'texto', 'Andamento', r => lbl(WBS_ST, r.status)), F('avanco', 'Avanço (%)', 'numero', 'Andamento', r => r._nivel === 'Entrega' ? num(r.pct) : null),
+        F('atrasada', 'Atrasada?', 'texto', 'Andamento', (r, c) => (r.status !== 'grn' && iso(r.end) && iso(r.end) < c.today) ? 'Sim' : 'Não'),
+        F('inicio', 'Início planejado', 'data', 'Datas', r => iso(r.start)), F('fim', 'Fim planejado', 'data', 'Datas', r => iso(r.end)), F('inicio_real', 'Início real', 'data', 'Datas', r => iso(r.startActual)), F('fim_real', 'Fim real', 'data', 'Datas', r => iso(r.endActual))] },
+    horas: { l: 'Horas apontadas', perm: null, date: 'data', ownOnly: 'view_all_hours',
+      rows: (pid, c) => c.get(pid, 'timeEntries'),
+      fields: [F('data', 'Data', 'data', 'Apontamento', r => iso(r.date)), F('mes', 'Mês', 'texto', 'Apontamento', r => iso(r.date).slice(0, 7)), F('pessoa', 'Pessoa', 'texto', 'Apontamento', r => r.person || ''),
+        F('horas', 'Horas', 'numero', 'Apontamento', r => num(r.hours)), F('referencia', 'Card ou entrega', 'texto', 'Apontamento', r => r.wbsRef || ''), F('situacao', 'Situação', 'texto', 'Apontamento', r => r.status || 'lançada'), F('obs', 'Observação', 'texto', 'Apontamento', r => r.note || '')] },
+    custos: { l: 'Custos lançados', perm: 'view_costs', date: 'data',
+      rows: (pid, c) => c.get(pid, 'costActuals'),
+      fields: [F('data', 'Data', 'data', 'Lançamento', r => iso(r.date)), F('mes', 'Mês', 'texto', 'Lançamento', r => iso(r.date).slice(0, 7)), F('descricao', 'Descrição', 'texto', 'Lançamento', r => r.label || ''),
+        F('tipo', 'Tipo', 'texto', 'Lançamento', r => r.kind === 'comprometido' ? 'Comprometido' : 'Real'), F('valor', 'Valor (R$)', 'dinheiro', 'Lançamento', r => num(r.amount))] },
+    escopo: { l: 'Mudanças de escopo', perm: null, date: 'criada',
+      rows: (pid, c) => c.get(pid, 'scopeChanges'),
+      fields: [F('id', 'Código', 'texto', 'Identificação', r => r.id), F('titulo', 'Título', 'texto', 'Identificação', r => r.title), F('status', 'Situação', 'texto', 'Identificação', r => lbl(SCOPE_ST, r.status)),
+        F('impacto_dias', 'Impacto em dias', 'numero', 'Impacto', r => num(r.impactDays)), F('impacto_custo', 'Impacto em R$', 'dinheiro', 'Impacto', r => num(r.impactCost), 'view_costs'), F('criada', 'Criada em', 'data', 'Datas', r => iso(r.createdAt))] },
+    impedimentos: { l: 'Impedimentos', perm: null, date: 'aberto_em',
+      rows: (pid, c) => c.get(pid, 'impediments'),
+      fields: [F('id', 'Código', 'texto', 'Identificação', r => r.id), F('titulo', 'Título', 'texto', 'Identificação', r => r.title), F('responsavel', 'Responsável', 'texto', 'Identificação', r => r.owner || ''),
+        F('situacao', 'Situação', 'texto', 'Andamento', r => r.status === 'resolvido' ? 'Resolvido' : 'Aberto'), F('aberto_em', 'Aberto em', 'data', 'Datas', r => iso(r.createdOn)), F('resolvido_em', 'Resolvido em', 'data', 'Datas', r => iso(r.resolvedOn)),
+        F('dias_aberto', 'Dias em aberto', 'numero', 'Andamento', (r, c) => { const d = dayDiff(r.createdOn, iso(r.resolvedOn) || c.today); return d == null ? null : Math.max(0, d); })] },
+    partes: { l: 'Partes interessadas', perm: null, date: null,
+      rows: (pid, c) => c.get(pid, 'stakeholders'),
+      fields: [F('nome', 'Nome', 'texto', 'Identificação', r => r.name), F('papel', 'Papel', 'texto', 'Identificação', r => r.role || ''), F('influencia', 'Influência', 'texto', 'Perfil', r => lbl(INFL, r.influence)),
+        F('engajamento', 'Engajamento', 'texto', 'Perfil', r => r.engagement || ''), F('ultimo_contato', 'Último contato', 'data', 'Contato', r => iso(r.lastContact)),
+        F('dias_sem_contato', 'Dias sem contato', 'numero', 'Contato', (r, c) => { const d = dayDiff(r.lastContact, c.today); return d == null ? null : Math.max(0, d); })] },
+    equipe: { l: 'Equipe', perm: null, date: null,
+      rows: (pid, c) => c.get(pid, 'team'),
+      fields: [F('nome', 'Nome', 'texto', 'Identificação', r => r.name), F('funcao', 'Função', 'texto', 'Identificação', r => r.role || ''), F('alocacao', 'Alocação (%)', 'numero', 'Carga', r => (r.allocationPct === '' || r.allocationPct == null) ? null : num(r.allocationPct)),
+        F('carga', 'Carga calculada (%)', 'numero', 'Carga', (r, c) => { const p = c.load ? c.load(r) : null; return p == null ? null : num(p); }, 'view_team_load')] },
+    sprints: { l: 'Sprints', perm: null, date: 'inicio',
+      rows: (pid, c) => c.get(pid, 'sprints'),
+      fields: [F('nome', 'Nome', 'texto', 'Identificação', r => r.name), F('situacao', 'Situação', 'texto', 'Identificação', r => ({ planejada: 'Planejada', ativa: 'Ativa', encerrada: 'Encerrada' })[r.state] || r.state || ''), F('meta', 'Meta', 'texto', 'Identificação', r => r.goal || ''),
+        F('inicio', 'Início', 'data', 'Datas', r => iso(r.startOn)), F('fim', 'Fim', 'data', 'Datas', r => iso(r.endOn)), F('capacidade', 'Capacidade (pontos)', 'numero', 'Identificação', r => (r.capacity === '' || r.capacity == null) ? null : num(r.capacity))] }
+  };
+  const FN = { sum: 'Soma', avg: 'Média', count: 'Contagem', max: 'Máximo', min: 'Mínimo' };
+  const OPS = { igual: 'é igual a', diferente: 'é diferente de', contem: 'contém', maior: 'é maior que', menor: 'é menor que' };
+  const isNum = t => t === 'numero' || t === 'dinheiro';
+
+  // Entidades e campos que ESTA pessoa pode usar (can(perm) decide); campo sem permissão não existe para ela
+  function catalog(can) {
+    const out = {};
+    Object.keys(ENTITIES).forEach(id => {
+      const e = ENTITIES[id]; if(e.perm && !can(e.perm)) return;
+      out[id] = { id, l: e.l, date: e.date, fields: e.fields.filter(f => !f.perm || can(f.perm)).map(f => ({ k: f.k, l: f.l, t: f.t, g: f.g })) };
+    });
+    return out;
+  }
+  const cell = (f, row, ctx) => { try { const v = f.f(row, ctx); return v === undefined ? null : v; } catch(e) { return null; } };
+  const cmp = (a, b) => (a == null && b == null) ? 0 : a == null ? 1 : b == null ? -1 : (typeof a === 'number' && typeof b === 'number') ? a - b : String(a).localeCompare(String(b), 'pt-BR');
+
+  // Confere a definição contra o catálogo da pessoa; devolve a mensagem do primeiro problema ou ''
+  function validate(def, can) {
+    const cat = catalog(can), e = def && cat[def.ent];
+    if(!e) return 'Escolha o que listar (entidade inválida ou sem permissão).';
+    const f = k => e.fields.find(x => x.k === k);
+    const g = def.grupos || [], m = def.medidas || [], fl = def.filtros || [], cols = def.campos || [];
+    if(g.length > MAX_GROUPS) return 'No máximo ' + MAX_GROUPS + ' agrupamentos.';
+    if(m.length > MAX_MEASURES) return 'No máximo ' + MAX_MEASURES + ' cálculos.';
+    if(fl.length > MAX_FILTERS) return 'No máximo ' + MAX_FILTERS + ' filtros.';
+    if(g.length) { for(const k of g) { const x = f(k); if(!x) return 'Campo de agrupamento inexistente: ' + k; if(isNum(x.t)) return 'Agrupe só por texto ou data: "' + x.l + '" é número.'; } if(!m.length) return 'Escolha ao menos um cálculo (soma, contagem…) para agrupar.'; }
+    else if(!cols.length) return 'Escolha ao menos um campo para as colunas.';
+    for(const k of cols) if(!f(k)) return 'Campo inexistente: ' + k;
+    for(const x of m) {
+      if(!FN[x.fn]) return 'Cálculo inválido: ' + x.fn;
+      if(x.campo === '*') { if(x.fn !== 'count') return 'O campo "*" só serve para contagem.'; continue; }
+      const y = f(x.campo); if(!y) return 'Campo de cálculo inexistente: ' + x.campo;
+      if(x.fn !== 'count' && !isNum(y.t)) return 'Não dá para ' + FN[x.fn].toLowerCase() + ' "' + y.l + '": só campos numéricos.';
+    }
+    for(const x of fl) { if(!f(x.campo)) return 'Campo de filtro inexistente: ' + x.campo; if(!OPS[x.op]) return 'Filtro inválido: ' + x.op; }
+    if(def.periodoCampo && !(f(def.periodoCampo) && f(def.periodoCampo).t === 'data')) return 'O período precisa de um campo de data.';
+    return '';
+  }
+  function matches(v, x, t) {
+    const a = v == null ? '' : v, b = x.valor == null ? '' : x.valor;
+    const sa = String(a).toLowerCase(), sb = String(b).toLowerCase().trim();
+    if(x.op === 'contem') return sa.indexOf(sb) >= 0;
+    if(x.op === 'igual') return isNum(t) ? Number(a) === Number(b) : sa === sb;
+    if(x.op === 'diferente') return isNum(t) ? Number(a) !== Number(b) : sa !== sb;
+    if(v == null || v === '') return false;
+    const A = isNum(t) ? Number(a) : String(a), B = isNum(t) ? Number(b) : String(b);
+    return x.op === 'maior' ? A > B : A < B;
+  }
+
+  // ctx: { projects:[{id,name}], get(pid, tabela), can(perm), today, me, load(membro) }
+  function run(def, ctx) {
+    const bad = validate(def, ctx.can); if(bad) throw new Error(bad);
+    const ent = ENTITIES[def.ent], cat = catalog(ctx.can)[def.ent], fields = ent.fields.filter(f => cat.fields.some(x => x.k === f.k));
+    const byKey = {}; fields.forEach(f => { byKey[f.k] = f; });
+    const multi = (ctx.projects || []).length > 1;
+    let rows = [];
+    (ctx.projects || []).forEach(p => (ent.rows(p.id, ctx) || []).forEach(r => rows.push({ _p: p.name, _r: r })));
+    // quem não tem a permissão de ver o de todos só enxerga o próprio nome nas horas
+    if(ent.ownOnly && !ctx.can(ent.ownOnly)) { const me = String(ctx.me || '').trim().toLowerCase(); rows = rows.filter(x => String(x._r.person || '').trim().toLowerCase() === me); }
+    const val = (x, k) => cell(byKey[k], x._r, ctx);
+    const pc = def.periodoCampo || '';
+    if(pc && (def.inicio || def.fim)) rows = rows.filter(x => { const d = val(x, pc); return d && (!def.inicio || d >= def.inicio) && (!def.fim || d <= def.fim); });
+    (def.filtros || []).forEach(fl => { rows = rows.filter(x => matches(val(x, fl.campo), fl, byKey[fl.campo].t)); });
+    const total = rows.length, grupos = def.grupos || [], medidas = def.medidas || [];
+    const projCol = (multi && !grupos.length) ? [{ key: '_p', label: 'Projeto', type: 'texto' }] : [];
+    const projVal = x => x._p;
+    if(!grupos.length) {
+      const cols = projCol.concat(def.campos.map(k => ({ key: k, label: byKey[k].l, type: byKey[k].t })));
+      let lin = rows.map(x => cols.map(c => c.key === '_p' ? projVal(x) : val(x, c.key)));
+      const oi = def.ordem ? cols.findIndex(c => c.key === def.ordem) : -1;
+      if(oi >= 0) lin.sort((a, b) => cmp(a[oi], b[oi]) * (def.dir === 'desc' ? -1 : 1));
+      const trunc = lin.length > MAX_ROWS; if(trunc) lin = lin.slice(0, MAX_ROWS);
+      return { colunas: cols, linhas: lin, total, truncado: trunc, agregado: false };
+    }
+    const gcols = (multi ? [{ key: '_p', label: 'Projeto', type: 'texto' }] : []).concat(grupos.map(k => ({ key: k, label: byKey[k].l, type: byKey[k].t })));
+    const mcols = medidas.map(m => ({ key: m.fn + ':' + m.campo, label: m.campo === '*' ? 'Quantidade' : FN[m.fn] + ' de ' + byKey[m.campo].l, type: m.fn === 'count' ? 'numero' : byKey[m.campo].t, fn: m.fn }));
+    const map = new Map();
+    rows.forEach(x => {
+      const key = gcols.map(c => c.key === '_p' ? projVal(x) : val(x, c.key)); const id = JSON.stringify(key);
+      let g = map.get(id); if(!g) { g = { key, n: medidas.map(() => 0), s: medidas.map(() => 0), mx: medidas.map(() => null), mn: medidas.map(() => null) }; map.set(id, g); }
+      medidas.forEach((m, i) => {
+        if(m.campo === '*') { g.n[i]++; return; }
+        const v = val(x, m.campo); if(v == null || v === '') return;
+        g.n[i]++; if(m.fn === 'count') return; const nv = Number(v); g.s[i] += nv; g.mx[i] = g.mx[i] == null ? nv : Math.max(g.mx[i], nv); g.mn[i] = g.mn[i] == null ? nv : Math.min(g.mn[i], nv);
+      });
+    });
+    let lin = Array.from(map.values()).map(g => g.key.concat(medidas.map((m, i) => m.fn === 'count' ? g.n[i] : m.fn === 'sum' ? Math.round(g.s[i] * 100) / 100 : m.fn === 'avg' ? (g.n[i] ? Math.round(g.s[i] / g.n[i] * 100) / 100 : null) : m.fn === 'max' ? g.mx[i] : g.mn[i])));
+    const cols = gcols.concat(mcols), oi = def.ordem ? cols.findIndex(c => c.key === def.ordem) : 0;
+    lin.sort((a, b) => cmp(a[oi < 0 ? 0 : oi], b[oi < 0 ? 0 : oi]) * (def.dir === 'desc' ? -1 : 1));
+    const top = Math.max(0, Math.min(Number(def.top) || 0, MAX_ROWS)), cortado = top > 0 && lin.length > top;
+    if(cortado) lin = lin.slice(0, top);
+    return { colunas: cols, linhas: lin, total, truncado: cortado, agregado: true };
+  }
+  // Linha de total: só soma e contagem, e só quando nenhuma linha foi cortada
+  function totals(res) {
+    if(!res.agregado || res.truncado || res.linhas.length < 2) return null;
+    let tem = false;
+    const t = res.colunas.map(c => { if(c.fn !== 'sum' && c.fn !== 'count') return null; tem = true; return Math.round(res.linhas.reduce((a, l) => a + num(l[res.colunas.indexOf(c)]), 0) * 100) / 100; });
+    if(!tem) return null; if(t[0] == null) t[0] = 'Total'; return t;
+  }
+  const money = v => 'R$ ' + num(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Valor para tela (csv=false) ou planilha (csv=true: números continuam números)
+  function fmt(v, type, forSheet) {
+    if(v == null || v === '') return '';
+    if(type === 'data') { const s = String(v).slice(0, 10).split('-'); return s.length === 3 ? s[2] + '/' + s[1] + '/' + s[0] : String(v); }
+    if(type === 'dinheiro') return forSheet ? Number(v) : money(v);
+    if(type === 'numero') return forSheet ? Number(v) : String(Math.round(Number(v) * 100) / 100).replace('.', ',');
+    return String(v);
+  }
+  // Código do modelo (só a definição, nunca dados) para usar em outra organização
+  const SAFE = def => ({ nome: String(def.nome || '').slice(0, 80), ent: def.ent, campos: def.campos || [], grupos: def.grupos || [], medidas: def.medidas || [], filtros: (def.filtros || []).map(x => ({ campo: x.campo, op: x.op, valor: x.valor })), ordem: def.ordem || '', dir: def.dir === 'desc' ? 'desc' : 'asc', top: Number(def.top) || 0, periodoCampo: def.periodoCampo || '' });
+  const enc = s => { try { return btoa(unescape(encodeURIComponent(s))); } catch(e) { return ''; } };
+  const dec = s => { try { return decodeURIComponent(escape(atob(s))); } catch(e) { return ''; } };
+  const toCode = def => enc(JSON.stringify(SAFE(def)));
+  function fromCode(code) { try { const d = JSON.parse(dec(String(code || '').trim())); return d && d.ent ? SAFE(d) : null; } catch(e) { return null; } }
+
+  // Relatórios padrão: cada um é só uma definição. Relatório novo = uma linha aqui (e, se faltar campo, uma linha no catálogo).
+  const PADROES = [
+    { id: 'p-cards-sit', grupo: 'Cards', nome: 'Cards por situação', desc: 'Quantos cards há em cada coluna do quadro.', ent: 'cards', grupos: ['situacao'], medidas: [{ campo: '*', fn: 'count' }, { campo: 'pontos', fn: 'sum' }], ordem: 'count:*', dir: 'desc' },
+    { id: 'p-cards-resp', grupo: 'Cards', nome: 'Cards por responsável e situação', desc: 'Quem está com quantos cards e em que situação.', ent: 'cards', grupos: ['responsavel', 'situacao'], medidas: [{ campo: '*', fn: 'count' }, { campo: 'pontos', fn: 'sum' }], ordem: 'responsavel' },
+    { id: 'p-bugs', grupo: 'Cards', nome: 'Bugs em aberto', desc: 'Bugs que ainda não foram concluídos, na ordem da fila de prioridade.', ent: 'cards', campos: ['prioridade_bug', 'id', 'titulo', 'situacao', 'responsavel', 'item_pai', 'criado'], filtros: [{ campo: 'tipo', op: 'igual', valor: 'Bug' }, { campo: 'situacao', op: 'diferente', valor: 'Concluído' }], ordem: 'prioridade_bug' },
+    { id: 'p-concl', grupo: 'Cards', nome: 'Cards concluídos no período', desc: 'Entregas concluídas entre as datas escolhidas.', ent: 'cards', campos: ['concluido', 'id', 'titulo', 'tipo', 'responsavel', 'pontos'], filtros: [{ campo: 'situacao', op: 'igual', valor: 'Concluído' }], periodoCampo: 'concluido', periodo: true, ordem: 'concluido', dir: 'desc' },
+    { id: 'p-entr-sit', grupo: 'Entregas (WBS)', nome: 'Entregas por situação', desc: 'Entregas e subtarefas do cronograma agrupadas pela situação.', ent: 'entregas', grupos: ['nivel', 'status'], medidas: [{ campo: '*', fn: 'count' }], ordem: 'nivel' },
+    { id: 'p-entr-atr', grupo: 'Entregas (WBS)', nome: 'Entregas atrasadas', desc: 'O prazo planejado já passou e a entrega não foi concluída.', ent: 'entregas', campos: ['nivel', 'entrega', 'nome', 'responsavel', 'fim', 'status', 'avanco'], filtros: [{ campo: 'atrasada', op: 'igual', valor: 'Sim' }], ordem: 'fim' },
+    { id: 'p-riscos-niv', grupo: 'Riscos', nome: 'Riscos em aberto por nível', desc: 'Riscos que ainda não foram encerrados, do mais grave ao menos grave.', ent: 'riscos', campos: ['nivel', 'id', 'titulo', 'categoria', 'status', 'responsavel', 'revisao'], filtros: [{ campo: 'status', op: 'diferente', valor: 'Encerrado' }], ordem: 'nivel', dir: 'desc' },
+    { id: 'p-riscos-cat', grupo: 'Riscos', nome: 'Riscos por categoria', desc: 'Quantos riscos há em cada categoria e o nível médio.', ent: 'riscos', grupos: ['categoria'], medidas: [{ campo: '*', fn: 'count' }, { campo: 'nivel', fn: 'avg' }], ordem: 'count:*', dir: 'desc' },
+    { id: 'p-imped', grupo: 'Impedimentos e escopo', nome: 'Impedimentos abertos', desc: 'Há quanto tempo cada impedimento está aberto.', ent: 'impedimentos', campos: ['dias_aberto', 'id', 'titulo', 'responsavel', 'aberto_em'], filtros: [{ campo: 'situacao', op: 'igual', valor: 'Aberto' }], ordem: 'dias_aberto', dir: 'desc' },
+    { id: 'p-escopo', grupo: 'Impedimentos e escopo', nome: 'Mudanças de escopo por situação', desc: 'Quantas mudanças há em cada situação e o impacto em dias (e em R$, para quem vê custos).', ent: 'escopo', grupos: ['status'], medidas: [{ campo: '*', fn: 'count' }, { campo: 'impacto_dias', fn: 'sum' }, { campo: 'impacto_custo', fn: 'sum' }], ordem: 'count:*', dir: 'desc', opcional: ['impacto_custo'] },
+    { id: 'p-horas-pessoa', grupo: 'Horas e custos', nome: 'Horas por pessoa', desc: 'Total de horas apontadas por pessoa no período.', ent: 'horas', grupos: ['pessoa'], medidas: [{ campo: 'horas', fn: 'sum' }, { campo: '*', fn: 'count' }], periodoCampo: 'data', periodo: true, ordem: 'sum:horas', dir: 'desc' },
+    { id: 'p-horas-ref', grupo: 'Horas e custos', nome: 'Horas por card ou entrega', desc: 'Onde as horas foram gastas no período.', ent: 'horas', grupos: ['referencia'], medidas: [{ campo: 'horas', fn: 'sum' }], periodoCampo: 'data', periodo: true, ordem: 'sum:horas', dir: 'desc', top: 30 },
+    { id: 'p-horas-dia', grupo: 'Horas e custos', nome: 'Horas por dia', desc: 'Horas apontadas em cada dia do período.', ent: 'horas', grupos: ['data'], medidas: [{ campo: 'horas', fn: 'sum' }], periodoCampo: 'data', periodo: true, ordem: 'data' },
+    { id: 'p-custos-mes', grupo: 'Horas e custos', nome: 'Custos lançados por mês', desc: 'Custo real e comprometido de cada mês.', ent: 'custos', grupos: ['mes', 'tipo'], medidas: [{ campo: 'valor', fn: 'sum' }], ordem: 'mes' },
+    { id: 'p-partes', grupo: 'Pessoas', nome: 'Contato com partes interessadas', desc: 'Há quantos dias não há contato com cada parte interessada.', ent: 'partes', campos: ['dias_sem_contato', 'nome', 'papel', 'influencia', 'engajamento', 'ultimo_contato'], ordem: 'dias_sem_contato', dir: 'desc' },
+    { id: 'p-equipe', grupo: 'Pessoas', nome: 'Equipe, alocação e carga', desc: 'Alocação de cada pessoa e a carga calculada pelo sistema (para quem vê a carga da equipe).', ent: 'equipe', campos: ['nome', 'funcao', 'alocacao', 'carga'], ordem: 'nome', opcional: ['carga'] },
+    { id: 'p-sprints', grupo: 'Pessoas', nome: 'Sprints', desc: 'Todas as sprints, com datas e capacidade.', ent: 'sprints', campos: ['nome', 'situacao', 'inicio', 'fim', 'capacidade', 'meta'], ordem: 'inicio', dir: 'desc' }
+  ];
+  // Tira de um padrão os campos que a pessoa não pode ver (quando o campo é marcado como opcional); sem permissão para a entidade, o padrão some
+  function usable(def, can) {
+    const cat = catalog(can)[def.ent]; if(!cat) return null;
+    const ok = k => k === '*' || cat.fields.some(f => f.k === k), d = JSON.parse(JSON.stringify(def));
+    if(d.campos) d.campos = d.campos.filter(ok); if(d.medidas) d.medidas = d.medidas.filter(m => ok(m.campo));
+    if(d.filtros && d.filtros.some(f => !ok(f.campo))) return null; if(d.grupos && !d.grupos.every(ok)) return null;
+    if(d.ordem && d.ordem.indexOf(':') < 0 && !ok(d.ordem)) d.ordem = '';
+    if(d.ordem && d.ordem.indexOf(':') >= 0 && !ok(d.ordem.split(':')[1])) d.ordem = '';
+    return validate(d, can) ? null : d;
+  }
+  return { ENTITIES, FN, OPS, PADROES, catalog, validate, run, totals, fmt, usable, toCode, fromCode, isNum, MAX_ROWS };
+})();
+</script>
+
+<!-- ■ MODULE: pages/reports-js ─ Lógica da Central de Relatórios e do Construtor (Configurações). Modelos ficam em org_settings (chave reportModels): o administrador grava, todos leem; o motor confere cada campo com a permissão de quem pede. -->
+<script data-module="pages/reports-js">
+const Reports = (() => {
+  const MODELS_KEY = 'reportModels', MAX_MODELS = 100;
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const $ = id => document.getElementById(id);
+  const can = p => (typeof Auth === 'undefined') ? true : Auth.can(p);
+  const today = () => Clock.iso(Clock.today()).slice(0, 10);
+  const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const models = () => { const l = OrgSettings.get(MODELS_KEY); return Array.isArray(l) ? l : []; };
+  const visibleModels = () => models().filter(m => m && m.def && (m.compartilhar === 'todos' || can('manage_settings')));
+  // Relatórios que já existem nas telas (continuam lá): atalhos
+  const SCREENS = [['report', 'file-analytics', 'Relatório Executivo (leitura rápida e PDF)'], ['pmoview', 'binoculars', 'Visão do PMO · Estimado × Real'], ['pfkpi', 'chart-donut-3', 'Indicadores do Portfólio'], ['board', 'presentation-analytics', 'Painel da Diretoria'], ['budget', 'coin', 'Orçamento e Custos'], ['hours', 'clock', 'Horas (exportar Excel)'], ['risks', 'shield-exclamation', 'Riscos (matriz e exportação)'], ['statusmsg', 'message-report', 'Mensagem de Status']];
+  let sel = null, scope = 'ativo', per = { inicio: '', fim: '' }, last = null, lastDef = null;
+
+  function projects() {
+    let all = []; try { all = DB.listProjects() || []; } catch(e) { all = []; }
+    const act = DB.getActiveProjectId();
+    if(scope === 'todos') { const l = all.filter(p => p.methodology !== 'quadro' || p.id === act); return l.length ? l : [{ id: act, name: 'Projeto atual' }]; }
+    const p = all.find(x => x.id === act); return [{ id: act, name: p ? p.name : 'Projeto atual' }];
+  }
+  function ctx() {
+    return { projects: projects(), get: (pid, t) => DB.getForProject(pid, t) || [], can, today: today(), me: (typeof Auth !== 'undefined' && Auth.getName()) || '', load: m => (typeof Burnout !== 'undefined' ? Burnout.effectivePct(m) : null) };
+  }
+  function defOf(s) {
+    if(!s) return null;
+    if(s.type === 'padrao') { const p = ReportEngine.PADROES.find(x => x.id === s.id); return p ? ReportEngine.usable(p, can) : null; }
+    const m = models().find(x => x.id === s.id); return m ? Object.assign({ nome: m.nome }, m.def) : null;
+  }
+  function nameOf(s) { if(!s) return ''; if(s.type === 'padrao') { const p = ReportEngine.PADROES.find(x => x.id === s.id); return p ? p.nome : ''; } const m = models().find(x => x.id === s.id); return m ? m.nome : ''; }
+  const hasPeriod = d => !!(d && d.periodoCampo);
+
+  function renderList() {
+    const root = $('rpt-list'); if(!root) return;
+    const groups = {}; ReportEngine.PADROES.forEach(p => { if(ReportEngine.usable(p, can)) (groups[p.grupo] = groups[p.grupo] || []).push(p); });
+    const item = (type, id, nome, sub) => '<button class="rpt-item' + (sel && sel.type === type && sel.id === id ? ' on' : '') + '" onclick="Reports.open(\'' + type + '\',\'' + esc(id) + '\')">' + esc(nome) + (sub ? '<span class="set-sub">' + esc(sub) + '</span>' : '') + '</button>';
+    const openFor = g => sel && sel.type === 'padrao' && groups[g].some(p => p.id === sel.id);
+    let html = Object.keys(groups).map((g, i) => '<details' + (openFor(g) || (!sel && i === 0) ? ' open' : '') + '><summary>' + esc(g) + '</summary>' + groups[g].map(p => item('padrao', p.id, p.nome)).join('') + '</details>').join('');
+    const mm = visibleModels();
+    html += '<details' + (sel && sel.type === 'modelo' ? ' open' : '') + '><summary>Meus Modelos (do Construtor)</summary>' + (mm.length ? mm.map(m => item('modelo', m.id, m.nome, (ReportEngine.ENTITIES[m.def.ent] || {}).l || '')).join('') : '<div class="set-sub" style="padding:8px 12px;border-top:1px solid var(--b1)">Nenhum modelo ainda. O administrador cria em Configurações › Relatórios.</div>') + '</details>';
+    const sc = SCREENS.filter(s => typeof Auth === 'undefined' || Auth.canOpen(s[0]));
+    html += '<details><summary>Já nas Telas</summary>' + sc.map(s => '<button class="rpt-item" onclick="R.go(\'' + s[0] + '\')"><i class="ti ti-' + s[1] + '"></i> ' + esc(s[2]) + '</button>').join('') + '</details>';
+    root.innerHTML = html;
+  }
+  function renderCtl() {
+    const box = $('rpt-ctl'), out = $('rpt-out'); if(!box) return;
+    const d = defOf(sel);
+    if(!d) { box.innerHTML = '<div class="rk-empty">Escolha um relatório na lista ao lado.</div>'; if(out) out.innerHTML = ''; return; }
+    const desc = sel.type === 'padrao' ? ((ReportEngine.PADROES.find(x => x.id === sel.id) || {}).desc || '') : 'Modelo criado no Construtor de Relatórios.';
+    const canAll = (() => { try { return (DB.listProjects() || []).filter(p => p.methodology !== 'quadro').length > 1; } catch(e) { return false; } })();
+    box.innerHTML = '<div class="lbl"><i class="ti ti-file-analytics"></i>' + esc(nameOf(sel)) + '</div><p style="font-size:12.5px;color:var(--t2);line-height:1.6">' + esc(desc) + '</p><div class="rpt-ctl">'
+      + (canAll ? '<div><label for="rpt-scope">Projetos</label><select class="input" id="rpt-scope" onchange="Reports.setScope(this.value)"><option value="ativo"' + (scope === 'ativo' ? ' selected' : '') + '>Só o projeto aberto</option><option value="todos"' + (scope === 'todos' ? ' selected' : '') + '>Todos os projetos</option></select></div>' : '')
+      + (hasPeriod(d) ? '<div><label for="rpt-ini">De</label><input class="input" type="date" id="rpt-ini" value="' + esc(per.inicio) + '" onchange="Reports.setPer()"></div><div><label for="rpt-fim">Até</label><input class="input" type="date" id="rpt-fim" value="' + esc(per.fim) + '" onchange="Reports.setPer()"></div><div class="btn-row"><button class="btn btn-sm" onclick="Reports.quick(7)">7 dias</button><button class="btn btn-sm" onclick="Reports.quick(30)">30 dias</button><button class="btn btn-sm" onclick="Reports.quick(90)">90 dias</button></div>' : '')
+      + '<div class="btn-row"><button class="btn btn-sm btn-acc" onclick="Reports.run()"><i class="ti ti-player-play"></i>Gerar</button></div></div>';
+    if(out && !last) out.innerHTML = '<div class="rk-empty">Toque em Gerar para ver o relatório.</div>';
+  }
+  function tableHtml(res) {
+    const tot = ReportEngine.totals(res), head = res.colunas.map(c => '<th scope="col"' + (ReportEngine.isNum(c.type) ? ' class="num"' : '') + '>' + esc(c.label) + '</th>').join('');
+    const body = res.linhas.slice(0, 500).map(l => '<tr>' + l.map((v, i) => '<td' + (ReportEngine.isNum(res.colunas[i].type) ? ' class="num"' : '') + '>' + esc(ReportEngine.fmt(v, res.colunas[i].type)) + '</td>').join('') + '</tr>').join('');
+    const foot = tot ? '<tr class="rpt-tot">' + tot.map((v, i) => '<td' + (ReportEngine.isNum(res.colunas[i].type) ? ' class="num"' : '') + '>' + (v == null ? '' : esc(typeof v === 'number' ? ReportEngine.fmt(v, res.colunas[i].type) : v)) + '</td>').join('') + '</tr>' : '';
+    return '<div style="overflow-x:auto"><table class="hr-tbl"><thead><tr>' + head + '</tr></thead><tbody>' + body + foot + '</tbody></table></div>'
+      + '<div class="set-sub" style="margin-top:6px">' + res.linhas.length + ' linha(s)' + (res.linhas.length > 500 ? ' (a tela mostra as 500 primeiras; a exportação leva todas)' : '') + (res.truncado ? ' · mostrando só os primeiros resultados (sem linha de total)' : '') + ' · de ' + res.total + ' registro(s) lidos.</div>';
+  }
+  function showResult(res, def, target) {
+    const box = $(target || 'rpt-out'); if(!box) return;
+    if(!res.linhas.length) { box.innerHTML = '<div class="rk-empty">Nenhum registro neste relatório com os filtros e o período escolhidos.</div>'; return; }
+    box.innerHTML = '<div class="card">' + tableHtml(res) + '<div class="btn-row" style="margin-top:10px"><button class="btn btn-sm" onclick="Reports.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Excel</button><button class="btn btn-sm" onclick="Reports.exportCsv()"><i class="ti ti-download"></i>CSV</button><button class="btn btn-sm" onclick="Reports.pdf()"><i class="ti ti-printer"></i>Salvar em PDF / Imprimir</button></div></div>';
+  }
+  function exec(def, target) {
+    const d = Object.assign({}, def); if(hasPeriod(d) && target !== 'rpb-out') { d.inicio = per.inicio; d.fim = per.fim; }
+    let res; try { res = ReportEngine.run(d, ctx()); } catch(e) { const box = $(target || 'rpt-out'); if(box) box.innerHTML = '<div class="rk-empty">' + esc(e.message || 'Não foi possível gerar o relatório.') + '</div>'; last = null; return null; }
+    last = res; lastDef = d; showResult(res, d, target); return res;
+  }
+  function run() { const d = defOf(sel); if(!d) return; if(hasPeriod(d) && (!per.inicio || !per.fim)) { quick(30, true); } exec(d, 'rpt-out'); }
+  function open(type, id) { sel = { type, id }; last = null; if(!per.inicio) quick(30, true); renderList(); renderCtl(); }
+  function quick(n, silent) { per.fim = today(); per.inicio = addDays(per.fim, -(n - 1)); if(!silent) { renderCtl(); } }
+  function setPer() { per.inicio = ($('rpt-ini') || {}).value || ''; per.fim = ($('rpt-fim') || {}).value || ''; }
+  function setScope(v) { scope = v === 'todos' ? 'todos' : 'ativo'; last = null; renderCtl(); }
+  function render() { renderList(); renderCtl(); if($('rpb-root')) builderRender(); }
+
+  // ── saída: Excel, CSV e PDF (a mesma tabela que está na tela, todas as linhas) ──
+  function sheetRows() {
+    const res = last; if(!res) return null;
+    const rows = [res.colunas.map(c => c.label)].concat(res.linhas.map(l => l.map((v, i) => ReportEngine.fmt(v, res.colunas[i].type, true))));
+    const tot = ReportEngine.totals(res); if(tot) rows.push(tot.map((v, i) => v == null ? '' : (typeof v === 'number' ? v : v)));
+    return rows;
+  }
+  const stampName = () => (nameOf(sel) || (lastDef && lastDef.nome) || 'relatorio').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'relatorio';
+  function exportXlsx() { const rows = sheetRows(); if(!rows) return; XlsxExport.download(stampName() + '-' + XlsxExport.stamp() + '.xlsx', [{ name: (nameOf(sel) || 'Relatório').slice(0, 31), rows }]); }
+  function exportCsv() {
+    const rows = sheetRows(); if(!rows) return;
+    const q = v => { let s = String(v == null ? '' : v); if(typeof v === 'number') s = String(v).replace('.', ','); if(/^[=+\-@\t\r]/.test(s) && typeof v !== 'number') s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
+    const blob = new Blob(['﻿' + rows.map(l => l.map(q).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = stampName() + '-' + today() + '.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    T.show('📥 CSV exportado.');
+  }
+  function pdf() {
+    if(!last) return;
+    const old = $('rpt-print-frame'); if(old) old.remove();
+    const per2 = (lastDef && lastDef.inicio) ? ' · período de ' + ReportEngine.fmt(lastDef.inicio, 'data') + ' a ' + ReportEngine.fmt(lastDef.fim, 'data') : '';
+    const proj = projects().map(p => p.name).join(', '), tot = ReportEngine.totals(last);
+    const th = last.colunas.map(c => '<th' + (ReportEngine.isNum(c.type) ? ' class="n"' : '') + '>' + esc(c.label) + '</th>').join('');
+    const tr = last.linhas.map(l => '<tr>' + l.map((v, i) => '<td' + (ReportEngine.isNum(last.colunas[i].type) ? ' class="n"' : '') + '>' + esc(ReportEngine.fmt(v, last.colunas[i].type)) + '</td>').join('') + '</tr>').join('');
+    const tf = tot ? '<tr class="t">' + tot.map((v, i) => '<td' + (ReportEngine.isNum(last.colunas[i].type) ? ' class="n"' : '') + '>' + (v == null ? '' : esc(typeof v === 'number' ? ReportEngine.fmt(v, last.colunas[i].type) : v)) + '</td>').join('') + '</tr>' : '';
+    const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>' + esc(nameOf(sel) || 'Relatório') + '</title><style>@page{size:A4;margin:14mm}body{font:12px/1.45 Arial,sans-serif;color:#111;background:#fff}h1{font-size:18px;margin:0 0 2px}.s{color:#555;font-size:11px;margin-bottom:12px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #bbb;padding:4px 6px;text-align:left;vertical-align:top}th{background:#eee}.n{text-align:right}tr{page-break-inside:avoid}.t td{font-weight:700;border-top:2px solid #333}.f{margin-top:10px;color:#666;font-size:10px}</style></head><body><h1>' + esc(nameOf(sel) || 'Relatório') + '</h1><div class="s">' + esc(proj) + esc(per2) + ' · gerado em ' + esc(ReportEngine.fmt(today(), 'data')) + ' por ' + esc((typeof Auth !== 'undefined' && Auth.getName()) || '') + '</div><table><thead><tr>' + th + '</tr></thead><tbody>' + tr + tf + '</tbody></table><div class="f">' + last.linhas.length + ' linha(s). Números calculados pelo sistema a partir dos dados do projeto.</div></body></html>';
+    const fr = document.createElement('iframe'); fr.id = 'rpt-print-frame'; fr.title = 'Relatório para impressão'; fr.setAttribute('aria-hidden', 'true'); fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+    fr.onload = () => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch(e) { T.show('⚠️ Não consegui abrir a impressão.'); } };
+    fr.srcdoc = html; document.body.appendChild(fr);
+  }
+
+  // ═══ Construtor (Configurações › Relatórios) ═══
+  let B = null, buildMsg = '';
+  const blank = () => ({ editId: '', nome: '', compartilhar: 'todos', def: { ent: 'cards', campos: [], grupos: [], medidas: [], filtros: [], ordem: '', dir: 'asc', top: 0, periodoCampo: '' }, modo: 'lista' });
+  const cat = () => ReportEngine.catalog(can);
+  function builderRender() {
+    const root = $('rpb-root'); if(!root) return;
+    if(!B) B = blank();
+    const c = cat(), e = c[B.def.ent] || c[Object.keys(c)[0]]; if(e && !c[B.def.ent]) B.def.ent = e.id;
+    if(!e) { root.innerHTML = '<div class="rk-empty">Sem permissão para nenhuma fonte de dados.</div>'; return; }
+    const fOpts = (types, sel2, blankTxt) => '<option value="">' + (blankTxt || 'Escolha…') + '</option>' + e.fields.filter(f => !types || types.includes(f.t)).map(f => '<option value="' + esc(f.k) + '"' + (f.k === sel2 ? ' selected' : '') + '>' + esc(f.l) + '</option>').join('');
+    const d = B.def, agr = B.modo === 'agrupar';
+    const groups = {}; e.fields.forEach(f => { (groups[f.g] = groups[f.g] || []).push(f); });
+    const colsPicked = d.campos.map((k, i) => { const f = e.fields.find(x => x.k === k); return f ? '<span class="rpt-chip">' + esc(f.l) + '<button title="Mover para antes" aria-label="Mover ' + esc(f.l) + ' para antes" onclick="Reports.bMove(' + i + ',-1)">↑</button><button title="Mover para depois" aria-label="Mover ' + esc(f.l) + ' para depois" onclick="Reports.bMove(' + i + ',1)">↓</button><button title="Tirar" aria-label="Tirar ' + esc(f.l) + '" onclick="Reports.bToggle(\'' + esc(k) + '\')">✕</button></span>' : ''; }).join('');
+    const gSel = [0, 1, 2].map(i => '<select class="input" aria-label="Agrupar por ' + (i + 1) + '" onchange="Reports.bGroup(' + i + ',this.value)">' + fOpts(['texto', 'data'], d.grupos[i], i ? 'Depois por…' : 'Agrupar por…') + '</select>').join('');
+    const mRows = d.medidas.map((m, i) => '<div class="rpt-row"><select class="input" aria-label="Cálculo ' + (i + 1) + '" onchange="Reports.bMeasure(' + i + ',\'fn\',this.value)">' + Object.keys(ReportEngine.FN).map(k => '<option value="' + k + '"' + (k === m.fn ? ' selected' : '') + '>' + ReportEngine.FN[k] + '</option>').join('') + '</select><span>de</span><select class="input" aria-label="Campo do cálculo ' + (i + 1) + '" onchange="Reports.bMeasure(' + i + ',\'campo\',this.value)"><option value="*"' + (m.campo === '*' ? ' selected' : '') + '>* (quantidade de registros)</option>' + e.fields.filter(f => ReportEngine.isNum(f.t) || m.fn === 'count').map(f => '<option value="' + esc(f.k) + '"' + (f.k === m.campo ? ' selected' : '') + '>' + esc(f.l) + '</option>').join('') + '</select><button class="btn btn-sm" onclick="Reports.bMeasureDel(' + i + ')" aria-label="Tirar cálculo ' + (i + 1) + '"><i class="ti ti-x"></i></button></div>').join('');
+    const fRows = d.filtros.map((x, i) => '<div class="rpt-row"><select class="input" aria-label="Campo do filtro ' + (i + 1) + '" onchange="Reports.bFilter(' + i + ',\'campo\',this.value)">' + fOpts(null, x.campo) + '</select><select class="input" aria-label="Condição do filtro ' + (i + 1) + '" onchange="Reports.bFilter(' + i + ',\'op\',this.value)">' + Object.keys(ReportEngine.OPS).map(k => '<option value="' + k + '"' + (k === x.op ? ' selected' : '') + '>' + ReportEngine.OPS[k] + '</option>').join('') + '</select><input class="input" aria-label="Valor do filtro ' + (i + 1) + '" value="' + esc(x.valor) + '" oninput="Reports.bFilter(' + i + ',\'valor\',this.value,true)"><button class="btn btn-sm" onclick="Reports.bFilterDel(' + i + ')" aria-label="Tirar filtro ' + (i + 1) + '"><i class="ti ti-x"></i></button></div>').join('');
+    const ordOpts = (agr ? ['<option value="">Por agrupamento</option>'].concat(d.medidas.map(m => '<option value="' + esc(m.fn + ':' + m.campo) + '"' + (d.ordem === m.fn + ':' + m.campo ? ' selected' : '') + '>' + esc(ReportEngine.FN[m.fn] + ' de ' + (m.campo === '*' ? 'registros' : ((e.fields.find(f => f.k === m.campo) || {}).l || m.campo))) + '</option>')).concat(d.grupos.filter(Boolean).map(k => '<option value="' + esc(k) + '"' + (d.ordem === k ? ' selected' : '') + '>' + esc((e.fields.find(f => f.k === k) || {}).l || k) + '</option>')).join('') : '<option value="">Sem ordem</option>' + d.campos.map(k => '<option value="' + esc(k) + '"' + (d.ordem === k ? ' selected' : '') + '>' + esc((e.fields.find(f => f.k === k) || {}).l || k) + '</option>').join(''));
+    const saved = models().map(m => '<tr><td>' + esc(m.nome) + '</td><td>' + esc((ReportEngine.ENTITIES[m.def.ent] || {}).l || m.def.ent) + '</td><td>' + (m.compartilhar === 'todos' ? 'Todos que abrem Relatórios' : 'Só administradores') + '</td><td><div class="btn-row"><button class="btn btn-sm" onclick="Reports.bEdit(\'' + esc(m.id) + '\')">Editar</button><button class="btn btn-sm" onclick="Reports.bCode(\'' + esc(m.id) + '\')">Código</button><button class="btn btn-sm btn-red" onclick="Reports.bDelete(\'' + esc(m.id) + '\')">Remover</button></div></td></tr>').join('');
+    root.innerHTML = '<div class="rpt-bld">'
+      + '<div class="card"><div class="lbl"><i class="ti ti-tools"></i>' + (B.editId ? 'Editando o modelo' : 'Novo modelo de relatório') + '</div>'
+      + '<div class="rpt-row"><div><label class="field-label" for="rpb-nome">Nome do relatório</label><input class="input" id="rpb-nome" maxlength="80" value="' + esc(B.nome) + '" oninput="Reports.bName(this.value)" placeholder="Ex.: Horas por pessoa no mês"></div>'
+      + '<div><label class="field-label" for="rpb-ent">O que listar</label><select class="input" id="rpb-ent" onchange="Reports.bEnt(this.value)">' + Object.keys(c).map(k => '<option value="' + k + '"' + (k === d.ent ? ' selected' : '') + '>' + esc(c[k].l) + '</option>').join('') + '</select></div>'
+      + '<div><label class="field-label" for="rpb-modo">Como mostrar</label><select class="input" id="rpb-modo" onchange="Reports.bModo(this.value)"><option value="lista"' + (!agr ? ' selected' : '') + '>Lista linha a linha</option><option value="agrupar"' + (agr ? ' selected' : '') + '>Agrupar e somar</option></select></div></div>'
+      + (agr ? '<div class="field-label">Agrupar (até 3)</div><div class="rpt-row">' + gSel + '</div><div class="field-label">Cálculos (até 10)</div>' + mRows + '<button class="btn btn-sm" onclick="Reports.bMeasureAdd()"><i class="ti ti-plus"></i>Cálculo</button>'
+        : '<div class="field-label">Colunas (clique para incluir; use ↑ ↓ para a ordem)</div>' + Object.keys(groups).map(g => '<div class="rpt-row"><b style="font-size:11.5px;color:var(--t2);min-width:110px">' + esc(g) + '</b>' + groups[g].map(f => '<label style="font-size:12.5px;display:inline-flex;gap:4px;align-items:center"><input type="checkbox" ' + (d.campos.includes(f.k) ? 'checked ' : '') + 'onchange="Reports.bToggle(\'' + esc(f.k) + '\')">' + esc(f.l) + '</label>').join('') + '</div>').join('') + '<div class="rpt-row" aria-label="Colunas escolhidas">' + (colsPicked || '<span class="set-sub">Nenhuma coluna escolhida.</span>') + '</div>')
+      + '<div class="field-label" style="margin-top:8px">Filtros (até 5)</div>' + fRows + '<button class="btn btn-sm" onclick="Reports.bFilterAdd()"><i class="ti ti-plus"></i>Filtro</button>'
+      + '<div class="rpt-row" style="margin-top:10px"><div><label class="field-label" for="rpb-per">Período por</label><select class="input" id="rpb-per" onchange="Reports.bPer(this.value)">' + fOpts(['data'], d.periodoCampo, 'Sem período') + '</select></div>'
+      + '<div><label class="field-label" for="rpb-ord">Ordenar por</label><select class="input" id="rpb-ord" onchange="Reports.bOrd(this.value)">' + ordOpts + '</select></div>'
+      + '<div><label class="field-label" for="rpb-dir">Sentido</label><select class="input" id="rpb-dir" onchange="Reports.bDir(this.value)"><option value="asc"' + (d.dir !== 'desc' ? ' selected' : '') + '>Crescente</option><option value="desc"' + (d.dir === 'desc' ? ' selected' : '') + '>Decrescente</option></select></div>'
+      + (agr ? '<div><label class="field-label" for="rpb-top">Mostrar só os primeiros</label><input class="input" id="rpb-top" type="number" min="0" max="20000" style="width:110px" value="' + (d.top || '') + '" oninput="Reports.bTop(this.value)" placeholder="todos"></div>' : '') + '</div>'
+      + '<div class="rpt-row"><div><label class="field-label" for="rpb-comp">Quem abre na Central</label><select class="input" id="rpb-comp" onchange="Reports.bShare(this.value)"><option value="todos"' + (B.compartilhar === 'todos' ? ' selected' : '') + '>Todos que abrem Relatórios (cada um vê só os campos que o perfil permite)</option><option value="admin"' + (B.compartilhar === 'admin' ? ' selected' : '') + '>Só administradores</option></select></div></div>'
+      + '<div class="btn-row"><button class="btn btn-sm" onclick="Reports.bPreview()"><i class="ti ti-eye"></i>Prévia</button><button class="btn btn-sm btn-acc" onclick="Reports.bSave()"><i class="ti ti-device-floppy"></i>Salvar Modelo</button><button class="btn btn-sm" onclick="Reports.bNew()">Novo</button><button class="btn btn-sm" onclick="Reports.bImport()"><i class="ti ti-file-import"></i>Importar Código</button></div>'
+      + '<div id="rpb-msg" class="set-sub" role="status" style="margin-top:6px">' + esc(buildMsg) + '</div><div id="rpb-out" style="margin-top:8px"></div></div>'
+      + '<div class="card"><div class="lbl"><i class="ti ti-list-details"></i>Modelos salvos (' + models().length + ' de ' + MAX_MODELS + ')</div>' + (saved ? '<div style="overflow-x:auto"><table class="hr-tbl"><thead><tr><th scope="col">Nome</th><th scope="col">O que lista</th><th scope="col">Quem abre</th><th scope="col">Ações</th></tr></thead><tbody>' + saved + '</tbody></table></div>' : '<div class="rk-empty">Nenhum modelo salvo. Monte um acima e toque em Salvar Modelo: ele aparece na Central de Relatórios.</div>') + '</div></div>';
+  }
+  const bd = () => { B = B || blank(); return B.def; };
+  const msg = t => { buildMsg = t; const m = $('rpb-msg'); if(m) m.textContent = t; };
+  function bName(v) { (B = B || blank()).nome = v; }
+  function bEnt(v) { const s = blank(); s.nome = B.nome; s.compartilhar = B.compartilhar; s.editId = B.editId; s.def.ent = v; B = s; builderRender(); }
+  function bModo(v) { B.modo = v === 'agrupar' ? 'agrupar' : 'lista'; const d = bd(); d.ordem = ''; if(B.modo === 'agrupar') { d.campos = []; if(!d.medidas.length) d.medidas = [{ campo: '*', fn: 'count' }]; } else { d.grupos = []; d.medidas = []; } builderRender(); }
+  function bToggle(k) { const d = bd(), i = d.campos.indexOf(k); if(i >= 0) d.campos.splice(i, 1); else d.campos.push(k); builderRender(); }
+  function bMove(i, s) { const d = bd(), j = i + s; if(j < 0 || j >= d.campos.length) return; const t = d.campos[i]; d.campos[i] = d.campos[j]; d.campos[j] = t; builderRender(); }
+  function bGroup(i, v) { const d = bd(); const g = d.grupos.slice(); g[i] = v; d.grupos = g.filter(Boolean).filter((x, ix, a) => a.indexOf(x) === ix); builderRender(); }
+  function bMeasure(i, k, v) { const m = bd().medidas[i]; if(!m) return; m[k] = v; if(k === 'fn' && v !== 'count' && m.campo === '*') m.campo = ''; builderRender(); }
+  function bMeasureAdd() { const d = bd(); if(d.medidas.length >= 10) return msg('No máximo 10 cálculos.'); d.medidas.push({ campo: '*', fn: 'count' }); builderRender(); }
+  function bMeasureDel(i) { bd().medidas.splice(i, 1); builderRender(); }
+  function bFilterAdd() { const d = bd(); if(d.filtros.length >= 5) return msg('No máximo 5 filtros.'); d.filtros.push({ campo: '', op: 'igual', valor: '' }); builderRender(); }
+  function bFilter(i, k, v, noRender) { const f = bd().filtros[i]; if(!f) return; f[k] = v; if(!noRender) builderRender(); }
+  function bFilterDel(i) { bd().filtros.splice(i, 1); builderRender(); }
+  function bPer(v) { bd().periodoCampo = v; }
+  function bOrd(v) { bd().ordem = v; }
+  function bDir(v) { bd().dir = v === 'desc' ? 'desc' : 'asc'; }
+  function bTop(v) { bd().top = Math.max(0, Math.min(20000, parseInt(v, 10) || 0)); }
+  function bShare(v) { B.compartilhar = v === 'admin' ? 'admin' : 'todos'; }
+  function cleanDef() { const d = JSON.parse(JSON.stringify(bd())); d.filtros = d.filtros.filter(f => f.campo); if(B.modo === 'lista') { d.grupos = []; d.medidas = []; } else d.campos = []; if(d.ordem && B.modo === 'lista' && !d.campos.includes(d.ordem)) d.ordem = ''; return d; }
+  function bPreview() {
+    const d = cleanDef(), bad = ReportEngine.validate(d, can); if(bad) { msg(bad); const o = $('rpb-out'); if(o) o.innerHTML = ''; return; }
+    msg('');
+    const t = today(); if(d.periodoCampo) { d.inicio = addDays(t, -29); d.fim = t; msg('Prévia com os últimos 30 dias (na Central o período é escolhido por quem gera).'); }
+    const saveScope = scope; scope = 'ativo'; const keep = last, keepDef = lastDef;
+    let res = null; try { res = ReportEngine.run(d, ctx()); } catch(e) { msg(e.message); }
+    scope = saveScope; last = keep; lastDef = keepDef;
+    const o = $('rpb-out'); if(o && res) o.innerHTML = res.linhas.length ? tableHtml(Object.assign({}, res, { linhas: res.linhas.slice(0, 50) })) : '<div class="rk-empty">Sem registros com esses filtros neste projeto.</div>';
+  }
+  function bSave() {
+    if(!can('manage_settings')) return T.show('🔒 Só o administrador salva modelos de relatório.');
+    const nome = String(B.nome || '').trim(); if(nome.length < 3) return msg('Dê um nome ao relatório (mínimo 3 letras).');
+    const d = cleanDef(), bad = ReportEngine.validate(d, can); if(bad) return msg(bad);
+    const list = models().slice(), dup = list.find(m => m.nome.toLowerCase() === nome.toLowerCase() && m.id !== B.editId); if(dup) return msg('Já existe um modelo com esse nome.');
+    const row = { id: B.editId || 'rm' + Date.now().toString(36), nome, compartilhar: B.compartilhar, def: Object.assign({}, d, { nome }), by: (typeof Auth !== 'undefined' && Auth.getName()) || '', at: new Date().toISOString() };
+    const i = list.findIndex(m => m.id === row.id);
+    if(i >= 0) list[i] = row; else { if(list.length >= MAX_MODELS) return msg('Limite de ' + MAX_MODELS + ' modelos.'); list.push(row); }
+    OrgSettings.set(MODELS_KEY, list); B.editId = row.id; msg('✅ Modelo salvo. Ele já aparece na Central de Relatórios.'); T.show('✅ Modelo "' + nome + '" salvo.'); builderRender(); renderList();
+  }
+  function bNew() { B = blank(); buildMsg = ''; builderRender(); }
+  function bEdit(id) { const m = models().find(x => x.id === id); if(!m) return; const d = JSON.parse(JSON.stringify(m.def)); delete d.nome; B = { editId: m.id, nome: m.nome, compartilhar: m.compartilhar || 'todos', def: Object.assign({ ent: 'cards', campos: [], grupos: [], medidas: [], filtros: [], ordem: '', dir: 'asc', top: 0, periodoCampo: '' }, d), modo: (d.grupos && d.grupos.length) ? 'agrupar' : 'lista' }; buildMsg = ''; builderRender(); const n = $('rpb-nome'); if(n) n.scrollIntoView({ block: 'center' }); }
+  async function bDelete(id) {
+    if(!can('manage_settings')) return T.show('🔒 Só o administrador remove modelos.');
+    const m = models().find(x => x.id === id); if(!m) return;
+    const ok = await Dlg.ask({ title: 'Remover o modelo?', body: '"' + m.nome + '" deixa de aparecer na Central de Relatórios. Os dados do projeto não mudam.', okLabel: 'Remover Modelo', danger: true }); if(!ok) return;
+    OrgSettings.set(MODELS_KEY, models().filter(x => x.id !== id)); if(B && B.editId === id) B = blank(); T.show('Modelo removido.'); builderRender(); renderList();
+  }
+  function bCode(id) { const m = models().find(x => x.id === id); if(!m) return; const code = ReportEngine.toCode(Object.assign({ nome: m.nome }, m.def)); const done = () => T.show('📋 Código copiado: cole em Importar Código, em outra organização.', 5000); if(navigator.clipboard) navigator.clipboard.writeText(code).then(done, () => msg(code)); else msg(code); }
+  function bImport() {
+    const code = (prompt('Cole o código do modelo (ele leva só a definição, nunca dados):') || '').trim(); if(!code) return;
+    const d = ReportEngine.fromCode(code); if(!d) return msg('Código inválido.');
+    const bad = ReportEngine.validate(d, can); if(bad) return msg('Este modelo não vale aqui: ' + bad);
+    const nome = d.nome; delete d.nome; B = { editId: '', nome, compartilhar: 'todos', def: d, modo: (d.grupos && d.grupos.length) ? 'agrupar' : 'lista' }; msg('Modelo importado: confira e toque em Salvar Modelo.'); builderRender();
+  }
+  function openBuilder() { R.go('settings'); SettingsTabs.show('relat'); }
+  return { render, open, run, quick, setPer, setScope, exportXlsx, exportCsv, pdf, openBuilder, builderRender, bName, bEnt, bModo, bToggle, bMove, bGroup, bMeasure, bMeasureAdd, bMeasureDel, bFilterAdd, bFilter, bFilterDel, bPer, bOrd, bDir, bTop, bShare, bPreview, bSave, bNew, bEdit, bDelete, bCode, bImport };
 })();
 </script>
 

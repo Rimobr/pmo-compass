@@ -189,6 +189,33 @@ for (const w of [900, 1100, 1300, 1500, 1900]) {
 console.log('   gráfico visível em: ' + vis.join(', '));
 await p.setViewportSize({ width: 1280, height: 800 });
 ok(over.length === 0, 'Kanban: gráfico da sprint não se sobrepõe aos botões do cabeçalho (900 a 1900 px)', over.join(' | ') + ' visível em: ' + vis.join(','));
+// Central de Relatórios + Construtor em Configurações
+await p.evaluate(() => { document.querySelectorAll('[id^="modal-"]').forEach(e => e.classList.add('hidden')); R.go('reports'); }); await p.waitForTimeout(400);
+r = await p.evaluate(async () => {
+  const out = {};
+  out.grupos = document.querySelectorAll('#rpt-list details').length; out.itens = document.querySelectorAll('#rpt-list .rpt-item').length;
+  const l0 = DB.get('backlog'); DB.set('backlog', l0.concat([{ id: 'US-77', title: 'X', kind: 'tarefa', status: 'todo', points: 2, assignee: 'Ana', sprintId: '', rank: 9, createdOn: '2026-11-01', doneOn: '', description: '', attachments: [], history: [], checklist: [] }])); Agile.resetCache && Agile.resetCache();
+  Reports.open('padrao', 'p-cards-sit'); Reports.run(); await new Promise(x => setTimeout(x, 200));
+  const t = document.querySelector('#rpt-out table'); out.linhas = t ? t.querySelectorAll('tbody tr').length : 0; out.tot = !!document.querySelector('#rpt-out .rpt-tot');
+  Reports.open('padrao', 'p-horas-pessoa'); out.periodo = !!document.getElementById('rpt-ini');
+  return out;
+});
+ok(r.grupos >= 4 && r.itens >= 17 && r.linhas >= 1 && r.tot && r.periodo, 'Central de Relatórios: lista agrupada, gera com total e mostra período quando o relatório tem', JSON.stringify(r));
+r = await p.evaluate(async () => {
+  R.go('settings'); SettingsTabs.show('relat'); await new Promise(x => setTimeout(x, 200));
+  const root = document.getElementById('rpb-root'); const antes = !!root && root.textContent.includes('Novo modelo');
+  Reports.bName('ZZ Teste do ciclo'); Reports.bEnt('riscos'); Reports.bName('ZZ Teste do ciclo'); Reports.bToggle('titulo'); Reports.bToggle('nivel'); Reports.bSave();
+  const salvo = (OrgSettings.get('reportModels') || []).some(x => x.nome === 'ZZ Teste do ciclo');
+  R.go('reports'); await new Promise(x => setTimeout(x, 200));
+  const naLista = document.getElementById('rpt-list').textContent.includes('ZZ Teste do ciclo');
+  const m = (OrgSettings.get('reportModels') || []).find(x => x.nome === 'ZZ Teste do ciclo');
+  if(m) { Reports.open('modelo', m.id); Reports.run(); }
+  await new Promise(x => setTimeout(x, 200));
+  const gerou = !!document.querySelector('#rpt-out table, #rpt-out .rk-empty');
+  OrgSettings.set('reportModels', (OrgSettings.get('reportModels') || []).filter(x => x.nome !== 'ZZ Teste do ciclo')); Reports.render();
+  return { antes, salvo, naLista, gerou };
+});
+ok(r.antes && r.salvo && r.naLista && r.gerou, 'Construtor (Configurações): salva o modelo e ele aparece e gera na Central de Relatórios', JSON.stringify(r));
 await p.close();
 
 await b.close(); srv.close();

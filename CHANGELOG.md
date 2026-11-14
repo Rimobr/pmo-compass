@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.91.0 — 2026-11-14
+- Telas unificadas (Diagnostico de Documentos, Diretoria, Visao do PMO) e grafico da sprint sem sobrepor os botoes do Kanban
+
 ## 2.90.0 — 2026-11-14
 - Visao do PMO: quadro Estimado x Real por projeto
 

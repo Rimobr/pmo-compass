@@ -1,0 +1,219 @@
+<!-- ■ MODULE: services/report-engine ─ Motor de relatórios: um catálogo único de entidades e campos (com a permissão exigida por campo), a execução de uma definição (filtrar, agrupar, somar, ordenar, limitar, totalizar), os relatórios padrão e o código de exportação do modelo. A tela só manda a definição; tudo é conferido contra o catálogo. Lógica pura, sem DOM. -->
+<script data-module="services/report-engine">
+const ReportEngine = (() => {
+  const MAX_ROWS = 20000, MAX_GROUPS = 3, MAX_MEASURES = 10, MAX_FILTERS = 5;
+  const ISO = /^\d{4}-\d{2}-\d{2}/;
+  const iso = v => ISO.test(String(v || '')) ? String(v).slice(0, 10) : '';
+  const num = v => { const n = Number(v); return isFinite(n) ? n : 0; };
+  const dayDiff = (a, b) => (iso(a) && iso(b)) ? Math.round((Date.parse(iso(b) + 'T12:00:00Z') - Date.parse(iso(a) + 'T12:00:00Z')) / 86400000) : null;
+  const STATUS = { todo: 'A fazer', doing: 'Em andamento', review: 'Em revisão', done: 'Concluído' };
+  const KIND = { historia: 'História', tarefa: 'Tarefa', bug: 'Bug', epico: 'Épico' };
+  const WBS_ST = { grn: 'Concluída', amb: 'Em andamento', red: 'Com risco', neu: 'Não iniciada' };
+  const RISK_ST = { aberto: 'Aberto', mitigando: 'Mitigando', encerrado: 'Encerrado', ocorreu: 'Ocorreu' };
+  const SCOPE_ST = { pending: 'Pendente', analysis: 'Em análise', approved: 'Aprovada', rejected: 'Rejeitada' };
+  const INFL = { alta: 'Alta', media: 'Média', baixa: 'Baixa' };
+  const lbl = (map, v) => map[v] || (v == null || v === '' ? '' : String(v));
+  const F = (k, l, t, g, f, perm) => ({ k, l, t, g, f, perm: perm || null });
+
+  // Cada entidade: rótulo, grupo, permissão da entidade, campo de data usado no período e as linhas (uma por registro do projeto)
+  const ENTITIES = {
+    cards: { l: 'Cards (backlog e quadro)', perm: null, date: 'criado',
+      rows: (pid, c) => { const sp = {}; c.get(pid, 'sprints').forEach(s => { sp[s.id] = s.name; }); return c.get(pid, 'backlog').map(i => Object.assign({}, i, { _sprint: sp[i.sprintId] || '' })); },
+      fields: [F('id', 'Código', 'texto', 'Identificação', r => r.id), F('titulo', 'Título', 'texto', 'Identificação', r => r.title), F('tipo', 'Tipo', 'texto', 'Identificação', r => lbl(KIND, r.kind)),
+        F('situacao', 'Situação', 'texto', 'Andamento', r => lbl(STATUS, r.status)), F('responsavel', 'Responsável', 'texto', 'Andamento', r => r.assignee || ''), F('sprint', 'Sprint', 'texto', 'Andamento', r => r._sprint),
+        F('pontos', 'Pontos', 'numero', 'Andamento', r => (r.points === '' || r.points == null) ? null : num(r.points)), F('prioridade_bug', 'Posição na fila de bugs', 'numero', 'Andamento', r => r.bugPriority ? num(r.bugPriority) : null),
+        F('item_pai', 'Item pai (bug)', 'texto', 'Ligações', r => r.parentId || ''), F('epico', 'Épico', 'texto', 'Ligações', r => r.epicId || ''),
+        F('criado', 'Criado em', 'data', 'Datas', r => iso(r.createdOn)), F('concluido', 'Concluído em', 'data', 'Datas', r => iso(r.doneOn))] },
+    riscos: { l: 'Riscos', perm: null, date: 'identificado',
+      rows: (pid, c) => c.get(pid, 'risks'),
+      fields: [F('id', 'Código', 'texto', 'Identificação', r => r.id), F('titulo', 'Título', 'texto', 'Identificação', r => r.title), F('categoria', 'Categoria', 'texto', 'Identificação', r => r.category || ''),
+        F('probabilidade', 'Probabilidade (1 a 5)', 'numero', 'Avaliação', r => num(r.probability)), F('impacto', 'Impacto (1 a 5)', 'numero', 'Avaliação', r => num(r.impact)), F('nivel', 'Nível (probabilidade × impacto)', 'numero', 'Avaliação', r => num(r.probability) * num(r.impact)),
+        F('status', 'Situação', 'texto', 'Tratamento', r => lbl(RISK_ST, r.status)), F('resposta', 'Resposta', 'texto', 'Tratamento', r => r.response || ''), F('responsavel', 'Responsável', 'texto', 'Tratamento', r => r.owner || ''),
+        F('identificado', 'Identificado em', 'data', 'Datas', r => iso(r.identifiedOn)), F('revisao', 'Próxima revisão', 'data', 'Datas', r => iso(r.reviewOn))] },
+    entregas: { l: 'Entregas e subtarefas (WBS)', perm: null, date: 'fim',
+      rows: (pid, c) => { const out = []; c.get(pid, 'wbs').forEach(m => { out.push(Object.assign({ _nivel: 'Entrega', _entrega: m.label }, m)); (m.children || []).forEach(t => out.push(Object.assign({ _nivel: 'Subtarefa', _entrega: m.label }, t))); }); return out; },
+      fields: [F('nivel', 'Nível', 'texto', 'Identificação', r => r._nivel), F('entrega', 'Entrega', 'texto', 'Identificação', r => r._entrega), F('nome', 'Nome', 'texto', 'Identificação', r => r.label),
+        F('responsavel', 'Responsável', 'texto', 'Andamento', r => r.responsavel || ''), F('status', 'Situação', 'texto', 'Andamento', r => lbl(WBS_ST, r.status)), F('avanco', 'Avanço (%)', 'numero', 'Andamento', r => r._nivel === 'Entrega' ? num(r.pct) : null),
+        F('atrasada', 'Atrasada?', 'texto', 'Andamento', (r, c) => (r.status !== 'grn' && iso(r.end) && iso(r.end) < c.today) ? 'Sim' : 'Não'),
+        F('inicio', 'Início planejado', 'data', 'Datas', r => iso(r.start)), F('fim', 'Fim planejado', 'data', 'Datas', r => iso(r.end)), F('inicio_real', 'Início real', 'data', 'Datas', r => iso(r.startActual)), F('fim_real', 'Fim real', 'data', 'Datas', r => iso(r.endActual))] },
+    horas: { l: 'Horas apontadas', perm: null, date: 'data', ownOnly: 'view_all_hours',
+      rows: (pid, c) => c.get(pid, 'timeEntries'),
+      fields: [F('data', 'Data', 'data', 'Apontamento', r => iso(r.date)), F('mes', 'Mês', 'texto', 'Apontamento', r => iso(r.date).slice(0, 7)), F('pessoa', 'Pessoa', 'texto', 'Apontamento', r => r.person || ''),
+        F('horas', 'Horas', 'numero', 'Apontamento', r => num(r.hours)), F('referencia', 'Card ou entrega', 'texto', 'Apontamento', r => r.wbsRef || ''), F('situacao', 'Situação', 'texto', 'Apontamento', r => r.status || 'lançada'), F('obs', 'Observação', 'texto', 'Apontamento', r => r.note || '')] },
+    custos: { l: 'Custos lançados', perm: 'view_costs', date: 'data',
+      rows: (pid, c) => c.get(pid, 'costActuals'),
+      fields: [F('data', 'Data', 'data', 'Lançamento', r => iso(r.date)), F('mes', 'Mês', 'texto', 'Lançamento', r => iso(r.date).slice(0, 7)), F('descricao', 'Descrição', 'texto', 'Lançamento', r => r.label || ''),
+        F('tipo', 'Tipo', 'texto', 'Lançamento', r => r.kind === 'comprometido' ? 'Comprometido' : 'Real'), F('valor', 'Valor (R$)', 'dinheiro', 'Lançamento', r => num(r.amount))] },
+    escopo: { l: 'Mudanças de escopo', perm: null, date: 'criada',
+      rows: (pid, c) => c.get(pid, 'scopeChanges'),
+      fields: [F('id', 'Código', 'texto', 'Identificação', r => r.id), F('titulo', 'Título', 'texto', 'Identificação', r => r.title), F('status', 'Situação', 'texto', 'Identificação', r => lbl(SCOPE_ST, r.status)),
+        F('impacto_dias', 'Impacto em dias', 'numero', 'Impacto', r => num(r.impactDays)), F('impacto_custo', 'Impacto em R$', 'dinheiro', 'Impacto', r => num(r.impactCost), 'view_costs'), F('criada', 'Criada em', 'data', 'Datas', r => iso(r.createdAt))] },
+    impedimentos: { l: 'Impedimentos', perm: null, date: 'aberto_em',
+      rows: (pid, c) => c.get(pid, 'impediments'),
+      fields: [F('id', 'Código', 'texto', 'Identificação', r => r.id), F('titulo', 'Título', 'texto', 'Identificação', r => r.title), F('responsavel', 'Responsável', 'texto', 'Identificação', r => r.owner || ''),
+        F('situacao', 'Situação', 'texto', 'Andamento', r => r.status === 'resolvido' ? 'Resolvido' : 'Aberto'), F('aberto_em', 'Aberto em', 'data', 'Datas', r => iso(r.createdOn)), F('resolvido_em', 'Resolvido em', 'data', 'Datas', r => iso(r.resolvedOn)),
+        F('dias_aberto', 'Dias em aberto', 'numero', 'Andamento', (r, c) => { const d = dayDiff(r.createdOn, iso(r.resolvedOn) || c.today); return d == null ? null : Math.max(0, d); })] },
+    partes: { l: 'Partes interessadas', perm: null, date: null,
+      rows: (pid, c) => c.get(pid, 'stakeholders'),
+      fields: [F('nome', 'Nome', 'texto', 'Identificação', r => r.name), F('papel', 'Papel', 'texto', 'Identificação', r => r.role || ''), F('influencia', 'Influência', 'texto', 'Perfil', r => lbl(INFL, r.influence)),
+        F('engajamento', 'Engajamento', 'texto', 'Perfil', r => r.engagement || ''), F('ultimo_contato', 'Último contato', 'data', 'Contato', r => iso(r.lastContact)),
+        F('dias_sem_contato', 'Dias sem contato', 'numero', 'Contato', (r, c) => { const d = dayDiff(r.lastContact, c.today); return d == null ? null : Math.max(0, d); })] },
+    equipe: { l: 'Equipe', perm: null, date: null,
+      rows: (pid, c) => c.get(pid, 'team'),
+      fields: [F('nome', 'Nome', 'texto', 'Identificação', r => r.name), F('funcao', 'Função', 'texto', 'Identificação', r => r.role || ''), F('alocacao', 'Alocação (%)', 'numero', 'Carga', r => (r.allocationPct === '' || r.allocationPct == null) ? null : num(r.allocationPct)),
+        F('carga', 'Carga calculada (%)', 'numero', 'Carga', (r, c) => { const p = c.load ? c.load(r) : null; return p == null ? null : num(p); }, 'view_team_load')] },
+    sprints: { l: 'Sprints', perm: null, date: 'inicio',
+      rows: (pid, c) => c.get(pid, 'sprints'),
+      fields: [F('nome', 'Nome', 'texto', 'Identificação', r => r.name), F('situacao', 'Situação', 'texto', 'Identificação', r => ({ planejada: 'Planejada', ativa: 'Ativa', encerrada: 'Encerrada' })[r.state] || r.state || ''), F('meta', 'Meta', 'texto', 'Identificação', r => r.goal || ''),
+        F('inicio', 'Início', 'data', 'Datas', r => iso(r.startOn)), F('fim', 'Fim', 'data', 'Datas', r => iso(r.endOn)), F('capacidade', 'Capacidade (pontos)', 'numero', 'Identificação', r => (r.capacity === '' || r.capacity == null) ? null : num(r.capacity))] }
+  };
+  const FN = { sum: 'Soma', avg: 'Média', count: 'Contagem', max: 'Máximo', min: 'Mínimo' };
+  const OPS = { igual: 'é igual a', diferente: 'é diferente de', contem: 'contém', maior: 'é maior que', menor: 'é menor que' };
+  const isNum = t => t === 'numero' || t === 'dinheiro';
+
+  // Entidades e campos que ESTA pessoa pode usar (can(perm) decide); campo sem permissão não existe para ela
+  function catalog(can) {
+    const out = {};
+    Object.keys(ENTITIES).forEach(id => {
+      const e = ENTITIES[id]; if(e.perm && !can(e.perm)) return;
+      out[id] = { id, l: e.l, date: e.date, fields: e.fields.filter(f => !f.perm || can(f.perm)).map(f => ({ k: f.k, l: f.l, t: f.t, g: f.g })) };
+    });
+    return out;
+  }
+  const cell = (f, row, ctx) => { try { const v = f.f(row, ctx); return v === undefined ? null : v; } catch(e) { return null; } };
+  const cmp = (a, b) => (a == null && b == null) ? 0 : a == null ? 1 : b == null ? -1 : (typeof a === 'number' && typeof b === 'number') ? a - b : String(a).localeCompare(String(b), 'pt-BR');
+
+  // Confere a definição contra o catálogo da pessoa; devolve a mensagem do primeiro problema ou ''
+  function validate(def, can) {
+    const cat = catalog(can), e = def && cat[def.ent];
+    if(!e) return 'Escolha o que listar (entidade inválida ou sem permissão).';
+    const f = k => e.fields.find(x => x.k === k);
+    const g = def.grupos || [], m = def.medidas || [], fl = def.filtros || [], cols = def.campos || [];
+    if(g.length > MAX_GROUPS) return 'No máximo ' + MAX_GROUPS + ' agrupamentos.';
+    if(m.length > MAX_MEASURES) return 'No máximo ' + MAX_MEASURES + ' cálculos.';
+    if(fl.length > MAX_FILTERS) return 'No máximo ' + MAX_FILTERS + ' filtros.';
+    if(g.length) { for(const k of g) { const x = f(k); if(!x) return 'Campo de agrupamento inexistente: ' + k; if(isNum(x.t)) return 'Agrupe só por texto ou data: "' + x.l + '" é número.'; } if(!m.length) return 'Escolha ao menos um cálculo (soma, contagem…) para agrupar.'; }
+    else if(!cols.length) return 'Escolha ao menos um campo para as colunas.';
+    for(const k of cols) if(!f(k)) return 'Campo inexistente: ' + k;
+    for(const x of m) {
+      if(!FN[x.fn]) return 'Cálculo inválido: ' + x.fn;
+      if(x.campo === '*') { if(x.fn !== 'count') return 'O campo "*" só serve para contagem.'; continue; }
+      const y = f(x.campo); if(!y) return 'Campo de cálculo inexistente: ' + x.campo;
+      if(x.fn !== 'count' && !isNum(y.t)) return 'Não dá para ' + FN[x.fn].toLowerCase() + ' "' + y.l + '": só campos numéricos.';
+    }
+    for(const x of fl) { if(!f(x.campo)) return 'Campo de filtro inexistente: ' + x.campo; if(!OPS[x.op]) return 'Filtro inválido: ' + x.op; }
+    if(def.periodoCampo && !(f(def.periodoCampo) && f(def.periodoCampo).t === 'data')) return 'O período precisa de um campo de data.';
+    return '';
+  }
+  function matches(v, x, t) {
+    const a = v == null ? '' : v, b = x.valor == null ? '' : x.valor;
+    const sa = String(a).toLowerCase(), sb = String(b).toLowerCase().trim();
+    if(x.op === 'contem') return sa.indexOf(sb) >= 0;
+    if(x.op === 'igual') return isNum(t) ? Number(a) === Number(b) : sa === sb;
+    if(x.op === 'diferente') return isNum(t) ? Number(a) !== Number(b) : sa !== sb;
+    if(v == null || v === '') return false;
+    const A = isNum(t) ? Number(a) : String(a), B = isNum(t) ? Number(b) : String(b);
+    return x.op === 'maior' ? A > B : A < B;
+  }
+
+  // ctx: { projects:[{id,name}], get(pid, tabela), can(perm), today, me, load(membro) }
+  function run(def, ctx) {
+    const bad = validate(def, ctx.can); if(bad) throw new Error(bad);
+    const ent = ENTITIES[def.ent], cat = catalog(ctx.can)[def.ent], fields = ent.fields.filter(f => cat.fields.some(x => x.k === f.k));
+    const byKey = {}; fields.forEach(f => { byKey[f.k] = f; });
+    const multi = (ctx.projects || []).length > 1;
+    let rows = [];
+    (ctx.projects || []).forEach(p => (ent.rows(p.id, ctx) || []).forEach(r => rows.push({ _p: p.name, _r: r })));
+    // quem não tem a permissão de ver o de todos só enxerga o próprio nome nas horas
+    if(ent.ownOnly && !ctx.can(ent.ownOnly)) { const me = String(ctx.me || '').trim().toLowerCase(); rows = rows.filter(x => String(x._r.person || '').trim().toLowerCase() === me); }
+    const val = (x, k) => cell(byKey[k], x._r, ctx);
+    const pc = def.periodoCampo || '';
+    if(pc && (def.inicio || def.fim)) rows = rows.filter(x => { const d = val(x, pc); return d && (!def.inicio || d >= def.inicio) && (!def.fim || d <= def.fim); });
+    (def.filtros || []).forEach(fl => { rows = rows.filter(x => matches(val(x, fl.campo), fl, byKey[fl.campo].t)); });
+    const total = rows.length, grupos = def.grupos || [], medidas = def.medidas || [];
+    const projCol = (multi && !grupos.length) ? [{ key: '_p', label: 'Projeto', type: 'texto' }] : [];
+    const projVal = x => x._p;
+    if(!grupos.length) {
+      const cols = projCol.concat(def.campos.map(k => ({ key: k, label: byKey[k].l, type: byKey[k].t })));
+      let lin = rows.map(x => cols.map(c => c.key === '_p' ? projVal(x) : val(x, c.key)));
+      const oi = def.ordem ? cols.findIndex(c => c.key === def.ordem) : -1;
+      if(oi >= 0) lin.sort((a, b) => cmp(a[oi], b[oi]) * (def.dir === 'desc' ? -1 : 1));
+      const trunc = lin.length > MAX_ROWS; if(trunc) lin = lin.slice(0, MAX_ROWS);
+      return { colunas: cols, linhas: lin, total, truncado: trunc, agregado: false };
+    }
+    const gcols = (multi ? [{ key: '_p', label: 'Projeto', type: 'texto' }] : []).concat(grupos.map(k => ({ key: k, label: byKey[k].l, type: byKey[k].t })));
+    const mcols = medidas.map(m => ({ key: m.fn + ':' + m.campo, label: m.campo === '*' ? 'Quantidade' : FN[m.fn] + ' de ' + byKey[m.campo].l, type: m.fn === 'count' ? 'numero' : byKey[m.campo].t, fn: m.fn }));
+    const map = new Map();
+    rows.forEach(x => {
+      const key = gcols.map(c => c.key === '_p' ? projVal(x) : val(x, c.key)); const id = JSON.stringify(key);
+      let g = map.get(id); if(!g) { g = { key, n: medidas.map(() => 0), s: medidas.map(() => 0), mx: medidas.map(() => null), mn: medidas.map(() => null) }; map.set(id, g); }
+      medidas.forEach((m, i) => {
+        if(m.campo === '*') { g.n[i]++; return; }
+        const v = val(x, m.campo); if(v == null || v === '') return;
+        g.n[i]++; if(m.fn === 'count') return; const nv = Number(v); g.s[i] += nv; g.mx[i] = g.mx[i] == null ? nv : Math.max(g.mx[i], nv); g.mn[i] = g.mn[i] == null ? nv : Math.min(g.mn[i], nv);
+      });
+    });
+    let lin = Array.from(map.values()).map(g => g.key.concat(medidas.map((m, i) => m.fn === 'count' ? g.n[i] : m.fn === 'sum' ? Math.round(g.s[i] * 100) / 100 : m.fn === 'avg' ? (g.n[i] ? Math.round(g.s[i] / g.n[i] * 100) / 100 : null) : m.fn === 'max' ? g.mx[i] : g.mn[i])));
+    const cols = gcols.concat(mcols), oi = def.ordem ? cols.findIndex(c => c.key === def.ordem) : 0;
+    lin.sort((a, b) => cmp(a[oi < 0 ? 0 : oi], b[oi < 0 ? 0 : oi]) * (def.dir === 'desc' ? -1 : 1));
+    const top = Math.max(0, Math.min(Number(def.top) || 0, MAX_ROWS)), cortado = top > 0 && lin.length > top;
+    if(cortado) lin = lin.slice(0, top);
+    return { colunas: cols, linhas: lin, total, truncado: cortado, agregado: true };
+  }
+  // Linha de total: só soma e contagem, e só quando nenhuma linha foi cortada
+  function totals(res) {
+    if(!res.agregado || res.truncado || res.linhas.length < 2) return null;
+    let tem = false;
+    const t = res.colunas.map(c => { if(c.fn !== 'sum' && c.fn !== 'count') return null; tem = true; return Math.round(res.linhas.reduce((a, l) => a + num(l[res.colunas.indexOf(c)]), 0) * 100) / 100; });
+    if(!tem) return null; if(t[0] == null) t[0] = 'Total'; return t;
+  }
+  const money = v => 'R$ ' + num(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Valor para tela (csv=false) ou planilha (csv=true: números continuam números)
+  function fmt(v, type, forSheet) {
+    if(v == null || v === '') return '';
+    if(type === 'data') { const s = String(v).slice(0, 10).split('-'); return s.length === 3 ? s[2] + '/' + s[1] + '/' + s[0] : String(v); }
+    if(type === 'dinheiro') return forSheet ? Number(v) : money(v);
+    if(type === 'numero') return forSheet ? Number(v) : String(Math.round(Number(v) * 100) / 100).replace('.', ',');
+    return String(v);
+  }
+  // Código do modelo (só a definição, nunca dados) para usar em outra organização
+  const SAFE = def => ({ nome: String(def.nome || '').slice(0, 80), ent: def.ent, campos: def.campos || [], grupos: def.grupos || [], medidas: def.medidas || [], filtros: (def.filtros || []).map(x => ({ campo: x.campo, op: x.op, valor: x.valor })), ordem: def.ordem || '', dir: def.dir === 'desc' ? 'desc' : 'asc', top: Number(def.top) || 0, periodoCampo: def.periodoCampo || '' });
+  const enc = s => { try { return btoa(unescape(encodeURIComponent(s))); } catch(e) { return ''; } };
+  const dec = s => { try { return decodeURIComponent(escape(atob(s))); } catch(e) { return ''; } };
+  const toCode = def => enc(JSON.stringify(SAFE(def)));
+  function fromCode(code) { try { const d = JSON.parse(dec(String(code || '').trim())); return d && d.ent ? SAFE(d) : null; } catch(e) { return null; } }
+
+  // Relatórios padrão: cada um é só uma definição. Relatório novo = uma linha aqui (e, se faltar campo, uma linha no catálogo).
+  const PADROES = [
+    { id: 'p-cards-sit', grupo: 'Cards', nome: 'Cards por situação', desc: 'Quantos cards há em cada coluna do quadro.', ent: 'cards', grupos: ['situacao'], medidas: [{ campo: '*', fn: 'count' }, { campo: 'pontos', fn: 'sum' }], ordem: 'count:*', dir: 'desc' },
+    { id: 'p-cards-resp', grupo: 'Cards', nome: 'Cards por responsável e situação', desc: 'Quem está com quantos cards e em que situação.', ent: 'cards', grupos: ['responsavel', 'situacao'], medidas: [{ campo: '*', fn: 'count' }, { campo: 'pontos', fn: 'sum' }], ordem: 'responsavel' },
+    { id: 'p-bugs', grupo: 'Cards', nome: 'Bugs em aberto', desc: 'Bugs que ainda não foram concluídos, na ordem da fila de prioridade.', ent: 'cards', campos: ['prioridade_bug', 'id', 'titulo', 'situacao', 'responsavel', 'item_pai', 'criado'], filtros: [{ campo: 'tipo', op: 'igual', valor: 'Bug' }, { campo: 'situacao', op: 'diferente', valor: 'Concluído' }], ordem: 'prioridade_bug' },
+    { id: 'p-concl', grupo: 'Cards', nome: 'Cards concluídos no período', desc: 'Entregas concluídas entre as datas escolhidas.', ent: 'cards', campos: ['concluido', 'id', 'titulo', 'tipo', 'responsavel', 'pontos'], filtros: [{ campo: 'situacao', op: 'igual', valor: 'Concluído' }], periodoCampo: 'concluido', periodo: true, ordem: 'concluido', dir: 'desc' },
+    { id: 'p-entr-sit', grupo: 'Entregas (WBS)', nome: 'Entregas por situação', desc: 'Entregas e subtarefas do cronograma agrupadas pela situação.', ent: 'entregas', grupos: ['nivel', 'status'], medidas: [{ campo: '*', fn: 'count' }], ordem: 'nivel' },
+    { id: 'p-entr-atr', grupo: 'Entregas (WBS)', nome: 'Entregas atrasadas', desc: 'O prazo planejado já passou e a entrega não foi concluída.', ent: 'entregas', campos: ['nivel', 'entrega', 'nome', 'responsavel', 'fim', 'status', 'avanco'], filtros: [{ campo: 'atrasada', op: 'igual', valor: 'Sim' }], ordem: 'fim' },
+    { id: 'p-riscos-niv', grupo: 'Riscos', nome: 'Riscos em aberto por nível', desc: 'Riscos que ainda não foram encerrados, do mais grave ao menos grave.', ent: 'riscos', campos: ['nivel', 'id', 'titulo', 'categoria', 'status', 'responsavel', 'revisao'], filtros: [{ campo: 'status', op: 'diferente', valor: 'Encerrado' }], ordem: 'nivel', dir: 'desc' },
+    { id: 'p-riscos-cat', grupo: 'Riscos', nome: 'Riscos por categoria', desc: 'Quantos riscos há em cada categoria e o nível médio.', ent: 'riscos', grupos: ['categoria'], medidas: [{ campo: '*', fn: 'count' }, { campo: 'nivel', fn: 'avg' }], ordem: 'count:*', dir: 'desc' },
+    { id: 'p-imped', grupo: 'Impedimentos e escopo', nome: 'Impedimentos abertos', desc: 'Há quanto tempo cada impedimento está aberto.', ent: 'impedimentos', campos: ['dias_aberto', 'id', 'titulo', 'responsavel', 'aberto_em'], filtros: [{ campo: 'situacao', op: 'igual', valor: 'Aberto' }], ordem: 'dias_aberto', dir: 'desc' },
+    { id: 'p-escopo', grupo: 'Impedimentos e escopo', nome: 'Mudanças de escopo por situação', desc: 'Quantas mudanças há em cada situação e o impacto em dias (e em R$, para quem vê custos).', ent: 'escopo', grupos: ['status'], medidas: [{ campo: '*', fn: 'count' }, { campo: 'impacto_dias', fn: 'sum' }, { campo: 'impacto_custo', fn: 'sum' }], ordem: 'count:*', dir: 'desc', opcional: ['impacto_custo'] },
+    { id: 'p-horas-pessoa', grupo: 'Horas e custos', nome: 'Horas por pessoa', desc: 'Total de horas apontadas por pessoa no período.', ent: 'horas', grupos: ['pessoa'], medidas: [{ campo: 'horas', fn: 'sum' }, { campo: '*', fn: 'count' }], periodoCampo: 'data', periodo: true, ordem: 'sum:horas', dir: 'desc' },
+    { id: 'p-horas-ref', grupo: 'Horas e custos', nome: 'Horas por card ou entrega', desc: 'Onde as horas foram gastas no período.', ent: 'horas', grupos: ['referencia'], medidas: [{ campo: 'horas', fn: 'sum' }], periodoCampo: 'data', periodo: true, ordem: 'sum:horas', dir: 'desc', top: 30 },
+    { id: 'p-horas-dia', grupo: 'Horas e custos', nome: 'Horas por dia', desc: 'Horas apontadas em cada dia do período.', ent: 'horas', grupos: ['data'], medidas: [{ campo: 'horas', fn: 'sum' }], periodoCampo: 'data', periodo: true, ordem: 'data' },
+    { id: 'p-custos-mes', grupo: 'Horas e custos', nome: 'Custos lançados por mês', desc: 'Custo real e comprometido de cada mês.', ent: 'custos', grupos: ['mes', 'tipo'], medidas: [{ campo: 'valor', fn: 'sum' }], ordem: 'mes' },
+    { id: 'p-partes', grupo: 'Pessoas', nome: 'Contato com partes interessadas', desc: 'Há quantos dias não há contato com cada parte interessada.', ent: 'partes', campos: ['dias_sem_contato', 'nome', 'papel', 'influencia', 'engajamento', 'ultimo_contato'], ordem: 'dias_sem_contato', dir: 'desc' },
+    { id: 'p-equipe', grupo: 'Pessoas', nome: 'Equipe, alocação e carga', desc: 'Alocação de cada pessoa e a carga calculada pelo sistema (para quem vê a carga da equipe).', ent: 'equipe', campos: ['nome', 'funcao', 'alocacao', 'carga'], ordem: 'nome', opcional: ['carga'] },
+    { id: 'p-sprints', grupo: 'Pessoas', nome: 'Sprints', desc: 'Todas as sprints, com datas e capacidade.', ent: 'sprints', campos: ['nome', 'situacao', 'inicio', 'fim', 'capacidade', 'meta'], ordem: 'inicio', dir: 'desc' }
+  ];
+  // Tira de um padrão os campos que a pessoa não pode ver (quando o campo é marcado como opcional); sem permissão para a entidade, o padrão some
+  function usable(def, can) {
+    const cat = catalog(can)[def.ent]; if(!cat) return null;
+    const ok = k => k === '*' || cat.fields.some(f => f.k === k), d = JSON.parse(JSON.stringify(def));
+    if(d.campos) d.campos = d.campos.filter(ok); if(d.medidas) d.medidas = d.medidas.filter(m => ok(m.campo));
+    if(d.filtros && d.filtros.some(f => !ok(f.campo))) return null; if(d.grupos && !d.grupos.every(ok)) return null;
+    if(d.ordem && d.ordem.indexOf(':') < 0 && !ok(d.ordem)) d.ordem = '';
+    if(d.ordem && d.ordem.indexOf(':') >= 0 && !ok(d.ordem.split(':')[1])) d.ordem = '';
+    return validate(d, can) ? null : d;
+  }
+  return { ENTITIES, FN, OPS, PADROES, catalog, validate, run, totals, fmt, usable, toCode, fromCode, isNum, MAX_ROWS };
+})();
+</script>
+

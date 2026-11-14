@@ -107,7 +107,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 
 | Tabela | Para que serve | Escopo | Dado pessoal | Apagar dados do projeto | Apagar toda a base | Campos |
 |---|---|---|---|---|---|---|
-| `org_settings` | Configurações da organização (perfil de PMO, frequência do resumo de entrada, atualização automática dos dados e tempo máximo de sessão). | sistema | não | não se aplica | preserva | `key`, `value`, `updated_at`, `updated_by` |
+| `org_settings` | Configurações da organização (perfil de PMO, frequência do resumo de entrada, atualização automática dos dados e tempo máximo de sessão e os modelos do Construtor de Relatórios, chave reportModels: nome, definição e quem abre; o administrador grava, todos leem). | sistema | não | não se aplica | preserva | `key`, `value`, `updated_at`, `updated_by` |
 
 ### Catálogos
 
@@ -208,6 +208,7 @@ O menu esconde, a abertura direta pelo endereço é barrada e o banco nega a lei
 | Indicadores | `view_portfolio` |
 | Portfólio | `view_portfolio` |
 | Priorização | `view_portfolio` |
+| Central de Relatórios | `view_management` |
 | Raio-X do Projeto | `view_management` |
 | Diagnóstico PMO | `view_management` |
 | Dashboard | `view_management` |

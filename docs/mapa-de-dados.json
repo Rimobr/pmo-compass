@@ -254,7 +254,7 @@
     },
     "org_settings": {
       "domain": "Configurações",
-      "desc": "Configurações da organização (perfil de PMO, frequência do resumo de entrada, atualização automática dos dados e tempo máximo de sessão).",
+      "desc": "Configurações da organização (perfil de PMO, frequência do resumo de entrada, atualização automática dos dados e tempo máximo de sessão e os modelos do Construtor de Relatórios, chave reportModels: nome, definição e quem abre; o administrador grava, todos leem).",
       "scope": "sistema",
       "personal": false,
       "clearProject": "não se aplica",
@@ -627,6 +627,10 @@
       "prioritization": [
         "Priorização",
         "view_portfolio"
+      ],
+      "reports": [
+        "Central de Relatórios",
+        "view_management"
       ],
       "xray": [
         "Raio-X do Projeto",
