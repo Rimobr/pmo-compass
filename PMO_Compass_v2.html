@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.89.0'
+  version: '2.90.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -3611,6 +3611,7 @@ const PmoViews = (() => {
     <div class="lbl"><i class="ti ti-alert-circle"></i><span id="pv-list-title">Atenção</span><span class="help-q" data-help="Projetos que se enquadram em algum critério de atenção deste tipo de PMO, do que mais pesa para o que menos pesa. Clique em &quot;Abrir&quot; para ir ao projeto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div id="pv-list"></div>
   </div>
+  <div class="card" style="margin-top:14px" id="pv-pvr-card"><div class="lbl"><i class="ti ti-scale"></i>Estimado × Real <span class="badge b-acc">automático</span><span class="help-q" data-help="Para cada projeto, o que o sistema calcula como 'como deveríamos estar' contra o que de fato aconteceu: entregas pelo cronograma, sprint pela linha ideal, custo apurado pelas horas contra o lançado, jornada apontada, impedimentos, revisões de risco, contato com partes interessadas e escopo. O real nunca é substituído pelo estimado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div style="overflow-x:auto" id="pv-pvr-root"></div></div>
   <div id="pv-note" style="font-size:11.5px;color:var(--t3);margin-top:10px"></div>
 </section>
 
@@ -3665,6 +3666,40 @@ const PmoView = (() => {
     return { rows, overallocatedPeople: alloc.size };
   }
 
+  // Estimado × Real de todos os projetos: o sistema cruza o esperado e o real de cada tema; o mais desviado vem primeiro
+  function pvrRow(p) {
+    const pid = p.id, g = k => DB.getForProject(pid, k) || [], today = Clock.iso(Clock.today(pid)).slice(0, 10);
+    const items = g('backlog').filter(i => i.kind !== 'epico'), sprints = g('sprints'), act = sprints.find(x => x.state === 'ativa');
+    let sprint = null, cost = null, cadence = null, finishVar = null;
+    try { if(act) sprint = AgileCalc.sprintReading(act, AgileCalc.sprintStats(act, items, today), today); } catch(e) { sprint = null; }
+    try {
+      const bl = g('baselines').slice(-1)[0]; if(bl && bl.snapshot) finishVar = BaselineCalc.compare(bl.snapshot, g('wbs'), g('budgetLines')).summary.finishVar;
+    } catch(e) { finishVar = null; }
+    try {
+      const hr = (DB.getForProject(pid, 'hoursRules') || {}).budget || {}, bac = g('budgetLines').filter(l => !l.isReserve).reduce((a, l) => a + (Number(l.plannedValue) || 0), 0);
+      const ac = g('costActuals').filter(a => a.kind === 'real').reduce((a, x) => a + (Number(x.amount) || 0), 0);
+      if(Auth.can('view_costs') && g('timeEntries').length) cost = HoursCost.compute({ bac, hoursTotal: hr.total, entries: g('timeEntries'), ac });
+    } catch(e) { cost = null; }
+    try {
+      const rows = HoursSuggest.cadence({ people: g('team').map(m => ({ name: m.name, allocationPct: m.allocationPct })), entries: g('timeEntries'), today, days: 14, dailyNormal: 8 });
+      const ex = rows.reduce((a, r) => a + r.expected, 0), lg = rows.reduce((a, r) => a + r.logged, 0);
+      if(ex > 0 && g('timeEntries').length) { const pct = Math.round(lg / ex * 100); cadence = { pct, level: (pct >= 90 && pct <= 115) ? 'grn' : (pct >= 70 && pct <= 130) ? 'amb' : 'red' }; }
+    } catch(e) { cadence = null; }
+    return Object.assign({ id: pid, name: p.name }, PlanVsReal.projectRow({ wbs: g('wbs'), imps: g('impediments'), risks: g('risks'), stakeholders: g('stakeholders'), scope: g('scopeChanges') }, today, { sprint, cost, cadence, finishVar }));
+  }
+  function renderPvr() {
+    const root = el('pv-pvr-root'); if(!root) return;
+    let rows = [];
+    try { rows = DB.listPortfolio().map(pvrRow); } catch(e) { rows = []; }
+    if(area && type === 'departamental') { const ids = new Set(DB.listPortfolio().filter(p => (p.area || '').trim() === area).map(p => p.id)); rows = rows.filter(r => ids.has(r.id)); }
+    if(!rows.length) { root.innerHTML = '<div class="rk-empty">Nenhum projeto para comparar ainda.</div>'; return; }
+    rows.sort((a, b) => b.red - a.red || b.amb - a.amb || a.name.localeCompare(b.name, 'pt-BR'));
+    const COL = { grn: 'var(--grn)', amb: 'var(--amb)', red: 'var(--red)' }, cols = [['entregas', 'Entregas'], ['sprint', 'Sprint'], ['custo', 'Custo'], ['horas', 'Horas'], ['impedimentos', 'Impedimentos'], ['riscos', 'Riscos'], ['partes', 'Partes interessadas'], ['escopo', 'Escopo']];
+    const cell = c => c ? '<td style="color:' + COL[c.level] + ';font-size:12px">' + esc(c.text) + '</td>' : '<td class="set-sub">sem dados</td>';
+    root.innerHTML = '<table class="hr-tbl"><thead><tr><th scope="col">Projeto</th>' + cols.map(c => '<th scope="col">' + c[1] + '</th>').join('') + '<th scope="col" class="num">Desvios</th></tr></thead><tbody>'
+      + rows.map(r => '<tr><td><b>' + esc(r.name) + '</b></td>' + cols.map(c => cell(r.cells[c[0]])).join('') + '<td class="num">' + (r.known ? (r.red ? '<span class="badge b-red">' + r.red + ' crítico(s)</span> ' : '') + (r.amb ? '<span class="badge b-amb">' + r.amb + ' atenção</span>' : '') + (!r.red && !r.amb ? '<span class="badge b-grn">no ritmo</span>' : '') : '<span class="badge b-neu">sem dados</span>') + '</td></tr>').join('')
+      + '</tbody></table><div style="font-size:11.5px;color:var(--t3);margin-top:8px">Esperado = o que o sistema calcula (cronograma, linha ideal, jornada, histórico do próprio projeto); real = o que foi apontado ou aconteceu. "Sem dados" quando falta uma das bases. Cada tema é explicado na própria tela do projeto.</div>';
+  }
   function render() {
     if(!el('pv-kpis')) return;
     if(!type) type = defaultType();
@@ -3683,6 +3718,7 @@ const PmoView = (() => {
       ? v.list.map(it => `<div class="rk-item" style="cursor:default"><div class="rk-main"><div class="rk-title">${Methodology.tag(it.id)}${esc(it.name)}</div><div class="rk-meta">${it.reasons.map(r => `<span class="chip">${esc(r)}</span>`).join('')}</div></div><button class="btn btn-sm" data-id="${esc(it.id)}" onclick="PmoView.openProject(this)"><i class="ti ti-arrow-right"></i>Abrir</button></div>`).join('')
       : `<div class="rk-empty">${v.projects ? 'Nada pedindo atenção neste momento. 👍' : 'Nenhum projeto nesta visão.'}</div>`;
     el('pv-note').textContent = v.note;
+    renderPvr();
     renderGuide();
   }
   function renderGuide() {
@@ -18457,7 +18493,29 @@ const PlanVsReal = (() => {
     const exp = Math.round(e / w), real = Math.round(r / w), gap = real - exp;
     return { expected: exp, real, gap, n, level: gap >= -5 ? 'grn' : gap >= -15 ? 'amb' : 'red' };
   }
-  return { impediments, decisions, riskReviews, stakeholders, scopeSuggest, scopeReality, meetingDigest, pace, days, median };
+  // Quadro Estimado × Real do portfólio: uma linha por projeto juntando o esperado × real de cada tema. d = dados do projeto; ext = { sprint, cost, cadence, finishVar }
+  const WORST = { red: 3, amb: 2, grn: 1, neu: 0 };
+  function projectRow(d, today, ext) {
+    ext = ext || {};
+    const pc = pace(d.wbs, today);
+    const imp = impediments(d.imps, today), impBad = imp.filter(x => x.level !== 'grn').length;
+    const rk = riskReviews(d.risks, today), rkBad = rk.filter(x => x.late > 0).length;
+    const st = stakeholders(d.stakeholders, today), stBad = st.filter(x => x.late > 0).length;
+    const sc = scopeReality(d.scope, ext.finishVar == null ? null : ext.finishVar);
+    const cells = {
+      entregas: pc ? { text: 'esperado ' + pc.expected + '% × real ' + pc.real + '%', level: pc.level } : null,
+      sprint: ext.sprint ? { text: (ext.sprint.gap > 0.5 ? ext.sprint.gap + ' pts atrás' : 'no ritmo') + (ext.sprint.etaLate ? ' · +' + ext.sprint.etaLate + ' d' : ''), level: ext.sprint.level } : null,
+      custo: ext.cost && ext.cost.rate != null && ext.cost.gap != null ? { text: 'horas R$' + Math.round(ext.cost.apurado).toLocaleString('pt-BR') + ' × lançado R$' + Math.round(ext.cost.ac).toLocaleString('pt-BR'), level: ext.cost.level === 'ok' ? 'grn' : 'amb' } : null,
+      horas: ext.cadence && ext.cadence.pct != null ? { text: ext.cadence.pct + '% da jornada apontada', level: ext.cadence.level } : null,
+      impedimentos: imp.length ? { text: impBad + ' de ' + imp.length + ' fora do esperado', level: impBad ? (imp.some(x => x.level === 'red') ? 'red' : 'amb') : 'grn' } : null,
+      riscos: rk.length ? { text: rkBad + ' revisão(ões) vencida(s)', level: rkBad ? (rk.some(x => x.level === 'red') ? 'red' : 'amb') : 'grn' } : null,
+      partes: st.length ? { text: stBad + ' sem contato no prazo', level: stBad ? (st.some(x => x.level === 'red') ? 'red' : 'amb') : 'grn' } : null,
+      escopo: sc.real != null ? { text: 'declarado +' + sc.declared + ' d × real ' + (sc.real > 0 ? '+' : '') + sc.real + ' d', level: sc.level } : null
+    };
+    const vals = Object.keys(cells).map(k => cells[k]).filter(Boolean);
+    return { cells, red: vals.filter(c => c.level === 'red').length, amb: vals.filter(c => c.level === 'amb').length, known: vals.length, worst: vals.reduce((m, c) => Math.max(m, WORST[c.level] || 0), 0) };
+  }
+  return { impediments, decisions, riskReviews, stakeholders, scopeSuggest, scopeReality, meetingDigest, pace, projectRow, days, median };
 })();
 </script>
 

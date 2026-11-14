@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.89.0 — 2026-11-14
+- Sistemico x Real (itens 8 a 12) e correcao dos bugs do Kanban: excluir anexo, criar item pai no combo, texto levado ao trocar para Bug, equipe relida, resumo uma vez por login
+
 ## 2.88.0 — 2026-11-12
 - Sistemico x Real (itens 1 a 7): leitura da sprint, custo pelas horas, prontidao da linha de base, impedimentos, decisoes, riscos e partes interessadas
 

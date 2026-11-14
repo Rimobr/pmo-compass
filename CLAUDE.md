@@ -224,3 +224,6 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - **Trocar o tipo para Bug** num item novo leva o título e a descrição escritos para o formulário do bug.
 - **Responsável fora da equipe**: depois de "Incluir na Equipe" a equipe é relida da nuvem antes de preencher o campo (senão aparecia "(não cadastrado)"); sem conta única com o nome, a mensagem explica.
 - **Resumo de entrada**: aparece **uma vez por login** (`pmo_digest_sess_v1` em sessionStorage, apagada ao sair da conta) e, no modo diário, uma vez por dia; não volta mais ao navegar, sincronizar ou quando chega card novo (o sino mostra os pendentes).
+
+## Quadro Estimado × Real na Visão do PMO (pedido do dono, 14/11/2026)
+- A Visão do PMO ganhou o bloco "Estimado × Real" (`#pv-pvr-root`, `PmoView.renderPvr`): uma linha por projeto cruzando entregas (cronograma × avanço real), sprint (linha ideal × concluído), custo (horas × valor da hora × custo lançado; só com `view_costs`), jornada apontada, impedimentos, revisões de risco, contato com partes interessadas e escopo (declarado × desvio real do término). A conta de cada linha é `PlanVsReal.projectRow`; o mais desviado vem primeiro e tema sem base mostra "sem dados". O quadro respeita o filtro de área do tipo Departamental.

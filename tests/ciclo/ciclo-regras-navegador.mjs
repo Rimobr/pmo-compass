@@ -150,6 +150,10 @@ r = await p.evaluate(async () => {
   return { novo, kind: it && it.kind, sem: !!dep && dep.attachments.length, hist: dep && dep.history && dep.history.some(h => /Anexo removido: a3.png/.test(h.to || '')) };
 });
 ok(r.novo && (r.kind === 'historia' || r.kind === 'tarefa') && r.sem === 5 && r.hist === true, 'bug: item pai criado na hora e anexo excluído do cartão (6 → 5, com registro no histórico)', JSON.stringify(r));
+// Quadro Estimado × Real na Visão do PMO
+await p.evaluate(() => { document.querySelectorAll('[id^="modal-"]').forEach(e => e.classList.add('hidden')); R.go('pmoview'); }); await p.waitForTimeout(500);
+r = await p.evaluate(() => { const root = document.getElementById('pv-pvr-root'); return { tem: !!root, linhas: root ? root.querySelectorAll('tbody tr').length : 0, txt: root ? root.innerText.slice(0, 120) : '' }; });
+ok(r.tem && r.linhas >= 1, 'Visão do PMO: quadro Estimado × Real lista os projetos', JSON.stringify(r));
 await p.close();
 
 await b.close(); srv.close();

@@ -49,3 +49,14 @@ test('ritmo das entregas: esperado pelo cronograma × real, ponderado pela dura�
   assert.equal(r.n, 2); assert.equal(r.expected, 67); assert.equal(r.real, 13); assert.equal(r.level, 'red');
   assert.equal(P.pace([], '2026-11-12'), null);
 });
+test('quadro do portfólio: junta esperado × real de cada tema e conta os desvios; sem base fica "sem dados"', () => {
+  const T0 = '2026-11-12';
+  const d = { wbs: [{ start: '2026-11-02', end: '2026-11-12', pct: 10, status: 'amb' }], imps: [{ id: 'I', status: 'aberto', createdOn: '2026-11-01' }], risks: [{ id: 'R', status: 'aberto', reviewOn: '2026-11-13' }], stakeholders: [], scope: [] };
+  const r = P.projectRow(d, T0, { sprint: { gap: 4, etaLate: 3, level: 'red' }, finishVar: 6 });
+  assert.equal(r.cells.entregas.level, 'red'); assert.equal(r.cells.sprint.level, 'red'); assert.equal(r.cells.impedimentos.level, 'red');
+  assert.equal(r.cells.riscos.level, 'grn'); assert.equal(r.cells.partes, null); assert.equal(r.cells.custo, null);
+  assert.equal(r.red, 4); assert.equal(r.known, 5); assert.equal(r.worst, 3); // o escopo declara 0 dias e o término já está +6 d: crítico
+  const vazio = P.projectRow({ wbs: [], imps: [], risks: [], stakeholders: [], scope: [] }, T0, {});
+  assert.equal(vazio.known, 0); assert.equal(vazio.red, 0);
+});
+test('quadro do portfólio: ligado à Visão do PMO', () => { for (const k of ['id="pv-pvr-root"', 'function renderPvr()', 'function pvrRow(p)', 'PlanVsReal.projectRow(']) assert.ok(html.includes(k), k); });
