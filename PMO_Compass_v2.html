@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.90.0'
+  version: '2.91.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -236,7 +236,7 @@ body.is-board [onclick*="openPlanNext"],body.is-board #as-goal-grp,body.is-board
 .sb-more-btn{color:var(--t2)}
 .sb-more-chev{margin-left:auto;font-size:12px;transition:transform .16s ease}
 .sb-proj-area.more .sb-more-chev{transform:rotate(180deg)}
-.kb-top{position:relative}
+.kb-top{position:relative;container:kbtop/inline-size}
 .kb-burn{display:inline-flex;align-items:center;gap:8px;margin-left:auto;font-size:11px;color:var(--t2);white-space:nowrap}
 .kb-burn svg{display:block;height:36px;width:auto}
 .kb-burn .kbb-bar{fill:var(--acc);fill-opacity:.28;stroke:var(--acc);stroke-width:1}
@@ -246,7 +246,7 @@ body.is-board [onclick*="openPlanNext"],body.is-board #as-goal-grp,body.is-board
 .kb-burn .kbb-trend{fill:none;stroke:var(--t1);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .kb-burn .kbb-lg{display:inline-flex;align-items:center;gap:4px}
 /* tela larga e sem aviso de metodologia: o gráfico ocupa todo o espaço livre à direita, abaixo dos botões do topo, até a linha do seletor de sprint */
-@media(min-width:1180px){.kb-top:not(:has(.m-notice)) .kb-burn{position:absolute;right:0;top:28px;bottom:0;width:clamp(300px,calc(100% - 560px),700px);margin:0;align-items:stretch;gap:10px;white-space:normal}
+@container kbtop (min-width:1060px){.kb-top:not(:has(.m-notice)) .kb-burn{position:absolute;right:0;top:28px;bottom:0;width:clamp(300px,calc(100% - 680px),700px);margin:0;align-items:stretch;gap:10px;white-space:normal}
 .kb-burn .kbb-head{width:118px;flex:none;display:flex;flex-direction:column;justify-content:center;gap:4px;font-size:11px;color:var(--t2);line-height:1.35}}
 @media(max-width:600px){.kb-burn{display:none!important}}
 body.is-board .btn-epic{display:none!important}
@@ -297,6 +297,11 @@ body.no-login #login-gate{display:flex}
 .settings-tab:hover{color:var(--t2)}
 .settings-tab.on{color:var(--acc);border-bottom-color:var(--acc)}
 .settings-tab i{font-size:14px}
+.pg-tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--b1);flex-wrap:wrap}
+.pg-tab{display:flex;align-items:center;gap:6px;padding:9px 14px;border:none;background:transparent;color:var(--t3);font-size:12.5px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.pg-tab:hover{color:var(--t2)}
+.pg-tab[aria-selected="true"]{color:var(--acc);border-bottom-color:var(--acc)}
+.pg-tab i{font-size:14px}
 .pg-breadcrumb{font-size:11px;color:var(--t3);margin-bottom:4px;display:flex;align-items:center;gap:5px}
 .pg-breadcrumb i{font-size:11px}
 .pg-breadcrumb .pg-bc-cur{color:var(--t2)}
@@ -1041,7 +1046,6 @@ body.icons-failed i[data-fb]::before{
       <button class="ntab" data-p="chat" onclick="R.go('chat')"><i class="ti ti-message-2"></i>Chat IA</button>
       <button class="ntab" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
       <button class="ntab" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Diretoria</button>
-      <button class="ntab" data-p="execview" onclick="R.go('execview')"><i class="ti ti-chart-infographic"></i>Executiva</button>
       <button class="ntab" data-p="settings" onclick="R.go('settings')"><i class="ti ti-settings"></i>Config.</button>
       <button class="ntab" data-p="help" onclick="R.go('help')"><i class="ti ti-help-circle"></i>Ajuda</button>
     </div>
@@ -1080,10 +1084,8 @@ body.icons-failed i[data-fb]::before{
     <div class="sb-group" id="sbg-visao">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-visao')" title="Painéis que juntam todos os projetos"><i class="ti ti-layout-grid sb-gico"></i>Visão Geral<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
-      <button class="si" data-p="xray" onclick="R.go('xray')"><i class="ti ti-report-medical"></i>Raio-X do Projeto</button>
-      <button class="si" data-p="drpmo" onclick="R.go('drpmo')" title="Aponte os arquivos que você já tem: o Dr. PMO diz se é quadro ou projeto, a metodologia, os riscos e os buracos"><i class="ti ti-stethoscope"></i>Diagnóstico PMO</button>
+      <button class="si" data-p="drpmo" onclick="R.go((typeof Methodology !== 'undefined' && Methodology.type() === 'quadro') || DB.isEmpty() ? 'drpmo' : 'xray')" title="Aponte os arquivos que você já tem: sem projeto, o Dr. PMO diz se é quadro ou projeto, a metodologia, os riscos e os buracos; com projeto aberto, o Raio-X aplica os achados depois de você revisar"><i class="ti ti-stethoscope"></i>Diagnóstico de Documentos</button>
       <button class="si" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button>
-      <button class="si" data-p="execview" onclick="R.go('execview')"><i class="ti ti-chart-infographic"></i>Visão Executiva</button>
       <button class="si" data-p="pmoview" onclick="R.go('pmoview')"><i class="ti ti-binoculars"></i>Visão do PMO</button>
     </div>
   </div>
@@ -1091,7 +1093,6 @@ body.icons-failed i[data-fb]::before{
   <div class="sb-group" id="sbg-indicadores">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-indicadores')"><i class="ti ti-chart-donut-3 sb-gico"></i>Portfólio e Relatórios<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
-      <button class="si" data-p="pfkpi" onclick="R.go('pfkpi')"><i class="ti ti-chart-donut-3"></i>Indicadores</button>
       <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
       <button class="si" data-p="prioritization" onclick="R.go('prioritization')"><i class="ti ti-sort-descending-2"></i>Priorização</button>
       <button class="si" data-p="report" onclick="R.go('report')"><i class="ti ti-file-report"></i>Relatório</button>
@@ -1353,6 +1354,7 @@ body.icons-failed i[data-fb]::before{
 <!-- ■ MODULE: pages/project-xray ─ Segunda frente do app: diagnóstico por documento,
      separado da gestão manual, pensado para convencer rápido antes de pedir cadastro. -->
 <section class="page" id="p-xray" data-module="pages/project-xray">
+  <div class="pg-tabs" role="tablist" aria-label="Diagnóstico de documentos"><button class="pg-tab" role="tab" aria-selected="false" onclick="R.go('drpmo')"><i class="ti ti-stethoscope"></i>Diagnóstico Rápido (sem gravar)</button><button class="pg-tab" role="tab" aria-selected="true" onclick="R.go('xray')"><i class="ti ti-report-medical"></i>Raio-X do Projeto (aplica ao projeto)</button></div>
   <div class="pg-hdr">
     <div><div class="pg-title"><i class="ti ti-report-medical" style="color:var(--acc)"></i> Raio-X do Projeto<span class="help-q" data-help="Envie documentos do projeto (proposta, ata, cronograma...) e a IA lê e monta um primeiro diagnóstico de prazo, custo e qualidade — nada vira registro real até você revisar e confirmar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Aponte os documentos do projeto — a IA lê, identifica saúde, caminho crítico e riscos, e devolve um diagnóstico em minutos. Depois, se fizer sentido, os achados viram registros reais em Gestão de Projeto.</div></div>
   </div>
@@ -1395,6 +1397,7 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: pages/drpmo ─ Diagnóstico PMO (Dr. PMO): vale antes de ter projeto; lê os arquivos que a pessoa já tem e orienta como seguir -->
 <section class="page" id="p-drpmo" data-module="pages/drpmo">
+  <div class="pg-tabs" role="tablist" aria-label="Diagnóstico de documentos"><button class="pg-tab" role="tab" aria-selected="true" onclick="R.go('drpmo')"><i class="ti ti-stethoscope"></i>Diagnóstico Rápido (sem gravar)</button><button class="pg-tab" role="tab" aria-selected="false" onclick="R.go('xray')"><i class="ti ti-report-medical"></i>Raio-X do Projeto (aplica ao projeto)</button></div>
   <div class="pg-hdr">
     <div><div class="pg-title"><i class="ti ti-stethoscope" style="color:var(--acc)"></i> Diagnóstico PMO — Dr. PMO<span class="help-q" data-help="Aponte as planilhas e documentos que você já tem. O Dr. PMO lê, diz se aquilo é um Quadro de tarefas ou um Projeto, qual metodologia faz sentido (ágil, cascata ou híbrido), que riscos e buracos já aparecem e por que vale usar o Compass. Nada é gravado: você decide depois se cria o quadro ou o projeto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div class="pg-sub">Mostre o que você tem hoje e descubra por onde começar.</div></div>
@@ -1598,6 +1601,7 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: pages/board -->
 <section class="page" id="p-board" data-module="pages/board">
+  <div class="pg-tabs" role="tablist" aria-label="Diretoria"><button class="pg-tab" role="tab" aria-selected="true" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button><button class="pg-tab" role="tab" aria-selected="false" onclick="R.go('execview')"><i class="ti ti-chart-infographic"></i>Visão Executiva</button></div>
   <div class="pg-hdr">
     <div><div class="pg-title">Painel da Diretoria<span class="help-q" data-help="Uma visão rápida e sem jargão de todos os projetos — pra decidir seguir, pausar ou escalar. Cada sugestão da IA é baseada em dado já calculado no sistema, nunca um palpite solto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Visão rápida do portfólio pra decidir — sem precisar entender os detalhes técnicos.</div></div>
     <div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Board.generateSuggestions()"><i class="ti ti-sparkles"></i>Atualizar Sugestões da IA</button><button class="btn btn-sm" onclick="window.print()"><i class="ti ti-download"></i>PDF</button></div>
@@ -1662,6 +1666,7 @@ body.icons-failed i[data-fb]::before{
      executiva agora (hoje espalhadas por tela) e tendência de saúde do portfólio ao longo do
      tempo (hoje só existe por projeto, no Dashboard/Forecast). -->
 <section class="page" id="p-execview" data-module="pages/execview">
+  <div class="pg-tabs" role="tablist" aria-label="Diretoria"><button class="pg-tab" role="tab" aria-selected="false" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button><button class="pg-tab" role="tab" aria-selected="true" onclick="R.go('execview')"><i class="ti ti-chart-infographic"></i>Visão Executiva</button></div>
   <div class="pg-hdr">
     <div><div class="pg-title">Visão Executiva<span class="help-q" data-help="Complemento do Painel da Diretoria — em vez de status projeto por projeto, mostra o portfólio como um todo: financeiro consolidado, o que precisa de decisão executiva agora, e se a saúde geral do portfólio está melhorando ou piorando ao longo do tempo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">O portfólio como um todo — financeiro consolidado, decisões pendentes e tendência de saúde.</div></div>
     <div class="btn-row"><button class="btn btn-sm" onclick="window.print()"><i class="ti ti-download"></i>PDF</button></div>
@@ -3339,6 +3344,7 @@ const PortfolioKpi = (() => {
 
 <!-- ■ MODULE: pages/pfkpi -->
 <section class="page" id="p-pfkpi" data-module="pages/pfkpi">
+  <div class="pg-tabs" role="tablist" aria-label="Visão do portfólio"><button class="pg-tab" role="tab" aria-selected="false" onclick="R.go('pmoview')"><i class="ti ti-binoculars"></i>Visão do PMO</button><button class="pg-tab" role="tab" aria-selected="true" onclick="R.go('pfkpi')"><i class="ti ti-chart-donut-3"></i>Indicadores do Portfólio</button></div>
   <div class="pg-hdr">
     <div><div class="pg-title">Indicadores do Portfólio<span class="help-q" data-help="Quantos projetos estão no prazo, no custo e no escopo, e como isso se divide por área. É a visão do PMO sobre o conjunto, calculada dos dados de cada projeto com as mesmas regras do assistente de WhatsApp. Projetos sem dados suficientes ficam fora das taxas e aparecem contados à parte." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Taxa de projetos no prazo, no custo e no escopo, por área, com a situação de cada projeto.</div></div>
     <div class="btn-row"><button class="btn btn-sm" onclick="PfKpi.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button><button class="btn btn-sm" onclick="PfKpi.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button></div>
@@ -3595,6 +3601,7 @@ const PmoViews = (() => {
 
 <!-- ■ MODULE: pages/pmoview -->
 <section class="page" id="p-pmoview" data-module="pages/pmoview">
+  <div class="pg-tabs" role="tablist" aria-label="Visão do portfólio"><button class="pg-tab" role="tab" aria-selected="true" onclick="R.go('pmoview')"><i class="ti ti-binoculars"></i>Visão do PMO</button><button class="pg-tab" role="tab" aria-selected="false" onclick="R.go('pfkpi')"><i class="ti ti-chart-donut-3"></i>Indicadores do Portfólio</button></div>
   <div class="pg-hdr">
     <div><div class="pg-title">Visão do PMO<span class="help-q" data-help="Cada tipo de PMO acompanha coisas diferentes. Escolha o tipo e veja os indicadores que ele costuma cobrar, calculados dos seus projetos, mais a lista do que pede atenção. A escolha só muda o que você vê aqui; o perfil da IA continua sendo definido em Configurações → Perfil de PMO." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">O que o seu tipo de PMO acompanha, calculado dos dados reais dos projetos.</div></div>
   </div>
@@ -8114,8 +8121,9 @@ const R = (() => {
       const el = document.getElementById('p-'+p);
       if(el) el.classList.toggle('on', p===id);
     });
-    document.querySelectorAll('.ntab[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===id));
-    document.querySelectorAll('.si[data-p], .sb-xray-btn[data-p], .sb-board-btn[data-p], .sb-exec-btn[data-p], .sb-pmo-btn[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===id));
+    const menuId = ({ xray: 'drpmo', pfkpi: 'pmoview', execview: 'board' })[id] || id; // telas que são aba de outra acendem o item da junção
+    document.querySelectorAll('.ntab[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===menuId));
+    document.querySelectorAll('.si[data-p], .sb-xray-btn[data-p], .sb-board-btn[data-p], .sb-exec-btn[data-p], .sb-pmo-btn[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===menuId));
     const c = document.getElementById('content');
     if(c) c.scrollTop = 0;
     history.replaceState(null,'','#'+id);
@@ -8781,7 +8789,7 @@ const Compass = (() => {
     { id: 'proj', ico: 'compass', label: 'Perguntar sobre os projetos', desc: 'Maior desvio, atrasos, horas, riscos, decisões e orçamento de todos os projetos que você acompanha.', ok: () => can('ask_compass'), mode: true },
     { id: 'docs', ico: 'file-search', label: 'Perguntar aos documentos', desc: 'A IA busca nos documentos do projeto aberto e responde citando a fonte.', ok: () => open_('chat') || open_('repository'), mode: true },
     { id: 'drpmo', ico: 'stethoscope', label: 'Diagnóstico PMO (Dr. PMO)', desc: 'Aponte os arquivos que você já tem: quadro ou projeto, metodologia, riscos, buracos e por que usar o Compass.', ok: () => open_('drpmo'), go: () => R.go('drpmo') },
-    { id: 'xray', ico: 'report-medical', label: 'Diagnosticar documentos (Raio-X)', desc: 'Envie documentos e receba o diagnóstico do projeto.', ok: () => open_('xray'), go: () => R.go('xray') },
+    { id: 'xray', ico: 'report-medical', label: 'Diagnosticar documentos', desc: 'Envie documentos e receba o diagnóstico do projeto.', ok: () => open_('xray'), go: () => R.go('xray') },
     { id: 'estimate', ico: 'sparkles', label: 'Estimar pontos do backlog', desc: 'A IA sugere os pontos e a divisão de itens grandes, calibrada pelo histórico do time.', ok: () => can('manage_backlog') && open_('backlog'), go: () => { R.go('backlog'); setTimeout(() => { try { Agile.aiEstimate(); } catch(e) { /* abre o backlog mesmo assim */ } }, 450); } },
     { id: 'models', ico: 'file-text', label: 'Rascunhar um documento', desc: 'A IA sugere o conteúdo de um modelo com os fatos do projeto (sem valores em R$); você revê antes de entrar.', ok: () => can('run_rites') && open_('modelos'), go: () => R.go('modelos') },
     { id: 'whatif', ico: 'arrows-split', label: 'Simular um cenário (What-If)', desc: 'Compare caminhos antes de decidir: prazo, custo e risco.', ok: () => open_('whatif'), go: () => R.go('whatif') }
@@ -14250,6 +14258,7 @@ const Agile = (() => {
   }
   let burnT = null;
   window.addEventListener('resize', () => { clearTimeout(burnT); burnT = setTimeout(() => { try { const pg = document.getElementById('p-kanban'); if(pg && pg.classList.contains('on')) { load(); burnChart(active()); } } catch(e) { /* o gráfico nunca derruba a tela */ } }, 150); });
+  try { const kt = document.querySelector('.kb-top'); if(kt && window.ResizeObserver) new ResizeObserver(() => { clearTimeout(burnT); burnT = setTimeout(() => { try { const pg = document.getElementById('p-kanban'); if(pg && pg.classList.contains('on')) { load(); burnChart(active()); } } catch(e) { /* o gráfico nunca derruba a tela */ } }, 150); }).observe(kt); } catch(e) { /* sem ResizeObserver: vale o resize da janela */ }
   function renderKanban() {
     const root = document.getElementById('kb-root'); if(!root) return;
     load();

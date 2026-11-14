@@ -154,6 +154,41 @@ ok(r.novo && (r.kind === 'historia' || r.kind === 'tarefa') && r.sem === 5 && r.
 await p.evaluate(() => { document.querySelectorAll('[id^="modal-"]').forEach(e => e.classList.add('hidden')); R.go('pmoview'); }); await p.waitForTimeout(500);
 r = await p.evaluate(() => { const root = document.getElementById('pv-pvr-root'); return { tem: !!root, linhas: root ? root.querySelectorAll('tbody tr').length : 0, txt: root ? root.innerText.slice(0, 120) : '' }; });
 ok(r.tem && r.linhas >= 1, 'Visão do PMO: quadro Estimado × Real lista os projetos', JSON.stringify(r));
+// Telas unificadas: aba acende o item do menu da junção e o menu não tem mais os itens antigos
+r = await p.evaluate(async () => {
+  const out = {};
+  for (const [pg, menu] of [['xray', 'drpmo'], ['pfkpi', 'pmoview'], ['execview', 'board']]) {
+    R.go(pg); await new Promise(x => setTimeout(x, 150));
+    const on = document.querySelector('.si.on[data-p]'), tab = document.querySelector('#p-' + pg + ' .pg-tab[aria-selected="true"]');
+    out[pg] = { menu: on && on.dataset.p, tab: !!tab, page: document.getElementById('p-' + pg).classList.contains('on') };
+  }
+  out.antigos = ['xray', 'execview', 'pfkpi'].filter(x => document.querySelector('.si[data-p="' + x + '"]')).length;
+  return out;
+});
+ok(r.xray.menu === 'drpmo' && r.pfkpi.menu === 'pmoview' && r.execview.menu === 'board' && r.xray.tab && r.pfkpi.tab && r.execview.tab && r.antigos === 0, 'telas unificadas: abas acendem o item da junção e os itens antigos saíram do menu', JSON.stringify(r));
+// Kanban: o gráfico da sprint nunca fica por cima dos botões do cabeçalho, em nenhuma largura de janela
+await p.evaluate(() => {
+  const hoje = Clock.iso(Clock.today()).slice(0, 10), d = n => { const x = new Date(hoje + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+  DB.set('sprints', [{ id: 'SP-9', name: 'Sprint 9', startOn: d(-3), endOn: d(10), state: 'ativa', goal: '', capacity: '' }]);
+  DB.set('backlog', [{ id: 'US-1', title: 'A', kind: 'historia', status: 'done', points: 3, assignee: 'Ana', sprintId: 'SP-9', rank: 1, createdOn: d(-3), doneOn: d(-1), description: '', attachments: [], history: [], checklist: [] }]);
+  Agile.resetCache && Agile.resetCache();
+});
+const over = [], vis = [];
+for (const w of [900, 1100, 1300, 1500, 1900]) {
+  await p.setViewportSize({ width: w, height: 800 });
+  await p.evaluate(() => { document.querySelectorAll('[id^="modal-"]').forEach(e => e.classList.add('hidden')); R.go('kanban'); Agile.renderKanban && Agile.renderKanban(); });
+  await p.waitForTimeout(500);
+  const o = await p.evaluate(() => {
+    const b = document.getElementById('kb-burn'); if(!b || b.hidden || b.offsetParent === null) return { hidden: true };
+    const rb = b.getBoundingClientRect(), bad = [...document.querySelectorAll('#p-kanban .kb-top button, #p-kanban .kb-top select')].filter(x => { const r = x.getBoundingClientRect(); return r.width > 0 && r.left < rb.right && r.right > rb.left && r.top < rb.bottom && r.bottom > rb.top; }).map(x => (x.textContent || x.id || '').trim().slice(0, 20));
+    return { hidden: false, bad };
+  });
+  if (!o.hidden) vis.push(w + (o.bad.length ? "!" : ""));
+  if (!o.hidden && o.bad.length) over.push(w + 'px: ' + o.bad.join(', '));
+}
+console.log('   gráfico visível em: ' + vis.join(', '));
+await p.setViewportSize({ width: 1280, height: 800 });
+ok(over.length === 0, 'Kanban: gráfico da sprint não se sobrepõe aos botões do cabeçalho (900 a 1900 px)', over.join(' | ') + ' visível em: ' + vis.join(','));
 await p.close();
 
 await b.close(); srv.close();

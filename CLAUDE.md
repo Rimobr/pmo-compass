@@ -34,7 +34,7 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - Card novo nasce na sprint ativa; sem responsável cadastrado ele fica fora dela (a regra do responsável vale para entrar em sprint).
 
 ## Menu em três níveis (pedido do dono, 04/11/2026)
-- Topo: "Meu Dia" (Meu Trabalho, Meus Indicadores); "Visão Geral" (grupo com Raio-X, Painel da Diretoria, Visão Executiva, Visão do PMO); "Indicadores"; "Quadros / Kanban"; "Gestão do Projeto"; "Sistema".
+- Topo: "Meu Dia" (Meu Trabalho, Meus Indicadores); "Visão Geral" (grupo com Diagnóstico de Documentos, Painel da Diretoria e Visão do PMO; ver "Telas unificadas"); "Indicadores"; "Quadros / Kanban"; "Gestão do Projeto"; "Sistema".
 - Um só seletor de projeto e de quadro: o chip do topo (com Novo Projeto, Novo Quadro e Mudar Metodologia). O seletor do menu lateral está oculto.
 - Em "Artefatos do Projeto" ficam à vista só os itens do dia a dia (`FLAT`: Dashboard, Quadro Kanban, Backlog, WBS, Riscos, Decisões, Colaboradores — a metodologia esconde o que não vale); o resto está em "Mais Telas" (`.sb-more-group`), que abre sozinho se a tela aberta é uma delas. Tela nova do projeto: decidir se é do dia a dia (solta) ou "Mais Telas".
 
@@ -227,3 +227,8 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 
 ## Quadro Estimado × Real na Visão do PMO (pedido do dono, 14/11/2026)
 - A Visão do PMO ganhou o bloco "Estimado × Real" (`#pv-pvr-root`, `PmoView.renderPvr`): uma linha por projeto cruzando entregas (cronograma × avanço real), sprint (linha ideal × concluído), custo (horas × valor da hora × custo lançado; só com `view_costs`), jornada apontada, impedimentos, revisões de risco, contato com partes interessadas e escopo (declarado × desvio real do término). A conta de cada linha é `PlanVsReal.projectRow`; o mais desviado vem primeiro e tema sem base mostra "sem dados". O quadro respeita o filtro de área do tipo Departamental.
+
+## Telas unificadas (pedido do dono, 14/11/2026)
+- Três junções, cada uma com **um só item no menu** e as telas antigas como **abas uma da outra** (barra `.pg-tabs` no alto da página; as telas, regras e permissões continuam as mesmas): **Diagnóstico de Documentos** (abas "Diagnóstico Rápido (sem gravar)" = Dr. PMO e "Raio-X do Projeto (aplica ao projeto)"; o item abre o Raio-X se há projeto aberto e o Dr. PMO se é Quadro ou base vazia), **Painel da Diretoria** (abas Painel da Diretoria e Visão Executiva) e **Visão do PMO** (abas Visão do PMO e Indicadores do Portfólio).
+- A tela que é aba acende o item do menu da junção (`R.go`: `menuId`); `xray`, `execview` e `pfkpi` continuam sendo páginas (`SCENES` do a11y e permissões iguais), só não têm mais item de menu. Tela nova da mesma natureza entra como aba, não como item solto.
+- Kanban: o gráfico grande da sprint só ocupa o canto quando o **cabeçalho** (`.kb-top`, container query `kbtop`, 1060 px) tem espaço para os botões e para ele; antes valia a largura da janela e, com o menu aberto, a legenda ficava por cima de "Automações" e "Personalizar quadro". Redesenha quando a largura do cabeçalho muda (`ResizeObserver`).

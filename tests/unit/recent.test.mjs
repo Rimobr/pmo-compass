@@ -263,3 +263,8 @@ test('bug: item pai obrigatório também no quadro, com aviso claro; recusa do b
 test('bugs do Kanban (14/11): excluir anexo, criar item pai no combo, levar o texto ao trocar para Bug, equipe relida e resumo uma vez por login', () => {
   for (const k of ['async function removeFile(path)', 'Agile.removeFile(', 'Anexo removido: ', 'Exclua um pelo X na lista', 'function quickItem(title)', '➕ Criar um item novo…', 'id="bug-f-newitem"', 'function parentPicked()', 'BugReport.open(\'\', carry)', 'await Cloud.pullAll()', "sessionStorage.removeItem('pmo_digest_sess_v1')"]) assert.ok(html.includes(k), k);
 });
+
+test('telas unificadas (14/11): um item de menu por junção e as telas viram abas uma da outra', () => {
+  for (const k of ['aria-label="Diagnóstico de documentos"', 'aria-label="Visão do portfólio"', 'aria-label="Diretoria"', 'Diagnóstico de Documentos</button>', "({ xray: 'drpmo', pfkpi: 'pmoview', execview: 'board' })[id] || id"]) assert.ok(html.includes(k), k);
+  for (const k of ['<button class="si" data-p="xray"', '<button class="si" data-p="execview"', '<button class="si" data-p="pfkpi"', '<button class="ntab" data-p="execview"']) assert.ok(!html.includes(k), 'não deve mais existir: ' + k);
+});

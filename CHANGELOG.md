@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.90.0 — 2026-11-14
+- Visao do PMO: quadro Estimado x Real por projeto
+
 ## 2.89.0 — 2026-11-14
 - Sistemico x Real (itens 8 a 12) e correcao dos bugs do Kanban: excluir anexo, criar item pai no combo, texto levado ao trocar para Bug, equipe relida, resumo uma vez por login
 
