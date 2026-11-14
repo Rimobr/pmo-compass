@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.92.0 — 2026-11-14
+- Central de Relatorios (padroes agrupados, modelos e atalhos) e Construtor em Configuracoes; contraste da metodologia no tema Cinza
+
 ## 2.91.0 — 2026-11-14
 - Telas unificadas (Diagnostico de Documentos, Diretoria, Visao do PMO) e grafico da sprint sem sobrepor os botoes do Kanban
 

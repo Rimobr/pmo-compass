@@ -171,7 +171,7 @@ test('o sino separa Pendências do dia (resumo) de Avisos das automações, e a 
 
 
 test('Quadro tem sprint simples: janela de tempo (2 semanas), prazo em cada card, faixa com encerrar e transbordo; sem planejamento por pontos, meta nem capacidade', () => {
-  for (const k of ['function boardBar(act)', 'Encerrar e Decidir o que Sobrou', 'Agile.openDue(', 'Agile.startSprint(', "boardSprint === '__auto' ? (isB ? '__all'", "'Todos os cards'", 'const dueChip =', 'atrasado · ', 'function sprintDur()', 'id="as-dur"', 'id="as-goal-grp"', 'id="as-cap-grp"', "presetSprint = (!it && location.hash === '#kanban' && active())"]) assert.ok(html.includes(k), k);
+  for (const k of ['function boardBar(act)', 'Encerrar e Decidir o que Sobrou', 'Agile.openDue(', 'Agile.startSprint(', "boardSprint === '__auto' ? (a ? a.id : ((isB", "['__nosprint', 'Cards sem sprint (não se movimentam)']", "const sprintLocked = it =>", "'Todos os cards'", 'const dueChip =', 'atrasado · ', 'function sprintDur()', 'id="as-dur"', 'id="as-goal-grp"', 'id="as-cap-grp"', "presetSprint = (!it && location.hash === '#kanban' && active())"]) assert.ok(html.includes(k), k);
   assert.ok(html.includes('body.is-board [onclick*="openPlanNext"],body.is-board #as-goal-grp,body.is-board #as-cap-grp{display:none !important}'));
   assert.ok(!html.includes('body.is-board #kb-sprint,'));
   assert.ok(html.includes('<select class="input" data-perm="manage_backlog" aria-label="Sprint do item'));

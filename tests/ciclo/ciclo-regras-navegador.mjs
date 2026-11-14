@@ -7,8 +7,8 @@ const res = []; const ok = (c, m, extra) => { res.push([c, m]); console.log(c ? 
 const srv = http.createServer((q, r) => { r.setHeader('Content-Type', 'text/html; charset=utf-8'); r.end(readFileSync(ROOT + 'PMO_Compass_v2.html')); }).listen(0);
 const b = await chromium.launch();
 const page = async (w = 1280, h = 900) => { const p = await (await b.newContext({ viewport: { width: w, height: h } })).newPage(); await p.addInitScript(() => { try { localStorage.setItem('pmo_cloud_v1', JSON.stringify({ localOnly: true })); } catch (e) {} }); p.errs = []; p.on('pageerror', e => p.errs.push(e.message)); p.on('dialog', d => d.accept()); await p.goto('http://localhost:' + srv.address().port + '/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(1400); return p; };
-const seed = async (p, items, team) => { await p.evaluate(([it, tm]) => { if (tm) DB.set('team', [...(DB.get('team') || []), ...tm]); DB.set('sprints', []); DB.set('backlog', it); }, [items, team || null]); await p.reload({ waitUntil: 'domcontentloaded' }); await p.waitForTimeout(1400); await p.evaluate(() => { document.querySelectorAll('[id^="modal-"]').forEach(e => e.classList.add('hidden')); }); };
-const base = (o) => ({ kind: 'tarefa', status: 'todo', points: 1, assignee: '', sprintId: '', rank: 1, createdOn: '2026-11-01', doneOn: '', parentId: '', epicId: '', bugPriority: '', attachments: [], history: [{ at: '2026-11-01T00:00:00Z', by: 'Leandro', field: '', from: '', to: 'Card criado' }], checklist: [], ...o });
+const seed = async (p, items, team) => { await p.evaluate(([it, tm]) => { if (tm) DB.set('team', [...(DB.get('team') || []), ...tm]); DB.set('sprints', [{ id: 'SP-T', name: 'Sprint T', startOn: '2026-11-01', endOn: '2026-12-31', state: 'ativa', goal: '', capacity: '' }]); DB.set('backlog', it); }, [items, team || null]); await p.reload({ waitUntil: 'domcontentloaded' }); await p.waitForTimeout(1400); await p.evaluate(() => { document.querySelectorAll('[id^="modal-"]').forEach(e => e.classList.add('hidden')); }); };
+const base = (o) => ({ kind: 'tarefa', status: 'todo', points: 1, assignee: '', sprintId: 'SP-T', rank: 1, createdOn: '2026-11-01', doneOn: '', parentId: '', epicId: '', bugPriority: '', attachments: [], history: [{ at: '2026-11-01T00:00:00Z', by: 'Leandro', field: '', from: '', to: 'Card criado' }], checklist: [], ...o });
 
 // 1) Épico x Bug: o bug só se liga a uma entrega (nunca a um épico); fila de bugs e épicos convivem
 let p = await page();
@@ -216,6 +216,40 @@ r = await p.evaluate(async () => {
   return { antes, salvo, naLista, gerou };
 });
 ok(r.antes && r.salvo && r.naLista && r.gerou, 'Construtor (Configurações): salva o modelo e ele aparece e gera na Central de Relatórios', JSON.stringify(r));
+// Kanban: só a sprint ativa por padrão; "Cards sem sprint" no filtro; card sem sprint não se movimenta
+r = await p.evaluate(async () => {
+  document.querySelectorAll('[id^="modal-"]').forEach(e => e.classList.add('hidden'));
+  const hoje = Clock.iso(Clock.today()).slice(0, 10), d = n => { const x = new Date(hoje + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+  DB.set('sprints', [{ id: 'SP-1', name: 'Sprint 1', startOn: d(-2), endOn: d(10), state: 'ativa', goal: '', capacity: '' }]);
+  const mk = (id, st, sp) => ({ id, title: 'Card ' + id, kind: 'tarefa', status: st, points: 1, assignee: 'Ana', sprintId: sp, rank: 1, createdOn: d(-3), doneOn: '', description: '', attachments: [], history: [], checklist: [] });
+  DB.set('backlog', [mk('US-A', 'doing', 'SP-1'), mk('US-B', 'todo', '')]);
+  Agile.resetCache && Agile.resetCache(); R.go('kanban'); Agile.setBoardSprint('__auto'); await new Promise(x => setTimeout(x, 200));
+  const ids = () => [...document.querySelectorAll('#kb-root .kb-card')].map(c => c.dataset.id);
+  const padrao = ids(), opcoes = [...document.querySelectorAll('#kb-sprint option')].map(o => o.value);
+  Agile.setBoardSprint('__nosprint'); await new Promise(x => setTimeout(x, 200));
+  const sem = ids(), card = document.querySelector('#kb-root .kb-card[data-id="US-B"]');
+  const botoes = card ? card.querySelectorAll('.kb-mv button').length : -1, arrasta = card ? card.getAttribute('draggable') : 'x';
+  Dlg.ask = async () => true; await Agile.move('US-B', 1);
+  const st = DB.get('backlog').find(x => x.id === 'US-B').status;
+  Agile.setBoardSprint('__auto');
+  return { padrao, sem, opcoes, botoes, arrasta, st };
+});
+ok(r.padrao.join() === 'US-A' && r.sem.join() === 'US-B' && r.opcoes.includes('__nosprint') && r.botoes === 0 && r.arrasta !== 'true' && r.st === 'todo', 'Kanban: padrão é a sprint ativa, filtro tem "Cards sem sprint" e card sem sprint não se movimenta', JSON.stringify(r));
+// Relatórios de vários projetos: todos ou escolhidos
+r = await p.evaluate(async () => {
+  R.go('reports'); await new Promise(x => setTimeout(x, 200));
+  const n = DB.listProjects().filter(x => x.id !== DB.NONE_ID).length;
+  Reports.open('padrao', 'p-sprints');
+  Reports.setScope('escolher'); const caixas = document.querySelectorAll('#rpt-ctl input[type=checkbox]').length;
+  Reports.pickAll(true); Reports.run(); await new Promise(x => setTimeout(x, 200));
+  const cab = [...document.querySelectorAll('#rpt-out thead th')].map(t => t.textContent);
+  Reports.pickAll(false); Reports.setScope('todos'); Reports.run(); await new Promise(x => setTimeout(x, 200));
+  const cabTodos = [...document.querySelectorAll('#rpt-out thead th')].map(t => t.textContent);
+  Reports.setScope('ativo');
+  return { n, caixas, cab0: cab[0], cabTodos0: cabTodos[0] };
+});
+console.log('   projetos no ciclo: ' + r.n);
+ok(r.n < 2 || (r.caixas === r.n && r.cab0 === 'Projeto' && r.cabTodos0 === 'Projeto'), 'Relatórios: escolher projetos (caixas) ou todos acrescenta a coluna Projeto', JSON.stringify(r));
 await p.close();
 
 await b.close(); srv.close();

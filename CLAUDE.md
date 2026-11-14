@@ -30,7 +30,7 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 
 ## Sprint simples no Quadro (pedido do dono, 06/11/2026)
 - O Quadro **tem sprint**, só como **janela de tempo** (por padrão **2 semanas**, de 1 a 4) para controlar quando cada entrega precisa estar pronta, e o **transbordo** do que não terminou (passar para a próxima sprint, estender ou devolver ao backlog: `Agile.openDue`). Nada mais do ágil: sem Planejar sprint por pontos, sem meta, sem capacidade, sem previsão, e a página Sprints fica fora do menu do quadro.
-- A faixa do Quadro Kanban (`boardBar`) mostra a sprint ativa, os dias que faltam, os cards concluídos e os botões Editar, Encerrar e Decidir o que Sobrou e Nova Sprint. Cada card mostra "até dd/mm" e fica vermelho ("atrasado") se o prazo passou. O Kanban mostra **todos os cards** por padrão; a sprint é filtro.
+- A faixa do Quadro Kanban (`boardBar`) mostra a sprint ativa, os dias que faltam, os cards concluídos e os botões Editar, Encerrar e Decidir o que Sobrou e Nova Sprint. Cada card mostra "até dd/mm" e fica vermelho ("atrasado") se o prazo passou. O Kanban mostra por padrão **só a sprint ativa** (decisão do dono de 14/11/2026; antes mostrava todos os cards); "Todos os cards" e "Cards sem sprint" são escolhas do filtro.
 - Card novo nasce na sprint ativa; sem responsável cadastrado ele fica fora dela (a regra do responsável vale para entrar em sprint).
 
 ## Menu em três níveis (pedido do dono, 04/11/2026)
@@ -239,3 +239,10 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 - **Motor** (`services/report-engine`, `ReportEngine`, lógica pura): o **catálogo** é a fonte única (entidades cards, riscos, entregas WBS, horas, custos, escopo, impedimentos, partes interessadas, equipe, sprints; cada campo com a permissão exigida) e a tela só manda a **definição**, conferida contra o catálogo (`validate`). Custos exigem `view_costs`; carga da equipe, `view_team_load`; horas de outras pessoas, `view_all_hours` (sem ela só o próprio nome). Padrão que usa campo proibido some ou perde só esse campo (`usable`). Relatório padrão novo = uma linha em `PADROES`; campo novo = uma linha no catálogo. Limite de 20.000 linhas; linha de total só quando nada foi cortado; sem dado = tabela vazia com aviso, nunca zero inventado.
 - Limite honesto: as permissões de campo valem pelo perfil no **projeto aberto** (no escopo "todos os projetos" não se reavalia por projeto).
 - A varredura de acessibilidade ganhou a cena "Configurações (Projeto e organização)" e a do Construtor (que roda como administrador): achou e corrigiu o contraste das legendas da metodologia escolhida no tema Cinza (`.m-opt[aria-checked="true"] .m-sub/.m-hide`).
+
+## Kanban: só a sprint ativa e card sem sprint não se movimenta (pedido do dono, 14/11/2026)
+- Projeto e Quadro abrem o Kanban na **sprint ativa**; o filtro tem Sprint ativa, **Todos os cards**, **Cards sem sprint** (`__nosprint`, com aviso de que não se movimentam) e cada sprint. Sem sprint ativa o Quadro mostra todos (projeto Scrum continua vazio com a dica de planejar).
+- **Card só se movimenta no quadro quando está em alguma sprint** (onde existem sprints ou o modo não é Kanban contínuo): sem sprint o card perde as setas ◀ ▶ e o arrasto, a recusa por arrasto, botão ou pelo cartão diz "abra o card e escolha a Sprint" (`sprintLocked` dentro de `canTouch`). Regra só na tela (o banco não bloqueia a mudança de coluna sem sprint).
+
+## Relatórios de vários projetos (pedido do dono, 14/11/2026)
+- Na Central de Relatórios o escopo tem **Só o projeto aberto**, **Todos os projetos e quadros** e **Escolher projetos…** (caixas de marcação, Marcar todos, Limpar). Com mais de um projeto o relatório ganha a coluna **Projeto** (e o agrupamento por projeto) e o PDF lista os projetos. A pessoa só vê o que o acesso dela permite (a nuvem entrega só os projetos dela).

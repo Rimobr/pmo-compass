@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.92.0'
+  version: '2.93.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -14254,11 +14254,12 @@ const Agile = (() => {
   // ───────── Quadro Kanban ─────────
   function boardItems() {
     const a = active();
-    // Quadro de tarefas: a sprint é uma janela de tempo e um filtro; por padrão mostra todos os cards
+    // O quadro mostra por padrão só o que está na sprint ativa (projeto e Quadro); "Todos os cards" e "Cards sem sprint" são escolhas do filtro
     const isB = document.body.classList.contains('is-board');
     // Scrum: sem sprint ativa o quadro fica vazio (não despeja o backlog inteiro); Kanban contínuo mostra tudo
-    const f = boardSprint === '__auto' ? (isB ? '__all' : (a ? a.id : (cfg && cfg.entry === 'kanban' ? '__all' : '__none'))) : boardSprint;
+    const f = boardSprint === '__auto' ? (a ? a.id : ((isB || (cfg && cfg.entry === 'kanban')) ? '__all' : '__none')) : boardSprint;
     if(f === '__none') return [];
+    if(f === '__nosprint') return items.filter(i => !i.sprintId && i.kind !== 'epico');
     return f === '__all' ? items.slice() : items.filter(i => i.sprintId === f);
   }
   // Sprint do Quadro: só uma janela de tempo (ex.: 2 semanas) para controlar quando cada entrega precisa estar pronta, e o transbordo do que sobrou
@@ -14330,9 +14331,9 @@ const Agile = (() => {
       else bar.innerHTML = modeBadge + '<span class="badge b-amb">Nenhuma sprint ativa</span> <span style="color:var(--t2)">' + (planned ? planned + ' planejada(s) aguardando início' : 'ainda não há sprint planejada') + '.</span> <button class="btn btn-sm" onclick="R.go(\'sprints\')"><i class="ti ti-player-play"></i>' + (planned ? 'Iniciar uma sprint' : 'Criar sprint') + '</button>' + (boardSprint === '__all' ? ' <span class="badge b-amb">Você está vendo: todos os itens</span>' : '');
     }
     if(sel) {
-      const opts = [['__auto', act ? 'Sprint ativa — ' + act.name : 'Sprint ativa (nenhuma)'], ['__all', 'Todos os itens'], ...sprints.slice().sort((a, b) => (ord[a.state] - ord[b.state]) || (b.startOn || '').localeCompare(a.startOn || '')).map(s => [s.id, s.name + ' (' + stateLbl[s.state] + ')'])];
-      const isB = document.body.classList.contains('is-board'), cur = isB && boardSprint === '__auto' ? '__all' : boardSprint;
-      sel.innerHTML = opts.filter(o => !(isB && o[0] === '__auto')).map(([v, l]) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v === '__all' && isB ? 'Todos os cards' : l)}</option>`).join('');
+      const opts = [['__auto', act ? 'Sprint ativa — ' + act.name : 'Sprint ativa (nenhuma)'], ['__all', 'Todos os itens'], ['__nosprint', 'Cards sem sprint (não se movimentam)'], ...sprints.slice().sort((a, b) => (ord[a.state] - ord[b.state]) || (b.startOn || '').localeCompare(a.startOn || '')).map(s => [s.id, s.name + ' (' + stateLbl[s.state] + ')'])];
+      const isB = document.body.classList.contains('is-board'), cur = boardSprint === '__auto' && !act ? (isB ? '__all' : '__auto') : boardSprint;
+      sel.innerHTML = opts.filter(o => !(isB && o[0] === '__auto' && !act)).map(([v, l]) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v === '__all' && isB ? 'Todos os cards' : (v === '__auto' && isB && act ? 'Sprint ativa — ' + act.name : l))}</option>`).join('');
     }
     const columns = AgileCalc.cols(cfg), keys = columns.map(c => c.key);
     // item cuja coluna foi removida (ou importado de outro quadro) aparece na primeira coluna, nunca some
@@ -14347,7 +14348,9 @@ const Agile = (() => {
       ? '<button class="btn btn-sm" onclick="R.go(\'backlog\')"><i class="ti ti-list-details"></i>Ir ao Backlog</button>' + (act ? '<button class="btn btn-sm" data-perm="manage_backlog" onclick="Agile.openUrgent()" title="Inclui um item direto na sprint ativa, registrando o motivo (mudança de escopo)"><i class="ti ti-alert-triangle"></i>Item Urgente na Sprint</button>' : '')
       : '<button class="btn btn-sm" data-perm="manage_backlog" onclick="ImportUi.open(\'backlog\')"><i class="ti ti-table-import"></i>Importar Planilha</button><button class="btn btn-sm btn-acc" data-perm="manage_backlog" onclick="Agile.openItem()"><i class="ti ti-plus"></i>Novo Item</button>';
     let emptyHint = '';
-    if(scrum && boardSprint === '__auto' && !act) emptyHint = '<div class="rk-empty" style="margin-bottom:10px">Este quadro mostra o que está <b>na sprint</b>. Crie e importe os itens no <b>Backlog</b>, use <b>Planejar sprint</b> para escolher o que cabe e depois inicie a sprint em <b>Sprints</b>. <button class="btn btn-sm" onclick="R.go(\'backlog\')">Ir ao Backlog</button></div>';
+    const lockNote = boardSprint === '__nosprint' ? '<div class="rk-empty" style="margin-bottom:10px"><i class="ti ti-lock"></i> Estes cards <b>ainda não estão em nenhuma sprint</b>, por isso não se movimentam aqui. Abra o card e escolha a <b>Sprint</b> para ele entrar no quadro.</div>' : '';
+    if(lockNote) emptyHint = lockNote;
+    else if(scrum && boardSprint === '__auto' && !act) emptyHint = '<div class="rk-empty" style="margin-bottom:10px">Este quadro mostra o que está <b>na sprint</b>. Crie e importe os itens no <b>Backlog</b>, use <b>Planejar sprint</b> para escolher o que cabe e depois inicie a sprint em <b>Sprints</b>. <button class="btn btn-sm" onclick="R.go(\'backlog\')">Ir ao Backlog</button></div>';
     else if(scrum && !list.length) emptyHint = '<div class="rk-empty" style="margin-bottom:10px">Nenhum item nesta sprint ainda. No <b>Backlog</b>, use <b>Planejar sprint</b> (ou escolha a sprint no próprio item) para trazer o que cabe. <button class="btn btn-sm" onclick="R.go(\'backlog\')">Ir ao Backlog</button></div>';
     else if(!scrum && !items.length) emptyHint = '<div class="rk-empty" style="margin-bottom:10px">Nenhum item ainda. Use <b>Novo item</b> para cadastrar a primeira história ou <b>Importar planilha</b> para trazer vários de uma vez — eles aparecem em “A fazer”.</div>';
     const grid = (rows, wipStats) => `<div class="kb-board" style="--kb-cols:${columns.length};--kb-min:${columns.length > 4 ? 210 : 0}px">` + columns.map(col => {
@@ -14398,8 +14401,8 @@ const Agile = (() => {
     const chk = Array.isArray(i.checklist) && i.checklist.length ? `<span class="chip" title="Tarefas concluídas do cartão"><i class="ti ti-checklist"></i>${i.checklist.filter(c => c.done).length}/${i.checklist.length}</span>` : '';
     const bottom = [f.bugs && rel, f.attachments && att, f.checklist && chk, f.assignee && (i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'), f.sprint && sp && `<span class="chip">${esc(sp.name)}</span>`, f.due && dueChip].filter(Boolean).join('');
     // O cartão é um grupo; só o título é o botão de abrir (botão dentro de botão não é acessível por leitor de tela)
-    const act = Auth.can('update_own');
-    return `<div class="kb-card"${act ? ` draggable="true" ondragstart="Agile.dragStart(event,'${esc(i.id)}')" ondragend="this.classList.remove('dragging')" onclick="Agile.openItem('${esc(i.id)}')"` : ''} role="group" data-id="${esc(i.id)}" aria-label="${esc(i.id)}: ${esc(i.title)}">
+    const act = Auth.can('update_own'), noSp = sprintLocked(i);
+    return `<div class="kb-card"${act ? `${noSp ? '' : ` draggable="true" ondragstart="Agile.dragStart(event,'${esc(i.id)}')"`} ondragend="this.classList.remove('dragging')" onclick="Agile.openItem('${esc(i.id)}')"` : ''} role="group" data-id="${esc(i.id)}" aria-label="${esc(i.id)}: ${esc(i.title)}">
       ${top ? `<div class="kb-meta">${top}</div>` : ''}
       ${act ? `<button type="button" class="kb-title kb-open" aria-label="Abrir ${esc(i.id)}: ${esc(i.title)}" onclick="event.stopPropagation();Agile.openItem('${esc(i.id)}')">${esc(i.title)}</button>` : `<span class="kb-title">${esc(i.title)}</span>`}
       ${bottom ? `<div class="kb-meta">${bottom}</div>` : ''}
@@ -14418,7 +14421,12 @@ const Agile = (() => {
   }
   // Autonomia do time: a gestão define em "Personalizar quadro" quem move os cartões (o servidor impõe a mesma regra)
   const policy = () => BoardRules.normPolicy(DB.get('teamPolicy'));
+  // Card só se movimenta no quadro quando está em alguma sprint (onde há sprint); sem sprint ele fica no backlog até entrar numa
+  const usesSprints = () => (sprints && sprints.length > 0) || (cfg && cfg.entry !== 'kanban');
+  const sprintLocked = it => !!it && it.kind !== 'epico' && !it.sprintId && usesSprints();
+  const LOCK_MSG = 'Este card ainda não está em nenhuma sprint. Abra o card e escolha a Sprint para ele entrar no quadro; só então ele se movimenta.';
   function canTouch(it, to, quiet) {
+    if(sprintLocked(it)) { if(!quiet) T.show('🔒 ' + LOCK_MSG, 6000); return false; }
     const r = BoardRules.canMove(policy(), { manager: Auth.can('manage_backlog'), member: Auth.can('update_own'), mine: typeof MyWork !== 'undefined' && MyWork.isMine(it.assignee), to, label: to ? AgileCalc.colLabel(cfg, to) : '' });
     if(!r.ok && !quiet) T.show('🔒 ' + r.why, 5000);
     return r.ok;
@@ -15398,6 +15406,7 @@ const Agile = (() => {
     const cur00 = itemCtx ? findAny(itemCtx) : null;
     if(f.sprintId && f.sprintId !== (cur00 ? cur00.sprintId || '' : '')) { const sb = AgileCalc.sprintAssigneeError(f.assignee, teamNames()); if(sb) { blockHelp(sb, f.assignee); document.getElementById('ai-assignee').focus(); return; } }
     const cur0 = itemCtx ? findAny(itemCtx) : null, to0 = val('ai-status') || (cur0 && cur0.status);
+    if(cur0 && to0 !== cur0.status && !f.sprintId && sprintLocked(Object.assign({}, cur0, { sprintId: '' }))) { T.show('🔒 ' + LOCK_MSG, 6000); document.getElementById('ai-sprint').focus(); return; }
     const onlyEpic = !!cur0 && f.title === cur0.title && f.kind === cur0.kind && String(f.points) === String(cur0.points == null ? '' : cur0.points) && f.assignee === (cur0.assignee || '') && f.description === (cur0.description || '') && f.sprintId === (cur0.sprintId || '') && (f.parentId || '') === (cur0.parentId || '') && to0 === cur0.status && (f.epicId || '') !== (cur0.epicId || '');
     const blk0 = cur0 && !onlyEpic ? moveBlock(f.assignee, to0) : ''; if(blk0) { blockHelp(blk0, f.assignee); document.getElementById('ai-assignee').focus(); return; }
     if(cur0 && to0 !== cur0.status && AgileCalc.isBackward(cfg, cur0.status, to0) && val('ai-note').trim().length < 5) { const w = await askReturn(cur0, to0); if(w === null) return; document.getElementById('ai-note').value = w; }
@@ -18814,13 +18823,20 @@ const Reports = (() => {
   const visibleModels = () => models().filter(m => m && m.def && (m.compartilhar === 'todos' || can('manage_settings')));
   // Relatórios que já existem nas telas (continuam lá): atalhos
   const SCREENS = [['report', 'file-analytics', 'Relatório Executivo (leitura rápida e PDF)'], ['pmoview', 'binoculars', 'Visão do PMO · Estimado × Real'], ['pfkpi', 'chart-donut-3', 'Indicadores do Portfólio'], ['board', 'presentation-analytics', 'Painel da Diretoria'], ['budget', 'coin', 'Orçamento e Custos'], ['hours', 'clock', 'Horas (exportar Excel)'], ['risks', 'shield-exclamation', 'Riscos (matriz e exportação)'], ['statusmsg', 'message-report', 'Mensagem de Status']];
-  let sel = null, scope = 'ativo', per = { inicio: '', fim: '' }, last = null, lastDef = null;
+  let sel = null, scope = 'ativo', chosen = null, per = { inicio: '', fim: '' }, last = null, lastDef = null;
 
+  // Projetos e quadros a que a pessoa tem acesso (a nuvem já entrega só os dela)
+  function allProjects() { try { return (DB.listProjects() || []).filter(p => p && p.id && p.id !== DB.NONE_ID).map(p => ({ id: p.id, name: p.name || p.id, board: p.methodology === 'quadro' })); } catch(e) { return []; } }
   function projects() {
-    let all = []; try { all = DB.listProjects() || []; } catch(e) { all = []; }
-    const act = DB.getActiveProjectId();
-    if(scope === 'todos') { const l = all.filter(p => p.methodology !== 'quadro' || p.id === act); return l.length ? l : [{ id: act, name: 'Projeto atual' }]; }
+    const all = allProjects(), act = DB.getActiveProjectId();
+    if(scope === 'todos' && all.length) return all;
+    if(scope === 'escolher') { const l = all.filter(p => chosen && chosen.has(p.id)); if(l.length) return l; }
     const p = all.find(x => x.id === act); return [{ id: act, name: p ? p.name : 'Projeto atual' }];
+  }
+  function pickHtml() {
+    const all = allProjects(); if(all.length < 2) return '';
+    return '<div style="flex:1 1 100%"><div class="rpt-row"><button class="btn btn-sm" onclick="Reports.pickAll(true)">Marcar todos</button><button class="btn btn-sm" onclick="Reports.pickAll(false)">Limpar</button><span class="set-sub">' + (chosen ? chosen.size : 0) + ' de ' + all.length + ' marcado(s)</span></div><div class="rpt-row" role="group" aria-label="Projetos do relatório">'
+      + all.map(p => '<label style="font-size:12.5px;display:inline-flex;gap:4px;align-items:center"><input type="checkbox" ' + (chosen && chosen.has(p.id) ? 'checked ' : '') + 'onchange="Reports.pick(\'' + esc(p.id) + '\')">' + esc(p.name) + (p.board ? ' <span class="set-sub">(quadro)</span>' : '') + '</label>').join('') + '</div></div>';
   }
   function ctx() {
     return { projects: projects(), get: (pid, t) => DB.getForProject(pid, t) || [], can, today: today(), me: (typeof Auth !== 'undefined' && Auth.getName()) || '', load: m => (typeof Burnout !== 'undefined' ? Burnout.effectivePct(m) : null) };
@@ -18850,11 +18866,11 @@ const Reports = (() => {
     const d = defOf(sel);
     if(!d) { box.innerHTML = '<div class="rk-empty">Escolha um relatório na lista ao lado.</div>'; if(out) out.innerHTML = ''; return; }
     const desc = sel.type === 'padrao' ? ((ReportEngine.PADROES.find(x => x.id === sel.id) || {}).desc || '') : 'Modelo criado no Construtor de Relatórios.';
-    const canAll = (() => { try { return (DB.listProjects() || []).filter(p => p.methodology !== 'quadro').length > 1; } catch(e) { return false; } })();
+    const canAll = allProjects().length > 1;
     box.innerHTML = '<div class="lbl"><i class="ti ti-file-analytics"></i>' + esc(nameOf(sel)) + '</div><p style="font-size:12.5px;color:var(--t2);line-height:1.6">' + esc(desc) + '</p><div class="rpt-ctl">'
-      + (canAll ? '<div><label for="rpt-scope">Projetos</label><select class="input" id="rpt-scope" onchange="Reports.setScope(this.value)"><option value="ativo"' + (scope === 'ativo' ? ' selected' : '') + '>Só o projeto aberto</option><option value="todos"' + (scope === 'todos' ? ' selected' : '') + '>Todos os projetos</option></select></div>' : '')
+      + (canAll ? '<div><label for="rpt-scope">Projetos</label><select class="input" id="rpt-scope" onchange="Reports.setScope(this.value)"><option value="ativo"' + (scope === 'ativo' ? ' selected' : '') + '>Só o projeto aberto</option><option value="todos"' + (scope === 'todos' ? ' selected' : '') + '>Todos os projetos e quadros</option><option value="escolher"' + (scope === 'escolher' ? ' selected' : '') + '>Escolher projetos…</option></select></div>' : '')
       + (hasPeriod(d) ? '<div><label for="rpt-ini">De</label><input class="input" type="date" id="rpt-ini" value="' + esc(per.inicio) + '" onchange="Reports.setPer()"></div><div><label for="rpt-fim">Até</label><input class="input" type="date" id="rpt-fim" value="' + esc(per.fim) + '" onchange="Reports.setPer()"></div><div class="btn-row"><button class="btn btn-sm" onclick="Reports.quick(7)">7 dias</button><button class="btn btn-sm" onclick="Reports.quick(30)">30 dias</button><button class="btn btn-sm" onclick="Reports.quick(90)">90 dias</button></div>' : '')
-      + '<div class="btn-row"><button class="btn btn-sm btn-acc" onclick="Reports.run()"><i class="ti ti-player-play"></i>Gerar</button></div></div>';
+      + '<div class="btn-row"><button class="btn btn-sm btn-acc" onclick="Reports.run()"><i class="ti ti-player-play"></i>Gerar</button></div>' + (canAll && scope === 'escolher' ? pickHtml() : '') + '</div>';
     if(out && !last) out.innerHTML = '<div class="rk-empty">Toque em Gerar para ver o relatório.</div>';
   }
   function tableHtml(res) {
@@ -18878,7 +18894,9 @@ const Reports = (() => {
   function open(type, id) { sel = { type, id }; last = null; if(!per.inicio) quick(30, true); renderList(); renderCtl(); }
   function quick(n, silent) { per.fim = today(); per.inicio = addDays(per.fim, -(n - 1)); if(!silent) { renderCtl(); } }
   function setPer() { per.inicio = ($('rpt-ini') || {}).value || ''; per.fim = ($('rpt-fim') || {}).value || ''; }
-  function setScope(v) { scope = v === 'todos' ? 'todos' : 'ativo'; last = null; renderCtl(); }
+  function setScope(v) { scope = v === 'todos' ? 'todos' : v === 'escolher' ? 'escolher' : 'ativo'; if(scope === 'escolher' && !chosen) chosen = new Set([DB.getActiveProjectId()]); last = null; renderCtl(); }
+  function pick(id) { chosen = chosen || new Set(); if(chosen.has(id)) chosen.delete(id); else chosen.add(id); last = null; renderCtl(); }
+  function pickAll(on) { chosen = new Set(on ? allProjects().map(p => p.id) : []); last = null; renderCtl(); }
   function render() { renderList(); renderCtl(); if($('rpb-root')) builderRender(); }
 
   // ── saída: Excel, CSV e PDF (a mesma tabela que está na tela, todas as linhas) ──
@@ -19001,7 +19019,7 @@ const Reports = (() => {
     const nome = d.nome; delete d.nome; B = { editId: '', nome, compartilhar: 'todos', def: d, modo: (d.grupos && d.grupos.length) ? 'agrupar' : 'lista' }; msg('Modelo importado: confira e toque em Salvar Modelo.'); builderRender();
   }
   function openBuilder() { R.go('settings'); SettingsTabs.show('relat'); }
-  return { render, open, run, quick, setPer, setScope, exportXlsx, exportCsv, pdf, openBuilder, builderRender, bName, bEnt, bModo, bToggle, bMove, bGroup, bMeasure, bMeasureAdd, bMeasureDel, bFilterAdd, bFilter, bFilterDel, bPer, bOrd, bDir, bTop, bShare, bPreview, bSave, bNew, bEdit, bDelete, bCode, bImport };
+  return { render, open, run, quick, setPer, setScope, pick, pickAll, exportXlsx, exportCsv, pdf, openBuilder, builderRender, bName, bEnt, bModo, bToggle, bMove, bGroup, bMeasure, bMeasureAdd, bMeasureDel, bFilterAdd, bFilter, bFilterDel, bPer, bOrd, bDir, bTop, bShare, bPreview, bSave, bNew, bEdit, bDelete, bCode, bImport };
 })();
 </script>
 
