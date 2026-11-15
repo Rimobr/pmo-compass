@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.98.0'
+  version: '2.98.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1084,7 +1084,7 @@ body.icons-failed i[data-fb]::before{
     <div class="sb-group" id="sbg-visao">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-visao')" title="Painéis de quem gerencia: diretoria, executivo e gerente de projetos"><i class="ti ti-layout-grid sb-gico"></i>Gerências<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
-      <button class="si" data-p="drpmo" onclick="R.go('drpmo')" title="Aponte os arquivos que você já tem: sem projeto, o Dr. PMO diz se é quadro ou projeto, a metodologia, os riscos e os buracos; com projeto aberto, o Raio-X aplica os achados depois de você revisar"><i class="ti ti-stethoscope"></i>Diagnóstico de Documentos</button>
+      <button class="si" data-p="drpmo" onclick="R.go('drpmo')" title="Aponte os arquivos que você já tem: sem projeto, o Dr. PMO diz se é quadro ou projeto, a metodologia, os riscos e os buracos; com projeto aberto, o Raio-X aplica os achados depois de você revisar"><i class="ti ti-stethoscope"></i>Diagnóstico - Dr PMO</button>
       <button class="si" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button>
       <button class="si" data-p="execview" onclick="R.go('execview')"><i class="ti ti-chart-infographic"></i>Painel Executivo</button>
       <button class="si" data-p="mgrpanel" onclick="R.go('mgrpanel')" title="Tudo o que está com você: seu time em todos os projetos, o que decidir agora e quem equilibrar"><i class="ti ti-user-star"></i>Painel do Gerente de Projetos</button>
@@ -1096,15 +1096,15 @@ body.icons-failed i[data-fb]::before{
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-relatorios')" title="Relatórios padrão, modelos do Construtor e atalhos dos relatórios das telas"><i class="ti ti-file-analytics sb-gico"></i>Relatórios<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
       <button class="si" data-p="reports" onclick="R.go('reports')"><i class="ti ti-file-analytics"></i>Central de Relatórios</button>
+      <button class="si" data-p="report" onclick="R.go('report')" title="Leitura rápida do projeto e PDF"><i class="ti ti-file-report"></i>Relatório Executivo</button>
     </div>
   </div>
 
   <div class="sb-group" id="sbg-indicadores">
-    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-indicadores')"><i class="ti ti-chart-donut-3 sb-gico"></i>Portfólio e Relatórios<i class="ti ti-chevron-right sb-gchev"></i></button>
+    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-indicadores')"><i class="ti ti-chart-donut-3 sb-gico"></i>Portfólio<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
       <button class="si" data-p="portfolio" onclick="R.go('portfolio')"><i class="ti ti-layout-grid"></i>Portfólio</button>
       <button class="si" data-p="prioritization" onclick="R.go('prioritization')"><i class="ti ti-sort-descending-2"></i>Priorização</button>
-      <button class="si" data-p="report" onclick="R.go('report')"><i class="ti ti-file-report"></i>Relatório</button>
     </div>
   </div>
 
@@ -1365,7 +1365,7 @@ body.icons-failed i[data-fb]::before{
 <section class="page" id="p-xray" data-module="pages/project-xray">
   <div class="pg-hdr">
     <div><div class="pg-title"><i class="ti ti-report-medical" style="color:var(--acc)"></i> Raio-X em Lote<span class="help-q" data-help="Envie documentos do projeto (proposta, ata, cronograma...) e a IA lê e monta um primeiro diagnóstico de prazo, custo e qualidade — nada vira registro real até você revisar e confirmar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Para estruturar vários projetos de uma vez. Para um projeto só, use o Diagnóstico de Documentos: ele avalia, orienta e deixa você decidir se vira projeto ou se descarta tudo.</div></div>
-    <div class="btn-row"><button class="btn btn-sm" onclick="R.go('drpmo')"><i class="ti ti-stethoscope"></i>Voltar ao Diagnóstico de Documentos</button></div>
+    <div class="btn-row"><button class="btn btn-sm" onclick="R.go('drpmo')"><i class="ti ti-stethoscope"></i>Voltar ao Diagnóstico - Dr PMO</button></div>
   </div>
 
   <div class="card" id="batchxray-idle-card" data-perm="business">
@@ -1407,7 +1407,7 @@ body.icons-failed i[data-fb]::before{
 <!-- ■ MODULE: pages/drpmo ─ Diagnóstico PMO (Dr. PMO): vale antes de ter projeto; lê os arquivos que a pessoa já tem e orienta como seguir -->
 <section class="page" id="p-drpmo" data-module="pages/drpmo">
   <div class="pg-hdr">
-    <div><div class="pg-title"><i class="ti ti-stethoscope" style="color:var(--acc)"></i> Diagnóstico de Documentos — Dr. PMO<span class="help-q" data-help="Aponte as planilhas e documentos que você já tem. O Dr. PMO lê, diz se aquilo é um Quadro de tarefas ou um Projeto, qual metodologia faz sentido (ágil, cascata ou híbrido), que riscos e buracos já aparecem e por que vale usar o Compass. Nada é gravado: você decide depois se cria o quadro ou o projeto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div><div class="pg-title"><i class="ti ti-stethoscope" style="color:var(--acc)"></i> Diagnóstico - Dr PMO<span class="help-q" data-help="Aponte as planilhas e documentos que você já tem. O Dr. PMO lê, diz se aquilo é um Quadro de tarefas ou um Projeto, qual metodologia faz sentido (ágil, cascata ou híbrido), que riscos e buracos já aparecem e por que vale usar o Compass. Nada é gravado: você decide depois se cria o quadro ou o projeto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div class="pg-sub">Aponte o que você tem. O Dr. PMO avalia, orienta o que corrigir e, se você quiser, vira projeto ou quadro; senão, descarte tudo.</div></div>
     <div class="btn-row"><button class="btn btn-sm" data-perm="business" onclick="R.go('xray')" title="Estruturar vários projetos de uma vez, um documento de cada"><i class="ti ti-stack-2"></i>Raio-X em Lote</button></div>
   </div>
@@ -8298,7 +8298,7 @@ const R = (() => {
 const Nav = (() => {
   // Mapa página → grupo, usado para abrir automaticamente o grupo certo ao navegar
   const GROUP_OF = {
-    pfkpi:'sbg-indicadores', portfolio:'sbg-indicadores', prioritization:'sbg-indicadores', report:'sbg-indicadores', reports:'sbg-relatorios',
+    pfkpi:'sbg-indicadores', portfolio:'sbg-indicadores', prioritization:'sbg-indicadores', report:'sbg-relatorios', reports:'sbg-relatorios',
     settings:'sbg-sistema', help:'sbg-sistema', account:'sbg-sistema',
     decisions:'sbg-decisao', loop:'sbg-decisao', trail:'sbg-decisao', statusmsg:'sbg-decisao',
     kanban:'sbg-agil', backlog:'sbg-agil', sprints:'sbg-agil', ritos:'sbg-agil', sprintnow:'sbg-agil', modelos:'sbg-conhecimento',
@@ -8434,7 +8434,7 @@ const Nav = (() => {
   });
 
   const GROUP_LABEL = {
-    sbg_indicadores: 'Portfólio e Relatórios', sbg_relatorios: 'Relatórios', sbg_visao: 'Gerências', sbg_sistema: 'Sistema',
+    sbg_indicadores: 'Portfólio', sbg_relatorios: 'Relatórios', sbg_visao: 'Gerências', sbg_sistema: 'Sistema',
     sbg_decisao: 'Decisões', sbg_agil: 'Execução ágil', sbg_planejamento: 'Planejamento',
     sbg_equipe: 'Equipe', sbg_conhecimento: 'Conhecimento', sbg_projetos: 'Projetos'
   };
