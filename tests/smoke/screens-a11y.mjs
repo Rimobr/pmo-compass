@@ -19,6 +19,8 @@ const SCENES = [
   ['Painel do Gerente de Projetos', `R.go('mgrpanel')`, null],
   ['Painel do Gerente (detalhe do cartão)', `R.go('mgrpanel'); MgrPanel.toggle('dec')`, null],
   ['Painel do Gerente (riscos críticos)', `R.go('mgrpanel'); MgrPanel.toggle('rsk')`, null],
+  ['Painel da Diretoria (detalhe do cartão)', `R.go('board'); Board.drill('proj')`, null],
+  ['Visão do PMO (detalhe do cartão)', `R.go('pmoview'); PmoView.drill('No prazo')`, null],
   ['Transferir atividades (janela)', `R.go('mgrpanel'); const b = document.querySelector('#res-team-root [data-k]'); if(b) Resources.openTransfer(b.dataset.k)`, 'modal-transfer'],
   ['Diagnóstico PMO (antes de analisar)', `R.go('drpmo')`, null],
   ['Diagnóstico PMO (resultado)', `R.go('drpmo'); await DrPmo.run([new File(['Tarefa;Prazo;Trocar piso;01/11;Pintar sala;05/11 atraso pendente bloqueado impedimento'], 'tarefas.csv'), new File(['EAP marcos fases cronograma'], 'plano.txt')])`, null],

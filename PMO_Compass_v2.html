@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.101.0'
+  version: '2.102.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1632,6 +1632,7 @@ body.icons-failed i[data-fb]::before{
 
   <div id="board-capacity-root"></div>
   <div class="g4 rc-k" id="board-kpis-root" style="margin-bottom:16px"></div>
+  <div class="card" id="board-drill-card" style="margin-bottom:16px;display:none" role="region" aria-live="polite"><div id="board-drill"></div></div>
 
   <div class="card" style="margin-bottom:16px">
     <div class="lbl"><i class="ti ti-grid-dots"></i>Farol do Portfólio<span class="help-q" data-help="Formato de semáforo/mapa de calor — o jeito mais usado em reporte de PMO pra diretoria, porque mostra prazo, custo, equipe, qualidade e risco de todos os projetos lado a lado, num único olhar. Verde = saudável, amarelo = atenção, vermelho = crítico. Clique num projeto pra abrir o Dashboard dele." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
@@ -3731,7 +3732,9 @@ const PmoViews = (() => {
     <span id="pv-area-wrap" style="display:none;align-items:center;gap:6px"><label for="pv-area" style="font-size:12px;color:var(--t2)">Área</label><span class="help-q" data-help="Mostra só os projetos desta área. A área de cada projeto é definida em Indicadores → Editar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span><select class="input" id="pv-area" onchange="PmoView.setArea(this.value)"></select></span>
   </div>
   <div id="pv-foco" style="font-size:12.5px;color:var(--t2);margin:2px 0 12px"></div>
+  <div class="card card-accent" style="margin-bottom:12px"><div class="lbl" style="color:var(--acc)"><i class="ti ti-compass"></i>Decisões do Portfólio</div><div id="pv-center"></div></div>
   <div class="g3" id="pv-kpis"></div>
+  <div class="card" id="pv-drill-card" style="margin-top:12px;display:none" role="region" aria-live="polite"><div class="lbl" style="display:flex;align-items:center;gap:8px"><i class="ti ti-zoom-in" aria-hidden="true"></i><span id="pv-drill-title"></span><button class="btn btn-sm" style="margin-left:auto" onclick="PmoView.drill(null)"><i class="ti ti-x"></i>Fechar</button></div><div id="pv-drill"></div></div>
   <div class="card" style="margin-top:12px">
     <div class="lbl"><i class="ti ti-alert-circle"></i><span id="pv-list-title">Atenção</span><span class="help-q" data-help="Projetos que se enquadram em algum critério de atenção deste tipo de PMO, do que mais pesa para o que menos pesa. Clique em &quot;Abrir&quot; para ir ao projeto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div id="pv-list"></div>
@@ -3832,6 +3835,19 @@ const PmoView = (() => {
       + rows.map(r => '<tr><td><b>' + esc(r.name) + '</b></td>' + cols.map(c => cell(r.cells[c[0]])).join('') + '<td class="num">' + (r.known ? (r.red ? '<span class="badge b-red">' + r.red + ' crítico(s)</span> ' : '') + (r.amb ? '<span class="badge b-amb">' + r.amb + ' atenção</span>' : '') + (!r.red && !r.amb ? '<span class="badge b-grn">no ritmo</span>' : '') : '<span class="badge b-neu">sem dados</span>') + '</td></tr>' + (r.fixes && r.fixes.length ? '<tr><td colspan="' + (cols.length + 2) + '" style="font-size:12px;color:var(--t2);padding:4px 10px 10px"><b>Como corrigir — ' + esc(r.name) + ':</b> ' + r.fixes.map(x => '<span style="color:' + COL[x.level] + '">' + esc(cols.find(c => c[0] === x.key)[1]) + '</span>: ' + esc(x.text)).join(' · ') + '</td></tr>' : '')).join('')
       + '</tbody></table><div style="font-size:11.5px;color:var(--t3);margin-top:8px">Esperado = o que o sistema calcula (cronograma, linha ideal, jornada, histórico do próprio projeto); real = o que foi apontado ou aconteceu. "Sem dados" quando falta uma das bases. Cada tema é explicado na própria tela do projeto.</div>';
   }
+  // Cada cartão desce até as decisões do tema (as mesmas da Central), com previsão, o que fazer e a ação
+  const KINDS = [[/decis/i, ['capacidade', 'decisao']], [/sobrealoc|carga muito alta|time sem reserva/i, ['capacidade', 'alocacao']], [/riscos? cr[ií]ticos|revis[õo]es de risco|sem respons/i, ['risco']], [/projetos? em risco|^em risco/i, ['capacidade', 'decisao', 'risco', 'prazo', 'custo']], [/atrasad|no prazo|prazo/i, ['prazo', 'sprint']], [/custo/i, ['custo']], [/escopo/i, ['escopo']], [/impediment|bloquead/i, ['prazo', 'sprint']]];
+  const kindsOf = label => { const m = KINDS.find(k => k[0].test(String(label || ''))); return m ? m[1] : null; };
+  let drillLabel = null;
+  function drill(label) {
+    const card = el('pv-drill-card'); if(!card) return;
+    const same = label && label === drillLabel; drillLabel = (!label || same) ? null : label;
+    document.querySelectorAll('#pv-kpis [data-l]').forEach(c => c.setAttribute('aria-expanded', c.dataset.l === drillLabel ? 'true' : 'false'));
+    if(!drillLabel) { card.style.display = 'none'; return; }
+    el('pv-drill-title').textContent = drillLabel;
+    let html = ''; try { html = MgrPanel.listHtml(kindsOf(drillLabel), 10, 'Nada pedindo decisão neste tema agora. 👍'); } catch(e) { html = '<div class="rk-empty">Sem dados no momento.</div>'; }
+    el('pv-drill').innerHTML = html; card.style.display = '';
+  }
   function render() {
     if(!el('pv-kpis')) return;
     if(!type) type = defaultType();
@@ -3844,7 +3860,9 @@ const PmoView = (() => {
     el('pv-area').innerHTML = areas.map(a => `<option value="${esc(a)}"${a === area ? ' selected' : ''}>${esc(a)}</option>`).join('') || '<option value="">(nenhuma área definida)</option>';
     const v = PmoViews.build(type, rows, { overallocatedPeople, area });
     el('pv-foco').innerHTML = `<strong>${esc(v.label)}:</strong> ${esc(v.foco)}`;
-    el('pv-kpis').innerHTML = v.kpis.map(x => `<div class="kpi"><div class="kpi-lbl"><span class="sdot ${DOT[x.tone] || 'sdot-acc'}"></span>${esc(x.label)}${x.tip ? `<span class="help-q" data-help="${esc(x.tip)}" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>` : ''}</div><div class="kpi-val" style="color:${TONE[x.tone] || 'var(--t1)'}">${esc(x.value)}</div><div class="kpi-delta">${esc(x.sub)}</div></div>`).join('');
+    el('pv-kpis').innerHTML = v.kpis.map(x => `<div class="kpi${kindsOf(x.label) ? ' kpi-link' : ''}"${kindsOf(x.label) ? ` role="button" tabindex="0" aria-expanded="false" data-l="${esc(x.label)}" onclick="PmoView.drill(this.dataset.l)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();PmoView.drill(this.dataset.l)}"` : ''}><div class="kpi-lbl"><span class="sdot ${DOT[x.tone] || 'sdot-acc'}"></span>${esc(x.label)}${x.tip ? `<span class="help-q" data-help="${esc(x.tip)}" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>` : ''}</div><div class="kpi-val" style="color:${TONE[x.tone] || 'var(--t1)'}">${esc(x.value)}</div><div class="kpi-delta">${esc(x.sub)}${kindsOf(x.label) ? ' <span style="color:var(--acc)">· ver detalhes</span>' : ''}</div></div>`).join('');
+    try { el('pv-center').innerHTML = MgrPanel.listHtml(null, 6, 'Nenhuma decisão pendente: o portfólio está dentro do esperado. 👍'); } catch(e) { /* sem a central */ }
+    if(drillLabel) { const l = drillLabel; drillLabel = null; drill(l); }
     el('pv-list-title').textContent = v.listTitle;
     el('pv-list').innerHTML = v.list.length
       ? v.list.map(it => `<div class="rk-item" style="cursor:default"><div class="rk-main"><div class="rk-title">${Methodology.tag(it.id)}${esc(it.name)}</div><div class="rk-meta">${it.reasons.map(r => `<span class="chip">${esc(r)}</span>`).join('')}</div><div class="rk-fix" style="font-size:12px;color:var(--t2);line-height:1.55;margin-top:6px">${(it.fixes || []).map(x => `<div><i class="ti ti-bulb" aria-hidden="true" style="color:var(--amb)"></i> ${esc(x)}</div>`).join('')}</div></div><button class="btn btn-sm" data-id="${esc(it.id)}" onclick="PmoView.openProject(this)"><i class="ti ti-arrow-right"></i>Abrir</button></div>`).join('')
@@ -3863,7 +3881,7 @@ const PmoView = (() => {
   function openProject(btn) { DB.switchProject(btn.dataset.id); R.go('dashboard'); }
   // Para o Painel do Gerente de Projetos: a visão de decisões e ações do portfólio (tipo Diretivo), com a sugestão de corrigir e mitigar
   function panel() { const { rows, overallocatedPeople } = collect(); return Object.assign(PmoViews.build('diretivo', rows, { overallocatedPeople }), { rows }); }
-  return { render, setType, setArea, openProject, openGuide, closeGuide, panel, resetCache: () => {} };
+  return { render, setType, setArea, openProject, openGuide, closeGuide, panel, drill, resetCache: () => {} };
 })();
 </script>
 
@@ -21076,13 +21094,29 @@ const Board = (() => {
     const investido = rows.reduce((s,r) => s + (r.bm ? r.bm.AC : 0), 0);
     const valorEntregue = rows.reduce((s,r) => s + (r.vr && r.vr.valorRealizado ? r.vr.valorRealizado : 0), 0);
     const riscos = rows.reduce((s,r) => s + r.criticas.length, 0);
+    lastRows = rows;
     const tiles = [
-      { lbl:'Projetos ativos', val: rows.length, icon:'briefcase', page:'portfolio' },
-      { lbl:'Investido até agora', val: fmtMoney(investido), icon:'coin', help:'Soma do que já foi realmente gasto em todos os projetos, comparado ao orçamento de cada um.', page:'budget' },
-      { lbl:'Valor já entregue', val: fmtMoney(valorEntregue), icon:'target-arrow', help:'Soma do valor financeiro que já foi confirmado como entregue (validado na Priorização), não o valor prometido.', page:'prioritization' },
-      { lbl:'Riscos críticos abertos', val: riscos, icon:'alert-triangle', help:'Decisões marcadas como críticas que ainda não foram resolvidas, somadas de todos os projetos.', page:'decisions' }
+      { key:'proj', lbl:'Projetos ativos', val: rows.length, icon:'briefcase', page:'portfolio' },
+      { key:'inv', lbl:'Investido até agora', val: fmtMoney(investido), icon:'coin', help:'Soma do que já foi realmente gasto em todos os projetos, comparado ao orçamento de cada um.', page:'budget' },
+      { key:'val', lbl:'Valor já entregue', val: fmtMoney(valorEntregue), icon:'target-arrow', help:'Soma do valor financeiro que já foi confirmado como entregue (validado na Priorização), não o valor prometido.', page:'prioritization' },
+      { key:'dec', lbl:'Decisões críticas abertas', val: riscos, icon:'alert-triangle', help:'Decisões marcadas como críticas que ainda não foram resolvidas, somadas de todos os projetos.', page:'decisions' }
     ];
-    root.innerHTML = tiles.map(t => `<div class="card kpi-link" role="button" tabindex="0" aria-label="Ver ${escapeHtml(t.lbl)}" style="padding:14px" onclick="R.go('${t.page}')" onkeydown="R.goKey(event,'${t.page}')"><div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t3);margin-bottom:6px"><i class="ti ti-${t.icon}"></i>${t.lbl}${t.help?`<span class="help-q" data-help="${escapeHtml(t.help)}" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>`:''}</div><div style="font-size:22px;font-weight:600;color:var(--t1)">${t.val}</div></div>`).join('');
+    root.innerHTML = tiles.map(t => `<div class="card kpi-link" role="button" tabindex="0" aria-label="Ver detalhes: ${escapeHtml(t.lbl)}" aria-expanded="false" data-k="${t.key}" style="padding:14px" onclick="Board.drill('${t.key}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();Board.drill('${t.key}')}"><div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t3);margin-bottom:6px"><i class="ti ti-${t.icon}"></i>${t.lbl}${t.help?`<span class="help-q" data-help="${escapeHtml(t.help)}" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>`:''}</div><div style="font-size:22px;font-weight:600;color:var(--t1)">${t.val}</div><div style="font-size:11px;color:var(--acc);margin-top:4px">ver detalhes</div></div>`).join('');
+  }
+  // Detalhe do cartão: por projeto, com o número e o que ele significa; "Abrir tela" é só atalho
+  let lastRows = [], drillKey = null;
+  function drill(key) {
+    drillKey = key === drillKey ? null : key;
+    const card = document.getElementById('board-drill-card'), body = document.getElementById('board-drill'); if(!card || !body) return;
+    document.querySelectorAll('#board-kpis-root [data-k]').forEach(c => c.setAttribute('aria-expanded', c.dataset.k === drillKey ? 'true' : 'false'));
+    if(!drillKey) { card.style.display = 'none'; return; }
+    const li = fn => '<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.75">' + lastRows.map(r => '<li><b>' + escapeHtml(r.project.name) + '</b>: ' + fn(r) + '</li>').join('') + '</ul>';
+    const M = { proj: ['Projetos ativos', li(r => escapeHtml(r.status.label) + (r.health != null ? ' (nota ' + r.health + ')' : '') + (r.cov && r.cov.known < r.cov.total ? ' · baseado em ' + r.cov.known + ' de ' + r.cov.total + ' áreas' : '')), 'portfolio'],
+      inv: ['Investido até agora', li(r => r.bm ? 'gasto R$ ' + Math.round(r.bm.AC || 0).toLocaleString('pt-BR') + (r.bm.BAC ? ' de R$ ' + Math.round(r.bm.BAC).toLocaleString('pt-BR') + ' orçados (' + Math.round((r.bm.AC || 0) / r.bm.BAC * 100) + '%)' : ' (sem orçamento definido)') : 'sem dados de custo'), 'budget'],
+      val: ['Valor já entregue', li(r => r.vr && r.vr.valorRealizado ? 'R$ ' + Math.round(r.vr.valorRealizado).toLocaleString('pt-BR') + ' confirmados' : 'nenhum valor confirmado ainda (sem dados)'), 'prioritization'],
+      dec: ['Decisões críticas abertas', li(r => r.criticas.length ? r.criticas.map(d => escapeHtml(d.title)).join('; ') : 'nenhuma'), 'decisions'] }[drillKey];
+    body.innerHTML = '<div class="lbl" style="display:flex;align-items:center;gap:8px"><i class="ti ti-zoom-in" aria-hidden="true"></i>' + M[0] + '<button class="btn btn-sm" style="margin-left:auto" onclick="Board.drill(Board.drillKey())"><i class="ti ti-x"></i>Fechar</button></div>' + M[1] + '<div class="btn-row" style="margin-top:8px"><button class="btn btn-sm" onclick="R.go(\'' + M[2] + '\')"><i class="ti ti-arrow-right"></i>Abrir a tela completa</button></div>';
+    card.style.display = '';
   }
 
   // ── Comparativo por metodologia: situação atual (sempre) + evolução da nota ao longo do tempo (precisa do histórico da nuvem) ──
@@ -21196,8 +21230,8 @@ const Board = (() => {
   // Alerta de capacidade para a diretoria: quem está sobrealocado e, sobretudo, quando não há ninguém para dividir o trabalho
   function renderCapacity() {
     const root = document.getElementById('board-capacity-root'); if(!root) return;
-    let list = []; try { list = Resources.capacityAlerts(); } catch(e) { list = []; }
-    root.innerHTML = list.length ? '<div class="card card-danger" style="margin-bottom:16px"><div class="lbl"><i class="ti ti-users-group"></i>Capacidade do Time: Decisão da Diretoria</div>' + list.map(x => MgrPanel.planHtml(x).replace(/<div class="btn-row"[\s\S]*?<\/div>/, '')).join('') + '</div>' : '';
+    let html = ''; try { html = MgrPanel.listHtml(null, 5, 'Nenhuma decisão pendente: o portfólio está dentro do esperado. 👍'); } catch(e) { html = ''; }
+    root.innerHTML = '<div class="card card-accent" style="margin-bottom:16px"><div class="lbl" style="color:var(--acc)"><i class="ti ti-compass"></i>Decisões da Diretoria<span class="help-q" data-help="As decisões mais urgentes do portfólio, com a previsão do que acontece se nada for feito, o que fazer e a ação. Capacidade do time (Capacidade do Time: Decisão da Diretoria), decisões críticas, riscos, prazo, custo e escopo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>' + html + '</div>';
   }
   async function render() {
     if(typeof DB === 'undefined') return;
@@ -21280,7 +21314,7 @@ const Board = (() => {
     T.show('✅ Avaliação registrada — isso entra no contexto da próxima sugestão da IA pra este projeto.');
   }
 
-  return { render, generateSuggestions, openDecisionModal, closeDecisionModal, saveDecision, openOutcomeModal, closeOutcomeModal, saveOutcome };
+  return { render, drill, drillKey: () => drillKey, generateSuggestions, openDecisionModal, closeDecisionModal, saveDecision, openOutcomeModal, closeOutcomeModal, saveOutcome };
 })();
 </script>
 
@@ -22021,12 +22055,22 @@ const MgrPanel = (() => {
     else if(t === 'team') { R.go('settings'); try { SettingsTabs.show('acesso'); } catch(e) { /* aba indisponível */ } }
     else if(t === 'open' && pid) { DB.switchProject(pid); R.go(el.dataset.page || 'dashboard'); }
   }
-  function render() {
-    const k = document.getElementById('mg-kpis'); if(!k) return;
+  // As decisões do portfólio inteiro (as mesmas em todas as telas de gestão)
+  function decisions() {
     let v = null; try { v = PmoView.panel(); } catch(e) { v = null; }
     let plansAll = [], sys = []; try { plansAll = Resources.plans(); } catch(e) { plansAll = []; } try { sys = Resources.systemRisks(); } catch(e) { sys = []; }
+    const decs = v ? DecisionCenter.build({ projects: v.rows.map(r => ({ id: r.id, name: r.name, facts: r.facts, ev: r.ev, sprint: r.sprint })), capacity: plansAll, sysRisks: sys, canCosts: Auth.can('view_costs') }) : [];
+    return { v, plansAll, sys, decs };
+  }
+  // HTML da lista de decisões de certos tipos (kinds vazio = todas), limitada
+  function listHtml(kinds, limit, emptyMsg) {
+    const all = decisions().decs.filter(d => !kinds || !kinds.length || kinds.includes(d.kind)), part = all.slice(0, limit || 12);
+    return part.length ? part.map(decisionHtml).join('') + (all.length > part.length ? '<div class="set-sub">+ ' + (all.length - part.length) + ' de menor urgência.</div>' : '') : '<div class="rk-empty">' + esc(emptyMsg || 'Nada pedindo decisão neste tema. 👍') + '</div>';
+  }
+  function render() {
+    const k = document.getElementById('mg-kpis'); if(!k) return;
+    const { v, plansAll, sys, decs } = decisions();
     if(v) {
-      const decs = DecisionCenter.build({ projects: v.rows.map(r => ({ id: r.id, name: r.name, facts: r.facts, ev: r.ev, sprint: r.sprint })), capacity: plansAll, sysRisks: sys, canCosts: Auth.can('view_costs') });
       const sums = buildDetails(v.rows, plansAll), n = x => String(x), crit = decs.filter(d => d.level === 'crit');
       DET.dec = { title: 'Decisões para agora (críticas)', html: crit.length ? crit.map(decisionHtml).join('') : '<div class="rk-empty">Nenhuma decisão crítica no momento. 👍</div>' };
       const nRisk = v.rows.filter(r => r.ev.farol === 'vermelho').length, nRsk = v.rows.reduce((a, r) => a + (r.ev.riscosCriticos || 0), 0) + sys.length, nDel = v.rows.reduce((a, r) => a + (r.ev.atrasadas || 0), 0), nScp = v.rows.reduce((a, r) => a + (r.facts.scope.openCount || 0), 0);
@@ -22044,7 +22088,7 @@ const MgrPanel = (() => {
     }
     if(typeof Resources !== 'undefined') Resources.renderTeam();
   }
-  return { render, planHtml, toggle, act };
+  return { render, planHtml, toggle, act, listHtml, decisions };
 })();
 </script>
 
