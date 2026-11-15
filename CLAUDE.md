@@ -275,3 +275,6 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 ## Informação que decide, nunca só link (regra do dono, 15/11/2026; vale para todos os produtos)
 - O conceito do sistema é entregar informação **confiável, gerencial, decisiva e importante, com orientação e direcionamento rápido para decidir**. Um aviso que só manda "ir até outra tela" não serve: a própria tela traz o **veredito** (quem, quanto, por quê), o **que fazer**, **como mitigar** e, quando couber, o **botão que executa** a ação. Link é só atalho de apoio.
 - Aplicado no Painel do Gerente de Projetos: "Decisões Sugeridas pelo Sistema" (cada pessoa sobrealocada com o plano e o botão de transferir) e o aviso de nomes sem conta, que diz quais nomes parecem ser a mesma pessoa e o que decidir. "Meu Time" lista só pessoas com conta quando a nuvem está ligada (pessoa única) e as colunas arrastam e redimensionam (`ColumnDrag`).
+
+## Títulos e cabeçalhos curtos (pedido do dono, 15/11/2026)
+- Cabeçalho de tabela e rótulo de campo: **nome curto e intuitivo**, sem "em", "de", unidade por extenso nem parêntese longo ("Fila", "Pai", "Criado", "Prob. (1-5)", "Carga %"). Detalhe vai na dica (?) ou no `title`, não no título. Vale para o catálogo do motor de relatórios e para tabelas novas.

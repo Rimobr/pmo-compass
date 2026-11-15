@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.98.3'
+  version: '2.98.5'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1131,7 +1131,7 @@ body.icons-failed i[data-fb]::before{
       <div id="sb-projects-root"></div>
       <div class="sb-sec sb-sub">Metodologias Disponíveis</div>
       <div id="sb-method-legend"></div>
-      <button class="si" data-perm="business" onclick="R.go('settings');SettingsTabs.show('pmo')" title="Muda quais telas aparecem para este projeto (Ágil, Cascata ou Híbrido)"><i class="ti ti-route"></i>Mudar Metodologia do Projeto</button>
+      <button class="si" data-perm="business" onclick="R.go('settings');SettingsTabs.show('pmo')" title="Muda quais telas aparecem para este projeto (Ágil, Cascata ou Híbrido)"><i class="ti ti-route"></i>Mudar Metodologia</button>
       <button class="si" data-perm="business" onclick="Wizard.open()"><i class="ti ti-plus"></i>Novo Projeto</button>
     </div>
   </div>
@@ -1159,7 +1159,7 @@ body.icons-failed i[data-fb]::before{
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-planejamento')"><i class="ti ti-sitemap sb-gico"></i>Planejamento<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
       <button class="si" data-p="baseline" onclick="R.go('baseline')"><i class="ti ti-camera"></i>Linha de Base</button>
-      <button class="si" data-perm="view_costs" data-p="budget" onclick="R.go('budget')"><i class="ti ti-wallet"></i>Orçamento e Custos</button>
+      <button class="si" data-perm="view_costs" data-p="budget" onclick="R.go('budget')"><i class="ti ti-wallet"></i>Orçamento</button>
       <button class="si" data-p="scope" onclick="R.go('scope')"><i class="ti ti-git-diff"></i>Scope Changes</button>
       <button class="si" data-p="estimates" onclick="R.go('estimates')"><i class="ti ti-ruler"></i>Estimativas IA</button>
       <button class="si" data-p="whatif" onclick="R.go('whatif')"><i class="ti ti-arrows-split"></i>What-If</button>
@@ -1331,7 +1331,7 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: pages/burnout -->
 <section class="page" id="p-burnout" data-module="pages/burnout">
-  <div class="pg-hdr"><div><div class="pg-title">Burnout Radar — Saúde da equipe<span class="help-q" data-help="Mostra quem da equipe está sobrecarregado, antes que isso vire atraso no projeto ou alguém pedir pra sair." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">IA detecta padrões de sobrecarga antes que virem queda de produtividade.</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Burnout.openAdd()"><i class="ti ti-plus"></i>Adicionar Colaborador</button><button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('team')"><i class="ti ti-table-import"></i>Importar Planilha</button></div></div>
+  <div class="pg-hdr"><div><div class="pg-title">Burnout Radar<span class="help-q" data-help="Mostra quem da equipe está sobrecarregado, antes que isso vire atraso no projeto ou alguém pedir pra sair." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">IA detecta padrões de sobrecarga antes que virem queda de produtividade.</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Burnout.openAdd()"><i class="ti ti-plus"></i>Adicionar Colaborador</button><button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('team')"><i class="ti ti-table-import"></i>Importar Planilha</button></div></div>
   <div class="fi-note" style="margin-bottom:14px">
     <i class="ti ti-shield-lock"></i>
     <div>Este painel <strong style="color:var(--t1)">não monitora atividade, tela ou comunicação</strong> de ninguém automaticamente — a carga é calculada pelo sistema a partir dos cards, prazos e horas que já estão registrados (ninguém precisa lançar percentual; o gerente só ajusta se quiser). Base legal: legítimo interesse do controlador na gestão de carga de trabalho (LGPD art. 7º, IX). Cada colaborador cadastrado tem o direito de saber que está sendo monitorado aqui e de solicitar a exclusão do próprio registro.</div>
@@ -1343,7 +1343,7 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: pages/resources -->
 <section class="page" id="p-resources" data-module="pages/resources">
-  <div class="pg-hdr"><div><div class="pg-title">Gestão de Colaboradores e Capacidade<span class="help-q" data-help="Mostra quem está alocado em mais de um projeto ao mesmo tempo, e se essa soma passou do que uma pessoa consegue dar conta." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Conflitos em múltiplos projetos causam mais atrasos que falta de pessoas (PMI 2025).</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" onclick="R.go('whatif')"><i class="ti ti-arrows-split"></i>What-If IA</button></div></div>
+  <div class="pg-hdr"><div><div class="pg-title">Colaboradores e Capacidade<span class="help-q" data-help="Mostra quem está alocado em mais de um projeto ao mesmo tempo, e se essa soma passou do que uma pessoa consegue dar conta." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Conflitos em múltiplos projetos causam mais atrasos que falta de pessoas (PMI 2025).</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" onclick="R.go('whatif')"><i class="ti ti-arrows-split"></i>What-If IA</button></div></div>
   <div class="card" id="res-portfolio-card">
     <div class="lbl"><i class="ti ti-affiliate"></i>Alocação Real Entre Projetos</div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px">Soma a alocação (%) de cada pessoa em todos os projetos do portfólio, casando por nome — só aparece quem está em mais de um projeto.</p>
@@ -1429,14 +1429,14 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: pages/whatif -->
 <section class="page" id="p-whatif" data-module="pages/whatif">
-  <div class="pg-hdr"><div><div class="pg-title">Análise What-If — Simulação de cenários<span class="help-q" data-help="Simule 'e se' antes de decidir: o que muda no prazo ou no custo se você mudar algo agora, sem precisar mexer de verdade no projeto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Simule o impacto antes de qualquer decisão. Funcionalidade mais pedida em comunidades PM (2026).</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="WI.openAdd()"><i class="ti ti-plus"></i>Novo Cenário</button></div></div>
+  <div class="pg-hdr"><div><div class="pg-title">What-If<span class="help-q" data-help="Simule 'e se' antes de decidir: o que muda no prazo ou no custo se você mudar algo agora, sem precisar mexer de verdade no projeto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Simule o impacto antes de qualquer decisão. Funcionalidade mais pedida em comunidades PM (2026).</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="WI.openAdd()"><i class="ti ti-plus"></i>Novo Cenário</button></div></div>
   <div id="whatif-list-root"></div>
   <div class="card card-accent" id="wi-detail"></div>
 </section>
 
 <!-- ■ MODULE: pages/lessons -->
 <section class="page" id="p-lessons" data-module="pages/lessons">
-  <div class="pg-hdr"><div><div class="pg-title">Lições Aprendidas — Inteligência acumulada<span class="help-q" data-help="Registro do que funcionou e do que não funcionou em projetos passados, pra não repetir o mesmo erro — e a IA cruza isso com decisões novas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">"Conhecimento sai quando o GP sai." A IA indexa, cruza e aplica lições entre projetos.</div></div><div class="btn-row"><input class="input" style="width:180px" placeholder="Buscar lições…" oninput="Search.filterLessons(this.value)"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Lessons.openAdd()"><i class="ti ti-plus"></i>Registrar</button><button class="btn btn-sm" onclick="Lessons.render();T.show('🔄 Padrões recalculados a partir das lições cadastradas.')"><i class="ti ti-brain"></i>Detectar Padrões</button></div></div>
+  <div class="pg-hdr"><div><div class="pg-title">Lições Aprendidas<span class="help-q" data-help="Registro do que funcionou e do que não funcionou em projetos passados, pra não repetir o mesmo erro — e a IA cruza isso com decisões novas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">"Conhecimento sai quando o GP sai." A IA indexa, cruza e aplica lições entre projetos.</div></div><div class="btn-row"><input class="input" style="width:180px" placeholder="Buscar lições…" oninput="Search.filterLessons(this.value)"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Lessons.openAdd()"><i class="ti ti-plus"></i>Registrar</button><button class="btn btn-sm" onclick="Lessons.render();T.show('🔄 Padrões recalculados a partir das lições cadastradas.')"><i class="ti ti-brain"></i>Detectar Padrões</button></div></div>
   <div class="card card-accent" id="lessons-patterns-card" style="display:none">
     <div class="lbl" style="color:var(--acc)"><i class="ti ti-sparkles"></i><span id="lessons-patterns-count"></span></div>
     <div style="display:flex;flex-direction:column;gap:8px" id="lessons-patterns-root"></div>
@@ -1446,7 +1446,7 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: pages/meetings -->
 <section class="page" id="p-meetings" data-module="pages/meetings">
-  <div class="pg-hdr"><div><div class="pg-title">Atas e Ações — IA extrai, você decide<span class="help-q" data-help="Suas atas de reunião viram uma lista de tarefas com responsável e prazo — sem precisar digitar tudo de novo em outra tela." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">GPs gastam 30% do tempo em atas. A IA processa e extrai ações automaticamente.</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Meetings.openAdd()"><i class="ti ti-plus"></i>Nova Ata</button><button class="btn btn-sm"><i class="ti ti-microphone"></i>Transcrição Áudio</button><button class="btn btn-sm" onclick="DB.exportBackup()"><i class="ti ti-download"></i>Exportar</button></div></div>
+  <div class="pg-hdr"><div><div class="pg-title">Atas e Ações<span class="help-q" data-help="Suas atas de reunião viram uma lista de tarefas com responsável e prazo — sem precisar digitar tudo de novo em outra tela." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">GPs gastam 30% do tempo em atas. A IA processa e extrai ações automaticamente.</div></div><div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Meetings.openAdd()"><i class="ti ti-plus"></i>Nova Ata</button><button class="btn btn-sm"><i class="ti ti-microphone"></i>Transcrição Áudio</button><button class="btn btn-sm" onclick="DB.exportBackup()"><i class="ti ti-download"></i>Exportar</button></div></div>
   <div id="meetings-list-root"></div>
 </section>
 
@@ -1548,7 +1548,7 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: pages/chat -->
 <section class="page" id="p-chat" data-module="pages/chat">
-  <div class="pg-hdr"><div><div class="pg-title">Chat contextual — IA fala três idiomas<span class="help-q" data-help="Converse com uma IA que já conhece os dados do seu projeto — toda resposta cita de qual documento ou registro ela tirou a informação." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Entrega, risco e valor. Toda resposta cita a fonte. Configure sua API Key em Configurações.</div></div><div class="btn-row"><button class="btn btn-sm" onclick="Chat.clear()"><i class="ti ti-trash"></i>Limpar Conversa</button></div></div>
+  <div class="pg-hdr"><div><div class="pg-title">Chat Contextual<span class="help-q" data-help="Converse com uma IA que já conhece os dados do seu projeto — toda resposta cita de qual documento ou registro ela tirou a informação." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Entrega, risco e valor. Toda resposta cita a fonte. Configure sua API Key em Configurações.</div></div><div class="btn-row"><button class="btn btn-sm" onclick="Chat.clear()"><i class="ti ti-trash"></i>Limpar Conversa</button></div></div>
   <div class="card">
     <div class="chat-scroll" id="chat-log" role="log" aria-live="polite">
       <div class="chat-msg">
@@ -1585,7 +1585,7 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: pages/prioritization -->
 <section class="page" id="p-prioritization" data-module="pages/prioritization">
-  <div class="pg-hdr"><div><div class="pg-title">Priorização de Projetos<span class="help-q" data-help="Compara os projetos do portfólio por benefício financeiro, pedido da diretoria e esforço, pra decidir qual entra na fila primeiro. A nota é sempre lançada por uma pessoa — a IA não decide isso sozinha. Depois de entregue, dá pra validar aqui mesmo se o valor prometido foi realmente alcançado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Critérios explícitos e parametrizáveis — a IA não decide nada aqui, cada nota é lançada por quem entende do projeto.</div></div></div>
+  <div class="pg-hdr"><div><div class="pg-title">Priorização<span class="help-q" data-help="Compara os projetos do portfólio por benefício financeiro, pedido da diretoria e esforço, pra decidir qual entra na fila primeiro. A nota é sempre lançada por uma pessoa — a IA não decide isso sozinha. Depois de entregue, dá pra validar aqui mesmo se o valor prometido foi realmente alcançado." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Critérios explícitos e parametrizáveis — a IA não decide nada aqui, cada nota é lançada por quem entende do projeto.</div></div></div>
 
   <div class="card" data-perm="settings">
     <div class="lbl"><i class="ti ti-adjustments"></i>Método de Priorização</div>
@@ -2116,7 +2116,7 @@ body.icons-failed i[data-fb]::before{
 <!-- ■ MODULE: pages/scope -->
 <section class="page" id="p-scope" data-module="pages/scope">
   <div class="pg-hdr">
-    <div><div class="pg-title">Controle de Mudanças — Scope Changes<span class="help-q" data-help="Toda vez que o escopo do projeto muda, registre o impacto em prazo e custo antes de aprovar — evita que mudanças pequenas se acumulem e estourem o projeto sem ninguém perceber." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Dor real PMI 2025: scope creep afeta 40% dos projetos. Cada mudança com impacto quantificado antes da aprovação.</div></div>
+    <div><div class="pg-title">Mudanças de Escopo<span class="help-q" data-help="Toda vez que o escopo do projeto muda, registre o impacto em prazo e custo antes de aprovar — evita que mudanças pequenas se acumulem e estourem o projeto sem ninguém perceber." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Dor real PMI 2025: scope creep afeta 40% dos projetos. Cada mudança com impacto quantificado antes da aprovação.</div></div>
     <div class="btn-row">
       <button class="btn btn-sm btn-acc" data-perm="business" onclick="Scope.openAdd()"><i class="ti ti-plus"></i>Registrar Mudança</button>
       <button class="btn btn-sm" onclick="Scope.analyzeAi()"><i class="ti ti-brain"></i>Análise IA<span class="help-q" data-help="A IA lê as mudanças abertas (prazo, custo e risco de cada uma) e sugere o que aprovar, rejeitar ou mover para a Fase 2, e o efeito se todas forem aprovadas. É uma sugestão: a decisão continua sendo sua. Precisa de uma chave de IA em Configurações." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
@@ -3297,7 +3297,7 @@ const Baselines = (() => {
       const [cls, lbl] = STATUS[r.status] || STATUS.sem_data;
       return `<tr><td style="${r.level === 2 ? 'padding-left:22px' : 'font-weight:600'}">${esc(r.label)}</td><td style="white-space:nowrap">${fmtDate(r.baseStart)}</td><td style="white-space:nowrap">${fmtDate(r.baseEnd)}</td><td style="white-space:nowrap">${fmtDate(r.curStart)}</td><td style="white-space:nowrap">${fmtDate(r.curEnd)}</td><td class="bl-var" style="color:${varColor(r.endVar)}">${varText(r.endVar)}</td><td><span class="badge ${cls}">${lbl}</span></td></tr>`;
     }).join('');
-    el('bl-table-root').innerHTML = `<table class="hr-tbl"><thead><tr><th scope="col">Entrega</th><th scope="col">Início (base)</th><th scope="col">Término (base)</th><th scope="col">Início (atual)</th><th scope="col">Término (atual)</th><th scope="col">Desvio</th><th scope="col">Situação</th></tr></thead><tbody>${rows}</tbody></table>`;
+    el('bl-table-root').innerHTML = `<table class="hr-tbl"><thead><tr><th scope="col">Entrega</th><th scope="col">Início (base)</th><th scope="col">Fim base</th><th scope="col">Início atual</th><th scope="col">Fim atual</th><th scope="col">Desvio</th><th scope="col">Situação</th></tr></thead><tbody>${rows}</tbody></table>`;
     if(typeof ColumnDrag !== 'undefined') ColumnDrag.enable(el('bl-table-root').querySelector('table'), 'baseline-entregas');
     el('bl-budget-root').innerHTML = bd.baseBAC || bd.curBAC
       ? `<div class="g4"><div class="kpi"><div class="kpi-lbl">Orçado (base)</div><div class="kpi-val" style="font-size:17px">${fmtMoney(bd.baseBAC)}</div></div><div class="kpi"><div class="kpi-lbl">Orçado (atual)</div><div class="kpi-val" style="font-size:17px">${fmtMoney(bd.curBAC)}</div></div><div class="kpi"><div class="kpi-lbl">Variação</div><div class="kpi-val" style="font-size:17px;color:${bd.bacVar > 0 ? 'var(--red)' : bd.bacVar < 0 ? 'var(--grn)' : 'var(--t1)'}">${bd.bacVar > 0 ? '+' : ''}${fmtMoney(bd.bacVar)}</div></div><div class="kpi"><div class="kpi-lbl">Reserva (base → atual)</div><div class="kpi-val" style="font-size:17px">${fmtMoney(bd.baseReserve)} → ${fmtMoney(bd.curReserve)}</div></div></div><div style="font-size:11.5px;color:var(--t3);margin-top:8px">${bd.changedLines} linha(s) de orçamento diferente(s) da linha de base.</div>`
@@ -3845,7 +3845,7 @@ const PmoView = (() => {
 <!-- ■ MODULE: pages/estimates -->
 <section class="page" id="p-estimates" data-module="pages/estimates">
   <div class="pg-hdr">
-    <div><div class="pg-title">Inteligência de Estimativas<span class="help-q" data-help="Ajusta a estimativa de prazo de uma tarefa nova com base no histórico real de quanto cada pessoa costuma atrasar ou adiantar — não é um palpite, é calculado a partir do que já aconteceu." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">70% dos atrasos vêm de estimativas sistematicamente otimistas (PMI 2025). Calculado a partir do histórico real de cada membro.</div></div>
+    <div><div class="pg-title">Estimativas<span class="help-q" data-help="Ajusta a estimativa de prazo de uma tarefa nova com base no histórico real de quanto cada pessoa costuma atrasar ou adiantar — não é um palpite, é calculado a partir do que já aconteceu." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">70% dos atrasos vêm de estimativas sistematicamente otimistas (PMI 2025). Calculado a partir do histórico real de cada membro.</div></div>
     <div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Estimates.openAdd()"><i class="ti ti-plus"></i>Registrar Entrega</button></div>
   </div>
 
@@ -3885,7 +3885,7 @@ const PmoView = (() => {
 
 <!-- ■ MODULE: pages/loop -->
 <section class="page" id="p-loop" data-module="pages/loop">
-  <div class="pg-hdr"><div><div class="pg-title">Loop Completo de Ação — IA fecha o ciclo<span class="help-q" data-help="Pega a decisão ou risco mais urgente do momento e leva até a ação final (replanejar, comunicar), sem você precisar caçar em várias telas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">A maior dor do mercado: a IA detecta o risco mas não fecha o loop. Aqui ela vai até o fim — cronograma revisado + comunicação gerada.</div></div></div>
+  <div class="pg-hdr"><div><div class="pg-title">Loop de Ação<span class="help-q" data-help="Pega a decisão ou risco mais urgente do momento e leva até a ação final (replanejar, comunicar), sem você precisar caçar em várias telas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">A maior dor do mercado: a IA detecta o risco mas não fecha o loop. Aqui ela vai até o fim — cronograma revisado + comunicação gerada.</div></div></div>
 
   <div class="card card-danger" id="loop-risk-card">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
@@ -3954,7 +3954,7 @@ const PmoView = (() => {
 <!-- ■ MODULE: pages/wbs -->
 <section class="page" id="p-wbs" data-module="pages/wbs">
   <div class="pg-hdr">
-    <div><div class="pg-title">WBS — Work Breakdown Structure<span class="help-q" data-help="A estrutura de entregas do projeto — o que precisa ser feito, quem é o responsável, quando deveria terminar (planejado) e quando terminou de verdade (real)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Hierarquia de entregas com rastreamento de progresso · "Quem tem a versão mais recente?" — respondida aqui.</div></div>
+    <div><div class="pg-title">WBS<span class="help-q" data-help="A estrutura de entregas do projeto — o que precisa ser feito, quem é o responsável, quando deveria terminar (planejado) e quando terminou de verdade (real)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Hierarquia de entregas com rastreamento de progresso · "Quem tem a versão mais recente?" — respondida aqui.</div></div>
     <div class="btn-row">
       <button class="btn btn-sm btn-acc" data-perm="business" onclick="WBS.openAddModule()"><i class="ti ti-plus"></i>Nova Entrega</button>
       <button class="btn btn-sm" data-perm="business" onclick="ImportUi.open('wbs')"><i class="ti ti-table-import"></i>Importar Planilha</button>
@@ -4024,7 +4024,7 @@ const PmoView = (() => {
 
 <!-- ■ MODULE: pages/help -->
 <section class="page" id="p-help" data-module="pages/help">
-  <div class="pg-hdr"><div><div class="pg-title">Ajuda — O que este produto faz por você</div><div class="pg-sub">Em linguagem simples: o que já funciona de verdade, e onde encontrar cada coisa.</div></div></div>
+  <div class="pg-hdr"><div><div class="pg-title">Ajuda</div><div class="pg-sub">Em linguagem simples: o que já funciona de verdade, e onde encontrar cada coisa.</div></div></div>
 
   <div class="card" style="border-color:var(--ab);background:var(--ad)">
     <div class="lbl" style="color:var(--acc)"><i class="ti ti-compass"></i>O propósito deste produto, em 5 perguntas</div>
@@ -8443,7 +8443,7 @@ const Nav = (() => {
   const SECTION_OF = { xray:'Painéis', drpmo:'Painéis', board:'Painéis', execview:'Painéis', mgrpanel:'Painéis', pmoview:'Painéis', dashboard:'Projeto' };
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
-    wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores', pmoview:'Visão do PMO', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint', modelos:'Modelos', mywork:'Meu trabalho', myind:'Meus Indicadores',
+    wbs:'WBS', scope:'Mudanças de Escopo', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores', pmoview:'Visão do PMO', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint', modelos:'Modelos', mywork:'Meu trabalho', myind:'Meus Indicadores',
     burnout:'Burnout Radar', resources:'Colaboradores', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
     reports:'Central de Relatórios', portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Painel Executivo', mgrpanel:'Painel do Gerente de Projetos', settings:'Configurações', account:'Minha conta', sprintnow:'Sprint atual', help:'Ajuda', xray:'Raio-X do Projeto'
@@ -13605,7 +13605,7 @@ const MyWork = (() => {
       const late = open.filter(d => d.a.code === 'atrasada').length, risk = open.filter(d => d.a.code === 'estourando').length, soon = open.filter(d => d.a.code === 'quase').length;
       const [from, to] = weekRange(), set = new Set(me.names.map(key));
       const hours = (DB.get('timeEntries') || []).filter(e => set.has(key(e.person)) && e.date >= from && e.date <= to).reduce((s2, e) => s2 + (Number(e.hours) || 0), 0);
-      const rows = list.length ? '<div style="overflow-x:auto" tabindex="0" role="region" aria-label="Minhas entregas (role para os lados se precisar)"><table class="mw-tbl" style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:560px"><thead><tr style="text-align:left;color:var(--t3);font-size:11px"><th scope="col" style="padding:6px 8px">Entrega</th><th scope="col" style="padding:6px 8px">Prazo</th><th scope="col" style="padding:6px 8px">Falta</th><th scope="col" style="padding:6px 8px">Avanço</th><th scope="col" style="padding:6px 8px">Situação</th><th scope="col" style="padding:6px 8px">Chance de estourar</th></tr></thead><tbody>'
+      const rows = list.length ? '<div style="overflow-x:auto" tabindex="0" role="region" aria-label="Minhas entregas (role para os lados se precisar)"><table class="mw-tbl" style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:560px"><thead><tr style="text-align:left;color:var(--t3);font-size:11px"><th scope="col" style="padding:6px 8px">Entrega</th><th scope="col" style="padding:6px 8px">Prazo</th><th scope="col" style="padding:6px 8px">Falta</th><th scope="col" style="padding:6px 8px">Avanço</th><th scope="col" style="padding:6px 8px">Situação</th><th scope="col" style="padding:6px 8px">Risco de estouro</th></tr></thead><tbody>'
         + list.map(d => '<tr style="border-top:1px solid var(--b1)"><td class="mw-main" style="padding:6px 8px"><div style="color:var(--t1);font-weight:600">' + esc(d.label) + '</div><div style="color:var(--t3);font-size:11px">' + esc(d.kind) + (d.parent ? ' · ' + esc(d.parent) : '') + '</div></td><td data-l="Prazo" style="padding:6px 8px;white-space:nowrap">' + fmtD(d.end) + '</td><td data-l="Falta" style="padding:6px 8px;white-space:nowrap">' + (d.a.daysLeft == null ? '—' : d.a.daysLeft < 0 ? (-d.a.daysLeft) + ' dia(s) de atraso' : d.a.daysLeft + ' dia(s)') + '</td><td data-l="Avanço" style="padding:6px 8px;white-space:nowrap">' + d.a.pct + '%' + (d.a.expected != null ? ' <span style="color:var(--t3)">(esperado ' + d.a.expected + '%)</span>' : '') + '</td><td data-l="Situação" style="padding:6px 8px"><span class="badge ' + d.a.badge + '" title="' + esc(d.a.why) + '">' + d.a.text + '</span></td><td class="mw-prob" data-l="Chance de estourar" style="padding:6px 8px">' + (d.a.prob ? esc(d.a.prob) : '—') + '</td></tr>').join('')
         + '</tbody></table></div><div style="font-size:11px;color:var(--t3);margin-top:8px;line-height:1.55"><i class="ti ti-info-circle"></i> <b>Como calculamos:</b> comparamos o avanço de hoje com o esperado para a data (o tempo já passado entre o início e o fim). Mais de 10 pontos atrás = <b>atenção</b> (chance média); mais de 25 = <b>pode estourar</b> (chance alta); passou do prazo = <b>atrasada</b>. Itens do quadro valem 0% (a fazer), 50% (em andamento), 80% (em revisão) e 100% (concluído) dentro do prazo da sprint. Passe o mouse na situação para ver a conta de cada entrega.</div>'
         : '<div class="rk-empty">Você ainda não tem entregas atribuídas neste projeto.</div>';
@@ -15642,7 +15642,7 @@ const Agile = (() => {
     const c = capRows();
     if(!c.rows.length) { root.innerHTML = '<div style="font-size:12px;color:var(--t3);margin:6px 0"><i class="ti ti-info-circle"></i> Cadastre os colaboradores em <button class="link-a" onclick="Agile.closePlan();R.go(\'resources\')">Equipe → Colaboradores</button> para planejar a capacidade por pessoa (folgas e alocação).</div>'; return; }
     root.innerHTML = `<div class="lbl" style="margin-top:8px">Capacidade por Pessoa<span class="help-q" data-help="Cada pessoa entra com o ritmo que ela realmente entregou nas últimas sprints (pontos concluídos por sprint), reduzido pelos dias de folga ou férias nesta sprint. Quem ainda não tem histórico usa a média do time ajustada pela alocação no projeto. A soma sugere a capacidade da sprint." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
-      <div style="overflow-x:auto"><table class="hr-tbl"><thead><tr><th scope="col">Pessoa</th><th scope="col" class="num">Ritmo (pts/sprint)</th><th scope="col" class="num">Dias de folga (de ${c.workingDays})</th><th scope="col" class="num">Capacidade</th></tr></thead><tbody>
+      <div style="overflow-x:auto"><table class="hr-tbl"><thead><tr><th scope="col">Pessoa</th><th scope="col" class="num">Pts/sprint</th><th scope="col" class="num">Dias de folga (de ${c.workingDays})</th><th scope="col" class="num">Capacidade</th></tr></thead><tbody>
       ${c.rows.map((r, i) => `<tr><td>${esc(r.name)}${r.role ? `<div style="font-size:11px;color:var(--t3)">${esc(r.role)}</div>` : ''}</td><td class="num">${r.base == null ? '—' : Math.round(r.base * 10) / 10}<div style="font-size:11px;color:var(--t3)">${esc(r.source)}</div></td>
         <td class="num"><input class="input" type="number" min="0" max="${c.workingDays}" value="${r.daysOff}" aria-label="Dias de folga de ${esc(r.name)} nesta sprint" style="width:70px;text-align:right" oninput="Agile.setDaysOff(${i}, this.value)"></td><td class="num" id="ap-cap-${i}"><b>${r.capacity}</b></td></tr>`).join('')}
       </tbody></table></div>
@@ -16417,7 +16417,7 @@ const Methodology = (() => {
     const root = document.getElementById('method-root'); if(!root) return;
     const cur = type(), all = showAll();
     const hiddenFor = t => (t === 'quadro' ? PROJECT_PAGES : Object.keys(ONLY)).filter(p => !visibleFor(p, t));
-    const label = { dashboard:'Dashboard', mywork:'Meu Trabalho', sprintnow:'Sprint atual', decisions:'Decisões', loop:'Loop de decisões', trail:'Trilha', statusmsg:'Mensagem de status', burnout:'Burnout', hours:'Horas', resources:'Colaboradores', stakeholders:'Partes interessadas', lessons:'Lições aprendidas', meetings:'Reuniões', repository:'Arquivos', chat:'Chat', modelos:'Modelos de documentos', risks:'Riscos', budget:'Orçamento e Custos', wbs:'WBS (aparece sozinha se já houver entregas cadastradas)', baseline:'Linha de base', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint' };
+    const label = { dashboard:'Dashboard', mywork:'Meu Trabalho', sprintnow:'Sprint atual', decisions:'Decisões', loop:'Loop de decisões', trail:'Trilha', statusmsg:'Mensagem de status', burnout:'Burnout', hours:'Horas', resources:'Colaboradores', stakeholders:'Partes interessadas', lessons:'Lições aprendidas', meetings:'Reuniões', repository:'Arquivos', chat:'Chat', modelos:'Modelos de documentos', risks:'Riscos', budget:'Orçamento e Custos', wbs:'WBS (aparece sozinha se já houver entregas cadastradas)', baseline:'Linha de base', scope:'Mudanças de Escopo', estimates:'Estimativas IA', whatif:'What-If', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint' };
     const noteBoard = cur === 'quadro' ? '<div class="m-notice" role="status"><i class="ti ti-info-circle"></i><span>Este é um <b>Quadro</b> de tarefas, não um projeto. Escolher uma metodologia abaixo o transforma em projeto (nada é apagado).</span></div>' : '';
     root.innerHTML = noteBoard + ORDER.map(t => {
       const hid = hiddenFor(t);
@@ -17887,7 +17887,7 @@ const Hours = (() => {
     const root = document.getElementById('hr-load-root'); if(!root) return;
     const rows = loadRows();
     if(!rows.length) { root.innerHTML = '<div class="rk-empty">Cadastre a equipe (Burnout Radar) para comparar.</div>'; return; }
-    root.innerHTML = `<div style="overflow-x:auto"><table class="hr-tbl"><thead><tr><th scope="col">Pessoa</th><th scope="col" class="num">Horas (7 dias)</th><th scope="col" class="num">Medida</th><th scope="col" class="num">Declarada</th><th scope="col">Leitura</th></tr></thead><tbody>` +
+    root.innerHTML = `<div style="overflow-x:auto"><table class="hr-tbl"><thead><tr><th scope="col">Pessoa</th><th scope="col" class="num">Horas 7d</th><th scope="col" class="num">Medida</th><th scope="col" class="num">Declarada</th><th scope="col">Leitura</th></tr></thead><tbody>` +
       rows.map(r => {
         let read = '<span class="badge b-neu">sem comparação</span>';
         if(r.measured != null && r.declared != null) {
@@ -17955,7 +17955,7 @@ const Hours = (() => {
     if(!rows.length) { box.innerHTML = ''; return; }
     const COL = { grn: 'var(--grn)', amb: 'var(--amb)', red: 'var(--red)', neu: 'var(--t3)' };
     box.innerHTML = '<div class="card" style="margin-bottom:12px"><div class="lbl"><i class="ti ti-calendar-check"></i>Jornada Esperada × Horas Apontadas (14 dias) <span class="badge b-acc">automático</span></div>'
-      + '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Pessoa</th><th>Esperado</th><th>Apontado</th><th>Cobertura</th><th>Dias sem lançamento</th><th>Dias com excesso</th></tr></thead><tbody>'
+      + '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Pessoa</th><th>Esperado</th><th>Apontado</th><th>Cobertura</th><th>Sem lançar (d)</th><th>Excesso (d)</th></tr></thead><tbody>'
       + rows.map(r => '<tr><td>' + esc(r.name) + '</td><td>' + esc(fmtH(r.expected)) + '</td><td>' + esc(fmtH(r.logged)) + '</td><td style="color:' + COL[r.level] + ';font-weight:600">' + (r.pct == null ? '—' : r.pct + '%') + '</td><td>' + r.missing + '</td><td>' + r.extra + '</td></tr>').join('')
       + '</tbody></table></div><div style="font-size:11.5px;color:var(--t3);margin-top:8px">Esperado = dias úteis × jornada (' + esc(String(rules().dailyNormal).replace('.', ',')) + ' h) × alocação. Cobertura entre 90% e 115% é normal; abaixo, faltam lançamentos; acima, há excesso (confira horas extras).</div></div>';
   }
@@ -18735,51 +18735,51 @@ const ReportEngine = (() => {
       rows: (pid, c) => { const sp = {}; c.get(pid, 'sprints').forEach(s => { sp[s.id] = s.name; }); return c.get(pid, 'backlog').map(i => Object.assign({}, i, { _sprint: sp[i.sprintId] || '' })); },
       fields: [F('id', 'Código', 'texto', 'Identificação', r => r.id), F('titulo', 'Título', 'texto', 'Identificação', r => r.title), F('tipo', 'Tipo', 'texto', 'Identificação', r => lbl(KIND, r.kind)),
         F('situacao', 'Situação', 'texto', 'Andamento', r => lbl(STATUS, r.status)), F('responsavel', 'Responsável', 'texto', 'Andamento', r => r.assignee || ''), F('sprint', 'Sprint', 'texto', 'Andamento', r => r._sprint),
-        F('pontos', 'Pontos', 'numero', 'Andamento', r => (r.points === '' || r.points == null) ? null : num(r.points)), F('prioridade_bug', 'Posição na fila de bugs', 'numero', 'Andamento', r => r.bugPriority ? num(r.bugPriority) : null),
-        F('item_pai', 'Item pai (bug)', 'texto', 'Ligações', r => r.parentId || ''), F('epico', 'Épico', 'texto', 'Ligações', r => r.epicId || ''),
-        F('criado', 'Criado em', 'data', 'Datas', r => iso(r.createdOn)), F('concluido', 'Concluído em', 'data', 'Datas', r => iso(r.doneOn))] },
+        F('pontos', 'Pontos', 'numero', 'Andamento', r => (r.points === '' || r.points == null) ? null : num(r.points)), F('prioridade_bug', 'Fila', 'numero', 'Andamento', r => r.bugPriority ? num(r.bugPriority) : null),
+        F('item_pai', 'Pai', 'texto', 'Ligações', r => r.parentId || ''), F('epico', 'Épico', 'texto', 'Ligações', r => r.epicId || ''),
+        F('criado', 'Criado', 'data', 'Datas', r => iso(r.createdOn)), F('concluido', 'Concluído', 'data', 'Datas', r => iso(r.doneOn))] },
     riscos: { l: 'Riscos', perm: null, date: 'identificado',
       rows: (pid, c) => c.get(pid, 'risks'),
       fields: [F('id', 'Código', 'texto', 'Identificação', r => r.id), F('titulo', 'Título', 'texto', 'Identificação', r => r.title), F('categoria', 'Categoria', 'texto', 'Identificação', r => r.category || ''),
-        F('probabilidade', 'Probabilidade (1 a 5)', 'numero', 'Avaliação', r => num(r.probability)), F('impacto', 'Impacto (1 a 5)', 'numero', 'Avaliação', r => num(r.impact)), F('nivel', 'Nível (probabilidade × impacto)', 'numero', 'Avaliação', r => num(r.probability) * num(r.impact)),
+        F('probabilidade', 'Prob. (1-5)', 'numero', 'Avaliação', r => num(r.probability)), F('impacto', 'Impacto (1-5)', 'numero', 'Avaliação', r => num(r.impact)), F('nivel', 'Nível (P×I)', 'numero', 'Avaliação', r => num(r.probability) * num(r.impact)),
         F('status', 'Situação', 'texto', 'Tratamento', r => lbl(RISK_ST, r.status)), F('resposta', 'Resposta', 'texto', 'Tratamento', r => r.response || ''), F('responsavel', 'Responsável', 'texto', 'Tratamento', r => r.owner || ''),
-        F('identificado', 'Identificado em', 'data', 'Datas', r => iso(r.identifiedOn)), F('revisao', 'Próxima revisão', 'data', 'Datas', r => iso(r.reviewOn))] },
+        F('identificado', 'Identificado', 'data', 'Datas', r => iso(r.identifiedOn)), F('revisao', 'Revisão', 'data', 'Datas', r => iso(r.reviewOn))] },
     entregas: { l: 'Entregas e subtarefas (WBS)', perm: null, date: 'fim',
       rows: (pid, c) => { const out = []; c.get(pid, 'wbs').forEach(m => { out.push(Object.assign({ _nivel: 'Entrega', _entrega: m.label }, m)); (m.children || []).forEach(t => out.push(Object.assign({ _nivel: 'Subtarefa', _entrega: m.label }, t))); }); return out; },
       fields: [F('nivel', 'Nível', 'texto', 'Identificação', r => r._nivel), F('entrega', 'Entrega', 'texto', 'Identificação', r => r._entrega), F('nome', 'Nome', 'texto', 'Identificação', r => r.label),
-        F('responsavel', 'Responsável', 'texto', 'Andamento', r => r.responsavel || ''), F('status', 'Situação', 'texto', 'Andamento', r => lbl(WBS_ST, r.status)), F('avanco', 'Avanço (%)', 'numero', 'Andamento', r => r._nivel === 'Entrega' ? num(r.pct) : null),
+        F('responsavel', 'Responsável', 'texto', 'Andamento', r => r.responsavel || ''), F('status', 'Situação', 'texto', 'Andamento', r => lbl(WBS_ST, r.status)), F('avanco', 'Avanço %', 'numero', 'Andamento', r => r._nivel === 'Entrega' ? num(r.pct) : null),
         F('atrasada', 'Atrasada?', 'texto', 'Andamento', (r, c) => (r.status !== 'grn' && iso(r.end) && iso(r.end) < c.today) ? 'Sim' : 'Não'),
-        F('inicio', 'Início planejado', 'data', 'Datas', r => iso(r.start)), F('fim', 'Fim planejado', 'data', 'Datas', r => iso(r.end)), F('inicio_real', 'Início real', 'data', 'Datas', r => iso(r.startActual)), F('fim_real', 'Fim real', 'data', 'Datas', r => iso(r.endActual))] },
+        F('inicio', 'Início plan.', 'data', 'Datas', r => iso(r.start)), F('fim', 'Fim plan.', 'data', 'Datas', r => iso(r.end)), F('inicio_real', 'Início real', 'data', 'Datas', r => iso(r.startActual)), F('fim_real', 'Fim real', 'data', 'Datas', r => iso(r.endActual))] },
     horas: { l: 'Horas apontadas', perm: null, date: 'data', ownOnly: 'view_all_hours',
       rows: (pid, c) => c.get(pid, 'timeEntries'),
       fields: [F('data', 'Data', 'data', 'Apontamento', r => iso(r.date)), F('mes', 'Mês', 'texto', 'Apontamento', r => iso(r.date).slice(0, 7)), F('pessoa', 'Pessoa', 'texto', 'Apontamento', r => r.person || ''),
-        F('horas', 'Horas', 'numero', 'Apontamento', r => num(r.hours)), F('referencia', 'Card ou entrega', 'texto', 'Apontamento', r => r.wbsRef || ''), F('situacao', 'Situação', 'texto', 'Apontamento', r => r.status || 'lançada'), F('obs', 'Observação', 'texto', 'Apontamento', r => r.note || '')] },
+        F('horas', 'Horas', 'numero', 'Apontamento', r => num(r.hours)), F('referencia', 'Referência', 'texto', 'Apontamento', r => r.wbsRef || ''), F('situacao', 'Situação', 'texto', 'Apontamento', r => r.status || 'lançada'), F('obs', 'Observação', 'texto', 'Apontamento', r => r.note || '')] },
     custos: { l: 'Custos lançados', perm: 'view_costs', date: 'data',
       rows: (pid, c) => c.get(pid, 'costActuals'),
       fields: [F('data', 'Data', 'data', 'Lançamento', r => iso(r.date)), F('mes', 'Mês', 'texto', 'Lançamento', r => iso(r.date).slice(0, 7)), F('descricao', 'Descrição', 'texto', 'Lançamento', r => r.label || ''),
-        F('tipo', 'Tipo', 'texto', 'Lançamento', r => r.kind === 'comprometido' ? 'Comprometido' : 'Real'), F('valor', 'Valor (R$)', 'dinheiro', 'Lançamento', r => num(r.amount))] },
+        F('tipo', 'Tipo', 'texto', 'Lançamento', r => r.kind === 'comprometido' ? 'Comprometido' : 'Real'), F('valor', 'R$', 'dinheiro', 'Lançamento', r => num(r.amount))] },
     escopo: { l: 'Mudanças de escopo', perm: null, date: 'criada',
       rows: (pid, c) => c.get(pid, 'scopeChanges'),
       fields: [F('id', 'Código', 'texto', 'Identificação', r => r.id), F('titulo', 'Título', 'texto', 'Identificação', r => r.title), F('status', 'Situação', 'texto', 'Identificação', r => lbl(SCOPE_ST, r.status)),
-        F('impacto_dias', 'Impacto em dias', 'numero', 'Impacto', r => num(r.impactDays)), F('impacto_custo', 'Impacto em R$', 'dinheiro', 'Impacto', r => num(r.impactCost), 'view_costs'), F('criada', 'Criada em', 'data', 'Datas', r => iso(r.createdAt))] },
+        F('impacto_dias', 'Impacto (dias)', 'numero', 'Impacto', r => num(r.impactDays)), F('impacto_custo', 'Impacto (R$)', 'dinheiro', 'Impacto', r => num(r.impactCost), 'view_costs'), F('criada', 'Criada', 'data', 'Datas', r => iso(r.createdAt))] },
     impedimentos: { l: 'Impedimentos', perm: null, date: 'aberto_em',
       rows: (pid, c) => c.get(pid, 'impediments'),
       fields: [F('id', 'Código', 'texto', 'Identificação', r => r.id), F('titulo', 'Título', 'texto', 'Identificação', r => r.title), F('responsavel', 'Responsável', 'texto', 'Identificação', r => r.owner || ''),
-        F('situacao', 'Situação', 'texto', 'Andamento', r => r.status === 'resolvido' ? 'Resolvido' : 'Aberto'), F('aberto_em', 'Aberto em', 'data', 'Datas', r => iso(r.createdOn)), F('resolvido_em', 'Resolvido em', 'data', 'Datas', r => iso(r.resolvedOn)),
-        F('dias_aberto', 'Dias em aberto', 'numero', 'Andamento', (r, c) => { const d = dayDiff(r.createdOn, iso(r.resolvedOn) || c.today); return d == null ? null : Math.max(0, d); })] },
+        F('situacao', 'Situação', 'texto', 'Andamento', r => r.status === 'resolvido' ? 'Resolvido' : 'Aberto'), F('aberto_em', 'Aberto', 'data', 'Datas', r => iso(r.createdOn)), F('resolvido_em', 'Resolvido', 'data', 'Datas', r => iso(r.resolvedOn)),
+        F('dias_aberto', 'Dias abertos', 'numero', 'Andamento', (r, c) => { const d = dayDiff(r.createdOn, iso(r.resolvedOn) || c.today); return d == null ? null : Math.max(0, d); })] },
     partes: { l: 'Partes interessadas', perm: null, date: null,
       rows: (pid, c) => c.get(pid, 'stakeholders'),
       fields: [F('nome', 'Nome', 'texto', 'Identificação', r => r.name), F('papel', 'Papel', 'texto', 'Identificação', r => r.role || ''), F('influencia', 'Influência', 'texto', 'Perfil', r => lbl(INFL, r.influence)),
-        F('engajamento', 'Engajamento', 'texto', 'Perfil', r => r.engagement || ''), F('ultimo_contato', 'Último contato', 'data', 'Contato', r => iso(r.lastContact)),
-        F('dias_sem_contato', 'Dias sem contato', 'numero', 'Contato', (r, c) => { const d = dayDiff(r.lastContact, c.today); return d == null ? null : Math.max(0, d); })] },
+        F('engajamento', 'Engajamento', 'texto', 'Perfil', r => r.engagement || ''), F('ultimo_contato', 'Contato', 'data', 'Contato', r => iso(r.lastContact)),
+        F('dias_sem_contato', 'Sem contato (d)', 'numero', 'Contato', (r, c) => { const d = dayDiff(r.lastContact, c.today); return d == null ? null : Math.max(0, d); })] },
     equipe: { l: 'Equipe', perm: null, date: null,
       rows: (pid, c) => c.get(pid, 'team'),
-      fields: [F('nome', 'Nome', 'texto', 'Identificação', r => r.name), F('funcao', 'Função', 'texto', 'Identificação', r => r.role || ''), F('alocacao', 'Alocação (%)', 'numero', 'Carga', r => (r.allocationPct === '' || r.allocationPct == null) ? null : num(r.allocationPct)),
-        F('carga', 'Carga calculada (%)', 'numero', 'Carga', (r, c) => { const p = c.load ? c.load(r) : null; return p == null ? null : num(p); }, 'view_team_load')] },
+      fields: [F('nome', 'Nome', 'texto', 'Identificação', r => r.name), F('funcao', 'Função', 'texto', 'Identificação', r => r.role || ''), F('alocacao', 'Alocação %', 'numero', 'Carga', r => (r.allocationPct === '' || r.allocationPct == null) ? null : num(r.allocationPct)),
+        F('carga', 'Carga %', 'numero', 'Carga', (r, c) => { const p = c.load ? c.load(r) : null; return p == null ? null : num(p); }, 'view_team_load')] },
     sprints: { l: 'Sprints', perm: null, date: 'inicio',
       rows: (pid, c) => c.get(pid, 'sprints'),
       fields: [F('nome', 'Nome', 'texto', 'Identificação', r => r.name), F('situacao', 'Situação', 'texto', 'Identificação', r => ({ planejada: 'Planejada', ativa: 'Ativa', encerrada: 'Encerrada' })[r.state] || r.state || ''), F('meta', 'Meta', 'texto', 'Identificação', r => r.goal || ''),
-        F('inicio', 'Início', 'data', 'Datas', r => iso(r.startOn)), F('fim', 'Fim', 'data', 'Datas', r => iso(r.endOn)), F('capacidade', 'Capacidade (pontos)', 'numero', 'Identificação', r => (r.capacity === '' || r.capacity == null) ? null : num(r.capacity))] }
+        F('inicio', 'Início', 'data', 'Datas', r => iso(r.startOn)), F('fim', 'Fim', 'data', 'Datas', r => iso(r.endOn)), F('capacidade', 'Capac. (pts)', 'numero', 'Identificação', r => (r.capacity === '' || r.capacity == null) ? null : num(r.capacity))] }
   };
   const FN = { sum: 'Soma', avg: 'Média', count: 'Contagem', max: 'Máximo', min: 'Mínimo' };
   const OPS = { igual: 'é igual a', diferente: 'é diferente de', contem: 'contém', maior: 'é maior que', menor: 'é menor que' };
@@ -21577,7 +21577,7 @@ const Resources = (() => {
     const list = TeamCapacity.filter(tcAll, o);
     if(!tcAll.length) { root.innerHTML = '<div class="rk-empty">Nenhuma pessoa cadastrada nos projetos ainda.</div>'; return; }
     const can = Auth.can('manage_backlog');
-    root.innerHTML = list.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Pessoa</th><th scope="col">Cargo</th><th scope="col">Alocação total</th><th scope="col">Por projeto</th><th scope="col">Cards em aberto</th><th scope="col">Situação</th><th scope="col"></th></tr></thead><tbody>'
+    root.innerHTML = list.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Pessoa</th><th scope="col">Cargo</th><th scope="col">Alocação</th><th scope="col">Projetos</th><th scope="col">Em aberto</th><th scope="col">Situação</th><th scope="col"></th></tr></thead><tbody>'
       + list.map(p => '<tr><td><b>' + esc(p.name) + '</b></td><td>' + esc(p.role || '—') + '</td><td><b>' + p.total + '%</b>' + (p.free ? ' <span class="set-sub">(' + p.free + '% livre)</span>' : '') + '</td><td>' + p.rows.map(r => '<span class="chip">' + esc(r.projectName) + ' ' + r.pct + '%</span>').join(' ') + '</td><td>' + p.open + (p.points ? ' <span class="set-sub">· ' + p.points + ' pts</span>' : '') + (p.late ? ' <span class="badge b-red">' + p.late + ' atrasado(s)</span>' : '') + '</td><td><span class="badge ' + LV[p.level][0] + '">' + LV[p.level][1] + '</span></td><td>' + (can && p.open ? '<button class="btn btn-sm" data-k="' + esc(p.key) + '" onclick="Resources.openTransfer(this.dataset.k)"><i class="ti ti-arrows-exchange"></i>Transferir Atividades</button>' : '') + '</td></tr>').join('')
       + '</tbody></table></div>'
       : '<div class="rk-empty">Ninguém com esses filtros.</div>';
