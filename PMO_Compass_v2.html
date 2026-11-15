@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.99.0'
+  version: '2.99.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -14423,8 +14423,8 @@ const Agile = (() => {
       else bar.innerHTML = modeBadge + '<span class="badge b-amb">Nenhuma sprint ativa</span> <span style="color:var(--t2)">' + (planned ? planned + ' planejada(s) aguardando início' : 'ainda não há sprint planejada') + '.</span> <button class="btn btn-sm" onclick="R.go(\'sprints\')"><i class="ti ti-player-play"></i>' + (planned ? 'Iniciar uma sprint' : 'Criar sprint') + '</button>' + (boardSprint === '__all' ? ' <span class="badge b-amb">Você está vendo: todos os itens</span>' : '');
     }
     if(sel) {
-      const opts = [['__auto', act ? 'Sprint ativa — ' + act.name : 'Sprint ativa (nenhuma)'], ['__all', 'Todos os itens'], ['__nosprint', 'Cards sem sprint (não se movimentam)'], ...sprints.slice().sort((a, b) => (ord[a.state] - ord[b.state]) || (b.startOn || '').localeCompare(a.startOn || '')).map(s => [s.id, s.name + ' (' + stateLbl[s.state] + ')'])];
-      const isB = document.body.classList.contains('is-board'), cur = boardSprint === '__auto' && !act ? (isB ? '__all' : '__auto') : boardSprint;
+      const opts = [['__auto', act ? 'Sprint ativa — ' + act.name : 'Sprint ativa (nenhuma)'], ['__all', 'Todos os itens'], ['__nosprint', 'Cards sem sprint (não se movimentam)'], ...sprints.filter(s => !(act && s.id === act.id)).sort((a, b) => (ord[a.state] - ord[b.state]) || (b.startOn || '').localeCompare(a.startOn || '')).map(s => [s.id, s.name + ' (' + stateLbl[s.state] + ')'])];
+      const isB = document.body.classList.contains('is-board'), cur = boardSprint === '__auto' && !act ? (isB ? '__all' : '__auto') : (act && boardSprint === act.id ? '__auto' : boardSprint);
       sel.innerHTML = opts.filter(o => !(isB && o[0] === '__auto' && !act)).map(([v, l]) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v === '__all' && isB ? 'Todos os cards' : (v === '__auto' && isB && act ? 'Sprint ativa — ' + act.name : l))}</option>`).join('');
     }
     const columns = AgileCalc.cols(cfg), keys = columns.map(c => c.key);
