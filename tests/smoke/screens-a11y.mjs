@@ -17,6 +17,8 @@ const port = srv.address().port;
 const SCENES = [
   ['Meus Indicadores', `R.go('myind')`, null],
   ['Painel do Gerente de Projetos', `R.go('mgrpanel')`, null],
+  ['Painel do Gerente (detalhe do cartão)', `R.go('mgrpanel'); MgrPanel.toggle('dec')`, null],
+  ['Painel do Gerente (riscos críticos)', `R.go('mgrpanel'); MgrPanel.toggle('rsk')`, null],
   ['Transferir atividades (janela)', `R.go('mgrpanel'); const b = document.querySelector('#res-team-root [data-k]'); if(b) Resources.openTransfer(b.dataset.k)`, 'modal-transfer'],
   ['Diagnóstico PMO (antes de analisar)', `R.go('drpmo')`, null],
   ['Diagnóstico PMO (resultado)', `R.go('drpmo'); await DrPmo.run([new File(['Tarefa;Prazo;Trocar piso;01/11;Pintar sala;05/11 atraso pendente bloqueado impedimento'], 'tarefas.csv'), new File(['EAP marcos fases cronograma'], 'plano.txt')])`, null],

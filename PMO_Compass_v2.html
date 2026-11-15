@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.100.0'
+  version: '2.100.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1677,6 +1677,7 @@ body.icons-failed i[data-fb]::before{
     <div><div class="pg-title"><i class="ti ti-user-star" style="color:var(--acc)"></i> Painel do Gerente de Projetos<span class="help-q" data-help="Visão de portfólio de quem gerencia: os números e o que decidir agora em todos os projetos que você acessa, e o seu time inteiro com a alocação somada, para equilibrar a carga transferindo atividades entre pessoas do mesmo cargo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Tudo o que está com você, em todos os projetos: o que decidir agora e como equilibrar o seu time.</div></div>
   </div>
   <div class="kpi-row" id="mg-kpis"></div>
+  <div class="card" id="mg-detail-card" style="margin-bottom:12px;display:none" role="region" aria-live="polite" aria-label="Detalhe do indicador"><div class="lbl" style="display:flex;align-items:center;gap:8px"><i class="ti ti-zoom-in" aria-hidden="true"></i><span id="mg-detail-title"></span><button class="btn btn-sm" style="margin-left:auto" onclick="MgrPanel.toggle(null)"><i class="ti ti-x"></i>Fechar</button></div><div id="mg-detail"></div></div>
   <div class="card card-accent" id="mg-plans-card" style="margin-bottom:12px;display:none"><div class="lbl" style="color:var(--acc)"><i class="ti ti-bulb"></i>Decisões Sugeridas pelo Sistema</div><div id="mg-plans"></div></div>
   <div class="card" style="margin-bottom:12px"><div class="lbl"><i class="ti ti-list-check"></i><span id="mg-list-title">O que decidir agora</span></div><div id="mg-list"></div></div>
   <div class="card" id="res-team-card">
@@ -2169,6 +2170,15 @@ body.icons-failed i[data-fb]::before{
 .rk-empty{text-align:center;padding:26px 10px;color:var(--t3);font-size:12.5px}
 .rk-prev{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r8);border:1px solid var(--b1);background:var(--s2);font-size:12px;color:var(--t2)}
 .rk-prev b{font-size:20px;color:var(--t1)}
+/* Padrão de tabela (vale para todas): o título acompanha o alinhamento da coluna (texto à esquerda, número à direita) e a tabela nunca passa do cartão */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+table th{text-align:left}
+table th.num,table td.num{text-align:right;white-space:nowrap}
+.tbl-wrap{max-width:100%;overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);padding:6px 8px;border-bottom:1px solid var(--b2);vertical-align:bottom}
+.tbl td{padding:8px;border-bottom:1px solid var(--b1);color:var(--t1);vertical-align:top;overflow-wrap:anywhere}
+.tbl td:first-child{min-width:104px}
 .hr-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
 .hr-tbl th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--b2)}
 .hr-tbl td{padding:8px;border-bottom:1px solid var(--b1);color:var(--t1);vertical-align:top;overflow-wrap:anywhere}
@@ -3764,7 +3774,7 @@ const PmoView = (() => {
       const items = []; g('wbs').forEach(m => { items.push(m); (m.children || []).forEach(t => items.push(t)); });
       const doneLast28 = items.filter(i => i.endActual && BaselineCalc.diff(i.endActual, todayIso) != null && BaselineCalc.diff(i.endActual, todayIso) >= 0 && BaselineCalc.diff(i.endActual, todayIso) <= 28).length;
       const lessons = g('lessons');
-      return { id: p.id, name: p.name, area: p.area || '', ev: PortfolioKpi.evaluate(f), days: PfKpi.daysSinceUpdate(p.id), hasBaseline: !!bl, baselineNA: Methodology.typeFor(p.id) === 'agil', finishVar: cmp ? cmp.summary.finishVar : null,
+      return { id: p.id, name: p.name, area: p.area || '', facts: f, ev: PortfolioKpi.evaluate(f), days: PfKpi.daysSinceUpdate(p.id), hasBaseline: !!bl, baselineNA: Methodology.typeFor(p.id) === 'agil', finishVar: cmp ? cmp.summary.finishVar : null,
         risksNoOwner: risks.filter(r => RiskMatrix.isOpen(r) && RiskMatrix.scoreOf(r) >= 15 && !String(r.owner || '').trim()).length, risksOverdue: rs.overdueReviews,
         lessons: { total: lessons.length, applied: lessons.filter(l => l.applied).length }, docs: g('repository').length,
         pendingActions: g('meetings').reduce((n, m) => n + (m.actions || []).filter(a => !a.done).length, 0),
@@ -3838,7 +3848,7 @@ const PmoView = (() => {
   function setArea(a) { area = a; render(); }
   function openProject(btn) { DB.switchProject(btn.dataset.id); R.go('dashboard'); }
   // Para o Painel do Gerente de Projetos: a visão de decisões e ações do portfólio (tipo Diretivo), com a sugestão de corrigir e mitigar
-  function panel() { const { rows, overallocatedPeople } = collect(); return PmoViews.build('diretivo', rows, { overallocatedPeople }); }
+  function panel() { const { rows, overallocatedPeople } = collect(); return Object.assign(PmoViews.build('diretivo', rows, { overallocatedPeople }), { rows }); }
   return { render, setType, setArea, openProject, openGuide, closeGuide, panel, resetCache: () => {} };
 })();
 </script>
@@ -21648,8 +21658,8 @@ const Resources = (() => {
     const list = TeamCapacity.filter(tcAll, o);
     if(!tcAll.length) { root.innerHTML = '<div class="rk-empty">Nenhuma pessoa cadastrada nos projetos ainda.</div>'; return; }
     const can = Auth.can('manage_backlog');
-    root.innerHTML = list.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Pessoa</th><th scope="col">Cargo</th><th scope="col">Alocação</th><th scope="col">Projetos</th><th scope="col">Em aberto</th><th scope="col">Situação</th><th scope="col"></th></tr></thead><tbody>'
-      + list.map(p => '<tr><td><b>' + esc(p.name) + '</b></td><td>' + esc(p.role || '—') + '</td><td><b>' + p.total + '%</b>' + (p.free ? ' <span class="set-sub">(' + p.free + '% livre)</span>' : '') + '</td><td>' + p.rows.map(r => '<span class="chip">' + esc(r.projectName) + ' ' + r.pct + '%</span>').join(' ') + '</td><td>' + p.open + (p.points ? ' <span class="set-sub">· ' + p.points + ' pts</span>' : '') + (p.late ? ' <span class="badge b-red">' + p.late + ' atrasado(s)</span>' : '') + '</td><td><span class="badge ' + LV[p.level][0] + '">' + LV[p.level][1] + '</span></td><td>' + (can && p.open ? '<button class="btn btn-sm" data-k="' + esc(p.key) + '" onclick="Resources.openTransfer(this.dataset.k)"><i class="ti ti-arrows-exchange"></i>Transferir Atividades</button>' : '') + '</td></tr>').join('')
+    root.innerHTML = list.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Pessoa</th><th scope="col">Cargo</th><th scope="col" class="num">Alocação</th><th scope="col">Projetos</th><th scope="col" class="num">Em aberto</th><th scope="col">Situação</th><th scope="col" class="num"><span class="sr-only">Ação</span></th></tr></thead><tbody>'
+      + list.map(p => '<tr><td><b>' + esc(p.name) + '</b></td><td>' + esc(p.role || '—') + '</td><td class="num"><b>' + p.total + '%</b>' + (p.free ? '<br><span class="set-sub">' + p.free + '% livre</span>' : '') + '</td><td>' + p.rows.map(r => '<span class="chip">' + esc(r.projectName) + ' ' + r.pct + '%</span>').join(' ') + '</td><td class="num">' + p.open + (p.points ? ' <span class="set-sub">· ' + p.points + ' pts</span>' : '') + (p.late ? '<br><span class="badge b-red">' + p.late + ' atrasado(s)</span>' : '') + '</td><td><span class="badge ' + LV[p.level][0] + '">' + LV[p.level][1] + '</span></td><td class="num">' + (can && p.open ? '<button class="btn btn-sm" data-k="' + esc(p.key) + '" onclick="Resources.openTransfer(this.dataset.k)"><i class="ti ti-arrows-exchange"></i>Transferir Atividades</button>' : '') + '</td></tr>').join('')
       + '</tbody></table></div>'
       : '<div class="rk-empty">Ninguém com esses filtros.</div>';
     const sem = [...semConta].filter(n => !tcAll.some(p => p.name.toLowerCase() === n.toLowerCase()));
@@ -21799,19 +21809,56 @@ const MgrPanel = (() => {
       + '<div style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-top:3px"><b>Como mitigar:</b> ' + esc(x.plan.mitigate) + '</div>'
       + (cap ? '' : '<div class="btn-row" style="margin-top:8px"><button class="btn btn-sm btn-acc" data-perm="manage_backlog" data-k="' + esc(x.key) + '" onclick="Resources.openTransfer(this.dataset.k)"><i class="ti ti-arrows-exchange"></i>Escolher Cards e Quem Recebe</button></div>') + '</div>';
   }
+  // Detalhe de cada cartão: quem, onde, quanto e o que fazer. Clicar de novo (ou em Fechar) recolhe.
+  let DET = {}, openKey = null;
+  const ul = items => items.length ? '<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7">' + items.join('') + '</ul>' : '<div class="rk-empty">Nada aqui no momento. 👍</div>';
+  const fix = t => '<div style="font-size:12px;color:var(--t2);margin-top:8px"><i class="ti ti-bulb" aria-hidden="true" style="color:var(--amb)"></i> ' + esc(PmoViews.fixFor(t)) + '</div>';
+  function buildDetails(rows, plans) {
+    const byP = fn => rows.flatMap(r => fn(r).map(x => '<li><b>' + esc(r.name) + '</b>: ' + x + '</li>'));
+    const crit = [], caps = plans.filter(p => p.plan.kind === 'capacity');
+    DET.dec = { title: 'Decisões críticas pendentes', html: ul(byP(r => (r.facts.decisions.pendingCritical || []).map(esc)).concat(caps.map(p => '<li><b>Capacidade do time</b>: ' + esc(p.plan.headline) + '. Decisão: priorizar os projetos e ampliar a equipe (detalhe abaixo).</li>'))) + caps.map(p => planHtmlSimple(p)).join('') + fix('decisão crítica') };
+    DET.risk = { title: 'Projetos em risco (farol vermelho)', html: ul(rows.filter(r => r.ev.farol === 'vermelho').map(r => '<li><b>' + esc(r.name) + '</b>: ' + [r.ev.atrasadas ? r.ev.atrasadas + ' entrega(s) atrasada(s)' : '', r.ev.riscosCriticos ? r.ev.riscosCriticos + ' risco(s) crítico(s)' : '', r.ev.decisoesCriticas ? r.ev.decisoesCriticas + ' decisão(ões) crítica(s)' : ''].filter(Boolean).join(' · ') + '</li>')) + fix('projeto em risco') };
+    DET.cap = { title: 'Capacidade do time', html: plans.length ? plans.map(p => planHtml(p)).join('') : '<div class="rk-empty">Ninguém acima de 100% somando os projetos. 👍</div>' };
+    DET.rsk = { title: 'Riscos críticos em aberto', html: ul(byP(r => (r.facts.risks.top || []).filter(x => x.level === 'crítico').map(x => esc(x.title) + ' (nota ' + x.score + (x.owner ? ', dono ' + esc(x.owner) : ', <b>sem dono</b>') + ')'))) + fix('risco crítico') };
+    DET.del = { title: 'Entregas atrasadas', html: ul(byP(r => (r.facts.schedule.delayed || []).map(x => esc(x.label) + ' (' + x.daysLate + ' dia(s) de atraso)'))) + fix('entrega atrasada') };
+    DET.scp = { title: 'Mudanças de escopo aguardando aprovação', html: ul(byP(r => r.facts.scope.openCount ? [r.facts.scope.openCount + ' mudança(s) · +' + r.facts.scope.daysImpact + ' dia(s) de impacto'] : [])) + fix('mudança de escopo') };
+    return { nCrit: rows.reduce((a, r) => a + (r.facts.decisions.pendingCriticalCount || 0), 0) + caps.length, caps: caps.length };
+  }
+  // dentro do detalhe de decisões a transferência não se repete: só o diagnóstico
+  const planHtmlSimple = p => planHtml(p).replace(/<div class="btn-row"[\s\S]*?<\/div>/, '');
+  function toggle(key) {
+    openKey = (key && key !== openKey) ? key : null;
+    const card = document.getElementById('mg-detail-card'); if(!card) return;
+    card.style.display = openKey ? '' : 'none';
+    if(openKey && DET[openKey]) { document.getElementById('mg-detail-title').textContent = DET[openKey].title; document.getElementById('mg-detail').innerHTML = DET[openKey].html; }
+    document.querySelectorAll('#mg-kpis [data-k]').forEach(c => { const on = c.dataset.k === openKey; c.setAttribute('aria-expanded', on ? 'true' : 'false'); c.style.outline = on ? '2px solid var(--acc)' : ''; });
+    if(openKey) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  const kpi = (id, label, value, sub, tone) => '<div class="kpi kpi-link" role="button" tabindex="0" aria-expanded="false" data-k="' + id + '" onclick="MgrPanel.toggle(this.dataset.k)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();MgrPanel.toggle(this.dataset.k)}"><div class="kpi-lbl">' + esc(label) + '</div><div class="kpi-val" style="color:' + (TONE[tone] || 'var(--t1)') + '">' + esc(value) + '</div><div class="kpi-delta">' + esc(sub) + ' <span style="color:var(--acc)">· ver detalhes</span></div></div>';
   function render() {
     const k = document.getElementById('mg-kpis'); if(!k) return;
     let v = null; try { v = PmoView.panel(); } catch(e) { v = null; }
+    let plansAll = []; try { plansAll = Resources.plans(); } catch(e) { plansAll = []; }
     if(v) {
-      k.innerHTML = v.kpis.map(x => '<div class="kpi"><div class="kpi-lbl">' + esc(x.label) + '</div><div class="kpi-val" style="color:' + (TONE[x.tone] || 'var(--t1)') + '">' + esc(x.value) + '</div><div class="kpi-delta">' + esc(x.sub) + '</div></div>').join('');
-      document.getElementById('mg-list').innerHTML = v.list.length ? v.list.map(it => '<div class="rk-item" style="cursor:default"><div class="rk-main"><div class="rk-title">' + esc(it.name) + '</div><div class="rk-meta">' + it.reasons.map(r => '<span class="chip">' + esc(r) + '</span>').join('') + '</div><div style="font-size:12px;color:var(--t2);line-height:1.55;margin-top:6px">' + (it.fixes || []).map(x => '<div><i class="ti ti-bulb" aria-hidden="true" style="color:var(--amb)"></i> ' + esc(x) + '</div>').join('') + '</div></div><button class="btn btn-sm" data-id="' + esc(it.id) + '" onclick="PmoView.openProject(this)"><i class="ti ti-arrow-right"></i>Abrir</button></div>').join('') : '<div class="rk-empty">Nada pedindo decisão neste momento. 👍</div>';
+      const sums = buildDetails(v.rows, plansAll), n = x => String(x);
+      const nRisk = v.rows.filter(r => r.ev.farol === 'vermelho').length, nRsk = v.rows.reduce((a, r) => a + (r.ev.riscosCriticos || 0), 0), nDel = v.rows.reduce((a, r) => a + (r.ev.atrasadas || 0), 0), nScp = v.rows.reduce((a, r) => a + (r.facts.scope.openCount || 0), 0);
+      k.innerHTML = kpi('dec', 'Decisões críticas', n(sums.nCrit), sums.caps ? 'inclui ' + sums.caps + ' de capacidade do time' : 'aguardando a sua decisão', sums.nCrit ? 'critico' : 'ok')
+        + kpi('cap', sums.caps ? 'Time sem reserva' : 'Capacidade do time', n(plansAll.length), sums.caps ? 'pessoa única em vários projetos' : (plansAll.length ? 'acima de 100% somando os projetos' : 'ninguém acima de 100%'), sums.caps ? 'critico' : (plansAll.length ? 'alerta' : 'ok'))
+        + kpi('risk', 'Projetos em risco', n(nRisk), 'farol vermelho', nRisk ? 'critico' : 'ok')
+        + kpi('rsk', 'Riscos críticos', n(nRsk), 'nota 15 a 25, em aberto', nRsk ? 'critico' : 'ok')
+        + kpi('del', 'Entregas atrasadas', n(nDel), 'em todo o portfólio', nDel ? 'alerta' : 'ok')
+        + kpi('scp', 'Mudanças de escopo', n(nScp), 'aguardando aprovação', nScp ? 'alerta' : 'ok');
+      const keep = openKey; openKey = null; toggle(keep);
+    }
+    if(v) {
+            document.getElementById('mg-list').innerHTML = v.list.length ? v.list.map(it => '<div class="rk-item" style="cursor:default"><div class="rk-main"><div class="rk-title">' + esc(it.name) + '</div><div class="rk-meta">' + it.reasons.map(r => '<span class="chip">' + esc(r) + '</span>').join('') + '</div><div style="font-size:12px;color:var(--t2);line-height:1.55;margin-top:6px">' + (it.fixes || []).map(x => '<div><i class="ti ti-bulb" aria-hidden="true" style="color:var(--amb)"></i> ' + esc(x) + '</div>').join('') + '</div></div><button class="btn btn-sm" data-id="' + esc(it.id) + '" onclick="PmoView.openProject(this)"><i class="ti ti-arrow-right"></i>Abrir</button></div>').join('') : '<div class="rk-empty">Nada pedindo decisão neste momento. 👍</div>';
     }
     const pc = document.getElementById('mg-plans-card'), pr = document.getElementById('mg-plans');
     let plans = []; try { plans = Resources.plans(); } catch(e) { plans = []; }
     if(pc && pr) { pc.style.display = plans.length ? '' : 'none'; pr.innerHTML = plans.map(x => MgrPanel.planHtml(x)).join(''); }
     if(typeof Resources !== 'undefined') Resources.renderTeam();
   }
-  return { render, planHtml };
+  return { render, planHtml, toggle };
 })();
 </script>
 
