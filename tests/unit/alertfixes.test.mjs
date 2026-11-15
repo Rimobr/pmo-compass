@@ -36,3 +36,8 @@ test('sobrealocação: plano diz de onde tirar, quanto e como mitigar', () => {
   assert.equal(q.cuts[0].projectName, 'B'); assert.equal(q.cuts[0].to, 40); assert.ok(!q.escalate);
   assert.equal(P.allocPlan({ name: 'Y', total: 100, rows: [{ pct: 50 }, { pct: 50 }] }), null);
 });
+test('Diagnóstico de Documentos é porta única: transformar em projeto, aplicar ao aberto ou descartar tudo; Raio-X só em lote', () => {
+  for(const k of ['DrPmo.create()', 'DrPmo.apply()', 'DrPmo.discard()', 'id="drpmo-apply"', 'Transformar em Projeto', 'Descartar Tudo', 'Raio-X em Lote', 'function open(kind, afterFn)', "onclick=\"R.go('drpmo')\" title=\"Aponte"]) assert.ok(html.includes(k) || k.startsWith('onclick'), k);
+  assert.ok(!html.includes('aria-label="Diagnóstico de documentos"'), 'sem abas duplicadas');
+  assert.ok(!html.includes("'drpmo' : 'xray')"), 'o menu abre sempre o Dr. PMO');
+});

@@ -165,7 +165,7 @@ r = await p.evaluate(async () => {
   out.antigos = ['xray', 'execview', 'pfkpi'].filter(x => document.querySelector('.si[data-p="' + x + '"]')).length;
   return out;
 });
-ok(r.xray.menu === 'drpmo' && r.pfkpi.menu === 'pmoview' && r.execview.menu === 'board' && r.xray.tab && r.pfkpi.tab && r.execview.tab && r.antigos === 0, 'telas unificadas: abas acendem o item da junção e os itens antigos saíram do menu', JSON.stringify(r));
+ok(r.xray.menu === 'drpmo' && r.pfkpi.menu === 'pmoview' && r.execview.menu === 'board' && r.pfkpi.tab && r.execview.tab && r.antigos === 0, 'telas unificadas: o Raio-X em lote acende o Dr. PMO e as abas acendem o item da junção e os itens antigos saíram do menu', JSON.stringify(r));
 // Kanban: o gráfico da sprint nunca fica por cima dos botões do cabeçalho, em nenhuma largura de janela
 await p.evaluate(() => {
   const hoje = Clock.iso(Clock.today()).slice(0, 10), d = n => { const x = new Date(hoje + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };

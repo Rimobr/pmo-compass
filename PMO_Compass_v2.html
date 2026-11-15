@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.96.0'
+  version: '2.97.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1084,7 +1084,7 @@ body.icons-failed i[data-fb]::before{
     <div class="sb-group" id="sbg-visao">
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-visao')" title="Painéis que juntam todos os projetos"><i class="ti ti-layout-grid sb-gico"></i>Visão Geral<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
-      <button class="si" data-p="drpmo" onclick="R.go((typeof Methodology !== 'undefined' && Methodology.type() === 'quadro') || DB.isEmpty() ? 'drpmo' : 'xray')" title="Aponte os arquivos que você já tem: sem projeto, o Dr. PMO diz se é quadro ou projeto, a metodologia, os riscos e os buracos; com projeto aberto, o Raio-X aplica os achados depois de você revisar"><i class="ti ti-stethoscope"></i>Diagnóstico de Documentos</button>
+      <button class="si" data-p="drpmo" onclick="R.go('drpmo')" title="Aponte os arquivos que você já tem: sem projeto, o Dr. PMO diz se é quadro ou projeto, a metodologia, os riscos e os buracos; com projeto aberto, o Raio-X aplica os achados depois de você revisar"><i class="ti ti-stethoscope"></i>Diagnóstico de Documentos</button>
       <button class="si" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Visão da Diretoria</button>
       <button class="si" data-p="pmoview" onclick="R.go('pmoview')"><i class="ti ti-binoculars"></i>Governança do Portfólio</button>
     </div>
@@ -1361,9 +1361,9 @@ body.icons-failed i[data-fb]::before{
 <!-- ■ MODULE: pages/project-xray ─ Segunda frente do app: diagnóstico por documento,
      separado da gestão manual, pensado para convencer rápido antes de pedir cadastro. -->
 <section class="page" id="p-xray" data-module="pages/project-xray">
-  <div class="pg-tabs" role="tablist" aria-label="Diagnóstico de documentos"><button class="pg-tab" role="tab" aria-selected="false" onclick="R.go('drpmo')"><i class="ti ti-stethoscope"></i>Diagnóstico Rápido (sem gravar)</button><button class="pg-tab" role="tab" aria-selected="true" onclick="R.go('xray')"><i class="ti ti-report-medical"></i>Raio-X do Projeto (aplica ao projeto)</button></div>
   <div class="pg-hdr">
-    <div><div class="pg-title"><i class="ti ti-report-medical" style="color:var(--acc)"></i> Raio-X do Projeto<span class="help-q" data-help="Envie documentos do projeto (proposta, ata, cronograma...) e a IA lê e monta um primeiro diagnóstico de prazo, custo e qualidade — nada vira registro real até você revisar e confirmar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Aponte os documentos do projeto — a IA lê, identifica saúde, caminho crítico e riscos, e devolve um diagnóstico em minutos. Depois, se fizer sentido, os achados viram registros reais em Gestão de Projeto.</div></div>
+    <div><div class="pg-title"><i class="ti ti-report-medical" style="color:var(--acc)"></i> Raio-X em Lote<span class="help-q" data-help="Envie documentos do projeto (proposta, ata, cronograma...) e a IA lê e monta um primeiro diagnóstico de prazo, custo e qualidade — nada vira registro real até você revisar e confirmar." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Para estruturar vários projetos de uma vez. Para um projeto só, use o Diagnóstico de Documentos: ele avalia, orienta e deixa você decidir se vira projeto ou se descarta tudo.</div></div>
+    <div class="btn-row"><button class="btn btn-sm" onclick="R.go('drpmo')"><i class="ti ti-stethoscope"></i>Voltar ao Diagnóstico de Documentos</button></div>
   </div>
 
   <div class="card" id="batchxray-idle-card" data-perm="business">
@@ -1404,10 +1404,10 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: pages/drpmo ─ Diagnóstico PMO (Dr. PMO): vale antes de ter projeto; lê os arquivos que a pessoa já tem e orienta como seguir -->
 <section class="page" id="p-drpmo" data-module="pages/drpmo">
-  <div class="pg-tabs" role="tablist" aria-label="Diagnóstico de documentos"><button class="pg-tab" role="tab" aria-selected="true" onclick="R.go('drpmo')"><i class="ti ti-stethoscope"></i>Diagnóstico Rápido (sem gravar)</button><button class="pg-tab" role="tab" aria-selected="false" onclick="R.go('xray')"><i class="ti ti-report-medical"></i>Raio-X do Projeto (aplica ao projeto)</button></div>
   <div class="pg-hdr">
-    <div><div class="pg-title"><i class="ti ti-stethoscope" style="color:var(--acc)"></i> Diagnóstico PMO — Dr. PMO<span class="help-q" data-help="Aponte as planilhas e documentos que você já tem. O Dr. PMO lê, diz se aquilo é um Quadro de tarefas ou um Projeto, qual metodologia faz sentido (ágil, cascata ou híbrido), que riscos e buracos já aparecem e por que vale usar o Compass. Nada é gravado: você decide depois se cria o quadro ou o projeto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
-    <div class="pg-sub">Mostre o que você tem hoje e descubra por onde começar.</div></div>
+    <div><div class="pg-title"><i class="ti ti-stethoscope" style="color:var(--acc)"></i> Diagnóstico de Documentos — Dr. PMO<span class="help-q" data-help="Aponte as planilhas e documentos que você já tem. O Dr. PMO lê, diz se aquilo é um Quadro de tarefas ou um Projeto, qual metodologia faz sentido (ágil, cascata ou híbrido), que riscos e buracos já aparecem e por que vale usar o Compass. Nada é gravado: você decide depois se cria o quadro ou o projeto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div class="pg-sub">Aponte o que você tem. O Dr. PMO avalia, orienta o que corrigir e, se você quiser, vira projeto ou quadro; senão, descarte tudo.</div></div>
+    <div class="btn-row"><button class="btn btn-sm" data-perm="business" onclick="R.go('xray')" title="Estruturar vários projetos de uma vez, um documento de cada"><i class="ti ti-stack-2"></i>Raio-X em Lote</button></div>
   </div>
   <div class="card">
     <div class="lbl" style="color:var(--acc)"><i class="ti ti-folder-search"></i>Aponte onde estão os seus arquivos</div>
@@ -1422,6 +1422,7 @@ body.icons-failed i[data-fb]::before{
     <input type="file" id="drpmo-folder-inp" webkitdirectory multiple style="display:none" onchange="DrPmo.run(this.files)">
   </div>
   <div id="drpmo-result" style="margin-top:12px"></div>
+  <div id="drpmo-apply" style="margin-top:12px"></div>
 </section>
 
 <!-- ■ MODULE: pages/whatif -->
@@ -10805,8 +10806,8 @@ const DrPmo = (() => {
     const head = '<div class="card card-accent"><div class="lbl" style="color:var(--acc)"><i class="ti ti-stethoscope"></i>Veredito do Dr. PMO</div>'
       + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 8px"><span class="badge b-acc" style="font-size:12px">' + (v.formato === 'quadro' ? 'Isto é um Quadro de tarefas' : 'Isto é um Projeto') + '</span>' + (v.metodologia ? '<span class="badge b-acc" style="font-size:12px">Metodologia sugerida: ' + MET[v.metodologia] + '</span>' : '') + '<span class="set-sub">' + last.read.docs.length + ' arquivo(s) lidos aqui no seu navegador' + (last.read.redactions ? ' · ' + last.read.redactions + ' dado(s) pessoal(is) descaracterizado(s)' : '') + '</span></div>'
       + '<ul style="margin:0 0 10px 18px;font-size:12.5px;color:var(--t1);line-height:1.65">' + v.porque.map(m => '<li>' + esc(m) + '</li>').join('') + '</ul>'
-      + '<div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="DrPmo.create()"><i class="ti ti-plus"></i>' + (v.formato === 'quadro' ? 'Criar como Quadro' : 'Criar como Projeto ' + MET[v.metodologia]) + '</button><button class="btn btn-sm" onclick="DrPmo.pdf()"><i class="ti ti-file-type-pdf"></i>Salvar em PDF / Imprimir</button><button class="btn btn-sm" onclick="DrPmo.copy()"><i class="ti ti-copy"></i>Copiar o Diagnóstico</button><button class="btn btn-sm" onclick="DrPmo.reset()"><i class="ti ti-refresh"></i>Nova Análise</button></div>'
-      + '<div class="set-sub" style="margin-top:8px"><i class="ti ti-shield-check"></i> Nada foi gravado: o diagnóstico existe só nesta tela. Criar o quadro ou o projeto é decisão sua.</div></div>';
+      + '<div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="DrPmo.create()"><i class="ti ti-plus"></i>' + (v.formato === 'quadro' ? 'Transformar em Quadro' : 'Transformar em Projeto ' + MET[v.metodologia]) + '</button>' + (canApply() ? '<button class="btn btn-sm" data-perm="business" onclick="DrPmo.apply()" title="A IA lê os documentos e propõe entregas, riscos, orçamento e partes interessadas; você revisa antes de virar registro"><i class="ti ti-file-import"></i>Aplicar ao Projeto Aberto</button>' : '') + '<button class="btn btn-sm" onclick="DrPmo.discard()"><i class="ti ti-trash" style="color:var(--red)"></i>Descartar Tudo</button><button class="btn btn-sm" onclick="DrPmo.pdf()"><i class="ti ti-file-type-pdf"></i>Salvar em PDF / Imprimir</button><button class="btn btn-sm" onclick="DrPmo.copy()"><i class="ti ti-copy"></i>Copiar o Diagnóstico</button><button class="btn btn-sm" onclick="DrPmo.reset()"><i class="ti ti-refresh"></i>Nova Análise</button></div>'
+      + '<div class="set-sub" style="margin-top:8px"><i class="ti ti-shield-check"></i> Nada foi gravado: o diagnóstico existe só nesta tela. Você decide: transformar em ' + (v.formato === 'quadro' ? 'quadro' : 'projeto') + ', aplicar a um projeto que já existe ou descartar tudo.</div></div>';
     const risksArr = (ai && ai.ok && ai.data.riscos.length ? ai.data.riscos : L.risks), gapsArr = (ai && ai.ok && ai.data.buracos.length ? ai.data.buracos : L.gaps);
     const riskHtml = risksArr.length ? risksArr.map(r => '<div class="set-row" style="gap:8px;align-items:flex-start"><span class="badge ' + SEV[r.gravidade][0] + '">' + SEV[r.gravidade][1] + '</span><div style="flex:1;min-width:0"><b>' + esc(r.titulo) + '</b><div style="font-size:12px;color:var(--t2);margin-top:2px">' + esc(r.evidencia) + '</div><div style="font-size:12px;color:var(--t1);margin-top:2px"><i class="ti ti-route"></i> ' + esc(r.acao) + '</div></div></div>').join('') : '<div class="rk-empty">Nenhum risco aparente só pelos documentos.</div>';
     const gapHtml = gapsArr.length ? gapsArr.map(g => '<div class="set-row" style="gap:8px;align-items:flex-start"><i class="ti ti-alert-triangle" style="color:var(--amb);margin-top:2px"></i><div style="flex:1;min-width:0"><b>' + esc(g.titulo) + '</b><div style="font-size:12px;color:var(--t2);margin-top:2px">' + esc(g.detalhe) + '</div><div style="font-size:12px;color:var(--t1);margin-top:2px"><i class="ti ti-circle-check" style="color:var(--grn)"></i> ' + esc(g.como_resolver) + '</div></div></div>').join('') : '<div class="rk-empty">Nenhum buraco aparente.</div>';
@@ -10825,7 +10826,7 @@ const DrPmo = (() => {
     const read = await FileIntake.readOnly(fileList);
     const inp = $('drpmo-files-inp'); if(inp) inp.value = ''; const inp2 = $('drpmo-folder-inp'); if(inp2) inp2.value = '';
     if(!read.docs.length) { if(root) root.innerHTML = ''; return; }
-    last = { read, local: DrPmoCore.analyze(read.docs), ai: null }; render();
+    last = { read, files: Array.from(fileList || []), local: DrPmoCore.analyze(read.docs), ai: null }; render(); { const ap = $('drpmo-apply'); if(ap) ap.innerHTML = ''; }
     if(typeof Cloud !== 'undefined' && Cloud.pushAuditEvent) Cloud.pushAuditEvent('compass_question', 'Diagnóstico PMO (Dr. PMO): ' + read.docs.length + ' arquivo(s) analisado(s)', { intent: 'drpmo', docs: read.docs.length });
     if(Store.hasKeyOrCloud()) {
       try {
@@ -10835,7 +10836,28 @@ const DrPmo = (() => {
       render();
     }
   }
-  function create() { if(!last) return; const v = verdict(); try { Wizard.open(v.formato === 'quadro' ? 'quadro' : v.metodologia); } catch(e) { T.show('⚠️ Não consegui abrir o assistente.'); } }
+  // Só faz sentido aplicar a um projeto que já existe (não quadro e não base vazia)
+  function canApply() { try { return !DB.isEmpty() && !(typeof Methodology !== 'undefined' && Methodology.type() === 'quadro'); } catch(e) { return false; } }
+  // Transformar: abre o assistente; se for projeto, depois de criado o Dr. PMO aplica os mesmos documentos a ele (com revisão antes de gravar)
+  function create() {
+    if(!last) return; const v = verdict();
+    try { Wizard.open(v.formato === 'quadro' ? 'quadro' : v.metodologia, v.formato === 'quadro' ? null : () => { R.go('drpmo'); apply(); }); } catch(e) { T.show('⚠️ Não consegui abrir o assistente.'); }
+  }
+  // Aplicar: só agora os arquivos entram no Repositório e a IA propõe os registros; nada vira dado sem a pessoa marcar
+  async function apply() {
+    if(!last || !last.files || !last.files.length) { T.show('⚠️ Envie os arquivos de novo para aplicar.'); return; }
+    const items = await FileIntake.ingestFiles(last.files); if(!items.length) return;
+    const ap = $('drpmo-apply'); if(ap) ap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    FileIntake.requestStructuredEvaluation(items, 'drpmo-apply');
+  }
+  // Descartar tudo: apaga a análise e os arquivos da memória; como nada foi gravado antes de aplicar, nada sobra
+  async function discard() {
+    if(!last) return;
+    const ok = await Dlg.ask({ title: 'Descartar tudo', body: 'O diagnóstico e os arquivos lidos saem da tela. Nada foi gravado no sistema, então nada fica para trás.\n\nPara ver de novo será preciso apontar os arquivos outra vez.', okLabel: 'Descartar Tudo', cancelLabel: 'Manter', danger: true });
+    if(!ok) return;
+    last = null; render(); const ap = $('drpmo-apply'); if(ap) ap.innerHTML = '';
+    T.show('🗑️ Diagnóstico descartado. Nada foi gravado.');
+  }
   function copy() {
     if(!last) return; const v = verdict(), L = last.local;
     const t = ['DIAGNÓSTICO PMO (Dr. PMO)', 'Formato: ' + (v.formato === 'quadro' ? 'Quadro de tarefas' : 'Projeto') + (v.metodologia ? ' · Metodologia: ' + MET[v.metodologia] : ''), '', 'Motivos:'].concat(v.porque.map(m => '- ' + m), ['', 'Riscos:'], L.risks.map(r => '- [' + SEV[r.gravidade][1] + '] ' + r.titulo + ': ' + r.evidencia), ['', 'Buracos:'], L.gaps.map(g => '- ' + g.titulo), ['', L.message]).join('\n');
@@ -10870,8 +10892,8 @@ const DrPmo = (() => {
     fr.srcdoc = printHtml(); document.body.appendChild(fr);
     T.show('🖨️ Na janela de impressão, escolha "Salvar como PDF".', 5000);
   }
-  function reset() { last = null; render(); }
-  return { run, dragOver, dragLeave, drop, create, copy, pdf, printHtml: () => last ? printHtml() : '', reset };
+  function reset() { last = null; render(); const ap = $('drpmo-apply'); if(ap) ap.innerHTML = ''; }
+  return { run, dragOver, dragLeave, drop, create, apply, discard, canApply, copy, pdf, printHtml: () => last ? printHtml() : '', reset };
 })();
 </script>
 
@@ -17311,7 +17333,8 @@ const WorkloadCalc = (() => {
 
 <!-- ■ MODULE: ui/modal-pin ─ Janelas de cadastro: os botões de ação (Excluir, Cancelar, Salvar…) ficam SEMPRE no cabeçalho fixo da janela, nunca no rodapé que obriga rolar até o fim. Move o rodapé existente para o cabeçalho, sem mudar o que cada botão faz. -->
 <style data-module="ui/modal-pin-css">
-.mh-bar{position:sticky;top:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;background:var(--s1);margin:0 0 8px;padding:0 0 8px;border-bottom:1px solid var(--b1)}
+.mh-bar{position:sticky;top:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;background:var(--s1);margin:-24px -24px 8px;padding:24px 24px 8px;border-bottom:1px solid var(--b1)} /* a barra cobre o espaço de cima da janela: nada rola por trás do título */
+.modal-box .lbl{font-size:12.5px;font-weight:700;letter-spacing:.06em;color:var(--acc);background:var(--ad);border-left:3px solid var(--acc);border-radius:6px;padding:6px 10px;margin:16px 0 10px} /* títulos dos blocos nas janelas: destacados para achar o item rápido */
 .mh-bar .modal-title{margin:0;flex:1 1 180px;min-width:0}
 .mh-act{display:inline-flex!important;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin:0!important;padding:0!important}
 .mh-act span{display:inline-flex;gap:6px;flex-wrap:wrap}
@@ -23713,7 +23736,9 @@ const Wizard = (() => {
   const sameName = (a, b) => { const x = normName(a), y = normName(b); return !!x && x === y; };
   let board = false; // Quadro: só o nome (um passo), sem equipe nem contexto da IA
 
-  function open(kind) {
+  let after = null; // opcional: o que fazer logo depois de criar (ex.: aplicar os documentos do diagnóstico ao projeto novo)
+  function open(kind, afterFn) {
+    after = typeof afterFn === 'function' ? afterFn : null;
     step = 1; board = kind === 'quadro';
     const sel = document.getElementById('wz-method'); if(sel) sel.value = board ? 'quadro' : (['agil', 'cascata', 'hibrido'].includes(kind) ? kind : 'hibrido');
     render();
@@ -23723,6 +23748,7 @@ const Wizard = (() => {
   function close() {
     const m = document.getElementById('modal-new-project');
     if(m) m.classList.add('hidden');
+    after = null;
   }
   function render() {
     for(let i=1;i<=total;i++){
@@ -23779,8 +23805,14 @@ const Wizard = (() => {
     // Evita criar de novo o que já existe (a tela só confirma depois; sem este aviso, quem não vê o projeto novo cria outro)
     const twin = (typeof DB !== 'undefined' ? DB.listProjects() : []).find(p => sameName(p.name, name));
     if(twin && !confirm('Já existe ' + (typeof Methodology !== 'undefined' && Methodology.isBoard(twin.id) ? 'o quadro' : 'o projeto') + ' "' + twin.name + '".\n\nClique OK para criar mais um com este nome, ou Cancelar para voltar.')) { T.show('Nada foi criado — já existe "' + twin.name + '".'); return; }
-    close();
+    const cb = after; close();
     const id = DB.createProject(name, client, area);
+    if(id && cb && method !== 'quadro') {
+      if(typeof Methodology !== 'undefined') Methodology.set(method, { silent: true });
+      T.show('✅ Projeto "' + name + '" criado! Agora o Dr. PMO aplica os seus documentos a ele.', 5000);
+      try { cb(id, method); } catch(e) { R.go('dashboard'); }
+      return;
+    }
     if(id) {
       if(typeof Methodology !== 'undefined') Methodology.set(method, { silent: true }); // o projeto novo já nasce com o menu do seu método
       // Projeto ágil começa pelo Backlog (a primeira coisa a fazer é ter itens); os demais, pelo Dashboard
