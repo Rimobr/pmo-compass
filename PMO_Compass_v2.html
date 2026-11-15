@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.98.2'
+  version: '2.98.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1676,10 +1676,11 @@ body.icons-failed i[data-fb]::before{
     <div><div class="pg-title"><i class="ti ti-user-star" style="color:var(--acc)"></i> Painel do Gerente de Projetos<span class="help-q" data-help="Visão de portfólio de quem gerencia: os números e o que decidir agora em todos os projetos que você acessa, e o seu time inteiro com a alocação somada, para equilibrar a carga transferindo atividades entre pessoas do mesmo cargo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Tudo o que está com você, em todos os projetos: o que decidir agora e como equilibrar o seu time.</div></div>
   </div>
   <div class="kpi-row" id="mg-kpis"></div>
+  <div class="card card-accent" id="mg-plans-card" style="margin-bottom:12px;display:none"><div class="lbl" style="color:var(--acc)"><i class="ti ti-bulb"></i>Decisões Sugeridas pelo Sistema</div><div id="mg-plans"></div></div>
   <div class="card" style="margin-bottom:12px"><div class="lbl"><i class="ti ti-list-check"></i><span id="mg-list-title">O que decidir agora</span></div><div id="mg-list"></div></div>
   <div class="card" id="res-team-card">
     <div class="lbl" style="color:var(--acc)"><i class="ti ti-users-group"></i>Meu Time em Todos os Projetos</div>
-    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:8px">Cada pessoa com a alocação somada em todos os projetos que você acessa, os cards em aberto e quem está no limite. Para equilibrar, <b>transfira atividades</b> de quem está sobrecarregado para alguém do mesmo cargo com folga.</p>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:8px">Pessoas com conta no sistema, com a alocação somada em todos os projetos. Para equilibrar, <b>transfira atividades</b> para alguém do mesmo cargo com folga.</p>
     <div class="btn-row" style="margin-bottom:8px;align-items:flex-end">
       <div><label class="set-sub" for="tc-role" style="display:block">Cargo</label><select class="input" id="tc-role" onchange="Resources.setTeamFilter()"><option value="">Todos</option></select></div>
       <div><label class="set-sub" for="tc-q" style="display:block">Pessoa</label><input class="input" id="tc-q" placeholder="Buscar pelo nome…" oninput="Resources.setTeamFilter()" style="width:200px"></div>
@@ -21468,15 +21469,16 @@ const Estimates = (() => {
 const TeamCapacity = (() => {
   const k = x => String(x == null ? '' : x).trim().toLowerCase();
   const num = v => Number.isFinite(Number(v)) ? Number(v) : 0;
+  const keyOf = m => (m && m.userId) ? 'u:' + m.userId : k(m && m.name); // a pessoa é a conta; sem conta vale o nome
   // projects: [{ id, name, team:[{name,role,allocationPct}], items:[card], sprints:[{id,endOn}] }]; today = 'YYYY-MM-DD'
   function build(projects, today) {
     const by = new Map();
     (projects || []).forEach(p => (p.team || []).forEach(m => {
-      const key = k(m && m.name); if(!key) return;
+      const key = keyOf(m); if(!k(m && m.name) || !key) return;
       if(!by.has(key)) by.set(key, { key, name: String(m.name).trim(), roles: [], rows: [] });
       const e = by.get(key); const role = String(m.role || '').trim(); if(role && !e.roles.some(r => k(r) === k(role))) e.roles.push(role);
       const dueOf = i => ((p.sprints || []).find(x => x.id === i.sprintId) || {}).endOn || '';
-      const cards = (p.items || []).filter(i => i && i.kind !== 'epico' && i.status !== 'done' && k(i.assignee) === key)
+      const cards = (p.items || []).filter(i => i && i.kind !== 'epico' && i.status !== 'done' && k(i.assignee) === k(m.name))
         .map(i => { const due = dueOf(i); return { id: i.id, title: i.title || '', kind: i.kind || 'tarefa', status: i.status, points: i.points == null || i.points === '' ? null : num(i.points), due, late: !!(due && today && due < today) }; });
       e.rows.push({ projectId: p.id, projectName: p.name, pct: m.allocationPct != null && m.allocationPct !== '' ? num(m.allocationPct) : 100, cards });
     }));
@@ -21488,14 +21490,22 @@ const TeamCapacity = (() => {
     }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'pt-BR'));
   }
   // Para onde passar os cards de "from" no projeto pid: quem está na equipe do projeto, mesmo cargo primeiro, depois quem tem mais folga e menos cards
-  function candidates(people, from, projectTeamNames) {
-    const names = new Set((projectTeamNames || []).map(k)), roles = (from.roles || []).map(k);
-    return (people || []).filter(p => p.key !== from.key && names.has(p.key))
-      .map(p => ({ name: p.name, role: p.role, total: p.total, free: p.free, open: p.open, level: p.level, sameRole: roles.length > 0 && p.roles.some(r => roles.indexOf(k(r)) >= 0) }))
+  function candidates(people, from, projectTeam) { // projectTeam: colaboradores do projeto ({ name, userId })
+    const nameIn = new Map((projectTeam || []).map(m => [keyOf(m), m.name])), roles = (from.roles || []).map(k);
+    return (people || []).filter(p => p.key !== from.key && nameIn.has(p.key))
+      .map(p => ({ name: nameIn.get(p.key), role: p.role, total: p.total, free: p.free, open: p.open, level: p.level, sameRole: roles.length > 0 && p.roles.some(r => roles.indexOf(k(r)) >= 0) }))
       .sort((a, b) => (b.sameRole - a.sameRole) || (a.level === 'over') - (b.level === 'over') || a.total - b.total || a.open - b.open || a.name.localeCompare(b.name, 'pt-BR'));
   }
   const filter = (people, o) => (people || []).filter(p => (!o || !o.role || p.roles.some(r => k(r) === k(o.role))) && (!o || !o.onlyOver || p.level !== 'ok') && (!o || !o.q || k(p.name).indexOf(k(o.q)) >= 0));
-  return { build, candidates, filter };
+  const norm = x => String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  function lev(a, b) { const d = []; for(let i = 0; i <= a.length; i++) { d[i] = [i]; } for(let j = 1; j <= b.length; j++) d[0][j] = j; for(let i = 1; i <= a.length; i++) for(let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); return d[a.length][b.length]; }
+  // Nome digitado sem conta que parece ser de uma pessoa com conta (erro de digitação ou nome incompleto): devolve o nome provável
+  function similar(name, accounts) {
+    const n = norm(name); if(n.length < 4) return '';
+    const hit = (accounts || []).find(a => { const m = norm(a); return m && (m === n || lev(n, m) <= 2 || (n.length >= 5 && (m.indexOf(n) === 0 || n.indexOf(m) === 0))); });
+    return hit || '';
+  }
+  return { build, candidates, filter, keyOf, similar };
 })();
 </script>
 
@@ -21545,13 +21555,19 @@ const Resources = (() => {
   // ───────── Meu time em todos os projetos + transferência de atividades ─────────
   const esc = escapeHtml;
   const LV = { over: ['b-red', 'Sobrealocado'], limit: ['b-amb', 'No limite'], ok: ['b-grn', 'Com folga'] };
-  let tcAll = [], tcProjects = [], trPerson = null;
+  let tcAll = [], tcProjects = [], trPerson = null, semConta = new Set();
   const todayIso = () => { try { return Clock.iso(new Date()).slice(0, 10); } catch(e) { return new Date().toISOString().slice(0, 10); } };
   function gather() {
-    tcProjects = DB.listProjects().map(p => ({ id: p.id, name: p.name, team: DB.getForProject(p.id, 'team') || [], items: DB.getForProject(p.id, 'backlog') || [], sprints: DB.getForProject(p.id, 'sprints') || [] }));
+    const cloud = typeof Cloud !== 'undefined' && Cloud.isSignedIn(); semConta = new Set();
+    tcProjects = DB.listProjects().map(p => ({ id: p.id, name: p.name, team: (DB.getForProject(p.id, 'team') || []).filter(m => { if(!cloud || (m && m.userId)) return true; if(m && m.name) semConta.add(String(m.name).trim()); return false; }), items: DB.getForProject(p.id, 'backlog') || [], sprints: DB.getForProject(p.id, 'sprints') || [] }));
     tcAll = TeamCapacity.build(tcProjects, todayIso());
   }
   function setTeamFilter() { renderTeam(); }
+  // Decisões de sobrealocação para o painel da gestão: quem, quanto, de onde tirar, como mitigar
+  function plans() {
+    gather();
+    return tcAll.filter(p => p.level === 'over').map(p => { let plan = null; try { plan = PlanVsReal.allocPlan({ name: p.name, total: p.total, rows: p.rows.map(r => Object.assign({}, r, { openCards: r.cards.length })) }); } catch(e) { plan = null; } return { key: p.key, name: p.name, total: p.total, open: p.open, plan }; }).filter(x => x.plan);
+  }
   function renderTeam() {
     const root = document.getElementById('res-team-root'); if(!root) return;
     gather();
@@ -21563,8 +21579,14 @@ const Resources = (() => {
     const can = Auth.can('manage_backlog');
     root.innerHTML = list.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Pessoa</th><th scope="col">Cargo</th><th scope="col">Alocação total</th><th scope="col">Por projeto</th><th scope="col">Cards em aberto</th><th scope="col">Situação</th><th scope="col"></th></tr></thead><tbody>'
       + list.map(p => '<tr><td><b>' + esc(p.name) + '</b></td><td>' + esc(p.role || '—') + '</td><td><b>' + p.total + '%</b>' + (p.free ? ' <span class="set-sub">(' + p.free + '% livre)</span>' : '') + '</td><td>' + p.rows.map(r => '<span class="chip">' + esc(r.projectName) + ' ' + r.pct + '%</span>').join(' ') + '</td><td>' + p.open + (p.points ? ' <span class="set-sub">· ' + p.points + ' pts</span>' : '') + (p.late ? ' <span class="badge b-red">' + p.late + ' atrasado(s)</span>' : '') + '</td><td><span class="badge ' + LV[p.level][0] + '">' + LV[p.level][1] + '</span></td><td>' + (can && p.open ? '<button class="btn btn-sm" data-k="' + esc(p.key) + '" onclick="Resources.openTransfer(this.dataset.k)"><i class="ti ti-arrows-exchange"></i>Transferir Atividades</button>' : '') + '</td></tr>').join('')
-      + '</tbody></table></div><div class="set-sub" style="margin-top:6px">A alocação e os cards vêm de cada projeto, casando a pessoa pelo nome. "Mesmo cargo" é o critério de habilidade; só quem está na equipe do projeto do card pode recebê-lo.</div>'
+      + '</tbody></table></div>'
       : '<div class="rk-empty">Ninguém com esses filtros.</div>';
+    const sem = [...semConta].filter(n => !tcAll.some(p => p.name.toLowerCase() === n.toLowerCase()));
+    if(sem.length) {
+      const accounts = tcAll.map(p => p.name);
+      root.insertAdjacentHTML('beforeend', '<div class="m-notice" style="margin-top:8px"><i class="ti ti-user-off" aria-hidden="true"></i><span><b>' + sem.length + ' nome(s) sem conta no sistema ficam fora da soma de alocação:</b> ' + sem.map(n => { const m = TeamCapacity.similar(n, accounts); return '<b>' + esc(n) + '</b>' + (m ? ' (parece ser <b>' + esc(m) + '</b>)' : ''); }).join(', ') + '. <b>Decisão:</b> se for a mesma pessoa, a alocação real dela está maior do que aparece; unifique no cadastro da equipe (Colaboradores do projeto → editar → escolher a conta). Se não for ninguém do time, exclua o nome para não distorcer a capacidade.</span></div>');
+    }
+    try { if(typeof ColumnDrag !== 'undefined') ColumnDrag.enable(root.querySelector('table'), 'mgr-time'); } catch(e) { /* sem arrastar */ }
   }
   function openTransfer(key) {
     gather(); const p = tcAll.find(x => x.key === key); if(!p) return; trPerson = { key, sel: {}, dest: {} };
@@ -21572,7 +21594,7 @@ const Resources = (() => {
     const suggested = new Set(plan ? plan.cuts.map(c => c.projectId) : []);
     document.getElementById('tr-sub').innerHTML = '<b>' + esc(p.name) + '</b>' + (p.role ? ' · ' + esc(p.role) : '') + ' · alocação ' + p.total + '% · ' + p.open + ' card(s) em aberto. Marque os cards e escolha quem recebe em cada projeto; o sistema já indica quem tem o mesmo cargo e mais folga.' + (plan ? '<div style="margin-top:6px"><i class="ti ti-bulb" aria-hidden="true" style="color:var(--amb)"></i> <b>Sugestão do sistema:</b> ' + esc(plan.steps.join(' ')) + '</div>' : '');
     document.getElementById('tr-body').innerHTML = p.rows.filter(r => r.cards.length).map(r => {
-      const proj = tcProjects.find(x => x.id === r.projectId), cands = TeamCapacity.candidates(tcAll, p, (proj.team || []).map(m => m.name));
+      const proj = tcProjects.find(x => x.id === r.projectId), cands = TeamCapacity.candidates(tcAll, p, proj.team || []);
       trPerson.dest[r.projectId] = (cands[0] && cands[0].name) || '';
       const opts = cands.length ? cands.map(c => '<option value="' + esc(c.name) + '">' + esc(c.name) + ' — ' + esc(c.role || 'sem cargo') + ' · ' + c.total + '% alocado' + (c.free ? ' (' + c.free + '% livre)' : '') + (c.sameRole ? ' · mesmo cargo' : '') + '</option>').join('') : '<option value="">Ninguém mais na equipe deste projeto</option>';
       return '<fieldset class="tr-proj" style="border:1px solid var(--b1);border-radius:var(--r8);padding:8px 12px;margin:0 0 10px"><legend style="font-size:12.5px;font-weight:700;padding:0 6px">' + esc(r.projectName) + ' <span class="set-sub">· ' + r.cards.length + ' card(s) · ' + r.pct + '%</span></legend>'
@@ -21683,7 +21705,7 @@ const Resources = (() => {
     </div>`;
   }
 
-  return { render, renderTeam, setTeamFilter, openTransfer, setDest, pickCard, closeTransfer, confirmTransfer };
+  return { render, renderTeam, plans, setTeamFilter, openTransfer, setDest, pickCard, closeTransfer, confirmTransfer };
 })();
 </script>
 
@@ -21699,6 +21721,9 @@ const MgrPanel = (() => {
       k.innerHTML = v.kpis.map(x => '<div class="kpi"><div class="kpi-lbl">' + esc(x.label) + '</div><div class="kpi-val" style="color:' + (TONE[x.tone] || 'var(--t1)') + '">' + esc(x.value) + '</div><div class="kpi-delta">' + esc(x.sub) + '</div></div>').join('');
       document.getElementById('mg-list').innerHTML = v.list.length ? v.list.map(it => '<div class="rk-item" style="cursor:default"><div class="rk-main"><div class="rk-title">' + esc(it.name) + '</div><div class="rk-meta">' + it.reasons.map(r => '<span class="chip">' + esc(r) + '</span>').join('') + '</div><div style="font-size:12px;color:var(--t2);line-height:1.55;margin-top:6px">' + (it.fixes || []).map(x => '<div><i class="ti ti-bulb" aria-hidden="true" style="color:var(--amb)"></i> ' + esc(x) + '</div>').join('') + '</div></div><button class="btn btn-sm" data-id="' + esc(it.id) + '" onclick="PmoView.openProject(this)"><i class="ti ti-arrow-right"></i>Abrir</button></div>').join('') : '<div class="rk-empty">Nada pedindo decisão neste momento. 👍</div>';
     }
+    const pc = document.getElementById('mg-plans-card'), pr = document.getElementById('mg-plans');
+    let plans = []; try { plans = Resources.plans(); } catch(e) { plans = []; }
+    if(pc && pr) { pc.style.display = plans.length ? '' : 'none'; pr.innerHTML = plans.map(x => '<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;margin-bottom:8px"><div style="font-size:13px;font-weight:600;margin-bottom:4px">' + esc(x.name) + ' está em ' + x.total + '% (' + x.plan.excess + ' pontos acima de 100%), com ' + x.open + ' card(s) em aberto</div><div style="font-size:12.5px;color:var(--t1);line-height:1.6"><b>O que fazer:</b> ' + x.plan.steps.map(esc).join(' ') + '</div><div style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-top:3px"><b>Como mitigar:</b> ' + esc(x.plan.mitigate) + '</div><div class="btn-row" style="margin-top:8px"><button class="btn btn-sm btn-acc" data-perm="manage_backlog" data-k="' + esc(x.key) + '" onclick="Resources.openTransfer(this.dataset.k)"><i class="ti ti-arrows-exchange"></i>Escolher Cards e Quem Recebe</button></div></div>').join(''); }
     if(typeof Resources !== 'undefined') Resources.renderTeam();
   }
   return { render };

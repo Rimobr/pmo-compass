@@ -50,13 +50,19 @@ test('Meu time em todos os projetos: soma por pessoa e sugere quem recebe (mesmo
   const gente = T.build(projetos, '2026-11-15');
   const l = gente.find(p => p.key === 'leandro r');
   assert.equal(l.total, 200); assert.equal(l.level, 'over'); assert.equal(l.open, 2); assert.equal(l.late, 1); assert.equal(l.points, 3);
-  const c = T.candidates(gente, l, projetos[0].team.map(m => m.name));
+  const c = T.candidates(gente, l, projetos[0].team);
   assert.deepEqual(c.map(x => x.name), ['Ana', 'Beto']); assert.ok(c[0].sameRole && !c[1].sameRole);
-  assert.deepEqual(T.candidates(gente, l, ['Leandro R']), []);
+  assert.deepEqual(T.candidates(gente, l, [{ name: 'Leandro R' }]), []);
   assert.equal(T.filter(gente, { role: 'dev' }).length, 1); assert.equal(T.filter(gente, { onlyOver: true }).length, 1);
 });
 test('transferência de atividades: banco com reassign_items e tela com janela própria', () => {
   const sql = readFileSync(join(root, 'supabase/migrations/20261115120000_reassign_items.sql'), 'utf8');
   for(const k of ['reassign_items', 'is_project_manager', "kind <> 'epico'", "status <> 'done'", 'array_length(ids, 1) > 200', 'não é uma pessoa com acesso']) assert.ok(sql.includes(k), k);
   for(const k of ['id="modal-transfer"', 'Resources.confirmTransfer()', 'reassignItems', 'id="res-team-root"', 'Transferir Atividades']) assert.ok(html.includes(k), k);
+});
+test('nome digitado sem conta: o sistema aponta quem parece ser a mesma pessoa', () => {
+  const { TeamCapacity: T } = new Function(`${mod('services/team-capacity')}\nreturn { TeamCapacity };`)();
+  const contas = ['Leandro R', 'Ana Souza'];
+  assert.equal(T.similar('Lendro R', contas), 'Leandro R'); assert.equal(T.similar('Leandro', contas), 'Leandro R');
+  assert.equal(T.similar('TimeQA', contas), ''); assert.equal(T.similar('Ana', contas), '');
 });
