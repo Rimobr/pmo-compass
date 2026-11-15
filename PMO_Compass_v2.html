@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.97.0'
+  version: '2.98.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1082,10 +1082,12 @@ body.icons-failed i[data-fb]::before{
   <button class="si" data-p="myind" onclick="R.go('myind')" title="Os seus números: atrasos, vencimentos, velocidade, horas e orientação do dia"><i class="ti ti-chart-dots"></i>Meus Indicadores</button>
 
     <div class="sb-group" id="sbg-visao">
-    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-visao')" title="Painéis que juntam todos os projetos"><i class="ti ti-layout-grid sb-gico"></i>Visão Geral<i class="ti ti-chevron-right sb-gchev"></i></button>
+    <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-visao')" title="Painéis de quem gerencia: diretoria, executivo e gerente de projetos"><i class="ti ti-layout-grid sb-gico"></i>Gerências<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
       <button class="si" data-p="drpmo" onclick="R.go('drpmo')" title="Aponte os arquivos que você já tem: sem projeto, o Dr. PMO diz se é quadro ou projeto, a metodologia, os riscos e os buracos; com projeto aberto, o Raio-X aplica os achados depois de você revisar"><i class="ti ti-stethoscope"></i>Diagnóstico de Documentos</button>
-      <button class="si" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Visão da Diretoria</button>
+      <button class="si" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button>
+      <button class="si" data-p="execview" onclick="R.go('execview')"><i class="ti ti-chart-infographic"></i>Painel Executivo</button>
+      <button class="si" data-p="mgrpanel" onclick="R.go('mgrpanel')" title="Tudo o que está com você: seu time em todos os projetos, o que decidir agora e quem equilibrar"><i class="ti ti-user-star"></i>Painel do Gerente de Projetos</button>
       <button class="si" data-p="pmoview" onclick="R.go('pmoview')"><i class="ti ti-binoculars"></i>Governança do Portfólio</button>
     </div>
   </div>
@@ -1609,7 +1611,6 @@ body.icons-failed i[data-fb]::before{
 
 <!-- ■ MODULE: pages/board -->
 <section class="page" id="p-board" data-module="pages/board">
-  <div class="pg-tabs" role="tablist" aria-label="Diretoria"><button class="pg-tab" role="tab" aria-selected="true" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button><button class="pg-tab" role="tab" aria-selected="false" onclick="R.go('execview')"><i class="ti ti-chart-infographic"></i>Visão Executiva</button></div>
   <div class="pg-hdr">
     <div><div class="pg-title">Painel da Diretoria<span class="help-q" data-help="Uma visão rápida e sem jargão de todos os projetos — pra decidir seguir, pausar ou escalar. Cada sugestão da IA é baseada em dado já calculado no sistema, nunca um palpite solto." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Visão rápida do portfólio pra decidir — sem precisar entender os detalhes técnicos.</div></div>
     <div class="btn-row"><button class="btn btn-sm btn-acc" data-perm="business" onclick="Board.generateSuggestions()"><i class="ti ti-sparkles"></i>Atualizar Sugestões da IA</button><button class="btn btn-sm" onclick="window.print()"><i class="ti ti-download"></i>PDF</button></div>
@@ -1669,14 +1670,32 @@ body.icons-failed i[data-fb]::before{
   </div>
 </section>
 
+<!-- ■ MODULE: pages/mgrpanel ─ Painel do Gerente de Projetos: tudo o que está com a gestão em visão de portfólio (o que decidir agora, o time em todos os projetos e a transferência de atividades) -->
+<section class="page" id="p-mgrpanel" data-module="pages/mgrpanel">
+  <div class="pg-hdr">
+    <div><div class="pg-title"><i class="ti ti-user-star" style="color:var(--acc)"></i> Painel do Gerente de Projetos<span class="help-q" data-help="Visão de portfólio de quem gerencia: os números e o que decidir agora em todos os projetos que você acessa, e o seu time inteiro com a alocação somada, para equilibrar a carga transferindo atividades entre pessoas do mesmo cargo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Tudo o que está com você, em todos os projetos: o que decidir agora e como equilibrar o seu time.</div></div>
+  </div>
+  <div class="kpi-row" id="mg-kpis"></div>
+  <div class="card" style="margin-bottom:12px"><div class="lbl"><i class="ti ti-list-check"></i><span id="mg-list-title">O que decidir agora</span></div><div id="mg-list"></div></div>
+  <div class="card" id="res-team-card">
+    <div class="lbl" style="color:var(--acc)"><i class="ti ti-users-group"></i>Meu Time em Todos os Projetos</div>
+    <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:8px">Cada pessoa com a alocação somada em todos os projetos que você acessa, os cards em aberto e quem está no limite. Para equilibrar, <b>transfira atividades</b> de quem está sobrecarregado para alguém do mesmo cargo com folga.</p>
+    <div class="btn-row" style="margin-bottom:8px;align-items:flex-end">
+      <div><label class="set-sub" for="tc-role" style="display:block">Cargo</label><select class="input" id="tc-role" onchange="Resources.setTeamFilter()"><option value="">Todos</option></select></div>
+      <div><label class="set-sub" for="tc-q" style="display:block">Pessoa</label><input class="input" id="tc-q" placeholder="Buscar pelo nome…" oninput="Resources.setTeamFilter()" style="width:200px"></div>
+      <label class="set-sub" style="display:inline-flex;gap:6px;align-items:center;margin-bottom:6px"><input type="checkbox" id="tc-over" onchange="Resources.setTeamFilter()">Só quem está no limite ou acima</label>
+    </div>
+    <div id="res-team-root"></div>
+  </div>
+</section>
+
 <!-- ■ MODULE: pages/execview ─ Complemento do Painel da Diretoria: visão do portfólio como UM
      todo, não projeto por projeto — financeiro consolidado, decisões que precisam de assinatura
      executiva agora (hoje espalhadas por tela) e tendência de saúde do portfólio ao longo do
      tempo (hoje só existe por projeto, no Dashboard/Forecast). -->
 <section class="page" id="p-execview" data-module="pages/execview">
-  <div class="pg-tabs" role="tablist" aria-label="Diretoria"><button class="pg-tab" role="tab" aria-selected="false" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button><button class="pg-tab" role="tab" aria-selected="true" onclick="R.go('execview')"><i class="ti ti-chart-infographic"></i>Visão Executiva</button></div>
   <div class="pg-hdr">
-    <div><div class="pg-title">Visão Executiva<span class="help-q" data-help="Complemento do Painel da Diretoria — em vez de status projeto por projeto, mostra o portfólio como um todo: financeiro consolidado, o que precisa de decisão executiva agora, e se a saúde geral do portfólio está melhorando ou piorando ao longo do tempo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">O portfólio como um todo — financeiro consolidado, decisões pendentes e tendência de saúde.</div></div>
+    <div><div class="pg-title">Painel Executivo<span class="help-q" data-help="Complemento do Painel da Diretoria — em vez de status projeto por projeto, mostra o portfólio como um todo: financeiro consolidado, o que precisa de decisão executiva agora, e se a saúde geral do portfólio está melhorando ou piorando ao longo do tempo." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">O portfólio como um todo — financeiro consolidado, decisões pendentes e tendência de saúde.</div></div>
     <div class="btn-row"><button class="btn btn-sm" onclick="window.print()"><i class="ti ti-download"></i>PDF</button></div>
   </div>
 
@@ -2506,6 +2525,14 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div class="modal-title" id="nt-title">Avisos para Você</div>
     <div id="nt-body"></div>
     <div class="btn-row" style="margin-top:12px;justify-content:flex-end"><button class="btn btn-sm" onclick="Notices.readAll()"><i class="ti ti-checks"></i>Marcar Todos Como Lidos</button><button class="btn btn-sm btn-acc" onclick="Notices.close()">Fechar</button></div>
+  </div>
+</div>
+<div class="modal-ov hidden" id="modal-transfer" onclick="if(event.target===this)Resources.closeTransfer()">
+  <div class="modal-box" style="width:680px;max-width:96vw" role="dialog" aria-modal="true" aria-labelledby="tr-title">
+    <div class="modal-title" id="tr-title">Transferir Atividades</div>
+    <div class="modal-sub" id="tr-sub"></div>
+    <div id="tr-body"></div>
+    <div class="btn-row" style="margin-top:12px;justify-content:flex-end"><button class="btn btn-sm" onclick="Resources.closeTransfer()">Cancelar</button><button class="btn btn-sm btn-acc" id="tr-go" onclick="Resources.confirmTransfer()"><i class="ti ti-arrows-exchange"></i>Transferir Selecionados</button></div>
   </div>
 </div>
 <div class="modal-ov hidden" id="modal-agile-board" onclick="if(event.target===this)Agile.closeBoardCfg()">
@@ -3808,7 +3835,9 @@ const PmoView = (() => {
   function setType(t) { type = t; area = ''; try { localStorage.setItem(K, t); } catch(e) {} render(); }
   function setArea(a) { area = a; render(); }
   function openProject(btn) { DB.switchProject(btn.dataset.id); R.go('dashboard'); }
-  return { render, setType, setArea, openProject, openGuide, closeGuide, resetCache: () => {} };
+  // Para o Painel do Gerente de Projetos: a visão de decisões e ações do portfólio (tipo Diretivo), com a sugestão de corrigir e mitigar
+  function panel() { const { rows, overallocatedPeople } = collect(); return PmoViews.build('diretivo', rows, { overallocatedPeople }); }
+  return { render, setType, setArea, openProject, openGuide, closeGuide, panel, resetCache: () => {} };
 })();
 </script>
 
@@ -5083,6 +5112,14 @@ const Cloud = (() => {
     if(pid === DB.getActiveProjectId()) { try { await pullAll(); } catch(e) {} }
     return data;
   }
+  // Passa só os cards escolhidos para outra pessoa (gestão); sem nuvem devolve { local: true } para a tela gravar no navegador
+  async function reassignItems(pid, ids, to, why) {
+    if(!client || !session) return { local: true };
+    const { data, error } = await client.rpc('reassign_items', { pid, ids, to_person: to, why: why || '' });
+    if(error) { T.show('❌ ' + error.message); return null; }
+    pushAuditEvent('work_reassigned', (ids.length) + ' card(s) passados para "' + to + '"', { projectId: pid, to, ids: ids.slice(0, 50), counts: data });
+    return data;
+  }
   async function changeOwnPassword(password) {
     if(!client || !session) { T.show('⚠️ Entre na conta primeiro.'); return false; }
     if(!password || password.length < 8) { T.show('⚠️ A nova senha precisa ter pelo menos 8 caracteres.'); return false; }
@@ -5553,7 +5590,7 @@ const Cloud = (() => {
   }
 
   return { load, configure, disconnect, setUse, isConfigured, isSignedIn, getEmail, sessionStart, authProvider, renewSession, getUserId, listProfiles, projectContacts, joinTeam, myOpenItems, openItemsForManagers, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
-    compassDigest, myWorkload, saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, hoursSummary, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, markOnboarded, saveMyDetails, signOut, pullAll, flush,
+    reassignItems, compassDigest, myWorkload, saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, hoursSummary, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, markOnboarded, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument, pushRow, pushMany, deleteRow, msgTable, invokeFn,
@@ -8185,7 +8222,7 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','raci','kanban','backlog','sprints','ritos','modelos','mywork','myind','help','xray','drpmo','account','sprintnow','noproject','reports'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','raci','kanban','backlog','sprints','ritos','modelos','mywork','myind','help','xray','drpmo','account','sprintnow','noproject','reports','mgrpanel'];
   function go(id) {
     // Base nova (ou conta sem projeto): só configurações, conta e ajuda existem; o resto convida a criar o primeiro projeto
     if(typeof DB !== 'undefined' && DB.isEmpty() && !['settings', 'account', 'help', 'noproject', 'drpmo'].includes(id)) id = 'noproject';
@@ -8194,7 +8231,7 @@ const R = (() => {
       const el = document.getElementById('p-'+p);
       if(el) el.classList.toggle('on', p===id);
     });
-    const menuId = ({ xray: 'drpmo', pfkpi: 'pmoview', execview: 'board' })[id] || id; // telas que são aba de outra acendem o item da junção
+    const menuId = ({ xray: 'drpmo', pfkpi: 'pmoview' })[id] || id; // telas que são aba de outra acendem o item da junção
     document.querySelectorAll('.ntab[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===menuId));
     document.querySelectorAll('.si[data-p], .sb-xray-btn[data-p], .sb-board-btn[data-p], .sb-exec-btn[data-p], .sb-pmo-btn[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p===menuId));
     const c = document.getElementById('content');
@@ -8209,6 +8246,7 @@ const R = (() => {
     if(id === 'board' && typeof Board !== 'undefined') Board.render();
     if(id === 'execview' && typeof ExecView !== 'undefined') ExecView.render();
     if(id === 'resources' && typeof Resources !== 'undefined') Resources.render();
+    if(id === 'mgrpanel' && typeof MgrPanel !== 'undefined') MgrPanel.render();
     if(id === 'budget' && typeof Budget !== 'undefined') Budget.render();
     if(id === 'risks' && typeof Risks !== 'undefined') Risks.render();
     if(id === 'pfkpi' && typeof PfKpi !== 'undefined') PfKpi.render();
@@ -8267,7 +8305,7 @@ const Nav = (() => {
     wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento', risks:'sbg-planejamento', baseline:'sbg-planejamento',
     burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe', hours:'sbg-equipe', raci:'sbg-equipe',
     lessons:'sbg-conhecimento', meetings:'sbg-conhecimento', repository:'sbg-conhecimento', chat:'sbg-conhecimento',
-    xray:'sbg-visao', drpmo:'sbg-visao', board:'sbg-visao', execview:'sbg-visao', pmoview:'sbg-visao'
+    xray:'sbg-visao', drpmo:'sbg-visao', board:'sbg-visao', execview:'sbg-visao', mgrpanel:'sbg-visao', pmoview:'sbg-visao'
     // projetos: a lista de projetos do menu (sem página própria)
   };
   // Itens do dia a dia que ficam soltos no menu do projeto (não abrem grupo nem a área "Mais Telas")
@@ -8396,18 +8434,18 @@ const Nav = (() => {
   });
 
   const GROUP_LABEL = {
-    sbg_indicadores: 'Portfólio e Relatórios', sbg_relatorios: 'Relatórios', sbg_visao: 'Visão Geral', sbg_sistema: 'Sistema',
+    sbg_indicadores: 'Portfólio e Relatórios', sbg_relatorios: 'Relatórios', sbg_visao: 'Gerências', sbg_sistema: 'Sistema',
     sbg_decisao: 'Decisões', sbg_agil: 'Execução ágil', sbg_planejamento: 'Planejamento',
     sbg_equipe: 'Equipe', sbg_conhecimento: 'Conhecimento', sbg_projetos: 'Projetos'
   };
   // Os 4 painéis do topo não pertencem a um grupo, mas ganham a trilha "Painéis › Página"
-  const SECTION_OF = { xray:'Painéis', drpmo:'Painéis', board:'Painéis', execview:'Painéis', pmoview:'Painéis', dashboard:'Projeto' };
+  const SECTION_OF = { xray:'Painéis', drpmo:'Painéis', board:'Painéis', execview:'Painéis', mgrpanel:'Painéis', pmoview:'Painéis', dashboard:'Projeto' };
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
     wbs:'WBS', scope:'Scope Changes', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores', pmoview:'Visão do PMO', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint', modelos:'Modelos', mywork:'Meu trabalho', myind:'Meus Indicadores',
     burnout:'Burnout Radar', resources:'Colaboradores', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
-    reports:'Central de Relatórios', portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Visão Executiva', settings:'Configurações', account:'Minha conta', sprintnow:'Sprint atual', help:'Ajuda', xray:'Raio-X do Projeto'
+    reports:'Central de Relatórios', portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Painel Executivo', mgrpanel:'Painel do Gerente de Projetos', settings:'Configurações', account:'Minha conta', sprintnow:'Sprint atual', help:'Ajuda', xray:'Raio-X do Projeto'
   };
 
   function renderBreadcrumb(pageId) {
@@ -8503,7 +8541,8 @@ const CmdK = (() => {
     { label:'Indicadores do Portfólio', page:'pfkpi', icon:'chart-donut-3', group:'Indicadores' },
     { label:'Visão do PMO', page:'pmoview', icon:'binoculars', group:'Painéis' },
     { label:'Painel da Diretoria', page:'board', icon:'presentation-analytics', group:'Painéis' },
-    { label:'Visão Executiva', page:'execview', icon:'chart-infographic', group:'Painéis' },
+    { label:'Painel Executivo', page:'execview', icon:'chart-infographic', group:'Painéis' },
+    { label:'Painel do Gerente de Projetos', page:'mgrpanel', icon:'user-star', group:'Painéis' },
     { label:'Configurações', page:'settings', icon:'settings', group:'Sistema' },
     { label:'Ajuda', page:'help', icon:'help-circle', group:'Sistema' }
   ];
@@ -13434,7 +13473,7 @@ const AccessProfiles = (() => {
   const count = perms => KEYS.filter(k => perms && perms[k]).length;
   // Cada tela exige uma permissão; tela que não está aqui é de todos que têm acesso ao projeto (Meu trabalho, Kanban, Backlog, Sprints, Ritos, WBS, Horas, Matriz RACI, Lições, Ajuda).
   const PAGE_NEEDS = {
-    board: 'view_portfolio', execview: 'view_portfolio', pmoview: 'view_portfolio', pfkpi: 'view_portfolio', portfolio: 'view_portfolio', prioritization: 'view_portfolio',
+    board: 'view_portfolio', execview: 'view_portfolio', mgrpanel: 'view_team_load', pmoview: 'view_portfolio', pfkpi: 'view_portfolio', portfolio: 'view_portfolio', prioritization: 'view_portfolio',
     reports: 'view_management', xray: 'view_management', drpmo: 'view_management', dashboard: 'view_management', report: 'view_management', baseline: 'view_management', estimates: 'view_management', whatif: 'view_management',
     decisions: 'view_management', loop: 'view_management', trail: 'view_management', statusmsg: 'view_management', scope: 'view_management', stakeholders: 'view_management',
     meetings: 'view_management', repository: 'view_management', chat: 'view_management', modelos: 'view_management', risks: 'view_management',
@@ -21424,6 +21463,42 @@ const Estimates = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: services/team-capacity ─ Meu time em todos os projetos: junta cada pessoa (pelo nome) em todos os projetos, com alocação, cards em aberto, pontos e atrasos, e sugere para quem passar um card (mesmo cargo primeiro, com folga). Lógica pura, sem DOM. -->
+<script data-module="services/team-capacity">
+const TeamCapacity = (() => {
+  const k = x => String(x == null ? '' : x).trim().toLowerCase();
+  const num = v => Number.isFinite(Number(v)) ? Number(v) : 0;
+  // projects: [{ id, name, team:[{name,role,allocationPct}], items:[card], sprints:[{id,endOn}] }]; today = 'YYYY-MM-DD'
+  function build(projects, today) {
+    const by = new Map();
+    (projects || []).forEach(p => (p.team || []).forEach(m => {
+      const key = k(m && m.name); if(!key) return;
+      if(!by.has(key)) by.set(key, { key, name: String(m.name).trim(), roles: [], rows: [] });
+      const e = by.get(key); const role = String(m.role || '').trim(); if(role && !e.roles.some(r => k(r) === k(role))) e.roles.push(role);
+      const dueOf = i => ((p.sprints || []).find(x => x.id === i.sprintId) || {}).endOn || '';
+      const cards = (p.items || []).filter(i => i && i.kind !== 'epico' && i.status !== 'done' && k(i.assignee) === key)
+        .map(i => { const due = dueOf(i); return { id: i.id, title: i.title || '', kind: i.kind || 'tarefa', status: i.status, points: i.points == null || i.points === '' ? null : num(i.points), due, late: !!(due && today && due < today) }; });
+      e.rows.push({ projectId: p.id, projectName: p.name, pct: m.allocationPct != null && m.allocationPct !== '' ? num(m.allocationPct) : 100, cards });
+    }));
+    return [...by.values()].map(e => {
+      const total = e.rows.reduce((a, r) => a + r.pct, 0), open = e.rows.reduce((a, r) => a + r.cards.length, 0);
+      const points = e.rows.reduce((a, r) => a + r.cards.reduce((b, c) => b + (c.points || 0), 0), 0), late = e.rows.reduce((a, r) => a + r.cards.filter(c => c.late).length, 0);
+      const level = total > 100 ? 'over' : (total >= 85 || late > 0) ? 'limit' : 'ok';
+      return Object.assign(e, { role: e.roles.join(' / '), total, free: Math.max(0, 100 - total), open, points, late, level });
+    }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'pt-BR'));
+  }
+  // Para onde passar os cards de "from" no projeto pid: quem está na equipe do projeto, mesmo cargo primeiro, depois quem tem mais folga e menos cards
+  function candidates(people, from, projectTeamNames) {
+    const names = new Set((projectTeamNames || []).map(k)), roles = (from.roles || []).map(k);
+    return (people || []).filter(p => p.key !== from.key && names.has(p.key))
+      .map(p => ({ name: p.name, role: p.role, total: p.total, free: p.free, open: p.open, level: p.level, sameRole: roles.length > 0 && p.roles.some(r => roles.indexOf(k(r)) >= 0) }))
+      .sort((a, b) => (b.sameRole - a.sameRole) || (a.level === 'over') - (b.level === 'over') || a.total - b.total || a.open - b.open || a.name.localeCompare(b.name, 'pt-BR'));
+  }
+  const filter = (people, o) => (people || []).filter(p => (!o || !o.role || p.roles.some(r => k(r) === k(o.role))) && (!o || !o.onlyOver || p.level !== 'ok') && (!o || !o.q || k(p.name).indexOf(k(o.q)) >= 0));
+  return { build, candidates, filter };
+})();
+</script>
+
 <!-- ■ MODULE: pages/resources-js -->
 <script data-module="pages/resources-js">
 const Resources = (() => {
@@ -21465,6 +21540,69 @@ const Resources = (() => {
         <span class="res-pct ${over?'c-dn':'c-ne'}" title="${over?'Acima de 100% — sobrealocado no portfólio':'Dentro da capacidade'}">${p.total}%</span>
       </div>`;
     }).join('');
+  }
+
+  // ───────── Meu time em todos os projetos + transferência de atividades ─────────
+  const esc = escapeHtml;
+  const LV = { over: ['b-red', 'Sobrealocado'], limit: ['b-amb', 'No limite'], ok: ['b-grn', 'Com folga'] };
+  let tcAll = [], tcProjects = [], trPerson = null;
+  const todayIso = () => { try { return Clock.iso(new Date()).slice(0, 10); } catch(e) { return new Date().toISOString().slice(0, 10); } };
+  function gather() {
+    tcProjects = DB.listProjects().map(p => ({ id: p.id, name: p.name, team: DB.getForProject(p.id, 'team') || [], items: DB.getForProject(p.id, 'backlog') || [], sprints: DB.getForProject(p.id, 'sprints') || [] }));
+    tcAll = TeamCapacity.build(tcProjects, todayIso());
+  }
+  function setTeamFilter() { renderTeam(); }
+  function renderTeam() {
+    const root = document.getElementById('res-team-root'); if(!root) return;
+    gather();
+    const sel = document.getElementById('tc-role');
+    if(sel) { const cur = sel.value, roles = [...new Set(tcAll.flatMap(p => p.roles))].sort((a, b) => a.localeCompare(b, 'pt-BR')); sel.innerHTML = '<option value="">Todos</option>' + roles.map(r => '<option' + (r === cur ? ' selected' : '') + '>' + esc(r) + '</option>').join(''); }
+    const o = { role: sel ? sel.value : '', onlyOver: !!(document.getElementById('tc-over') || {}).checked, q: (document.getElementById('tc-q') || {}).value };
+    const list = TeamCapacity.filter(tcAll, o);
+    if(!tcAll.length) { root.innerHTML = '<div class="rk-empty">Nenhuma pessoa cadastrada nos projetos ainda.</div>'; return; }
+    const can = Auth.can('manage_backlog');
+    root.innerHTML = list.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Pessoa</th><th scope="col">Cargo</th><th scope="col">Alocação total</th><th scope="col">Por projeto</th><th scope="col">Cards em aberto</th><th scope="col">Situação</th><th scope="col"></th></tr></thead><tbody>'
+      + list.map(p => '<tr><td><b>' + esc(p.name) + '</b></td><td>' + esc(p.role || '—') + '</td><td><b>' + p.total + '%</b>' + (p.free ? ' <span class="set-sub">(' + p.free + '% livre)</span>' : '') + '</td><td>' + p.rows.map(r => '<span class="chip">' + esc(r.projectName) + ' ' + r.pct + '%</span>').join(' ') + '</td><td>' + p.open + (p.points ? ' <span class="set-sub">· ' + p.points + ' pts</span>' : '') + (p.late ? ' <span class="badge b-red">' + p.late + ' atrasado(s)</span>' : '') + '</td><td><span class="badge ' + LV[p.level][0] + '">' + LV[p.level][1] + '</span></td><td>' + (can && p.open ? '<button class="btn btn-sm" data-k="' + esc(p.key) + '" onclick="Resources.openTransfer(this.dataset.k)"><i class="ti ti-arrows-exchange"></i>Transferir Atividades</button>' : '') + '</td></tr>').join('')
+      + '</tbody></table></div><div class="set-sub" style="margin-top:6px">A alocação e os cards vêm de cada projeto, casando a pessoa pelo nome. "Mesmo cargo" é o critério de habilidade; só quem está na equipe do projeto do card pode recebê-lo.</div>'
+      : '<div class="rk-empty">Ninguém com esses filtros.</div>';
+  }
+  function openTransfer(key) {
+    gather(); const p = tcAll.find(x => x.key === key); if(!p) return; trPerson = { key, sel: {}, dest: {} };
+    let plan = null; try { plan = PlanVsReal.allocPlan({ name: p.name, total: p.total, rows: p.rows.map(r => Object.assign({}, r, { openCards: r.cards.length })) }); } catch(e) { plan = null; }
+    const suggested = new Set(plan ? plan.cuts.map(c => c.projectId) : []);
+    document.getElementById('tr-sub').innerHTML = '<b>' + esc(p.name) + '</b>' + (p.role ? ' · ' + esc(p.role) : '') + ' · alocação ' + p.total + '% · ' + p.open + ' card(s) em aberto. Marque os cards e escolha quem recebe em cada projeto; o sistema já indica quem tem o mesmo cargo e mais folga.' + (plan ? '<div style="margin-top:6px"><i class="ti ti-bulb" aria-hidden="true" style="color:var(--amb)"></i> <b>Sugestão do sistema:</b> ' + esc(plan.steps.join(' ')) + '</div>' : '');
+    document.getElementById('tr-body').innerHTML = p.rows.filter(r => r.cards.length).map(r => {
+      const proj = tcProjects.find(x => x.id === r.projectId), cands = TeamCapacity.candidates(tcAll, p, (proj.team || []).map(m => m.name));
+      trPerson.dest[r.projectId] = (cands[0] && cands[0].name) || '';
+      const opts = cands.length ? cands.map(c => '<option value="' + esc(c.name) + '">' + esc(c.name) + ' — ' + esc(c.role || 'sem cargo') + ' · ' + c.total + '% alocado' + (c.free ? ' (' + c.free + '% livre)' : '') + (c.sameRole ? ' · mesmo cargo' : '') + '</option>').join('') : '<option value="">Ninguém mais na equipe deste projeto</option>';
+      return '<fieldset class="tr-proj" style="border:1px solid var(--b1);border-radius:var(--r8);padding:8px 12px;margin:0 0 10px"><legend style="font-size:12.5px;font-weight:700;padding:0 6px">' + esc(r.projectName) + ' <span class="set-sub">· ' + r.cards.length + ' card(s) · ' + r.pct + '%</span></legend>'
+        + '<div style="margin-bottom:6px"><label class="set-sub" for="tr-dest-' + esc(r.projectId) + '" style="display:block">Quem recebe neste projeto</label><select class="input" id="tr-dest-' + esc(r.projectId) + '" data-pid="' + esc(r.projectId) + '" onchange="Resources.setDest(this)">' + opts + '</select></div>'
+        + r.cards.map(c => '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;padding:3px 0"><input type="checkbox" data-pid="' + esc(r.projectId) + '" data-id="' + esc(c.id) + '"' + (suggested.has(r.projectId) ? ' checked' : '') + ' onchange="Resources.pickCard()"><span><b>' + esc(c.id) + '</b> · ' + esc(c.title) + (c.points != null ? ' <span class="set-sub">· ' + c.points + ' pts</span>' : '') + (c.due ? ' <span class="set-sub">· até ' + esc(c.due.split('-').reverse().slice(0, 2).join('/')) + '</span>' : '') + (c.late ? ' <span class="badge b-red">atrasado</span>' : '') + '</span></label>').join('') + '</fieldset>';
+    }).join('') + '<div><label class="set-sub" for="tr-why" style="display:block">Motivo (opcional; vai para o histórico dos cards)</label><input class="input" id="tr-why" maxlength="200" style="width:100%" placeholder="Ex.: equilibrar a carga entre o time"></div>';
+    document.getElementById('modal-transfer').classList.remove('hidden'); pickCard();
+  }
+  function setDest(el) { if(trPerson) trPerson.dest[el.dataset.pid] = el.value; }
+  function pickCard() { const n = document.querySelectorAll('#tr-body input[type=checkbox]:checked').length, b = document.getElementById('tr-go'); if(b) { b.disabled = n === 0; b.innerHTML = '<i class="ti ti-arrows-exchange"></i>Transferir ' + (n ? n + ' Card(s)' : 'Selecionados'); } }
+  function closeTransfer() { document.getElementById('modal-transfer').classList.add('hidden'); trPerson = null; }
+  async function confirmTransfer() {
+    if(!trPerson || !Auth.guard('manage_backlog')) return;
+    const groups = {}; document.querySelectorAll('#tr-body input[type=checkbox]:checked').forEach(c => { (groups[c.dataset.pid] = groups[c.dataset.pid] || []).push(c.dataset.id); });
+    const pids = Object.keys(groups); if(!pids.length) return;
+    for(const pid of pids) if(!trPerson.dest[pid]) { T.show('⚠️ Escolha quem recebe os cards de "' + ((tcProjects.find(x => x.id === pid) || {}).name || pid) + '".'); return; }
+    const why = ((document.getElementById('tr-why') || {}).value || '').trim(); const from = (tcAll.find(x => x.key === trPerson.key) || {}).name || '';
+    const btn = document.getElementById('tr-go'); if(btn) btn.disabled = true;
+    let done = 0;
+    for(const pid of pids) {
+      const to = trPerson.dest[pid], r = await Cloud.reassignItems(pid, groups[pid], to, why);
+      if(r === null) { if(btn) btn.disabled = false; break; }
+      if(r.local) { // sem nuvem: grava só neste navegador, com o registro no histórico
+        const items = DB.getForProject(pid, 'backlog') || [], at = new Date().toISOString(), by = (typeof Auth !== 'undefined' && Auth.getName()) || 'Gestão';
+        items.forEach(i => { if(groups[pid].includes(i.id) && i.status !== 'done') { if(!Array.isArray(i.history)) i.history = []; i.history.push({ at, by, field: 'Responsável', from: i.assignee || '', to }); if(why) i.history.push({ at, by, field: '', from: '', to: 'Comentário: ' + why }); i.assignee = to; done++; } });
+        DB.setForProject(pid, 'backlog', items);
+      } else done += (r.backlog || 0);
+    }
+    if(done) { try { if(Cloud.isSignedIn()) await Cloud.pullAll(); } catch(e) { /* a tela relê no próximo ciclo */ } try { if(typeof Agile !== 'undefined' && Agile.resetCache) Agile.resetCache(); } catch(e) { /* sem cache */ } if(typeof renderAllModules === 'function') renderAllModules(); T.show('✅ ' + done + ' card(s) passaram de ' + from + ' para o time escolhido.', 6000); closeTransfer(); }
+    renderTeam(); renderPortfolio(); renderRedistribution(); try { if(typeof MgrPanel !== 'undefined') MgrPanel.render(); } catch(e) { /* tela fechada */ }
   }
 
   function render() {
@@ -21545,6 +21683,24 @@ const Resources = (() => {
     </div>`;
   }
 
+  return { render, renderTeam, setTeamFilter, openTransfer, setDest, pickCard, closeTransfer, confirmTransfer };
+})();
+</script>
+
+<!-- ■ MODULE: pages/mgrpanel-js ─ Painel do Gerente de Projetos: números e lista de decisões do portfólio + o time em todos os projetos -->
+<script data-module="pages/mgrpanel-js">
+const MgrPanel = (() => {
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const TONE = { ok: 'var(--grn)', alerta: 'var(--amb)', critico: 'var(--red)', neutro: 'var(--t1)' };
+  function render() {
+    const k = document.getElementById('mg-kpis'); if(!k) return;
+    let v = null; try { v = PmoView.panel(); } catch(e) { v = null; }
+    if(v) {
+      k.innerHTML = v.kpis.map(x => '<div class="kpi"><div class="kpi-lbl">' + esc(x.label) + '</div><div class="kpi-val" style="color:' + (TONE[x.tone] || 'var(--t1)') + '">' + esc(x.value) + '</div><div class="kpi-delta">' + esc(x.sub) + '</div></div>').join('');
+      document.getElementById('mg-list').innerHTML = v.list.length ? v.list.map(it => '<div class="rk-item" style="cursor:default"><div class="rk-main"><div class="rk-title">' + esc(it.name) + '</div><div class="rk-meta">' + it.reasons.map(r => '<span class="chip">' + esc(r) + '</span>').join('') + '</div><div style="font-size:12px;color:var(--t2);line-height:1.55;margin-top:6px">' + (it.fixes || []).map(x => '<div><i class="ti ti-bulb" aria-hidden="true" style="color:var(--amb)"></i> ' + esc(x) + '</div>').join('') + '</div></div><button class="btn btn-sm" data-id="' + esc(it.id) + '" onclick="PmoView.openProject(this)"><i class="ti ti-arrow-right"></i>Abrir</button></div>').join('') : '<div class="rk-empty">Nada pedindo decisão neste momento. 👍</div>';
+    }
+    if(typeof Resources !== 'undefined') Resources.renderTeam();
+  }
   return { render };
 })();
 </script>

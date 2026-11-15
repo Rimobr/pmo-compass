@@ -209,6 +209,7 @@ O menu esconde, a abertura direta pelo endereço é barrada e o banco nega a lei
 | Portfólio | `view_portfolio` |
 | Priorização | `view_portfolio` |
 | Central de Relatórios | `view_management` |
+| Painel do Gerente de Projetos | `view_team_load` |
 | Raio-X do Projeto | `view_management` |
 | Diagnóstico PMO | `view_management` |
 | Dashboard | `view_management` |

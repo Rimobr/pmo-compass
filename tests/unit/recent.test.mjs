@@ -265,8 +265,8 @@ test('bugs do Kanban (14/11): excluir anexo, criar item pai no combo, levar o te
 });
 
 test('telas unificadas (14/11): um item de menu por junção e as telas viram abas uma da outra', () => {
-  for (const k of ['aria-label="Visão do portfólio"', 'aria-label="Diretoria"', 'Diagnóstico de Documentos — Dr. PMO', "({ xray: 'drpmo', pfkpi: 'pmoview', execview: 'board' })[id] || id"]) assert.ok(html.includes(k), k);
-  for (const k of ['<button class="si" data-p="xray"', '<button class="si" data-p="execview"', '<button class="si" data-p="pfkpi"', '<button class="ntab" data-p="execview"']) assert.ok(!html.includes(k), 'não deve mais existir: ' + k);
+  for (const k of ['aria-label="Visão do portfólio"', 'Diagnóstico de Documentos — Dr. PMO', "({ xray: 'drpmo', pfkpi: 'pmoview' })[id] || id"]) assert.ok(html.includes(k), k);
+  for (const k of ['<button class="si" data-p="xray"', '<button class="si" data-p="pfkpi"', '<button class="ntab" data-p="execview"']) assert.ok(!html.includes(k), 'não deve mais existir: ' + k);
 });
 
 test('logs: quem alterou aparece em negrito com fundo próprio (pessoa) ou neutro e itálico (sistema), no card, nas horas e na trilha', () => {

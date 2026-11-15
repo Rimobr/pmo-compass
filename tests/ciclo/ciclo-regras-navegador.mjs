@@ -157,15 +157,15 @@ ok(r.tem && r.linhas >= 1, 'Visão do PMO: quadro Estimado × Real lista os proj
 // Telas unificadas: aba acende o item do menu da junção e o menu não tem mais os itens antigos
 r = await p.evaluate(async () => {
   const out = {};
-  for (const [pg, menu] of [['xray', 'drpmo'], ['pfkpi', 'pmoview'], ['execview', 'board']]) {
+  for (const [pg, menu] of [['xray', 'drpmo'], ['pfkpi', 'pmoview'], ['execview', 'execview'], ['mgrpanel', 'mgrpanel']]) {
     R.go(pg); await new Promise(x => setTimeout(x, 150));
     const on = document.querySelector('.si.on[data-p]'), tab = document.querySelector('#p-' + pg + ' .pg-tab[aria-selected="true"]');
     out[pg] = { menu: on && on.dataset.p, tab: !!tab, page: document.getElementById('p-' + pg).classList.contains('on') };
   }
-  out.antigos = ['xray', 'execview', 'pfkpi'].filter(x => document.querySelector('.si[data-p="' + x + '"]')).length;
+  out.antigos = ['xray', 'pfkpi'].filter(x => document.querySelector('.si[data-p="' + x + '"]')).length;
   return out;
 });
-ok(r.xray.menu === 'drpmo' && r.pfkpi.menu === 'pmoview' && r.execview.menu === 'board' && r.pfkpi.tab && r.execview.tab && r.antigos === 0, 'telas unificadas: o Raio-X em lote acende o Dr. PMO e as abas acendem o item da junção e os itens antigos saíram do menu', JSON.stringify(r));
+ok(r.xray.menu === 'drpmo' && r.pfkpi.menu === 'pmoview' && r.execview.menu === 'execview' && r.mgrpanel.menu === 'mgrpanel' && r.pfkpi.tab && r.antigos === 0, 'telas unificadas: o Raio-X em lote acende o Dr. PMO e as abas acendem o item da junção e os itens antigos saíram do menu', JSON.stringify(r));
 // Kanban: o gráfico da sprint nunca fica por cima dos botões do cabeçalho, em nenhuma largura de janela
 await p.evaluate(() => {
   const hoje = Clock.iso(Clock.today()).slice(0, 10), d = n => { const x = new Date(hoje + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };

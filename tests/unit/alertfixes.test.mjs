@@ -41,3 +41,22 @@ test('Diagnóstico de Documentos é porta única: transformar em projeto, aplica
   assert.ok(!html.includes('aria-label="Diagnóstico de documentos"'), 'sem abas duplicadas');
   assert.ok(!html.includes("'drpmo' : 'xray')"), 'o menu abre sempre o Dr. PMO');
 });
+test('Meu time em todos os projetos: soma por pessoa e sugere quem recebe (mesmo cargo, com folga)', () => {
+  const { TeamCapacity: T } = new Function(`${mod('services/team-capacity')}\nreturn { TeamCapacity };`)();
+  const projetos = [
+    { id: 'a', name: 'Barbearia', team: [{ name: 'Leandro R', role: 'QA', allocationPct: 100 }, { name: 'Ana', role: 'QA', allocationPct: 40 }, { name: 'Beto', role: 'Dev', allocationPct: 20 }], sprints: [{ id: 's1', endOn: '2026-11-10' }],
+      items: [{ id: 'US-1', title: 'x', kind: 'historia', status: 'doing', points: 3, assignee: 'leandro r', sprintId: 's1' }, { id: 'US-2', title: 'y', kind: 'bug', status: 'done', assignee: 'Leandro R' }, { id: 'EP-1', kind: 'epico', status: 'todo', assignee: 'Leandro R' }] },
+    { id: 'b', name: 'Financeira', team: [{ name: 'Leandro R', role: 'QA', allocationPct: 100 }], sprints: [], items: [{ id: 'T-1', title: 'z', kind: 'tarefa', status: 'todo', assignee: 'Leandro R' }] }];
+  const gente = T.build(projetos, '2026-11-15');
+  const l = gente.find(p => p.key === 'leandro r');
+  assert.equal(l.total, 200); assert.equal(l.level, 'over'); assert.equal(l.open, 2); assert.equal(l.late, 1); assert.equal(l.points, 3);
+  const c = T.candidates(gente, l, projetos[0].team.map(m => m.name));
+  assert.deepEqual(c.map(x => x.name), ['Ana', 'Beto']); assert.ok(c[0].sameRole && !c[1].sameRole);
+  assert.deepEqual(T.candidates(gente, l, ['Leandro R']), []);
+  assert.equal(T.filter(gente, { role: 'dev' }).length, 1); assert.equal(T.filter(gente, { onlyOver: true }).length, 1);
+});
+test('transferência de atividades: banco com reassign_items e tela com janela própria', () => {
+  const sql = readFileSync(join(root, 'supabase/migrations/20261115120000_reassign_items.sql'), 'utf8');
+  for(const k of ['reassign_items', 'is_project_manager', "kind <> 'epico'", "status <> 'done'", 'array_length(ids, 1) > 200', 'não é uma pessoa com acesso']) assert.ok(sql.includes(k), k);
+  for(const k of ['id="modal-transfer"', 'Resources.confirmTransfer()', 'reassignItems', 'id="res-team-root"', 'Transferir Atividades']) assert.ok(html.includes(k), k);
+});

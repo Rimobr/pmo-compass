@@ -632,6 +632,10 @@
         "Central de Relatórios",
         "view_management"
       ],
+      "mgrpanel": [
+        "Painel do Gerente de Projetos",
+        "view_team_load"
+      ],
       "xray": [
         "Raio-X do Projeto",
         "view_management"
