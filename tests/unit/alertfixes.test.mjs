@@ -66,3 +66,11 @@ test('nome digitado sem conta: o sistema aponta quem parece ser a mesma pessoa',
   assert.equal(T.similar('Lendro R', contas), 'Leandro R'); assert.equal(T.similar('Leandro', contas), 'Leandro R');
   assert.equal(T.similar('TimeQA', contas), ''); assert.equal(T.similar('Ana', contas), '');
 });
+test('sem ninguém para receber: o sistema traduz em falta de capacidade (priorizar, ampliar o time, avisar a diretoria)', () => {
+  const rows = [{ projectId: 'a', projectName: 'A', pct: 100, openCards: 4 }, { projectId: 'b', projectName: 'B', pct: 100, openCards: 1 }, { projectId: 'c', projectName: 'C', pct: 100, openCards: 2 }, { projectId: 'd', projectName: 'D', pct: 100, openCards: 0 }];
+  const p = P.allocPlan({ name: 'Leandro R', total: 400, receivers: 0, rows });
+  assert.equal(p.kind, 'capacity'); assert.equal(p.peopleNeeded, 3); assert.equal(p.keep, 'A'); assert.deepEqual(p.cuts.map(c => c.projectName).sort(), ['B', 'C', 'D']);
+  assert.match(p.headline, /única pessoa/); assert.match(p.steps.join(' '), /Não há para quem transferir/); assert.match(p.steps.join(' '), /Amplie o time/); assert.match(p.mitigate, /diretoria hoje/); assert.ok(p.escalate);
+  const q = P.allocPlan({ name: 'X', total: 200, receivers: 2, rows: rows.slice(0, 2) }); assert.notEqual(q.kind, 'capacity');
+  assert.ok(html.includes('id="board-capacity-root"') && html.includes('Capacidade do Time: Decisão da Diretoria'), 'alerta no Painel da Diretoria');
+});

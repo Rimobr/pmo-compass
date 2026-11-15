@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.99.1'
+  version: '2.100.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1623,6 +1623,7 @@ body.icons-failed i[data-fb]::before{
     <div style="font-size:12px;color:#444;margin-top:2px" id="board-print-meta"></div>
   </div>
 
+  <div id="board-capacity-root"></div>
   <div class="g4 rc-k" id="board-kpis-root" style="margin-bottom:16px"></div>
 
   <div class="card" style="margin-bottom:16px">
@@ -16810,6 +16811,8 @@ table[data-col-key] th.col-over-r{box-shadow:inset -3px 0 0 var(--acc)}
 .col-rz{position:absolute;top:0;right:-3px;width:8px;height:100%;cursor:col-resize;z-index:2}
 .col-rz:hover,.col-rz.on{background:var(--ab)}
 .col-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--t3);margin-top:6px}
+table.col-auto+.col-tools{margin-top:4px}
+table.col-auto+.col-tools>span{display:none}
 </style>
 
 <!-- ■ MODULE: ui/column-drag ─ Arrastar o título da coluna para mudar a ordem; puxar a borda para mudar a largura.
@@ -17063,6 +17066,34 @@ const ColumnDrag = (() => {
     if(document.readyState !== 'loading') boot();
   }
   return { enable, reset, moveOrder, isPermutation, enableGantt, enableSidebar, enableSplit };
+})();
+</script>
+
+<!-- ■ MODULE: ui/column-auto ─ Todas as telas com tabela deixam reorganizar (arrastar o título) e redimensionar (puxar a borda) as colunas, sem cada tela pedir. Observa a página e liga o ColumnDrag em toda tabela com cabeçalho; a escolha fica salva por tabela neste navegador. Fica de fora: tabela de uma coluna, com título mesclado, ou marcada com data-nodrag. -->
+<script data-module="ui/column-auto">
+const ColumnAuto = (() => {
+  let timer = null;
+  const txt = th => (th.textContent || '').replace(/\s+/g, ' ').trim();
+  // A chave nasce da tela e dos títulos: tabela com outras colunas nunca herda a ordem de outra
+  function keyFor(table) {
+    const page = table.closest('.page'), head = [...table.tHead.rows[0].cells].map(txt).join('|');
+    const modal = table.closest('.modal-ov');
+    return 'auto:' + ((modal && modal.id) || (page && page.id) || 'app') + ':' + head.slice(0, 160);
+  }
+  function scan() {
+    timer = null;
+    document.querySelectorAll('table:not([data-col-key]):not([data-nodrag])').forEach(t => {
+      try {
+        if(!t.tHead || !t.tHead.rows.length || t.tHead.rows[0].cells.length < 3 || t.closest('.print-only')) return;
+        ColumnDrag.enable(t, keyFor(t));
+        if(t.dataset.colKey) t.classList.add('col-auto');
+      } catch(e) { /* uma tabela com defeito não derruba as outras */ }
+    });
+  }
+  function soon() { if(timer == null) timer = setTimeout(scan, 200); }
+  function start() { scan(); try { new MutationObserver(soon).observe(document.body, { childList: true, subtree: true }); } catch(e) { /* sem observador: só as tabelas já ligadas */ } }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+  return { scan, keyFor };
 })();
 </script>
 
@@ -18702,6 +18733,7 @@ const PlanVsReal = (() => {
   function fixesOf(cells) { return Object.keys(cells || {}).filter(k => cells[k] && cells[k].level !== 'grn' && CELL_FIX[k]).map(k => ({ key: k, level: cells[k].level, text: CELL_FIX[k] })); }
   // Plano para quem soma mais de 100% entre projetos: de onde tirar, quanto, o que fazer com os cards em aberto e como mitigar.
   // person = { name, total, rows: [{ projectId, projectName, pct, priorityValue|null, openCards }] }. Só sugere; quem decide é o gerente.
+  // person.receivers (opcional): quantas pessoas, nas equipes dos projetos dela, poderiam receber cards; 0 = ninguém
   function allocPlan(person) {
     const rows = (person && person.rows || []).map(r => Object.assign({}, r, { pct: Number(r.pct) || 0, openCards: Number(r.openCards) || 0 }));
     const total = rows.reduce((a, r) => a + r.pct, 0), excess = total - 100;
@@ -18711,6 +18743,17 @@ const PlanVsReal = (() => {
     const order = rows.slice().sort((a, b) => hasPri ? ((a.priorityValue == null ? 1e9 : a.priorityValue) - (b.priorityValue == null ? 1e9 : b.priorityValue)) : (a.openCards - b.openCards || b.pct - a.pct));
     let left = excess; const cuts = [];
     for(const r of order) { if(left <= 0) break; const take = Math.min(left, r.pct); if(take > 0) { cuts.push({ projectId: r.projectId, projectName: r.projectName, from: r.pct, to: r.pct - take, openCards: r.openCards }); left -= take; } }
+    if(person.receivers === 0) { // ninguém para quem transferir: não é ajuste de carga, é falta de capacidade (ponto único de falha)
+      const keep = order[order.length - 1], pause = order.slice(0, -1), need = Math.max(1, Math.ceil(total / 100) - 1);
+      const names = pause.map(r => r.projectName).join(', ');
+      return { kind: 'capacity', excess, total, keep: keep.projectName, cuts: pause.map(r => ({ projectId: r.projectId, projectName: r.projectName, from: r.pct, to: 0, openCards: r.openCards })), peopleNeeded: need, escalate: true,
+        basis: hasPri ? 'a Priorização dos projetos' : 'o volume de trabalho em aberto',
+        headline: person.name + ' é a única pessoa nas equipes de ' + rows.length + ' projeto(s): ' + total + '% de alocação somada e ninguém para dividir o trabalho',
+        steps: ['Não há para quem transferir: isto é falta de capacidade do time, não um ajuste de carga entre pessoas.',
+          'Decida a prioridade: mantenha ' + keep.projectName + ' em andamento e coloque ' + names + ' em pausa ou em ritmo reduzido até haver mais gente.',
+          'Amplie o time: faltam cerca de ' + need + ' pessoa(s) em tempo integral. Dê acesso ao projeto a quem puder ajudar (Pessoas e Acesso) ou peça reforço de outra área.'],
+        mitigate: 'Avise a diretoria hoje: enquanto não houver decisão, o prazo de todos esses projetos depende de uma só pessoa. Registre o risco "ponto único de falha" e renegocie prazos e escopo com os clientes.' };
+    }
     const basis = hasPri ? 'o projeto de menor prioridade na Priorização' : 'o projeto com menos cards em aberto (menor impacto); cadastre a Priorização para decidir pelo valor';
     const steps = cuts.map(c => 'Reduzir a alocação em ' + c.projectName + ' de ' + c.from + '% para ' + c.to + '% (Burnout Radar do projeto)' + (c.openCards ? ' e passar os ' + c.openCards + ' card(s) em aberto para quem tem folga.' : '.'));
     const mitigate = (total > 150 ? 'Escalar à diretoria hoje: ' + person.name + ' está em ' + total + '%. ' : '') + 'Avisar o gerente de cada projeto, registrar a nova alocação e revisar em 1 semana até a soma ficar em 100%.';
@@ -19003,8 +19046,9 @@ const Reports = (() => {
     if(out && !last) out.innerHTML = '<div class="rk-empty">Toque em Gerar para ver o relatório.</div>';
   }
   function tableHtml(res) {
-    const tot = ReportEngine.totals(res), head = res.colunas.map(c => '<th scope="col"' + (ReportEngine.isNum(c.type) ? ' class="num"' : '') + '>' + esc(c.label) + '</th>').join('');
-    const body = res.linhas.slice(0, 500).map(l => '<tr>' + l.map((v, i) => '<td' + (ReportEngine.isNum(res.colunas[i].type) ? ' class="num"' : '') + '>' + esc(ReportEngine.fmt(v, res.colunas[i].type)) + '</td>').join('') + '</tr>').join('');
+    const nw = c => c.type === 'data' ? ' style="white-space:nowrap"' : ''; // datas nunca quebram no meio
+    const tot = ReportEngine.totals(res), head = res.colunas.map(c => '<th scope="col"' + (ReportEngine.isNum(c.type) ? ' class="num"' : '') + nw(c) + '>' + esc(c.label) + '</th>').join('');
+    const body = res.linhas.slice(0, 500).map(l => '<tr>' + l.map((v, i) => '<td' + (ReportEngine.isNum(res.colunas[i].type) ? ' class="num"' : '') + nw(res.colunas[i]) + '>' + esc(ReportEngine.fmt(v, res.colunas[i].type)) + '</td>').join('') + '</tr>').join('');
     const foot = tot ? '<tr class="rpt-tot">' + tot.map((v, i) => '<td' + (ReportEngine.isNum(res.colunas[i].type) ? ' class="num"' : '') + '>' + (v == null ? '' : esc(typeof v === 'number' ? ReportEngine.fmt(v, res.colunas[i].type) : v)) + '</td>').join('') + '</tr>' : '';
     return '<div style="overflow-x:auto"><table class="hr-tbl"><thead><tr>' + head + '</tr></thead><tbody>' + body + foot + '</tbody></table></div>'
       + '<div class="set-sub" style="margin-top:6px">' + res.linhas.length + ' linha(s)' + (res.linhas.length > 500 ? ' (a tela mostra as 500 primeiras; a exportação leva todas)' : '') + (res.truncado ? ' · mostrando só os primeiros resultados (sem linha de total)' : '') + ' · de ' + res.total + ' registro(s) lidos.</div>';
@@ -21066,6 +21110,12 @@ const Board = (() => {
     }).join('');
   }
 
+  // Alerta de capacidade para a diretoria: quem está sobrealocado e, sobretudo, quando não há ninguém para dividir o trabalho
+  function renderCapacity() {
+    const root = document.getElementById('board-capacity-root'); if(!root) return;
+    let list = []; try { list = Resources.capacityAlerts(); } catch(e) { list = []; }
+    root.innerHTML = list.length ? '<div class="card card-danger" style="margin-bottom:16px"><div class="lbl"><i class="ti ti-users-group"></i>Capacidade do Time: Decisão da Diretoria</div>' + list.map(x => MgrPanel.planHtml(x).replace(/<div class="btn-row"[\s\S]*?<\/div>/, '')).join('') + '</div>' : '';
+  }
   async function render() {
     if(typeof DB === 'undefined') return;
     if(typeof BoardHistory !== 'undefined') await BoardHistory.sync();
@@ -21074,6 +21124,7 @@ const Board = (() => {
     if(titleEl) titleEl.textContent = `${BRAND.name} — Painel da Diretoria`;
     if(metaEl) metaEl.textContent = `Portfólio completo · gerado em ${new Date().toLocaleString('pt-BR')}`;
     const rows = DB.listPortfolio().map(p => projectData(p));
+    renderCapacity();
     renderKpis(rows); // KPI strip sempre mostra o portfólio inteiro, sem filtro — é o "big picture"
     const filtered = applyFilters(rows);
     renderHeatmap(filtered);
@@ -21581,9 +21632,12 @@ const Resources = (() => {
   }
   function setTeamFilter() { renderTeam(); }
   // Decisões de sobrealocação para o painel da gestão: quem, quanto, de onde tirar, como mitigar
+  // Quantas pessoas, nas equipes dos projetos de "p", poderiam receber cards dela (0 = é o único profissional)
+  function receiversOf(p) { return p.rows.reduce((n, r) => { const proj = tcProjects.find(x => x.id === r.projectId); return n + (proj ? TeamCapacity.candidates(tcAll, p, proj.team || []).length : 0); }, 0); }
+  function planOf(p) { try { return PlanVsReal.allocPlan({ name: p.name, total: p.total, receivers: receiversOf(p), rows: p.rows.map(r => Object.assign({}, r, { openCards: r.cards.length })) }); } catch(e) { return null; } }
   function plans() {
     gather();
-    return tcAll.filter(p => p.level === 'over').map(p => { let plan = null; try { plan = PlanVsReal.allocPlan({ name: p.name, total: p.total, rows: p.rows.map(r => Object.assign({}, r, { openCards: r.cards.length })) }); } catch(e) { plan = null; } return { key: p.key, name: p.name, total: p.total, open: p.open, plan }; }).filter(x => x.plan);
+    return tcAll.filter(p => p.level === 'over').map(p => ({ key: p.key, name: p.name, total: p.total, open: p.open, plan: planOf(p) })).filter(x => x.plan);
   }
   function renderTeam() {
     const root = document.getElementById('res-team-root'); if(!root) return;
@@ -21607,7 +21661,13 @@ const Resources = (() => {
   }
   function openTransfer(key) {
     gather(); const p = tcAll.find(x => x.key === key); if(!p) return; trPerson = { key, sel: {}, dest: {} };
-    let plan = null; try { plan = PlanVsReal.allocPlan({ name: p.name, total: p.total, rows: p.rows.map(r => Object.assign({}, r, { openCards: r.cards.length })) }); } catch(e) { plan = null; }
+    const plan = planOf(p);
+    if(plan && plan.kind === 'capacity') { // ninguém para receber: a janela traduz a situação em decisões em vez de oferecer um seletor vazio
+      document.getElementById('tr-sub').innerHTML = '<b>' + esc(p.name) + '</b>' + (p.role ? ' · ' + esc(p.role) : '') + ' · alocação ' + p.total + '% · ' + p.open + ' card(s) em aberto';
+      document.getElementById('tr-body').innerHTML = '<div class="card card-danger" style="margin:0"><div style="font-size:13.5px;font-weight:700;margin-bottom:6px"><i class="ti ti-alert-triangle" aria-hidden="true"></i> ' + esc(plan.headline) + '</div><div style="font-size:12.5px;line-height:1.65"><b>O que decidir:</b><ol style="margin:4px 0 6px 18px;padding:0">' + plan.steps.map(x => '<li>' + esc(x) + '</li>').join('') + '</ol><b>Como mitigar:</b> ' + esc(plan.mitigate) + '</div></div>';
+      const go = document.getElementById('tr-go'); if(go) { go.disabled = true; go.innerHTML = '<i class="ti ti-arrows-exchange"></i>Sem quem receba'; }
+      document.getElementById('modal-transfer').classList.remove('hidden'); return;
+    }
     const suggested = new Set(plan ? plan.cuts.map(c => c.projectId) : []);
     document.getElementById('tr-sub').innerHTML = '<b>' + esc(p.name) + '</b>' + (p.role ? ' · ' + esc(p.role) : '') + ' · alocação ' + p.total + '% · ' + p.open + ' card(s) em aberto. Marque os cards e escolha quem recebe em cada projeto; o sistema já indica quem tem o mesmo cargo e mais folga.' + (plan ? '<div style="margin-top:6px"><i class="ti ti-bulb" aria-hidden="true" style="color:var(--amb)"></i> <b>Sugestão do sistema:</b> ' + esc(plan.steps.join(' ')) + '</div>' : '');
     document.getElementById('tr-body').innerHTML = p.rows.filter(r => r.cards.length).map(r => {
@@ -21722,7 +21782,7 @@ const Resources = (() => {
     </div>`;
   }
 
-  return { render, renderTeam, plans, setTeamFilter, openTransfer, setDest, pickCard, closeTransfer, confirmTransfer };
+  return { render, renderTeam, plans, capacityAlerts: () => { try { return plans(); } catch(e) { return []; } }, setTeamFilter, openTransfer, setDest, pickCard, closeTransfer, confirmTransfer };
 })();
 </script>
 
@@ -21731,6 +21791,14 @@ const Resources = (() => {
 const MgrPanel = (() => {
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const TONE = { ok: 'var(--grn)', alerta: 'var(--amb)', critico: 'var(--red)', neutro: 'var(--t1)' };
+  // Uma decisão de sobrealocação: ajuste entre pessoas (transferir) ou falta de capacidade (priorizar e ampliar o time)
+  function planHtml(x) {
+    const cap = x.plan.kind === 'capacity';
+    return '<div style="background:var(--s1);border:1px solid ' + (cap ? 'var(--rb)' : 'var(--b1)') + ';border-radius:var(--r8);padding:10px 12px;margin-bottom:8px"><div style="font-size:13px;font-weight:600;margin-bottom:4px">' + (cap ? '<i class="ti ti-alert-triangle" aria-hidden="true" style="color:var(--red)"></i> ' + esc(x.plan.headline) : esc(x.name) + ' está em ' + x.total + '% (' + x.plan.excess + ' pontos acima de 100%), com ' + x.open + ' card(s) em aberto') + '</div>'
+      + '<div style="font-size:12.5px;color:var(--t1);line-height:1.6"><b>' + (cap ? 'O que decidir:' : 'O que fazer:') + '</b>' + (cap ? '<ol style="margin:3px 0 3px 18px;padding:0">' + x.plan.steps.map(t => '<li>' + esc(t) + '</li>').join('') + '</ol>' : ' ' + x.plan.steps.map(esc).join(' ')) + '</div>'
+      + '<div style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-top:3px"><b>Como mitigar:</b> ' + esc(x.plan.mitigate) + '</div>'
+      + (cap ? '' : '<div class="btn-row" style="margin-top:8px"><button class="btn btn-sm btn-acc" data-perm="manage_backlog" data-k="' + esc(x.key) + '" onclick="Resources.openTransfer(this.dataset.k)"><i class="ti ti-arrows-exchange"></i>Escolher Cards e Quem Recebe</button></div>') + '</div>';
+  }
   function render() {
     const k = document.getElementById('mg-kpis'); if(!k) return;
     let v = null; try { v = PmoView.panel(); } catch(e) { v = null; }
@@ -21740,10 +21808,10 @@ const MgrPanel = (() => {
     }
     const pc = document.getElementById('mg-plans-card'), pr = document.getElementById('mg-plans');
     let plans = []; try { plans = Resources.plans(); } catch(e) { plans = []; }
-    if(pc && pr) { pc.style.display = plans.length ? '' : 'none'; pr.innerHTML = plans.map(x => '<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px;margin-bottom:8px"><div style="font-size:13px;font-weight:600;margin-bottom:4px">' + esc(x.name) + ' está em ' + x.total + '% (' + x.plan.excess + ' pontos acima de 100%), com ' + x.open + ' card(s) em aberto</div><div style="font-size:12.5px;color:var(--t1);line-height:1.6"><b>O que fazer:</b> ' + x.plan.steps.map(esc).join(' ') + '</div><div style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-top:3px"><b>Como mitigar:</b> ' + esc(x.plan.mitigate) + '</div><div class="btn-row" style="margin-top:8px"><button class="btn btn-sm btn-acc" data-perm="manage_backlog" data-k="' + esc(x.key) + '" onclick="Resources.openTransfer(this.dataset.k)"><i class="ti ti-arrows-exchange"></i>Escolher Cards e Quem Recebe</button></div></div>').join(''); }
+    if(pc && pr) { pc.style.display = plans.length ? '' : 'none'; pr.innerHTML = plans.map(x => MgrPanel.planHtml(x)).join(''); }
     if(typeof Resources !== 'undefined') Resources.renderTeam();
   }
-  return { render };
+  return { render, planHtml };
 })();
 </script>
 
