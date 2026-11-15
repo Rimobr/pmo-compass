@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.95.0'
+  version: '2.96.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1085,8 +1085,8 @@ body.icons-failed i[data-fb]::before{
     <button class="sb-group-hdr" onclick="Nav.toggleGroup('sbg-visao')" title="Painéis que juntam todos os projetos"><i class="ti ti-layout-grid sb-gico"></i>Visão Geral<i class="ti ti-chevron-right sb-gchev"></i></button>
     <div class="sb-group-body">
       <button class="si" data-p="drpmo" onclick="R.go((typeof Methodology !== 'undefined' && Methodology.type() === 'quadro') || DB.isEmpty() ? 'drpmo' : 'xray')" title="Aponte os arquivos que você já tem: sem projeto, o Dr. PMO diz se é quadro ou projeto, a metodologia, os riscos e os buracos; com projeto aberto, o Raio-X aplica os achados depois de você revisar"><i class="ti ti-stethoscope"></i>Diagnóstico de Documentos</button>
-      <button class="si" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button>
-      <button class="si" data-p="pmoview" onclick="R.go('pmoview')"><i class="ti ti-binoculars"></i>Visão do PMO</button>
+      <button class="si" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Visão da Diretoria</button>
+      <button class="si" data-p="pmoview" onclick="R.go('pmoview')"><i class="ti ti-binoculars"></i>Governança do Portfólio</button>
     </div>
   </div>
 
@@ -3539,8 +3539,27 @@ const PmoViews = (() => {
 
   // rows: um item por projeto, já com { id, name, area, ev (PortfolioKpi.evaluate), days, hasBaseline, finishVar, risksNoOwner, risksOverdue, lessons:{total,applied},
   //   docs, pendingActions, blocked, doneLast28, highLoad, overallocated, decisionsOpen }.   ctx: { overallocatedPeople, area }
+  // Todo motivo de atenção traz o que fazer (corrigir) e como reduzir o dano (mitigar). A ordem importa: o primeiro padrão que casar vale.
+  const FIXES = [
+    [/risco\(s\) cr[ií]tico\(s\) sem respons/, 'Corrigir: nomear hoje um responsável para cada risco crítico. Mitigar: definir resposta e data de revisão em até 7 dias.'],
+    [/risco\(s\) cr[ií]tico/, 'Corrigir: o dono de cada risco executa o plano de resposta com data. Mitigar: ter o plano B pronto e revisar a nota toda semana.'],
+    [/revis(ão|ões|ao).*risco/, 'Corrigir: reunir o dono de cada risco e revisar probabilidade e resposta. Mitigar: fixar a próxima revisão em até 30 dias.'],
+    [/sem linha de base|linha de base(?! )/, 'Corrigir: salvar a linha de base (Linha de Base → Salvar Agora) assim que entregas e orçamento estiverem prontos. Mitigar: até lá, medir o prazo pelo cronograma.'],
+    [/depois d[ao] (linha de base|plano)/, 'Corrigir: replanejar o término (cortar escopo ou reforçar o caminho crítico) e avisar as partes interessadas. Mitigar: acompanhar o desvio toda semana.'],
+    [/sem atualiza/, 'Corrigir: pedir ao gerente que atualize o status hoje. Mitigar: combinar uma atualização semanal fixa.'],
+    [/custo/, 'Corrigir: revisar as linhas do orçamento com o gerente e pedir a previsão no término. Mitigar: exigir aprovação para novos gastos até estabilizar.'],
+    [/escopo|mudan[çc]a/, 'Corrigir: decidir cada mudança (aprovar ou recusar) com o impacto em dias e R$ à vista. Mitigar: fixar um dia por semana para decidir escopo.'],
+    [/decis/, 'Corrigir: decidir na próxima reunião ou pedir a informação que falta ao gerente em 2 dias. Mitigar: decisão parada atrasa a entrega, então registrar o prazo limite.'],
+    [/sobrealoc|redistribuir|carga|sobrecarreg/, 'Corrigir: passar o card ou entrega menos prioritário de quem está no limite para quem tem folga. Mitigar: renegociar prazo e evitar horas extras seguidas.'],
+    [/bloquead|impediment/, 'Corrigir: resolver o bloqueio com quem o causa em até 3 dias. Mitigar: se passar disso, escalar ao patrocinador.'],
+    [/a[çc][ãa]o\(s\)? de reuni|a[çc][õo]es? de reuni/, 'Corrigir: cobrar cada responsável com data. Mitigar: abrir a próxima reunião revisando as pendências.'],
+    [/sem entregas cadastradas|planejamento/, 'Corrigir: apoiar o gerente a montar a WBS (pode importar a planilha). Mitigar: começar pelas 3 entregas principais.'],
+    [/prazo|atrasad/, 'Corrigir: replanejar as entregas atrasadas com o responsável (nova data ou corte de escopo) esta semana. Mitigar: acompanhar o ritmo e escalar se passar de 2 semanas.'],
+    [/em risco/, 'Corrigir: abrir o Dashboard e tratar primeiro o alerta mais grave. Mitigar: decidir continuar, pausar ou replanejar na próxima reunião da diretoria.']
+  ];
+  function fixFor(reason) { const t = String(reason || ''); const m = FIXES.find(x => x[0].test(t)); return m ? m[1] : 'Corrigir: abrir o projeto e tratar a causa com o gerente. Mitigar: definir responsável e data.'; }
   function attention(rows, why) {
-    return rows.map(r => ({ id: r.id, name: r.name, reasons: why(r).filter(Boolean) })).filter(x => x.reasons.length).sort((a, b) => b.reasons.length - a.reasons.length);
+    return rows.map(r => { const reasons = why(r).filter(Boolean); return { id: r.id, name: r.name, reasons, fixes: [...new Set(reasons.map(fixFor))] }; }).filter(x => x.reasons.length).sort((a, b) => b.reasons.length - a.reasons.length);
   }
 
   function build(type, rowsAll, ctx = {}) {
@@ -3614,7 +3633,7 @@ const PmoViews = (() => {
     }
     return { type, label: INFO[type].label, foco: INFO[type].foco, kpis, listTitle, list, note, projects: rows.length };
   }
-  return { ORDER, INFO, build };
+  return { ORDER, INFO, build, fixFor };
 })();
 </script>
 
@@ -3756,7 +3775,7 @@ const PmoView = (() => {
     const COL = { grn: 'var(--grn)', amb: 'var(--amb)', red: 'var(--red)' }, cols = [['entregas', 'Entregas'], ['sprint', 'Sprint'], ['custo', 'Custo'], ['horas', 'Horas'], ['impedimentos', 'Impedimentos'], ['riscos', 'Riscos'], ['partes', 'Partes interessadas'], ['escopo', 'Escopo']];
     const cell = c => c ? '<td style="color:' + COL[c.level] + ';font-size:12px">' + esc(c.text) + '</td>' : '<td class="set-sub">sem dados</td>';
     root.innerHTML = '<table class="hr-tbl"><thead><tr><th scope="col">Projeto</th>' + cols.map(c => '<th scope="col">' + c[1] + '</th>').join('') + '<th scope="col" class="num">Desvios</th></tr></thead><tbody>'
-      + rows.map(r => '<tr><td><b>' + esc(r.name) + '</b></td>' + cols.map(c => cell(r.cells[c[0]])).join('') + '<td class="num">' + (r.known ? (r.red ? '<span class="badge b-red">' + r.red + ' crítico(s)</span> ' : '') + (r.amb ? '<span class="badge b-amb">' + r.amb + ' atenção</span>' : '') + (!r.red && !r.amb ? '<span class="badge b-grn">no ritmo</span>' : '') : '<span class="badge b-neu">sem dados</span>') + '</td></tr>').join('')
+      + rows.map(r => '<tr><td><b>' + esc(r.name) + '</b></td>' + cols.map(c => cell(r.cells[c[0]])).join('') + '<td class="num">' + (r.known ? (r.red ? '<span class="badge b-red">' + r.red + ' crítico(s)</span> ' : '') + (r.amb ? '<span class="badge b-amb">' + r.amb + ' atenção</span>' : '') + (!r.red && !r.amb ? '<span class="badge b-grn">no ritmo</span>' : '') : '<span class="badge b-neu">sem dados</span>') + '</td></tr>' + (r.fixes && r.fixes.length ? '<tr><td colspan="' + (cols.length + 2) + '" style="font-size:12px;color:var(--t2);padding:4px 10px 10px"><b>Como corrigir — ' + esc(r.name) + ':</b> ' + r.fixes.map(x => '<span style="color:' + COL[x.level] + '">' + esc(cols.find(c => c[0] === x.key)[1]) + '</span>: ' + esc(x.text)).join(' · ') + '</td></tr>' : '')).join('')
       + '</tbody></table><div style="font-size:11.5px;color:var(--t3);margin-top:8px">Esperado = o que o sistema calcula (cronograma, linha ideal, jornada, histórico do próprio projeto); real = o que foi apontado ou aconteceu. "Sem dados" quando falta uma das bases. Cada tema é explicado na própria tela do projeto.</div>';
   }
   function render() {
@@ -3774,7 +3793,7 @@ const PmoView = (() => {
     el('pv-kpis').innerHTML = v.kpis.map(x => `<div class="kpi"><div class="kpi-lbl"><span class="sdot ${DOT[x.tone] || 'sdot-acc'}"></span>${esc(x.label)}${x.tip ? `<span class="help-q" data-help="${esc(x.tip)}" onclick="event.stopPropagation();HelpTip.toggle(this)">?</span>` : ''}</div><div class="kpi-val" style="color:${TONE[x.tone] || 'var(--t1)'}">${esc(x.value)}</div><div class="kpi-delta">${esc(x.sub)}</div></div>`).join('');
     el('pv-list-title').textContent = v.listTitle;
     el('pv-list').innerHTML = v.list.length
-      ? v.list.map(it => `<div class="rk-item" style="cursor:default"><div class="rk-main"><div class="rk-title">${Methodology.tag(it.id)}${esc(it.name)}</div><div class="rk-meta">${it.reasons.map(r => `<span class="chip">${esc(r)}</span>`).join('')}</div></div><button class="btn btn-sm" data-id="${esc(it.id)}" onclick="PmoView.openProject(this)"><i class="ti ti-arrow-right"></i>Abrir</button></div>`).join('')
+      ? v.list.map(it => `<div class="rk-item" style="cursor:default"><div class="rk-main"><div class="rk-title">${Methodology.tag(it.id)}${esc(it.name)}</div><div class="rk-meta">${it.reasons.map(r => `<span class="chip">${esc(r)}</span>`).join('')}</div><div class="rk-fix" style="font-size:12px;color:var(--t2);line-height:1.55;margin-top:6px">${(it.fixes || []).map(x => `<div><i class="ti ti-bulb" aria-hidden="true" style="color:var(--amb)"></i> ${esc(x)}</div>`).join('')}</div></div><button class="btn btn-sm" data-id="${esc(it.id)}" onclick="PmoView.openProject(this)"><i class="ti ti-arrow-right"></i>Abrir</button></div>`).join('')
       : `<div class="rk-empty">${v.projects ? 'Nada pedindo atenção neste momento. 👍' : 'Nenhum projeto nesta visão.'}</div>`;
     el('pv-note').textContent = v.note;
     renderPvr();
@@ -11308,6 +11327,7 @@ const Stakeholders = (() => {
             <div>
               <div style="font-size:13.5px;font-weight:600;color:var(--t1)">1 stakeholder crítico sem contato há ${d===null?'—':d} dias</div>
               <div style="font-size:12px;color:var(--t2);margin-top:2px">${escapeHtml(critical.name)} — ${escapeHtml(critical.role)}. ${escapeHtml(critical.notes||'')}</div>
+              <div class="how-fix" style="font-size:12px;color:var(--t2);line-height:1.55;margin-top:4px"><b>Como corrigir:</b> marcar uma conversa de 15 minutos esta semana (o botão ao lado redige a mensagem) e registrar o contato. Para mitigar, combinar uma cadência fixa de contato.</div>
             </div>
             <button class="btn btn-red btn-sm" style="flex-shrink:0;margin-left:auto" title="A IA escreve uma mensagem de reaproximação no Chat contextual" data-q="${escapeHtml(`Escreva uma mensagem curta e cordial para reengajar ${critical.name} (${critical.role}), que está sem contato há ${d === null ? 'muito tempo' : d + ' dias'}. Contexto: ${critical.notes || 'sem observações'}. Tom profissional, com um convite claro para uma conversa de 15 minutos.`)}" onclick="Chat.ask(this.dataset.q)"><i class="ti ti-message-2"></i>Redigir Mensagem (IA)</button>
           </div>
@@ -11492,7 +11512,7 @@ const Dashboard = (() => {
         else {
           const dt = new Date(sf.projectedEnd + 'T00:00:00').toLocaleDateString('pt-BR');
           fEl.textContent = dt;
-          if(sf.deltaDays > 0) { fSub.innerHTML = `<i class="ti ti-alert-triangle"></i>${sf.deltaDays} dia(s) de atraso no ritmo atual`; if(fDot) fDot.className = 'sdot sdot-red'; }
+          if(sf.deltaDays > 0) { fSub.innerHTML = `<i class="ti ti-alert-triangle"></i>${sf.deltaDays} dia(s) de atraso no ritmo atual`; fSub.title = 'Como corrigir: replanejar a data com o time ou cortar escopo da sprint. Mitigar: acompanhar o burndown todo dia.'; if(fDot) fDot.className = 'sdot sdot-red'; }
           else if(sf.deltaDays < 0) { fSub.innerHTML = `<i class="ti ti-trending-up"></i>${Math.abs(sf.deltaDays)} dia(s) de antecipação no ritmo atual`; if(fDot) fDot.className = 'sdot sdot-grn'; }
           else { fSub.textContent = 'no prazo, no ritmo atual'; if(fDot) fDot.className = 'sdot sdot-grn'; }
         }
@@ -12547,7 +12567,7 @@ const Scope = (() => {
           <i class="ti ti-alert-triangle" style="color:var(--red);font-size:18px;flex-shrink:0;margin-top:1px"></i>
           <div>
             <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:2px">${open.length} mudança(s) aberta(s) — impacto total estimado: +${totalDays} dias e +${fmtMoney(totalCost)}</div>
-            <div style="font-size:12px;color:var(--t2)">Revise e decida antes que o impacto acumule.</div>
+            <div style="font-size:12px;color:var(--t2)">Revise e decida antes que o impacto acumule.</div><div class="how-fix" style="font-size:12px;color:var(--t2);line-height:1.55;margin-top:4px"><b>Como corrigir:</b> abrir cada mudança, conferir o impacto em dias e R$ e aprovar, recusar ou negociar. Para mitigar, só aprovar com a nova data e o orçamento registrados e avisar as partes interessadas.</div>
           </div>
           <button class="btn btn-red btn-sm" data-perm="business" style="flex-shrink:0;margin-left:auto" onclick="T.show('🔒 Em breve — congelar novas solicitações. Por enquanto, use Rejeitar ou Mover para a Fase 2 em cada mudança.', 5000)"><i class="ti ti-lock"></i>Congelar · em breve</button>
         </div>`;
@@ -17655,7 +17675,7 @@ const EffortCompare = (() => {
     const list = (items || []).filter(i => i.kind !== 'epico' && i.status !== 'done' && Number(i.points) > 0).map(i => {
       const est = Math.round(Number(i.points) * hpp * 4) / 4, real = Math.round(sumFor(entries, i) * 4) / 4, pct = est > 0 ? Math.round(real / est * 100) : null;
       const level = pct == null ? 'neu' : pct > 100 ? 'red' : pct >= 80 ? 'amb' : 'grn';
-      const why = level === 'red' ? 'já apontou mais horas do que o estimado e o card não está concluído' : level === 'amb' ? 'consumiu ' + pct + '% do estimado e ainda não terminou' : real === 0 ? 'ainda sem horas apontadas' : 'dentro do estimado';
+      const why = level === 'red' ? 'já apontou mais horas do que o estimado e o card não está concluído. Corrigir: reestimar o que falta com o responsável ou dividir o card; mitigar: avisar o gerente da nova data' : level === 'amb' ? 'consumiu ' + pct + '% do estimado e ainda não terminou. Corrigir: confirmar com o responsável quanto falta; mitigar: reservar folga ou ajuda' : real === 0 ? 'ainda sem horas apontadas' : 'dentro do estimado';
       return { id: i.id, title: i.title, assignee: i.assignee || '', est, real, pct, level, why };
     }).filter(r => r.est > 0).sort((a, b) => (b.pct || 0) - (a.pct || 0) || a.id.localeCompare(b.id));
     return { hpp, list };
@@ -18595,9 +18615,37 @@ const PlanVsReal = (() => {
       escopo: sc.real != null ? { text: 'declarado +' + sc.declared + ' d × real ' + (sc.real > 0 ? '+' : '') + sc.real + ' d', level: sc.level } : null
     };
     const vals = Object.keys(cells).map(k => cells[k]).filter(Boolean);
-    return { cells, red: vals.filter(c => c.level === 'red').length, amb: vals.filter(c => c.level === 'amb').length, known: vals.length, worst: vals.reduce((m, c) => Math.max(m, WORST[c.level] || 0), 0) };
+    return { cells, fixes: fixesOf(cells), red: vals.filter(c => c.level === 'red').length, amb: vals.filter(c => c.level === 'amb').length, known: vals.length, worst: vals.reduce((m, c) => Math.max(m, WORST[c.level] || 0), 0) };
   }
-  return { impediments, decisions, riskReviews, stakeholders, scopeSuggest, scopeReality, meetingDigest, pace, projectRow, days, median };
+  // O que fazer quando um tema do quadro Estimado × Real sai do esperado (corrigir e mitigar)
+  const CELL_FIX = {
+    entregas: 'Replanejar as entregas atrasadas com o responsável (nova data ou corte de escopo); mitigar acompanhando o ritmo toda semana.',
+    sprint: 'Rever o que cabe na sprint com o time: tirar ou dividir o que não vai terminar; mitigar puxando ajuda para o que está parado.',
+    custo: 'Conferir os lançamentos de custo contra as horas apontadas e atualizar a previsão; mitigar travando gasto novo sem aprovação.',
+    horas: 'Pedir o apontamento dos dias sem lançamento (use a estimativa do sistema e confirme); mitigar combinando um horário fixo para apontar.',
+    impedimentos: 'Resolver o impedimento mais antigo com o dono do bloqueio; mitigar escalando ao patrocinador se passar do esperado.',
+    riscos: 'Revisar os riscos vencidos com os donos e marcar a próxima revisão; mitigar mantendo o plano B de cada risco crítico.',
+    partes: 'Contatar as partes interessadas sem retorno e registrar o contato; mitigar combinando uma cadência fixa de comunicação.',
+    escopo: 'Atualizar o declarado das mudanças aprovadas com o desvio real do término; mitigar exigindo impacto em dias antes de aprovar novas.'
+  };
+  function fixesOf(cells) { return Object.keys(cells || {}).filter(k => cells[k] && cells[k].level !== 'grn' && CELL_FIX[k]).map(k => ({ key: k, level: cells[k].level, text: CELL_FIX[k] })); }
+  // Plano para quem soma mais de 100% entre projetos: de onde tirar, quanto, o que fazer com os cards em aberto e como mitigar.
+  // person = { name, total, rows: [{ projectId, projectName, pct, priorityValue|null, openCards }] }. Só sugere; quem decide é o gerente.
+  function allocPlan(person) {
+    const rows = (person && person.rows || []).map(r => Object.assign({}, r, { pct: Number(r.pct) || 0, openCards: Number(r.openCards) || 0 }));
+    const total = rows.reduce((a, r) => a + r.pct, 0), excess = total - 100;
+    if(excess <= 0 || rows.length < 2) return null;
+    const hasPri = rows.some(r => r.priorityValue != null);
+    // quem reduz primeiro: menor prioridade (se houver pontuação); senão o projeto com menos cards em aberto (menor impacto)
+    const order = rows.slice().sort((a, b) => hasPri ? ((a.priorityValue == null ? 1e9 : a.priorityValue) - (b.priorityValue == null ? 1e9 : b.priorityValue)) : (a.openCards - b.openCards || b.pct - a.pct));
+    let left = excess; const cuts = [];
+    for(const r of order) { if(left <= 0) break; const take = Math.min(left, r.pct); if(take > 0) { cuts.push({ projectId: r.projectId, projectName: r.projectName, from: r.pct, to: r.pct - take, openCards: r.openCards }); left -= take; } }
+    const basis = hasPri ? 'o projeto de menor prioridade na Priorização' : 'o projeto com menos cards em aberto (menor impacto); cadastre a Priorização para decidir pelo valor';
+    const steps = cuts.map(c => 'Reduzir a alocação em ' + c.projectName + ' de ' + c.from + '% para ' + c.to + '% (Burnout Radar do projeto)' + (c.openCards ? ' e passar os ' + c.openCards + ' card(s) em aberto para quem tem folga.' : '.'));
+    const mitigate = (total > 150 ? 'Escalar à diretoria hoje: ' + person.name + ' está em ' + total + '%. ' : '') + 'Avisar o gerente de cada projeto, registrar a nova alocação e revisar em 1 semana até a soma ficar em 100%.';
+    return { excess, total, cuts, basis, steps, mitigate, escalate: total > 150 };
+  }
+  return { impediments, decisions, riskReviews, stakeholders, scopeSuggest, scopeReality, meetingDigest, pace, projectRow, fixesOf, allocPlan, days, median };
 })();
 </script>
 
@@ -19225,7 +19273,7 @@ const Budget = (() => {
 
     const note = document.getElementById('bud-note-root');
     if(note) note.innerHTML = m.unlinkedCount
-      ? `<i class="ti ti-alert-triangle" style="color:var(--amb)"></i> ${m.unlinkedCount} linha(s) de orçamento sem entrega da WBS vinculada — não entram no cálculo de EV/CPI.`
+      ? `<i class="ti ti-alert-triangle" style="color:var(--amb)"></i> ${m.unlinkedCount} linha(s) de orçamento sem entrega da WBS vinculada — não entram no cálculo de EV/CPI. <b>Como corrigir:</b> edite cada linha e escolha a entrega da WBS dela; se não houver entrega, cadastre-a na WBS primeiro.`
       : '';
   }
 
@@ -19475,7 +19523,7 @@ const Burnout = (() => {
     const critical = rows.filter(x => statusOf(x.e.pct) === 'critico');
     if(alertRoot) {
       alertRoot.innerHTML = critical.length
-        ? `<div class="card card-danger"><div style="display:flex;align-items:center;gap:12px"><i class="ti ti-alert-triangle" style="color:var(--red);font-size:22px;flex-shrink:0"></i><div><div style="font-size:14px;font-weight:600">${critical.length} colaborador(es) em zona crítica</div><div style="font-size:12px;color:var(--t2);margin-top:2px">${critical.map(x => escapeHtml(x.m.name)).join(', ')} — carga de trabalho acima de 85%.</div></div></div></div>`
+        ? `<div class="card card-danger"><div style="display:flex;align-items:center;gap:12px"><i class="ti ti-alert-triangle" style="color:var(--red);font-size:22px;flex-shrink:0"></i><div><div style="font-size:14px;font-weight:600">${critical.length} colaborador(es) em zona crítica</div><div style="font-size:12px;color:var(--t2);margin-top:2px">${critical.map(x => escapeHtml(x.m.name)).join(', ')} — carga de trabalho acima de 85%.</div><div style="font-size:12px;color:var(--t2);line-height:1.55;margin-top:4px"><b>Como corrigir:</b> passar o card ou entrega menos prioritário de cada um para quem tem folga (a sugestão está na lista abaixo). Para mitigar, renegociar o prazo e evitar horas extras seguidas.</div></div></div></div>`
         : '';
     }
     const listRoot = document.getElementById('burnout-list-root');
@@ -21439,7 +21487,9 @@ const Resources = (() => {
       });
       const withScore = withPriority.filter(r => r.priorityValue != null);
       const suggestedCut = withScore.length ? withScore.sort((a,b) => a.priorityValue - b.priorityValue)[0] : null;
-      return { name:p.name, total:p.total, rows:withPriority, suggestedCut };
+      withPriority.forEach(r => { const bl = DB.getForProject(r.projectId, 'backlog') || []; const nm = String(p.name || '').trim().toLowerCase(); r.openCards = bl.filter(i => i.kind !== 'epico' && i.status !== 'done' && String(i.assignee || '').trim().toLowerCase() === nm).length; });
+      let plan = null; try { plan = PlanVsReal.allocPlan({ name: p.name, total: p.total, rows: withPriority }); } catch(e) { plan = null; }
+      return { name:p.name, total:p.total, rows:withPriority, suggestedCut, plan };
     });
   }
 
@@ -21450,9 +21500,14 @@ const Resources = (() => {
     if(!suggestions.length) { root.innerHTML = ''; return; }
     const rows = suggestions.map(s => {
       const breakdown = s.rows.map(r => `<span class="badge ${s.suggestedCut && r.projectId===s.suggestedCut.projectId ? 'b-red' : 'b-neu'}">${escapeHtml(r.projectName)} ${r.pct}%${r.priorityValue!=null?' · prioridade '+r.priorityValue:''}</span>`).join(' ');
-      const note = s.suggestedCut
-        ? `Menor prioridade no portfólio: <strong>${escapeHtml(s.suggestedCut.projectName)}</strong> — candidato a reduzir a alocação de ${escapeHtml(s.name)} lá primeiro.`
-        : `Cadastre a Priorização dos projetos envolvidos pra saber qual reduzir primeiro.`;
+      const pl = s.plan;
+      const note = pl
+        ? '<div style="color:var(--t1);font-weight:600;margin-bottom:3px"><i class="ti ti-bulb" aria-hidden="true" style="color:var(--amb)"></i> Como corrigir (' + pl.excess + ' pontos acima de 100%)</div>'
+          + '<div style="margin-bottom:3px">Sugestão: reduzir em ' + escapeHtml(pl.basis) + '.</div>'
+          + '<ol style="margin:0 0 4px 18px;padding:0">' + pl.steps.map(x => '<li>' + escapeHtml(x) + '</li>').join('') + '</ol>'
+          + '<div><b>Como mitigar:</b> ' + escapeHtml(pl.mitigate) + '</div>'
+          + '<div class="btn-row" style="margin-top:6px">' + pl.cuts.map(c => '<button class="btn btn-sm" data-id="' + escapeHtml(c.projectId) + '" onclick="DB.switchProject(this.dataset.id);R.go(&quot;burnout&quot;)"><i class="ti ti-heartbeat"></i>Abrir Burnout de ' + escapeHtml(c.projectName) + '</button>').join('') + '</div>'
+        : 'Cadastre a Priorização dos projetos envolvidos para saber qual reduzir primeiro.';
       return `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:10px 12px">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px"><span style="font-size:12.5px;font-weight:600">${escapeHtml(s.name)} — ${s.total}% no portfólio</span></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${breakdown}</div>
@@ -21631,7 +21686,7 @@ const WBS = (() => {
       const div = document.createElement('div');
       div.id = 'wbs-gargalo-line';
       div.style.cssText = 'background:var(--rd);border:1px solid var(--rb);border-radius:var(--r8);padding:10px 12px;font-size:12.5px;color:var(--t2)';
-      div.innerHTML = `<i class="ti ti-alert-triangle" style="color:var(--red)"></i> <strong style="color:var(--t1)">Gargalo crítico:</strong> ${escapeHtml(worst.label)}${worst.pct!=null?' em '+worst.pct+'%':''} está bloqueando ${worstCount} outro${worstCount>1?'s':''} item${worstCount>1?'s':''} (via predecessoras cadastradas).`;
+      div.innerHTML = `<i class="ti ti-alert-triangle" style="color:var(--red)"></i> <strong style="color:var(--t1)">Gargalo crítico:</strong> ${escapeHtml(worst.label)}${worst.pct!=null?' em '+worst.pct+'%':''} está bloqueando ${worstCount} outro${worstCount>1?'s':''} item${worstCount>1?'s':''} (via predecessoras cadastradas). <b>Como corrigir:</b> destravar este item primeiro (reforçar quem o executa ou retirar o que o impede). Para mitigar, avisar os responsáveis dos itens que esperam e revisar a nova data.`;
       wrap.insertBefore(div, cpmLine);
     }
 
@@ -21666,7 +21721,7 @@ const WBS = (() => {
       const gap = expected != null ? m.pct - expected : null;
       const atrasado = gap != null && gap < -5;
       const mRange = fmtRange(m.start, m.end, m.startActual, m.endActual);
-      const mSubParts = [mRange, m.responsavel ? escapeHtml(m.responsavel) : '', expected != null ? (atrasado ? `<span style="color:var(--amb)"><i class="ti ti-alert-triangle"></i> esperado ${expected}% hoje, real ${m.pct}% — ${Math.abs(gap)}pp atrasado</span>` : `<span style="color:var(--grn)"><i class="ti ti-check"></i> esperado ${expected}% hoje, real ${m.pct}%</span>`) : ''].filter(Boolean);
+      const mSubParts = [mRange, m.responsavel ? escapeHtml(m.responsavel) : '', expected != null ? (atrasado ? `<span style="color:var(--amb)"><i class="ti ti-alert-triangle"></i> esperado ${expected}% hoje, real ${m.pct}% — ${Math.abs(gap)}pp atrasado · corrigir: replanejar a data ou reforçar a entrega; mitigar: acompanhar toda semana</span>` : `<span style="color:var(--grn)"><i class="ti ti-check"></i> esperado ${expected}% hoje, real ${m.pct}%</span>`) : ''].filter(Boolean);
       html += `<div class="wbs-row wbs-l1" style="${i>0?'margin-top:4px':''}">
         <i class="ti ${open?'ti-chevron-down':'ti-chevron-right'}" style="font-size:12px;color:var(--t3);transition:transform .15s;cursor:pointer" onclick="WBS.toggle('${m.id}')"></i>
         <div style="cursor:pointer;flex:1;min-width:0" onclick="WBS.toggle('${m.id}')">
