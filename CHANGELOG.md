@@ -2,6 +2,9 @@
 
 Gerado do Git por `node scripts/build-changelog.mjs` (nunca editar à mão). Cada linha é um commit publicado; a data é a do commit.
 
+## 2.94.2 — 2026-11-14
+- Menu do quadro: Arquivos e demais telas do quadro mantem Quadros / Kanban aberto
+
 ## 2.94.1 — 2026-11-14
 - Modo Kanban continuo descrito com a regra de sprint do quadro
 

@@ -268,6 +268,18 @@ r = await p.evaluate(async () => {
   return out;
 });
 ok(Object.values(r).every(Boolean), 'Menu do quadro: Arquivos, Colaboradores, Meu Trabalho, Backlog e Kanban mantêm o grupo Quadros / Kanban aberto', JSON.stringify(r));
+// Equipe sobrealocada entre projetos não pode aparecer "100% saudável"; a análise da IA leva o alerta com a mitigação
+r = await p.evaluate(async () => {
+  const keep = DB.computePortfolioAllocation;
+  DB.computePortfolioAllocation = () => [{ name: 'Ana', total: 200, overallocated: true, rows: [{}, {}] }];
+  DB.set('team', [{ id: 'tmA', name: 'Ana', role: 'Dev', allocationPct: 100, workloadPct: null, signals: [], recommendation: '', actionPage: '' }]);
+  const dims = HealthScore.computeMetrics(DB.getActiveProjectId());
+  const facts = BoardAdvisor.projectFacts(DB.getActiveProjectId());
+  const g = BoardAdvisor.guard({ projectId: DB.getActiveProjectId(), sugestao: 'continuar', motivo: 'O projeto apresenta excelente saúde geral.', riscoPrincipal: '' });
+  DB.computePortfolioAllocation = keep;
+  return { team: dims.team, over: facts.over.length, how: !!(facts.over[0] && facts.over[0].how), sug: g.sugestao, risco: g.riscoPrincipal };
+});
+ok(r.team != null && r.team < 100 && r.over === 1 && r.how && r.sug === 'escalar' && /Sobrealocação/.test(r.risco) && /O que fazer/.test(r.risco), 'Equipe sobrealocada: farol cai, a análise da IA leva o alerta com o que fazer e sugere escalar', JSON.stringify(r));
 await p.close();
 
 await b.close(); srv.close();

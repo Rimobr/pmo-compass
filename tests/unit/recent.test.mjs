@@ -272,3 +272,8 @@ test('telas unificadas (14/11): um item de menu por junção e as telas viram ab
 test('logs: quem alterou aparece em negrito com fundo próprio (pessoa) ou neutro e itálico (sistema), no card, nas horas e na trilha', () => {
   for (const k of ['.who{font-weight:700', '.who.sys{', 'function histRow(h)', 'const whoHtml = n =>', '<span class="who${/^(claude code|sistema)/i.test(h.by', '<div class="tl-by"><span class="who']) assert.ok(html.includes(k), k);
 });
+
+test('alerta sem saída é defeito (14/11): alertas do Dashboard trazem "Como corrigir" e a análise da diretoria leva os fatos com mitigação', () => {
+  assert.equal((html.match(/how: '/g) || []).length >= 9, true);
+  for (const k of ['<b>Como corrigir:</b>', 'function teamFacts(projectId)', 'function coverage(dims)', 'function projectFacts(pid)', 'function guard(sug)', 'Baseado em ${r.cov.known} de ${r.cov.total} áreas', 'Mitigação sugerida pelo sistema:']) assert.ok(html.includes(k), k);
+});

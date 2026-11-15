@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.94.2'
+  version: '2.95.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -11546,7 +11546,7 @@ const Dashboard = (() => {
         alerts.push({ sev: pct>=90?'Crítico':'Alto', cls: pct>=90?'b-red':'b-amb',
           title: `${m.name} — burnout iminente (${pct}%)`,
           sub: ((typeof Burnout !== 'undefined' ? Burnout.signalsOf(m) : m.signals) || []).join(' · ') || 'Sobrecarga acima do limite saudável',
-          page:'burnout', label:'Ver Burnout Radar', act: '', actLabel: '' });
+          how: 'Passe um card dele para quem tem folga ou renegocie o prazo; a sugestão pronta está no Burnout Radar.', page:'burnout', label:'Ver Burnout Radar', act: '', actLabel: '' });
       });
     }
     // Alocação real entre projetos (casada por nome via DB.computePortfolioAllocation) —
@@ -11555,21 +11555,21 @@ const Dashboard = (() => {
     DB.computePortfolioAllocation().filter(p => p.overallocated && p.rows.some(r => r.projectId === DB.getActiveProjectId())).forEach(p => {
       const others = p.rows.filter(r => r.projectId !== DB.getActiveProjectId()).map(r => `${r.projectName} ${r.pct}%`).join(', ');
       alerts.push({ sev:'Alto', cls:'b-amb', title: `${p.name} — ${p.total}% de alocação total no portfólio`,
-        sub: others ? `Também alocado em ${others}` : 'Alocação combinada acima de 100%', page:'resources', label:'Gerenciar' });
+        sub: others ? `Também alocado em ${others}` : 'Alocação combinada acima de 100%', how: 'Reduza a alocação em um dos projetos ou redistribua cards; decida qual projeto é a prioridade desta pessoa.', page:'resources', label:'Gerenciar' });
     });
     if(P.get('criticalRiskAlerts')) {
       decisions.filter(d => d.status==='pending' && d.severity==='crit').forEach(d => {
-        alerts.push({ sev:'Crítico', cls:'b-red', title: d.title, sub:'Decisão crítica pendente', page:'decisions', label:'Ver decisão' });
+        alerts.push({ sev:'Crítico', cls:'b-red', title: d.title, sub:'Decisão crítica pendente', how: 'Decida hoje ou delegue com prazo: abra a decisão e aceite, adie com data ou discorde.', page:'decisions', label:'Ver decisão' });
       });
     }
     // Riscos críticos em aberto (nota 15–25 no registro de riscos) e revisões de risco vencidas
     if(P.get('criticalRiskAlerts') && typeof RiskMatrix !== 'undefined') {
       const todayD = Clock.today();
       (DB.get('risks') || []).filter(r => RiskMatrix.isOpen(r) && RiskMatrix.scoreOf(r) >= 15).forEach(r => {
-        alerts.push({ sev:'Crítico', cls:'b-red', title: `${r.title} — risco crítico (nota ${RiskMatrix.scoreOf(r)})`, sub: r.owner ? `Responsável: ${r.owner}` : 'Sem responsável definido', page:'risks', label:'Ver riscos', act: Auth.can('business') && r.id ? "Risks.openEdit('" + String(r.id).replace(/'/g, '') + "')" : '', actLabel: 'Abrir o Risco' });
+        alerts.push({ sev:'Crítico', cls:'b-red', title: `${r.title} — risco crítico (nota ${RiskMatrix.scoreOf(r)})`, sub: r.owner ? `Responsável: ${r.owner}` : 'Sem responsável definido', how: 'Defina a mitigação e o plano B, indique um responsável (se não houver) e marque a próxima revisão.',  page:'risks', label:'Ver riscos', act: Auth.can('business') && r.id ? "Risks.openEdit('" + String(r.id).replace(/'/g, '') + "')" : '', actLabel: 'Abrir o Risco' });
       });
       const vencidas = (DB.get('risks') || []).filter(r => RiskMatrix.isOpen(r) && r.reviewOn && r.reviewOn < Clock.iso(todayD)).length;
-      if(vencidas) alerts.push({ sev:'Médio', cls:'b-amb', title: `${vencidas} risco(s) com revisão vencida`, sub:'Reavalie probabilidade e impacto', page:'risks', label:'Revisar' });
+      if(vencidas) alerts.push({ sev:'Médio', cls:'b-amb', title: `${vencidas} risco(s) com revisão vencida`, sub:'Reavalie probabilidade e impacto', how: 'Revise hoje os riscos vencidos: confirme probabilidade e impacto e marque a próxima revisão.', page:'risks', label:'Revisar' });
     }
     // "Lembrete de decisões pendentes" — desligado por padrão (Configurações → Notificações);
     // só existe cadência de "mais de 5 dias" pra decisões que têm createdAt (criadas depois
@@ -11579,12 +11579,12 @@ const Dashboard = (() => {
       const fiveDaysMs = 5 * 86400000;
       decisions.filter(d => d.status==='pending' && d.createdAt && (Date.now() - new Date(d.createdAt).getTime()) > fiveDaysMs).forEach(d => {
         const dias = Math.floor((Date.now() - new Date(d.createdAt).getTime()) / 86400000);
-        alerts.push({ sev:'Médio', cls:'b-amb', title: `${d.title} — parada há ${dias} dias`, sub:'Decisão pendente sem ação', page:'decisions', label:'Ver decisão' });
+        alerts.push({ sev:'Médio', cls:'b-amb', title: `${d.title} — parada há ${dias} dias`, sub:'Decisão pendente sem ação', how: 'Leve ao responsável ainda esta semana ou registre o adiamento com uma data.', page:'decisions', label:'Ver decisão' });
       });
     }
     const acoesPendentes = meetings.reduce((s,m) => s + (m.actions||[]).filter(a=>!a.done).length, 0);
     const atasComPendencia = meetings.filter(m => (m.actions||[]).some(a=>!a.done)).length;
-    if(atasComPendencia) alerts.push({ sev:'Médio', cls:'b-acc', title:`${atasComPendencia} ata(s) com ações não formalizadas`, sub:`${acoesPendentes} ação(ões) pendente(s)`, page:'meetings', label:'Processar' });
+    if(atasComPendencia) alerts.push({ sev:'Médio', cls:'b-acc', title:`${atasComPendencia} ata(s) com ações não formalizadas`, sub:`${acoesPendentes} ação(ões) pendente(s)`, how: 'Formalize cada ação com um dono e um prazo.', page:'meetings', label:'Processar' });
 
     // Caminho crítico em risco — entrega que está no caminho crítico (folga zero, CPM real) E já
     // com prazo vencido, não só "está atrasada" (que já vira KPI, não alerta) — é a combinação das
@@ -11598,7 +11598,7 @@ const Dashboard = (() => {
       const { error, result } = CPM.compute(cpmItems);
       if(!error) {
         cpmItems.filter(it => it.status !== 'grn' && it.end && new Date(it.end.split('-')[0], it.end.split('-')[1]-1, it.end.split('-')[2]) < today && result.get(it.id) && result.get(it.id).critical).forEach(it => {
-          alerts.push({ sev:'Crítico', cls:'b-red', title:`${it.label} — no caminho crítico e atrasada`, sub:'Sem folga: o atraso aqui atrasa o projeto inteiro', page:'wbs', label:'Ver WBS' });
+          alerts.push({ sev:'Crítico', cls:'b-red', title:`${it.label} — no caminho crítico e atrasada`, sub:'Sem folga: o atraso aqui atrasa o projeto inteiro', how: 'Reforce ou realoque pessoas nesta entrega, corte escopo ou renegocie a data com o patrocinador.', page:'wbs', label:'Ver WBS' });
         });
       }
     }
@@ -11613,7 +11613,7 @@ const Dashboard = (() => {
     })[0];
     if(criticalStakeholder) {
       const dias = criticalStakeholder.lastContact ? Math.floor((Date.now() - new Date(criticalStakeholder.lastContact).getTime()) / 86400000) : null;
-      alerts.push({ sev:'Alto', cls:'b-amb', title:`${criticalStakeholder.name} — sem contato há ${dias===null?'muito tempo':dias+' dias'}`, sub:'Stakeholder em zona crítica de engajamento', page:'stakeholders', label:'Reengajar' });
+      alerts.push({ sev:'Alto', cls:'b-amb', title:`${criticalStakeholder.name} — sem contato há ${dias===null?'muito tempo':dias+' dias'}`, sub:'Stakeholder em zona crítica de engajamento', how: 'Marque uma conversa curta esta semana e registre o contato.', page:'stakeholders', label:'Reengajar' });
     }
 
     const sevOrder = { 'Crítico':0, 'Alto':1, 'Médio':2 };
@@ -11628,7 +11628,7 @@ const Dashboard = (() => {
     if(typeof Notif !== 'undefined') Notif.refreshBadge();
 
     if(!top.length) { root.innerHTML = '<div style="padding:12px 0;color:var(--t3);font-size:12.5px">Nenhum alerta crítico no momento.</div>'; return; }
-    root.innerHTML = top.map((a,i) => `<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;${i<top.length-1?'border-bottom:1px solid var(--b1)':''}"><span class="badge ${a.cls}" style="margin-top:1px;flex-shrink:0">${a.sev}</span><div><div style="font-size:12.5px;font-weight:500">${escapeHtml(a.title)}</div><div style="font-size:11px;color:var(--t3)">${escapeHtml(a.sub)}</div><button class="link-a" onclick="${a.act ? a.act : "R.go('" + a.page + "')"}"><i class="ti ti-arrow-right"></i>${escapeHtml(a.act ? a.actLabel : a.label)}</button></div></div>`).join('');
+    root.innerHTML = top.map((a,i) => `<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;${i<top.length-1?'border-bottom:1px solid var(--b1)':''}"><span class="badge ${a.cls}" style="margin-top:1px;flex-shrink:0">${a.sev}</span><div><div style="font-size:12.5px;font-weight:500">${escapeHtml(a.title)}</div><div style="font-size:11px;color:var(--t3)">${escapeHtml(a.sub)}</div>${a.how ? `<div style="font-size:11px;color:var(--t2);margin-top:2px"><b>Como corrigir:</b> ${escapeHtml(a.how)}</div>` : ''}<button class="link-a" onclick="${a.act ? a.act : "R.go('" + a.page + "')"}"><i class="ti ti-arrow-right"></i>${escapeHtml(a.act ? a.actLabel : a.label)}</button></div></div>`).join('');
   }
 
   function renderPriorityDecision() {
@@ -20583,7 +20583,7 @@ Responda APENAS com um objeto JSON válido, sem markdown, sem texto antes ou dep
   ]
 }
 
-Regras: uma entrada por projeto recebido, na mesma ordem. Só sugira "pausar" ou "escalar" quando houver motivo concreto nos dados (custo bem acima do combinado, risco crítico parado há tempo, valor prometido não realizado apesar do prazo já ter passado) — nunca sem apontar exatamente qual dado sustenta. Nunca invente número, nome de projeto ou risco que não esteja nos dados recebidos. Quando houver histórico de avaliação anterior, leve em conta o que já foi considerado decisão ruim antes, pra não repetir o mesmo raciocínio sem uma justificativa nova.`;
+Regras: nunca chame a saúde de "excelente" quando poucas áreas têm informação (diga que há pouco dado) e SEMPRE cite sobrealocação da equipe, riscos críticos e entregas atrasadas quando aparecerem nos dados; sobrealocação acima de 150% pede "escalar". Uma entrada por projeto recebido, na mesma ordem. Só sugira "pausar" ou "escalar" quando houver motivo concreto nos dados (custo bem acima do combinado, risco crítico parado há tempo, valor prometido não realizado apesar do prazo já ter passado) — nunca sem apontar exatamente qual dado sustenta. Nunca invente número, nome de projeto ou risco que não esteja nos dados recebidos. Quando houver histórico de avaliação anterior, leve em conta o que já foi considerado decisão ruim antes, pra não repetir o mesmo raciocínio sem uma justificativa nova.`;
 
   function buildRollup() {
     const projects = DB.listPortfolio();
@@ -20601,12 +20601,40 @@ Regras: uma entrada por projeto recebido, na mesma ordem. Só sugira "pausar" ou
       line += (bm && bm.hasLines) ? `Orçamento: planejado R$${Math.round(bm.BAC)}, já gasto R$${Math.round(bm.AC)} (${bm.consumoPct}% do orçado)${bm.CPI!=null ? (bm.CPI < 0.95 ? ', gastando mais do que o combinado para o que já foi entregue' : bm.CPI > 1.05 ? ', gastando menos do que o combinado' : ', dentro do combinado') : ''}. ` : 'Sem orçamento lançado ainda. ';
       line += scores.benefitValueAnnual ? `Benefício prometido: R$${scores.benefitValueAnnual}/ano. ` : '';
       line += vr.status ? `Valor entregue: ${vr.status === 'total' ? 'totalmente realizado' : vr.status === 'parcial' ? 'parcialmente realizado' : 'ainda não iniciado'}${vr.valorRealizado?` (R$${vr.valorRealizado} já confirmado)`:''}. ` : 'Valor entregue: ainda não validado. ';
-      line += `Decisões críticas pendentes: ${criticas.length ? criticas.join('; ') : 'nenhuma'}.`;
+      line += `Decisões críticas pendentes: ${criticas.length ? criticas.join('; ') : 'nenhuma'}. `;
+      const facts = projectFacts(p.id); line += facts.text;
       if(histCtx) line += '\n' + histCtx;
       return line;
     }).join('\n\n');
   }
 
+  // Fatos que a IA não pode ignorar: quantas áreas da situação geral têm dado, sobrealocação entre projetos, riscos críticos e entregas atrasadas
+  function projectFacts(pid) {
+    const out = { over: [], known: 4, riskCrit: 0, late: 0, missing: [], text: '' }, parts = [];
+    try {
+      const cov = HealthScore.coverage(HealthScore.computeMetrics(pid)); out.known = cov.known; out.missing = cov.missing;
+      parts.push('Áreas com informação na situação geral: ' + cov.known + ' de ' + cov.total + (cov.missing.length ? ' (sem dado: ' + cov.missing.join(', ') + ')' : '') + '.');
+      const tf = HealthScore.teamFacts(pid); out.over = tf.over;
+      if(tf.over.length) parts.push('SOBREALOCAÇÃO DA EQUIPE: ' + tf.over.map(o => o.name + ' soma ' + o.total + '% em ' + o.projects + ' projetos').join('; ') + '. Mitigação sugerida pelo sistema: ' + tf.over.map(o => o.how).join(' ') + '');
+      const risks = DB.getForProject(pid, 'risks') || [], crit = risks.filter(r => (r.status === 'aberto' || r.status === 'mitigando') && (Number(r.probability) || 0) * (Number(r.impact) || 0) >= 15);
+      out.riskCrit = crit.length; if(crit.length) parts.push('Riscos críticos abertos: ' + crit.slice(0, 3).map(r => r.title).join('; ') + '.');
+      const today = Clock.iso(Clock.today(pid)).slice(0, 10), late = (DB.getForProject(pid, 'wbs') || []).filter(m => m.status !== 'grn' && m.end && m.end < today);
+      out.late = late.length; if(late.length) parts.push('Entregas atrasadas: ' + late.length + '.');
+    } catch(e) { /* os fatos extras nunca derrubam a análise */ }
+    out.text = parts.join(' ');
+    return out;
+  }
+  // Rede de segurança: o que a regra já sabe não pode sumir da sugestão (alerta de sobrealocação, pouco dado)
+  function guard(sug) {
+    const facts = projectFacts(sug.projectId), s = Object.assign({}, sug);
+    if(facts.over.length) {
+      const msg = 'Sobrealocação: ' + facts.over.map(o => o.name + ' soma ' + o.total + '% em ' + o.projects + ' projetos').join('; ') + '. O que fazer: ' + facts.over.map(o => o.how).join(' ');
+      if(!/sobrealoca/i.test((s.riscoPrincipal || '') + ' ' + s.motivo)) s.riscoPrincipal = s.riscoPrincipal ? s.riscoPrincipal + ' ' + msg : msg;
+      if(s.sugestao === 'continuar' && facts.over.some(o => o.total > 150)) s.sugestao = 'escalar';
+    }
+    if(facts.known < 2 && !/pouco dado|poucos dados|sem dado/i.test(s.motivo)) s.motivo = 'Pouco dado para avaliar (só ' + facts.known + ' de 4 áreas têm informação). ' + s.motivo;
+    return s;
+  }
   function parseSuggestions(text) {
     const tryParse = (s) => { try { return JSON.parse(s); } catch(e) { return null; } };
     let obj = tryParse(text.trim());
@@ -20626,8 +20654,9 @@ Regras: uma entrada por projeto recebido, na mesma ordem. Só sugira "pausar" ou
     const rollup = buildRollup();
     const r = await AI.send([{ role:'user', content: rollup }], { system: SYSTEM, progressTitle: 'Analisando o portfólio' });
     if(r.error) return { error: r.error };
-    const parsed = parseSuggestions(r.text || '');
-    if(!parsed || !parsed.length) return { error: 'A IA respondeu, mas não em um formato que consegui interpretar.' };
+    const parsed0 = parseSuggestions(r.text || '');
+    if(!parsed0 || !parsed0.length) return { error: 'A IA respondeu, mas não em um formato que consegui interpretar.' };
+    const parsed = parsed0.map(guard);
     parsed.forEach(s => {
       if(typeof BoardHistory !== 'undefined') {
         const motivo = s.riscoPrincipal ? `${s.motivo} Risco principal: ${s.riscoPrincipal}` : s.motivo;
@@ -20637,7 +20666,7 @@ Regras: uma entrada por projeto recebido, na mesma ordem. Só sugira "pausar" ou
     return { suggestions: parsed };
   }
 
-  return { generate, buildRollup };
+  return { generate, buildRollup, projectFacts, guard };
 })();
 </script>
 
@@ -20679,7 +20708,8 @@ const Board = (() => {
     const hist = (typeof BoardHistory !== 'undefined') ? BoardHistory.list(p.id) : [];
     const lastSuggestion = hist.find(r => r.aiSuggestion && !r.boardDecision) || null;
     const hasRiskData = decisions.length > 0 || (DB.getForProject(p.id, 'risks') || []).length > 0;
-    return { project:p, dims, health, status, statusCode, bm, criticas, vr, lastSuggestion, hasRiskData };
+    let cov = { known: 4, total: 4 }, over = []; try { cov = HealthScore.coverage(dims); over = HealthScore.teamFacts(p.id).over; } catch(e) { /* sem os extras */ }
+    return { project:p, dims, health, status, statusCode, bm, criticas, vr, lastSuggestion, hasRiskData, cov, over };
   }
 
   function currentFilters() {
@@ -20856,6 +20886,8 @@ const Board = (() => {
         const v = noData ? 0 : Math.max(0, Math.min(100, r.dims[k]));
         return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="width:52px;flex-shrink:0;font-size:11px;color:var(--t3)">${DIM_LABEL_SHORT[k]}</span><div style="flex:1;height:6px;background:var(--s3);border-radius:3px;overflow:hidden"><div style="width:${v}%;height:100%;background:${dimColor(v)}"></div></div><span style="width:24px;text-align:right;font-size:11px;color:var(--t3);font-variant-numeric:tabular-nums">${noData ? '—' : v}</span></div>`;
       }).join('');
+      const covNote = r.cov && r.cov.known < r.cov.total ? `<div style="font-size:11px;color:var(--amb);margin:2px 0 4px"><i class="ti ti-info-circle"></i> Baseado em ${r.cov.known} de ${r.cov.total} áreas: o restante está sem dados</div>` : '';
+      const overNote = (r.over || []).length ? `<div style="font-size:11.5px;color:var(--amb);display:flex;align-items:center;gap:5px;margin-top:8px"><i class="ti ti-users-group"></i>Sobrealocação: ${escapeHtml(r.over.map(o => o.name + ' ' + o.total + '%').join(', '))}. ${escapeHtml(r.over[0].how)}</div>` : '';
       const costSub = (r.bm && r.bm.BAC > 0) ? `<div style="font-size:11px;color:var(--t3);margin-top:2px">Gasto: ${fmtMoney(r.bm.AC)} de ${fmtMoney(r.bm.BAC)}</div>` : `<div style="font-size:11px;color:var(--t3);margin-top:2px">Sem orçamento lançado ainda</div>`;
       const vrLabel = r.vr.status === 'total' ? 'Valor: totalmente entregue' : r.vr.status === 'parcial' ? 'Valor: parcialmente entregue' : r.vr.status === 'nao_iniciado' ? 'Valor: ainda não entregue' : 'Valor: não validado ainda';
       const vrClass = r.vr.status === 'total' ? 'b-grn' : r.vr.status === 'parcial' ? 'b-amb' : 'b-neu';
@@ -23984,6 +24016,20 @@ const HealthScore = (() => {
   // Sem projectId, calcula pro projeto ativo — com projectId, lê o outro projeto sem trocar o
   // ativo (DB.getForProject), do mesmo jeito que Budget.computeMetrics já fazia. É o que permite
   // o Portfólio usar o índice completo de 6 dimensões em vez de uma fórmula própria mais pobre.
+  // Fatos da equipe do projeto: quem está sobrealocado (soma entre projetos acima de 100%) e quem está com carga de 85% ou mais
+  function teamFacts(projectId) {
+    const pid = projectId || (typeof DB !== 'undefined' ? DB.getActiveProjectId() : null);
+    const team = (pid && typeof DB !== 'undefined') ? (DB.getForProject(pid, 'team') || []) : [];
+    const key = n => String(n || '').trim().toLowerCase(), over = [], critical = [];
+    let alloc = []; try { alloc = DB.computePortfolioAllocation().filter(p => p.overallocated); } catch(e) { alloc = []; }
+    team.forEach(m => { const a = alloc.find(x => key(x.name) === key(m.name)); if(a) over.push({ name: m.name, total: a.total, projects: a.rows.length, how: 'Reduza a alocação de ' + m.name + ' em um dos ' + a.rows.length + ' projetos (hoje soma ' + a.total + '%) ou passe cards dela para quem tem folga; se não der, renegocie o prazo do projeto menos prioritário.' }); });
+    return { team, over, critical };
+  }
+  // Quantas das quatro áreas do farol (prazo, custo, equipe, qualidade) têm dado
+  function coverage(dims) {
+    const ks = ['schedule', 'budget', 'team', 'quality'], known = ks.filter(k => dims && dims[k] != null);
+    return { known: known.length, total: ks.length, missing: ks.filter(k => !known.includes(k)).map(k => ({ schedule: 'Prazo', budget: 'Custo', team: 'Equipe', quality: 'Qualidade' })[k]) };
+  }
   function computeMetrics(projectId) {
     const pid = projectId || (typeof DB !== 'undefined' ? DB.getActiveProjectId() : null);
     const getTable = (table) => (pid && typeof DB !== 'undefined') ? (DB.getForProject(pid, table) || []) : [];
@@ -24005,9 +24051,22 @@ const HealthScore = (() => {
     const hasPlan = wbs.length > 0 || getTable('backlog').length > 0 || getTable('sprints').length > 0;
     const scopeScore = hasPlan ? Math.max(0, 100 - Math.min(scopeAbertos.length * 10, 100)) : null;
 
-    // Equipe: penaliza membros em zona crítica de carga (mesma fórmula já usada no Relatório)
-    const membrosCriticos = team.filter(m => (m.workloadPct||0) >= 85);
-    const teamScore = team.length ? Math.max(0, 100 - Math.min(membrosCriticos.length * 30, 100)) : null;
+    // Equipe: a carga de cada pessoa (calculada pelo sistema, ou o ajuste manual) e a alocação somada entre TODOS os projetos.
+    // Quem está em zona crítica (carga de 85% ou mais) ou sobrealocado (soma acima de 100%) tira pontos; sem nenhuma informação de carga e sem sobrealocação = "sem dados"
+    const nameKey = n => String(n || '').trim().toLowerCase();
+    const loads = {};
+    try {
+      if(typeof Burnout !== 'undefined' && pid === DB.getActiveProjectId()) team.forEach(m => { loads[m.id] = Burnout.effectivePct(m); });
+      else if(typeof WorkloadCalc !== 'undefined') {
+        const auto = WorkloadCalc.all(team, { items: getTable('backlog'), sprints: getTable('sprints'), hours: getTable('timeEntries'), imps: getTable('impediments'), today: Clock.iso(Clock.today(pid)), capacity: null });
+        team.forEach(m => { loads[m.id] = (m.workloadPct === '' || m.workloadPct == null) ? (auto[m.id] ? auto[m.id].pct : null) : Number(m.workloadPct); });
+      } else team.forEach(m => { loads[m.id] = (m.workloadPct === '' || m.workloadPct == null) ? null : Number(m.workloadPct); });
+    } catch(e) { team.forEach(m => { loads[m.id] = (m.workloadPct === '' || m.workloadPct == null) ? null : Number(m.workloadPct); }); }
+    const over = new Map();
+    try { if(typeof DB !== 'undefined' && DB.computePortfolioAllocation) DB.computePortfolioAllocation().filter(p => p.overallocated).forEach(p => over.set(nameKey(p.name), p.total)); } catch(e) { /* sem visão do portfólio: vale só a carga */ }
+    const hasInfo = team.some(m => loads[m.id] != null || over.has(nameKey(m.name)));
+    const penalty = m => { const sobre = over.get(nameKey(m.name)); if(sobre != null) return sobre > 150 ? 45 : 30; return (loads[m.id] != null && loads[m.id] >= 85) ? 30 : 0; };
+    const teamScore = (team.length && hasInfo) ? Math.max(0, 100 - Math.min(team.reduce((a, m) => a + penalty(m), 0), 100)) : null;
 
     // Orçamento: CPI real (services/budget-js) — sem custo real lançado ainda, considera neutro
     const bm = (typeof Budget !== 'undefined') ? Budget.computeMetrics(pid) : { CPI:null };
@@ -24027,7 +24086,7 @@ const HealthScore = (() => {
     return { schedule, budget:budgetScore, team:teamScore, quality:qualityScore, learning:learningScore, scope:scopeScore, risks:risksScore };
   }
 
-  return { calculate, getStatus, updateRingDisplay, computeMetrics, WEIGHTS, DIM_LABEL, dimLabel, sprintSchedule };
+  return { calculate, getStatus, updateRingDisplay, computeMetrics, teamFacts, coverage, WEIGHTS, DIM_LABEL, dimLabel, sprintSchedule };
 })();
 </script>
 
