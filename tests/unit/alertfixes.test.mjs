@@ -81,3 +81,16 @@ test('caso real: há gente em outro projeto, mas onde estão os cards ninguém r
   assert.match(p.headline, /única pessoa disponível em Barbearia, Vida-Financeira, PMO Compass/);
   for(const k of ['function systemRisks()', 'function registerRisk(key, pid)', 'Ponto único de falha', 'id="risk-sys-root"', 'Identificado pelo Sistema', 'forPid || DB.getActiveProjectId()']) assert.ok(html.includes(k), k);
 });
+test('Central de Decisões: ordena por urgência e cada decisão traz porquê, previsão, o que fazer, prazo e ação', () => {
+  const { DecisionCenter: D } = new Function(`${mod('services/decision-center')}\nreturn { DecisionCenter };`)();
+  const plan = P.allocPlan({ name: 'Leandro R', total: 400, receivers: 0, rows: [{ projectId: 'a', projectName: 'A', pct: 100, openCards: 4, receivers: 0 }, { projectId: 'b', projectName: 'B', pct: 100, openCards: 1, receivers: 0 }] });
+  const facts = { decisions: { pendingCritical: ['Aprovar contrato'], pendingCriticalCount: 1 }, risks: { top: [{ title: 'Sem QA', score: 20, level: 'crítico', owner: '' }] }, schedule: { delayed: [{ label: 'Relatórios', daysLate: 6 }], delayedCount: 1, spi: 0.8 }, budget: { hasBudget: true, cpi: 0.8, eacPctOfBac: 120 }, scope: { openCount: 2, daysImpact: 8, costImpact: 5000 } };
+  const r = D.build({ projects: [{ id: 'a', name: 'A', facts, ev: {}, sprint: { etaLate: 3, gap: 4 } }], capacity: [{ key: 'u:1', name: 'Leandro R', total: 400, open: 5, plan }], sysRisks: [{ key: 'u:1', person: 'Leandro R', projectId: 'a', projectName: 'A', title: 't' }], canCosts: true });
+  assert.equal(r[0].kind, 'capacidade'); assert.equal(r[0].level, 'crit'); assert.equal(r[1].kind, 'decisao');
+  assert.deepEqual(r.map(x => x.score), [...r.map(x => x.score)].sort((a, b) => b - a));
+  for(const d of r) { assert.ok(d.why && d.forecast && d.recommend.length && d.decideBy, d.kind); }
+  assert.ok(r[0].actions.some(a => a.type === 'risk') && r.some(x => x.kind === 'custo') && r.some(x => x.kind === 'sprint') && r.some(x => x.kind === 'escopo'));
+  assert.match(r.find(x => x.kind === 'prazo').forecast, /25% mais longo/);
+  assert.equal(D.build({ projects: [], capacity: [] }).length, 0);
+  assert.ok(html.includes('id="mg-center"') && html.includes('MgrPanel.act(this)') && html.includes('pullPortfolio'), 'tela e carga do portfólio');
+});

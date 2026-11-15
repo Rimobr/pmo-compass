@@ -108,6 +108,12 @@ for (const pgName of ['dashboard', 'kanban', 'backlog']) {
   const h = await pg.evaluate(`(() => { const t = document.querySelector('.topbar'), out = [...t.querySelectorAll('button')].filter(e => e.getBoundingClientRect().width > 0 && e.getBoundingClientRect().right > t.clientWidth + 1).map(e => e.title || e.id); return { sobra: t.scrollWidth > t.clientWidth, fora: out }; })()`);
   ok(!h.sobra && !h.fora.length, `[375 px] ${pgName}: cabeçalho cabe inteiro`, JSON.stringify(h));
 }
+// Notebook e monitor: nenhum item do cabeçalho passa do limite da tela (os de menor prioridade encolhem ou saem)
+for (const w of [1100, 1280, 1366, 1440, 1536, 1920]) {
+  await pg.setViewportSize({ width: w, height: 900 }); await closeAll(); await pg.evaluate(`R.go('mgrpanel')`); await pg.waitForTimeout(300);
+  const h = await pg.evaluate(`(() => { const t = document.querySelector('.topbar'), vis = [...t.querySelectorAll('button,span,select,header *')].filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; }); const fora = vis.filter(e => e.getBoundingClientRect().right > document.documentElement.clientWidth + 1).map(e => e.id || e.title || e.className).slice(0, 4); return { sobra: t.scrollWidth > t.clientWidth + 1, fora }; })()`);
+  ok(!h.sobra && !h.fora.length, `[${w} px] cabeçalho dentro da tela`, JSON.stringify(h));
+}
 ok(!errs.length, 'nenhum erro de JavaScript durante a varredura', errs.slice(0, 3).join(' | '));
 await b.close(); srv.close();
 console.log(fail ? `\n${fail} falha(s).` : '\nVarredura de acessibilidade e 375 px: tudo certo');

@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.100.3'
+  version: '2.101.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -279,6 +279,13 @@ body.no-login #login-gate{display:flex}
 <style data-module="ui/layout">
 .app-shell{display:flex;flex-direction:column;height:100vh;overflow:hidden}
 .topbar{height:48px;flex-shrink:0;background:var(--s1);border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:10px;padding:0 16px;z-index:50}
+/* O cabeçalho nunca passa da tela: conforme a largura, os itens de menor prioridade encolhem ou saem (a dica de cada um continua no avatar/ícone) */
+.tb-actions{min-width:0}
+@media(max-width:1520px){#tb-viewas{max-width:150px!important}}
+@media(max-width:1420px){#tb-cloud-badge{font-size:0!important;gap:0!important}#tb-viewas{max-width:120px!important}}
+@media(max-width:1330px){#tb-role-tag{display:none}}
+@media(max-width:1240px){#tb-ver{display:none}}
+@media(max-width:1120px){.tb-actions .ico-btn[title="Configurações"],.tb-actions .ico-btn[title="Novo projeto"]{display:none}}
 .tb-logo{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--t1);white-space:nowrap;flex-shrink:0;padding-right:14px;border-right:1px solid var(--b1)}
 .tb-logo-ico{width:28px;height:28px;border-radius:var(--r8);background:var(--ad);border:1px solid var(--ab);display:flex;align-items:center;justify-content:center}
 .tb-logo-ico i{font-size:15px;color:var(--acc)}
@@ -1678,8 +1685,7 @@ body.icons-failed i[data-fb]::before{
   </div>
   <div class="kpi-row" id="mg-kpis"></div>
   <div class="card" id="mg-detail-card" style="margin-bottom:12px;display:none" role="region" aria-live="polite" aria-label="Detalhe do indicador"><div class="lbl" style="display:flex;align-items:center;gap:8px"><i class="ti ti-zoom-in" aria-hidden="true"></i><span id="mg-detail-title"></span><button class="btn btn-sm" style="margin-left:auto" onclick="MgrPanel.toggle(null)"><i class="ti ti-x"></i>Fechar</button></div><div id="mg-detail"></div></div>
-  <div class="card card-accent" id="mg-plans-card" style="margin-bottom:12px;display:none"><div class="lbl" style="color:var(--acc)"><i class="ti ti-bulb"></i>Decisões Sugeridas pelo Sistema</div><div id="mg-plans"></div></div>
-  <div class="card" style="margin-bottom:12px"><div class="lbl"><i class="ti ti-list-check"></i><span id="mg-list-title">O que decidir agora</span></div><div id="mg-list"></div></div>
+  <div class="card card-accent" id="mg-center-card" style="margin-bottom:12px"><div class="lbl" style="color:var(--acc)"><i class="ti ti-compass"></i>Central de Decisões <span class="badge b-acc" id="mg-center-n"></span></div><div class="set-sub" id="mg-center-sub" style="margin-bottom:8px"></div><div id="mg-center"></div></div>
   <div class="card" id="res-team-card">
     <div class="lbl" style="color:var(--acc)"><i class="ti ti-users-group"></i>Meu Time em Todos os Projetos</div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:8px">Pessoas com conta no sistema, com a alocação somada em todos os projetos. Para equilibrar, <b>transfira atividades</b> para alguém do mesmo cargo com folga.</p>
@@ -3775,7 +3781,7 @@ const PmoView = (() => {
       const items = []; g('wbs').forEach(m => { items.push(m); (m.children || []).forEach(t => items.push(t)); });
       const doneLast28 = items.filter(i => i.endActual && BaselineCalc.diff(i.endActual, todayIso) != null && BaselineCalc.diff(i.endActual, todayIso) >= 0 && BaselineCalc.diff(i.endActual, todayIso) <= 28).length;
       const lessons = g('lessons');
-      return { id: p.id, name: p.name, area: p.area || '', facts: f, ev: PortfolioKpi.evaluate(f), days: PfKpi.daysSinceUpdate(p.id), hasBaseline: !!bl, baselineNA: Methodology.typeFor(p.id) === 'agil', finishVar: cmp ? cmp.summary.finishVar : null,
+      return { id: p.id, name: p.name, area: p.area || '', facts: f, sprint: sprintOf(p.id), ev: PortfolioKpi.evaluate(f), days: PfKpi.daysSinceUpdate(p.id), hasBaseline: !!bl, baselineNA: Methodology.typeFor(p.id) === 'agil', finishVar: cmp ? cmp.summary.finishVar : null,
         risksNoOwner: risks.filter(r => RiskMatrix.isOpen(r) && RiskMatrix.scoreOf(r) >= 15 && !String(r.owner || '').trim()).length, risksOverdue: rs.overdueReviews,
         lessons: { total: lessons.length, applied: lessons.filter(l => l.applied).length }, docs: g('repository').length,
         pendingActions: g('meetings').reduce((n, m) => n + (m.actions || []).filter(a => !a.done).length, 0),
@@ -3786,6 +3792,13 @@ const PmoView = (() => {
   }
 
   // Estimado × Real de todos os projetos: o sistema cruza o esperado e o real de cada tema; o mais desviado vem primeiro
+  // Previsão da sprint ativa de um projeto (linha ideal × ritmo atual); null se não há sprint ativa
+  function sprintOf(pid) {
+    try {
+      const g = k => DB.getForProject(pid, k) || [], items = g('backlog').filter(i => i.kind !== 'epico'), act = g('sprints').find(x => x.state === 'ativa'); if(!act) return null;
+      const today = Clock.iso(Clock.today(pid)).slice(0, 10); return AgileCalc.sprintReading(act, AgileCalc.sprintStats(act, items, today), today);
+    } catch(e) { return null; }
+  }
   function pvrRow(p) {
     const pid = p.id, g = k => DB.getForProject(pid, k) || [], today = Clock.iso(Clock.today(pid)).slice(0, 10);
     const items = g('backlog').filter(i => i.kind !== 'epico'), sprints = g('sprints'), act = sprints.find(x => x.state === 'ativa');
@@ -5183,6 +5196,7 @@ const Cloud = (() => {
       await syncProjects();
       await syncAllTeamMembers();
       await pullAll();
+      await pullPortfolio(true);
       if(typeof FirstAccess !== 'undefined') FirstAccess.check();
     } catch(e) {
       console.warn('Supabase: falha ao ler perfil — caindo para o perfil mais restrito', e);
@@ -5223,6 +5237,51 @@ const Cloud = (() => {
   }
 
   const DEMO_PROJECT_IDS = ['nexus', 'valdori', 'beltrano'];
+  // Painéis de gestão (Gerente, Diretoria, PMO, Colaboradores) olham TODOS os projetos, mas o pullAll só traz o projeto aberto:
+  // sem isto, backlog, riscos, decisões e prazos dos outros projetos só existiam depois de abrir cada um (e os painéis diziam "0").
+  // Traz as tabelas sem filtro de projeto (a RLS limita ao que a pessoa pode ver), em páginas de 1000, e grava no cache de cada projeto
+  // (o projeto aberto fica de fora: o pullAll já o mantém). Devolve true se algo foi lido.
+  let portfolioAt = 0, portfolioBusy = null;
+  async function fetchAllRows(table, order) {
+    const out = []; let from = 0;
+    for(let guard = 0; guard < 40; guard++) {
+      let q = client.from(table).select('*'); if(order) q = q.order(order, { ascending: true });
+      const { data, error } = await q.range(from, from + 999);
+      if(error) throw error; if(!data || !data.length) break;
+      out.push(...data); if(data.length < 1000) break; from += 1000;
+    }
+    return out;
+  }
+  function pullPortfolio(force) {
+    if(!client || !session || typeof DB === 'undefined') return Promise.resolve(false);
+    if(portfolioBusy) return portfolioBusy;
+    if(!force && Date.now() - portfolioAt < 60000) return Promise.resolve(false);
+    portfolioBusy = (async () => {
+      try {
+        await flush();
+        const active = DB.getActiveProjectId();
+        const names = ['wbs_modules', 'wbs_tasks', 'decisions', 'budget_lines', 'cost_actuals', 'scope_changes', 'risks', 'baselines', 'backlog_items', 'sprints', 'impediments', 'time_entries'];
+        const res = await Promise.all(names.map(t => fetchAllRows(t, t === 'time_entries' ? 'work_date' : null)));
+        const T = Object.fromEntries(names.map((t, i) => [t, res[i]]));
+        const by = rows => { const m = new Map(); rows.forEach(r => { if(!m.has(r.project_id)) m.set(r.project_id, []); m.get(r.project_id).push(r); }); return m; };
+        const B = Object.fromEntries(names.map(t => [t, by(T[t])]));
+        DB.listProjects().forEach(p => {
+          if(p.id === active || DEMO_PROJECT_IDS.includes(p.id)) return;
+          const g = t => B[t].get(p.id) || [], tasks = g('wbs_tasks');
+          DB.setForProject(p.id, 'wbs', g('wbs_modules').map(m => ({ id:m.id, label:m.label, status:m.status, pct:m.pct, start:m.start_date, end:m.end_date, startActual:m.start_actual||null, endActual:m.end_actual||null, responsavel:m.responsavel||'', lastEditedBy:m.last_edited_by||'', lastEditedAt:m.last_edited_at||null, critical:m.critical, predecessors:m.predecessors||[], origin:m.origin||undefined,
+            children: tasks.filter(t => t.module_id === m.id).map(t => ({ id:t.id, label:t.label, status:t.status, start:t.start_date, end:t.end_date, startActual:t.start_actual||null, endActual:t.end_actual||null, responsavel:t.responsavel||'', lastEditedBy:t.last_edited_by||'', lastEditedAt:t.last_edited_at||null, predecessors:t.predecessors||[] })) })));
+          DB.setForProject(p.id, 'decisions', g('decisions').map(d => ({ id:d.id, severity:d.severity, pct:d.pct, title:d.title, body:d.body, sources:d.sources||[], status:d.status, actions:d.actions||['accept'], resolvedAt:d.resolved_at, origin:d.origin||undefined, createdAt:d.created_at })));
+          DB.setForProject(p.id, 'budgetLines', g('budget_lines').map(l => ({ id:l.id, label:l.label, plannedValue:l.planned_value, wbsModuleId:l.wbs_module_id||'', isReserve:!!l.is_reserve, origin:l.origin||undefined })));
+          DB.setForProject(p.id, 'costActuals', g('cost_actuals').map(a => ({ id:a.id, label:a.label, amount:a.amount, date:a.entry_date, budgetLineId:a.budget_line_id||'', kind:a.kind })));
+          ['scope_changes', 'risks', 'baselines', 'backlog_items', 'sprints', 'impediments', 'time_entries'].forEach(t => { const m = ROW[t]; if(m && m.fromDb && m.local) DB.setForProject(p.id, m.local, g(t).map(m.fromDb)); });
+        });
+        portfolioAt = Date.now();
+        return true;
+      } catch(e) { console.warn('Supabase: falha ao ler o portfólio', e); return false; }
+      finally { portfolioBusy = null; }
+    })();
+    return portfolioBusy;
+  }
   async function pullAll() {
     if(!client || !session) return;
     // Espera qualquer push/delete ainda em voo terminar de gravar no servidor ANTES de ler —
@@ -5603,7 +5662,7 @@ const Cloud = (() => {
   }
 
   return { load, configure, disconnect, setUse, isConfigured, isSignedIn, getEmail, sessionStart, authProvider, renewSession, getUserId, listProfiles, projectContacts, joinTeam, myOpenItems, openItemsForManagers, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
-    reassignItems, compassDigest, myWorkload, saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, hoursSummary, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, markOnboarded, saveMyDetails, signOut, pullAll, flush,
+    pullPortfolio, reassignItems, compassDigest, myWorkload, saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, hoursSummary, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, markOnboarded, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
     pushDecision, deleteDecision, pushDocument, deleteDocument, pushRow, pushMany, deleteRow, msgTable, invokeFn,
@@ -8260,6 +8319,12 @@ const R = (() => {
     if(id === 'execview' && typeof ExecView !== 'undefined') ExecView.render();
     if(id === 'resources' && typeof Resources !== 'undefined') Resources.render();
     if(id === 'mgrpanel' && typeof MgrPanel !== 'undefined') MgrPanel.render();
+    if(['mgrpanel', 'board', 'execview', 'pmoview', 'pfkpi', 'resources', 'portfolio'].includes(id) && typeof Cloud !== 'undefined' && Cloud.isSignedIn()) {
+      Cloud.pullPortfolio().then(changed => {
+        if(!changed || !document.getElementById('p-' + id) || !document.getElementById('p-' + id).classList.contains('on')) return;
+        try { ({ mgrpanel: () => MgrPanel.render(), board: () => Board.render(), execview: () => ExecView.render(), pmoview: () => PmoView.render(), pfkpi: () => PfKpi.render(), resources: () => Resources.render(), portfolio: () => Portfolio.render() })[id](); } catch(e) { /* tela fechada */ }
+      });
+    }
     if(id === 'budget' && typeof Budget !== 'undefined') Budget.render();
     if(id === 'risks' && typeof Risks !== 'undefined') Risks.render();
     if(id === 'pfkpi' && typeof PfKpi !== 'undefined') PfKpi.render();
@@ -17482,7 +17547,7 @@ const AutoRefresh = (() => {
   async function run() {
     if(busy || typeof Cloud === 'undefined' || !Cloud.isSignedIn()) return false;
     busy = true;
-    try { await Cloud.pullAll(); if(typeof renderAllModules === 'function') renderAllModules(); lastAt = Date.now(); return true; }
+    try { await Cloud.pullAll(); await Cloud.pullPortfolio(true); if(typeof renderAllModules === 'function') renderAllModules(); lastAt = Date.now(); return true; }
     catch(e) { return false; } // sem rede ou erro: tenta de novo no próximo ciclo; os dados locais continuam intactos
     finally { busy = false; }
   }
@@ -21834,6 +21899,67 @@ const Resources = (() => {
 })();
 </script>
 
+<!-- ■ MODULE: services/decision-center ─ Central de Decisões: junta o que o sistema sabe (capacidade do time, decisões críticas, riscos, prazos, custo, escopo, sprint) em uma lista ORDENADA de decisões para a gestão. Cada decisão traz o porquê (evidência), a previsão do que acontece se nada for feito, o que fazer, até quando decidir e a ação que executa. Lógica pura, sem DOM. -->
+<script data-module="services/decision-center">
+const DecisionCenter = (() => {
+  const LV = s => s >= 85 ? 'crit' : s >= 65 ? 'high' : 'med';
+  const pl = (n, a, b) => n + ' ' + (n === 1 ? a : b);
+  // input: { projects:[{ id, name, facts, ev, sprint }], capacity:[{ key, name, total, open, plan }], sysRisks:[{ key, person, projectId, projectName, title }], canCosts }
+  function build(input) {
+    const out = [], P = (input && input.projects) || [];
+    const add = d => out.push(Object.assign({ level: LV(d.score), actions: [], recommend: [] }, d));
+    // 1) Capacidade do time (a decisão mais grave: sem gente, nada anda)
+    ((input && input.capacity) || []).forEach(x => {
+      const pl0 = x.plan; if(!pl0) return;
+      if(pl0.kind === 'capacity') {
+        const solo = (pl0.solo || []).map(r => r.projectName), share = Math.max(1, Math.round(100 / Math.max(1, (pl0.cuts || []).length + 1)));
+        add({ id: 'cap-' + x.key, kind: 'capacidade', score: 100, title: 'Falta capacidade: ' + x.name + ' é a única pessoa em ' + (solo.length ? solo.join(', ') : 'seus projetos'),
+          why: x.name + ' soma ' + x.total + '% de alocação e tem ' + pl(x.open, 'card', 'cards') + ' em aberto, sem ninguém na equipe para receber.',
+          forecast: 'Cada projeto recebe cerca de ' + share + '% da atenção dela: o prazo tende a esticar em torno de ' + Math.max(2, Math.round(x.total / 100)) + 'x. Se ' + x.name + ' faltar uma semana, ' + pl(solo.length || 1, 'projeto para', 'projetos param') + '.',
+          recommend: pl0.steps, mitigate: pl0.mitigate, decideBy: 'hoje',
+          actions: (input.sysRisks || []).filter(r => r.key === x.key).slice(0, 1).map(r => ({ type: 'risk', label: 'Registrar Risco de Ponto Único de Falha', key: r.key, pid: r.projectId })).concat([{ type: 'team', label: 'Incluir Pessoas na Equipe' }]) });
+      } else {
+        add({ id: 'over-' + x.key, kind: 'alocacao', score: 85, title: x.name + ' está em ' + x.total + '% de alocação: transferir atividades',
+          why: pl(x.open, 'card', 'cards') + ' em aberto somando ' + x.total + '% entre projetos; há quem possa receber.',
+          forecast: 'Acima de 100% por semanas gera atraso nas entregas e risco de esgotamento (burnout).',
+          recommend: pl0.steps, mitigate: pl0.mitigate, decideBy: 'esta semana', actions: [{ type: 'transfer', label: 'Escolher Cards e Quem Recebe', key: x.key }] });
+      }
+    });
+    P.forEach(p => {
+      const F = p.facts || {};
+      // 2) Decisões críticas paradas
+      ((F.decisions && F.decisions.pendingCritical) || []).forEach((t, i) => add({ id: 'dec-' + p.id + '-' + i, kind: 'decisao', score: 90, title: 'Decidir: ' + t, why: 'Decisão crítica pendente em ' + p.name + '.',
+        forecast: 'Enquanto não for decidida, tudo o que depende dela fica parado e o atraso cresce a cada dia.', recommend: ['Decida na próxima reunião; se faltar informação, peça ao gerente do projeto em até 2 dias.', 'Registre o prazo limite da decisão.'], decideBy: 'em 2 dias',
+        actions: [{ type: 'open', label: 'Decidir Agora', pid: p.id, page: 'decisions' }] }));
+      // 3) Riscos críticos sem dono
+      ((F.risks && F.risks.top) || []).filter(r => r.level === 'crítico').forEach((r, i) => add({ id: 'rsk-' + p.id + '-' + i, kind: 'risco', score: r.owner ? 66 : 80, title: 'Risco crítico' + (r.owner ? '' : ' sem dono') + ': ' + r.title, why: 'Nota ' + r.score + ' em ' + p.name + (r.owner ? ', dono ' + r.owner : ', sem responsável') + '.',
+        forecast: r.owner ? 'Sem resposta ativa, a chance de o risco virar problema continua alta.' : 'Risco sem dono não é tratado: tende a virar problema sem aviso.', recommend: [r.owner ? 'Confirme o plano de resposta e a data de revisão.' : 'Nomeie um responsável hoje e defina a resposta.', 'Tenha o plano B pronto.'], decideBy: r.owner ? 'esta semana' : 'hoje',
+        actions: [{ type: 'open', label: 'Abrir Riscos', pid: p.id, page: 'risks' }] }));
+      // 4) Entregas atrasadas, com previsão pelo ritmo (SPI)
+      const dl = (F.schedule && F.schedule.delayed) || [], dn = (F.schedule && F.schedule.delayedCount) || 0;
+      if(dn) { const spi = F.schedule.spi, stretch = spi && spi > 0 && spi < 1 ? Math.round((1 / spi - 1) * 100) : null;
+        add({ id: 'del-' + p.id, kind: 'prazo', score: Math.min(84, 68 + dn * 3), title: pl(dn, 'entrega atrasada', 'entregas atrasadas') + ' em ' + p.name, why: dl.map(d => d.label + ' (' + d.daysLate + ' d)').join('; ') + '.',
+          forecast: stretch ? 'No ritmo atual (SPI ' + String(Math.round(spi * 100) / 100).replace('.', ',') + ') o término tende a ficar ' + stretch + '% mais longo que o planejado.' : 'Sem ação, o atraso se acumula nas entregas seguintes.',
+          recommend: ['Replanejar as entregas atrasadas com o responsável: nova data ou corte de escopo.', 'Avisar as partes interessadas do novo prazo.'], decideBy: 'esta semana', actions: [{ type: 'open', label: 'Abrir Cronograma', pid: p.id, page: 'wbs' }] }); }
+      // 5) Custo: previsão no término acima do orçado
+      const B = F.budget;
+      if(input.canCosts && B && B.hasBudget && ((B.eacPctOfBac != null && B.eacPctOfBac > 105) || (B.cpi != null && B.cpi < 0.9))) add({ id: 'bud-' + p.id, kind: 'custo', score: 75, title: 'Custo acima do orçado em ' + p.name,
+        why: 'CPI ' + (B.cpi != null ? String(Math.round(B.cpi * 100) / 100).replace('.', ',') : '—') + '; previsão no término em ' + (B.eacPctOfBac != null ? B.eacPctOfBac + '% do orçamento' : 'valor acima do orçado') + '.', forecast: 'No ritmo atual o projeto fecha acima do orçamento aprovado.',
+        recommend: ['Revisar as linhas do orçamento e pedir a previsão no término.', 'Exigir aprovação para novos gastos até estabilizar.'], decideBy: 'esta semana', actions: [{ type: 'open', label: 'Abrir Orçamento', pid: p.id, page: 'budget' }] });
+      // 6) Sprint: previsão de término pelo ritmo
+      if(p.sprint && p.sprint.etaLate > 0) add({ id: 'spr-' + p.id, kind: 'sprint', score: 65 + Math.min(10, p.sprint.etaLate), title: 'A sprint de ' + p.name + ' deve terminar ' + pl(p.sprint.etaLate, 'dia', 'dias') + ' depois', why: 'No ritmo atual de conclusão a meta da sprint não fecha na data.',
+        forecast: 'Sem ajuste, ' + (p.sprint.gap > 0.5 ? p.sprint.gap + ' pts ficam para a próxima sprint.' : 'parte do escopo transborda para a próxima sprint.'), recommend: ['Tirar ou dividir o que não vai terminar.', 'Puxar ajuda para o que está parado.'], decideBy: 'hoje', actions: [{ type: 'open', label: 'Abrir o Quadro', pid: p.id, page: 'kanban' }] });
+      // 7) Escopo aguardando aprovação
+      const sc = F.scope; if(sc && sc.openCount) add({ id: 'scp-' + p.id, kind: 'escopo', score: 50 + Math.min(14, Math.round((sc.daysImpact || 0) / 2)), title: pl(sc.openCount, 'mudança de escopo aguardando aprovação', 'mudanças de escopo aguardando aprovação') + ' em ' + p.name,
+        why: 'Impacto somado: +' + (sc.daysImpact || 0) + ' dia(s)' + (input.canCosts ? ' e R$ ' + Math.round(sc.costImpact || 0).toLocaleString('pt-BR') : '') + '.', forecast: 'Mudança sem decisão vira trabalho não planejado e estoura prazo e custo.',
+        recommend: ['Aprovar, recusar ou negociar cada mudança com o impacto à vista.', 'Fixar um dia por semana para decidir escopo.'], decideBy: 'esta semana', actions: [{ type: 'open', label: 'Abrir Mudanças', pid: p.id, page: 'scope' }] });
+    });
+    return out.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title, 'pt-BR'));
+  }
+  return { build, LV };
+})();
+</script>
+
 <!-- ■ MODULE: pages/mgrpanel-js ─ Painel do Gerente de Projetos: números e lista de decisões do portfólio + o time em todos os projetos -->
 <script data-module="pages/mgrpanel-js">
 const MgrPanel = (() => {
@@ -21874,30 +22000,51 @@ const MgrPanel = (() => {
     if(openKey) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
   const kpi = (id, label, value, sub, tone) => '<div class="kpi kpi-link" role="button" tabindex="0" aria-expanded="false" data-k="' + id + '" onclick="MgrPanel.toggle(this.dataset.k)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();MgrPanel.toggle(this.dataset.k)}"><div class="kpi-lbl">' + esc(label) + '</div><div class="kpi-val" style="color:' + (TONE[tone] || 'var(--t1)') + '">' + esc(value) + '</div><div class="kpi-delta">' + esc(sub) + ' <span style="color:var(--acc)">· ver detalhes</span></div></div>';
+  const BADGE = { crit: ['b-red', 'Crítica'], high: ['b-amb', 'Alta'], med: ['b-neu', 'Média'] };
+  // Uma decisão: o porquê, a previsão se nada for feito, o que fazer, como mitigar, até quando e o botão que executa
+  function decisionHtml(d) {
+    const acts = (d.actions || []).map(a => '<button class="btn btn-sm' + (a.type === 'risk' || a.type === 'transfer' ? ' btn-acc' : '') + '" data-t="' + a.type + '" data-p="' + esc(a.pid || '') + '" data-page="' + esc(a.page || '') + '" data-k="' + esc(a.key || '') + '" onclick="MgrPanel.act(this)">' + esc(a.label) + '</button>').join('');
+    const b = BADGE[d.level] || BADGE.med;
+    return '<div style="background:var(--s1);border:1px solid ' + (d.level === 'crit' ? 'var(--rb)' : 'var(--b1)') + ';border-left:4px solid ' + (d.level === 'crit' ? 'var(--red)' : d.level === 'high' ? 'var(--amb)' : 'var(--b2)') + ';border-radius:var(--r8);padding:10px 14px;margin-bottom:10px">'
+      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><span class="badge ' + b[0] + '">' + b[1] + '</span><b style="font-size:13.5px">' + esc(d.title) + '</b><span class="chip" style="margin-left:auto">Decidir: ' + esc(d.decideBy || '') + '</span></div>'
+      + '<div style="font-size:12.5px;line-height:1.6"><b>Por quê:</b> ' + esc(d.why) + '</div>'
+      + '<div style="font-size:12.5px;line-height:1.6;color:var(--amb)"><i class="ti ti-chart-line" aria-hidden="true"></i> <b>Se nada for feito:</b> ' + esc(d.forecast) + '</div>'
+      + '<div style="font-size:12.5px;line-height:1.6;margin-top:4px"><b>O que fazer:</b><ol style="margin:2px 0 2px 18px;padding:0">' + (d.recommend || []).map(t => '<li>' + esc(t) + '</li>').join('') + '</ol></div>'
+      + (d.mitigate ? '<div style="font-size:12.5px;line-height:1.6;color:var(--t2)"><b>Como mitigar:</b> ' + esc(d.mitigate) + '</div>' : '')
+      + (acts ? '<div class="btn-row" style="margin-top:8px">' + acts + '</div>' : '') + '</div>';
+  }
+  // Ação do botão: registrar o risco, escolher os cards a transferir, ir à tela de quem decide ou à de pessoas e acesso
+  function act(el) {
+    const t = el.dataset.t, pid = el.dataset.p, k = el.dataset.k;
+    if(t === 'risk') Resources.registerRisk(k, pid);
+    else if(t === 'transfer') Resources.openTransfer(k);
+    else if(t === 'team') { R.go('settings'); try { SettingsTabs.show('acesso'); } catch(e) { /* aba indisponível */ } }
+    else if(t === 'open' && pid) { DB.switchProject(pid); R.go(el.dataset.page || 'dashboard'); }
+  }
   function render() {
     const k = document.getElementById('mg-kpis'); if(!k) return;
     let v = null; try { v = PmoView.panel(); } catch(e) { v = null; }
-    let plansAll = []; try { plansAll = Resources.plans(); } catch(e) { plansAll = []; }
+    let plansAll = [], sys = []; try { plansAll = Resources.plans(); } catch(e) { plansAll = []; } try { sys = Resources.systemRisks(); } catch(e) { sys = []; }
     if(v) {
-      const sums = buildDetails(v.rows, plansAll), n = x => String(x);
-      const nRisk = v.rows.filter(r => r.ev.farol === 'vermelho').length, nRsk = v.rows.reduce((a, r) => a + (r.ev.riscosCriticos || 0), 0) + ((Resources.systemRisks ? Resources.systemRisks() : []).length), nDel = v.rows.reduce((a, r) => a + (r.ev.atrasadas || 0), 0), nScp = v.rows.reduce((a, r) => a + (r.facts.scope.openCount || 0), 0);
-      k.innerHTML = kpi('dec', 'Decisões críticas', n(sums.nCrit), sums.caps ? 'inclui ' + sums.caps + ' de capacidade do time' : 'aguardando a sua decisão', sums.nCrit ? 'critico' : 'ok')
+      const decs = DecisionCenter.build({ projects: v.rows.map(r => ({ id: r.id, name: r.name, facts: r.facts, ev: r.ev, sprint: r.sprint })), capacity: plansAll, sysRisks: sys, canCosts: Auth.can('view_costs') });
+      const sums = buildDetails(v.rows, plansAll), n = x => String(x), crit = decs.filter(d => d.level === 'crit');
+      DET.dec = { title: 'Decisões para agora (críticas)', html: crit.length ? crit.map(decisionHtml).join('') : '<div class="rk-empty">Nenhuma decisão crítica no momento. 👍</div>' };
+      const nRisk = v.rows.filter(r => r.ev.farol === 'vermelho').length, nRsk = v.rows.reduce((a, r) => a + (r.ev.riscosCriticos || 0), 0) + sys.length, nDel = v.rows.reduce((a, r) => a + (r.ev.atrasadas || 0), 0), nScp = v.rows.reduce((a, r) => a + (r.facts.scope.openCount || 0), 0);
+      k.innerHTML = kpi('dec', 'Decisões críticas', n(crit.length), crit.length ? 'ordenadas por urgência abaixo' : 'nada pedindo decisão agora', crit.length ? 'critico' : 'ok')
         + kpi('cap', sums.caps ? 'Time sem reserva' : 'Capacidade do time', n(plansAll.length), sums.caps ? 'pessoa única em vários projetos' : (plansAll.length ? 'acima de 100% somando os projetos' : 'ninguém acima de 100%'), sums.caps ? 'critico' : (plansAll.length ? 'alerta' : 'ok'))
         + kpi('risk', 'Projetos em risco', n(nRisk), 'farol vermelho', nRisk ? 'critico' : 'ok')
         + kpi('rsk', 'Riscos críticos', n(nRsk), 'nota 15 a 25, em aberto', nRsk ? 'critico' : 'ok')
         + kpi('del', 'Entregas atrasadas', n(nDel), 'em todo o portfólio', nDel ? 'alerta' : 'ok')
         + kpi('scp', 'Mudanças de escopo', n(nScp), 'aguardando aprovação', nScp ? 'alerta' : 'ok');
       const keep = openKey; openKey = null; toggle(keep);
+      const c = document.getElementById('mg-center'), cn = document.getElementById('mg-center-n'), cs = document.getElementById('mg-center-sub');
+      if(cn) cn.textContent = decs.length ? decs.length + ' decisão(ões)' : 'em dia';
+      if(cs) cs.textContent = v.rows.length + ' projeto(s) e quadro(s) analisados agora, em ordem de urgência. O sistema recalcula a cada abertura da tela e a cada atualização automática.';
+      if(c) c.innerHTML = decs.length ? decs.slice(0, 12).map(decisionHtml).join('') + (decs.length > 12 ? '<div class="set-sub">+ ' + (decs.length - 12) + ' decisão(ões) de menor urgência, que aparecem quando as maiores forem tratadas.</div>' : '') : '<div class="rk-empty">Nenhuma decisão pendente: o portfólio está dentro do esperado. 👍</div>';
     }
-    if(v) {
-            document.getElementById('mg-list').innerHTML = v.list.length ? v.list.map(it => '<div class="rk-item" style="cursor:default"><div class="rk-main"><div class="rk-title">' + esc(it.name) + '</div><div class="rk-meta">' + it.reasons.map(r => '<span class="chip">' + esc(r) + '</span>').join('') + '</div><div style="font-size:12px;color:var(--t2);line-height:1.55;margin-top:6px">' + (it.fixes || []).map(x => '<div><i class="ti ti-bulb" aria-hidden="true" style="color:var(--amb)"></i> ' + esc(x) + '</div>').join('') + '</div></div><button class="btn btn-sm" data-id="' + esc(it.id) + '" onclick="PmoView.openProject(this)"><i class="ti ti-arrow-right"></i>Abrir</button></div>').join('') : '<div class="rk-empty">Nada pedindo decisão neste momento. 👍</div>';
-    }
-    const pc = document.getElementById('mg-plans-card'), pr = document.getElementById('mg-plans');
-    let plans = []; try { plans = Resources.plans(); } catch(e) { plans = []; }
-    if(pc && pr) { pc.style.display = plans.length ? '' : 'none'; pr.innerHTML = plans.map(x => MgrPanel.planHtml(x)).join(''); }
     if(typeof Resources !== 'undefined') Resources.renderTeam();
   }
-  return { render, planHtml, toggle };
+  return { render, planHtml, toggle, act };
 })();
 </script>
 
