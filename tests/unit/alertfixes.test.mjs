@@ -74,3 +74,10 @@ test('sem ninguém para receber: o sistema traduz em falta de capacidade (priori
   const q = P.allocPlan({ name: 'X', total: 200, receivers: 2, rows: rows.slice(0, 2) }); assert.notEqual(q.kind, 'capacity');
   assert.ok(html.includes('id="board-capacity-root"') && html.includes('Capacidade do Time: Decisão da Diretoria'), 'alerta no Painel da Diretoria');
 });
+test('caso real: há gente em outro projeto, mas onde estão os cards ninguém recebe: é decisão de capacidade e nomeia os projetos', () => {
+  const rows = [{ projectId: 'g', projectName: 'Cla Guard', pct: 100, openCards: 0, receivers: 1 }, { projectId: 'b', projectName: 'Barbearia', pct: 100, openCards: 4, receivers: 0 }, { projectId: 'v', projectName: 'Vida-Financeira', pct: 100, openCards: 1, receivers: 0 }, { projectId: 'p', projectName: 'PMO Compass', pct: 100, openCards: 0, receivers: 0 }];
+  const p = P.allocPlan({ name: 'Leandro R', total: 400, receivers: 0, rows });
+  assert.equal(p.kind, 'capacity'); assert.deepEqual(p.solo.map(x => x.projectName), ['Barbearia', 'Vida-Financeira', 'PMO Compass']);
+  assert.match(p.headline, /única pessoa disponível em Barbearia, Vida-Financeira, PMO Compass/);
+  for(const k of ['function systemRisks()', 'function registerRisk(key, pid)', 'Ponto único de falha', 'id="risk-sys-root"', 'Identificado pelo Sistema', 'forPid || DB.getActiveProjectId()']) assert.ok(html.includes(k), k);
+});

@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.100.2'
+  version: '2.100.3'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -2211,6 +2211,7 @@ table th.num,table td.num{text-align:right;white-space:nowrap}
       <button class="btn btn-sm" onclick="XlsxExport.risks()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button>
     </div>
   </div>
+  <div id="risk-sys-root"></div>
   <div class="g4 rc-k" id="rk-kpis"></div>
   <div class="rk-grid">
     <div class="card">
@@ -5430,9 +5431,9 @@ const Cloud = (() => {
     if(!client || !session || !ROW[table]) return;
     track(client.from(table).upsert(ROW[table].toDb(x, DB.getActiveProjectId())).then(r => { if(r && r.error) cloudSyncFailed(r.error); }).catch(cloudSyncFailed));
   }
-  function pushMany(table, rows) {
+  function pushMany(table, rows, forPid) {
     if(!client || !session || !ROW[table] || !rows.length) return;
-    const pid = DB.getActiveProjectId();
+    const pid = forPid || DB.getActiveProjectId();
     for(let i = 0; i < rows.length; i += 200) {
       track(client.from(table).upsert(rows.slice(i, i + 200).map(x => ROW[table].toDb(x, pid))).then(r => { if(r && r.error) cloudSyncFailed(r.error); }).catch(cloudSyncFailed));
     }
@@ -12955,7 +12956,13 @@ const Risks = (() => {
     }).join('');
   }
 
-  function render() { renderKpis(); renderMatrix(); renderList(); }
+  // Riscos que o sistema identificou neste projeto e ainda não estão registrados (ex.: ponto único de falha)
+  function renderSystem() {
+    const root = document.getElementById('risk-sys-root'); if(!root) return;
+    let list = []; try { list = Resources.systemRisks().filter(x => x.projectId === DB.getActiveProjectId()); } catch(e) { list = []; }
+    root.innerHTML = list.length ? '<div class="card card-danger" style="margin-bottom:12px"><div class="lbl"><i class="ti ti-radar"></i>Identificado pelo Sistema</div>' + list.map(x => '<div style="font-size:12.5px;line-height:1.6;margin-bottom:6px"><b>' + esc(x.title) + '</b> (nota 20, crítico). ' + esc(x.person) + ' soma ' + x.total + '% entre projetos e tem ' + x.openCards + ' card(s) em aberto aqui, sem ninguém para receber. <b>Como corrigir:</b> incluir mais uma pessoa na equipe e/ou priorizar os projetos. <b>Como mitigar:</b> avisar a diretoria e renegociar prazo. <button class="btn btn-sm btn-acc" data-perm="business" data-k="' + esc(x.key) + '" data-p="' + esc(x.projectId) + '" onclick="Resources.registerRisk(this.dataset.k, this.dataset.p)"><i class="ti ti-shield-plus"></i>Registrar Como Risco</button></div>').join('') + '</div>' : '';
+  }
+  function render() { renderSystem(); renderKpis(); renderMatrix(); renderList(); }
 
   // ── filtros (a busca redesenha só a lista, para não perder o foco do campo) ──
   function setQuery(v) { filter.q = v; renderList(); }
@@ -18758,7 +18765,8 @@ const PlanVsReal = (() => {
       const names = pause.map(r => r.projectName).join(', ');
       return { kind: 'capacity', excess, total, keep: keep.projectName, cuts: pause.map(r => ({ projectId: r.projectId, projectName: r.projectName, from: r.pct, to: 0, openCards: r.openCards })), peopleNeeded: need, escalate: true,
         basis: hasPri ? 'a Priorização dos projetos' : 'o volume de trabalho em aberto',
-        headline: person.name + ' é a única pessoa nas equipes de ' + rows.length + ' projeto(s): ' + total + '% de alocação somada e ninguém para dividir o trabalho',
+        solo: rows.filter(r => r.receivers === 0).map(r => ({ projectId: r.projectId, projectName: r.projectName, openCards: r.openCards })),
+        headline: person.name + ' é a única pessoa disponível' + (rows.some(r => r.receivers === 0) ? ' em ' + rows.filter(r => r.receivers === 0).map(r => r.projectName).join(', ') : ' nas equipes') + ': ' + total + '% de alocação somada e ninguém para receber os cards',
         steps: ['Não há para quem transferir: isto é falta de capacidade do time, não um ajuste de carga entre pessoas.',
           'Decida a prioridade: mantenha ' + keep.projectName + ' em andamento e coloque ' + names + ' em pausa ou em ritmo reduzido até haver mais gente.',
           'Amplie o time: faltam cerca de ' + need + ' pessoa(s) em tempo integral. Dê acesso ao projeto a quem puder ajudar (Pessoas e Acesso) ou peça reforço de outra área.'],
@@ -21643,8 +21651,37 @@ const Resources = (() => {
   function setTeamFilter() { renderTeam(); }
   // Decisões de sobrealocação para o painel da gestão: quem, quanto, de onde tirar, como mitigar
   // Quantas pessoas, nas equipes dos projetos de "p", poderiam receber cards dela (0 = é o único profissional)
-  function receiversOf(p) { return p.rows.reduce((n, r) => { const proj = tcProjects.find(x => x.id === r.projectId); return n + (proj ? TeamCapacity.candidates(tcAll, p, proj.team || []).length : 0); }, 0); }
-  function planOf(p) { try { return PlanVsReal.allocPlan({ name: p.name, total: p.total, receivers: receiversOf(p), rows: p.rows.map(r => Object.assign({}, r, { openCards: r.cards.length })) }); } catch(e) { return null; } }
+  // Quem pode receber os cards dela em cada projeto (só olha as equipes onde ela tem trabalho: ter gente em outro projeto não resolve)
+  const rowRecv = (p, r) => { const proj = tcProjects.find(x => x.id === r.projectId); return proj ? TeamCapacity.candidates(tcAll, p, proj.team || []).length : 0; };
+  function planOf(p) {
+    try {
+      const rows = p.rows.map(r => Object.assign({}, r, { openCards: r.cards.length, receivers: rowRecv(p, r) }));
+      const withWork = rows.filter(r => r.openCards > 0), recv = (withWork.length ? withWork : rows).reduce((n, r) => n + r.receivers, 0);
+      return PlanVsReal.allocPlan({ name: p.name, total: p.total, receivers: recv, rows });
+    } catch(e) { return null; }
+  }
+  const spofTitle = (name, proj) => 'Ponto único de falha: ' + name + ' é a única pessoa em ' + proj;
+  // Riscos que o sistema identificou sozinho (ponto único de falha) e que ainda não foram registrados no projeto
+  function systemRisks() {
+    const out = [];
+    plans().forEach(x => { if(x.plan.kind === 'capacity') (x.plan.solo || []).forEach(r => {
+      const title = spofTitle(x.name, r.projectName);
+      if(!(DB.getForProject(r.projectId, 'risks') || []).some(k => RiskMatrix.isOpen(k) && k.title === title)) out.push({ key: x.key, person: x.name, projectId: r.projectId, projectName: r.projectName, title, total: x.total, openCards: r.openCards, score: 20, level: 'crítico' });
+    }); });
+    return out;
+  }
+  // Registra o risco no projeto (mesmo fora do aberto); o dono fica em branco para o gerente assumir
+  function registerRisk(key, pid) {
+    if(!Auth.guard('business')) return;
+    const r = systemRisks().find(x => x.key === key && x.projectId === pid); if(!r) { T.show('Esse risco já está registrado.'); return; }
+    const list = DB.getForProject(pid, 'risks') || [], nums = list.map(x => parseInt(String(x.id).replace(/\D/g, ''), 10)).filter(n => !isNaN(n));
+    const item = { id: 'RK-' + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, '0'), title: r.title, description: r.person + ' soma ' + r.total + '% de alocação e é a única pessoa neste projeto, com ' + r.openCards + ' card(s) em aberto. Se ela faltar ou estourar a capacidade, o projeto para. Identificado automaticamente pelo sistema.', category: 'recursos', probability: 4, impact: 5, status: 'aberto', response: 'mitigar', mitigation: 'Incluir ao menos mais uma pessoa na equipe (Pessoas e Acesso) e/ou priorizar os projetos para reduzir a alocação dela; avisar a diretoria.', contingency: 'Pausar o projeto ou renegociar prazo e escopo até haver cobertura.', owner: '', reviewOn: '', closedOn: '', identifiedOn: new Date().toISOString().slice(0, 10) };
+    DB.setForProject(pid, 'risks', [item].concat(list));
+    try { Cloud.pushMany('risks', [item], pid); } catch(e) { /* sem nuvem */ }
+    try { if(typeof Risks !== 'undefined') Risks.resetCache(); } catch(e) { /* sem cache */ }
+    T.show('✅ Risco registrado no projeto "' + r.projectName + '".', 5000);
+    try { if(typeof MgrPanel !== 'undefined') MgrPanel.render(); if(typeof Risks !== 'undefined') Risks.render(); } catch(e) { /* tela fechada */ }
+  }
   function plans() {
     gather();
     return tcAll.filter(p => p.level === 'over').map(p => ({ key: p.key, name: p.name, total: p.total, open: p.open, plan: planOf(p) })).filter(x => x.plan);
@@ -21683,6 +21720,7 @@ const Resources = (() => {
     document.getElementById('tr-body').innerHTML = p.rows.filter(r => r.cards.length).map(r => {
       const proj = tcProjects.find(x => x.id === r.projectId), cands = TeamCapacity.candidates(tcAll, p, proj.team || []);
       trPerson.dest[r.projectId] = (cands[0] && cands[0].name) || '';
+      if(!cands.length) return '<fieldset class="tr-proj" style="border:1px solid var(--rb);border-radius:var(--r8);padding:8px 12px;margin:0 0 10px"><legend style="font-size:12.5px;font-weight:700;padding:0 6px">' + esc(r.projectName) + ' <span class="set-sub">· ' + r.cards.length + ' card(s)</span></legend><div style="font-size:12.5px;line-height:1.6"><i class="ti ti-alert-triangle" aria-hidden="true" style="color:var(--red)"></i> <b>' + esc(p.name) + ' é a única pessoa neste projeto:</b> não há para quem passar estes ' + r.cards.length + ' card(s). É decisão de capacidade: incluir mais uma pessoa na equipe ou priorizar/pausar este projeto (o sistema já registra o risco no Painel do Gerente).</div></fieldset>';
       const opts = cands.length ? cands.map(c => '<option value="' + esc(c.name) + '">' + esc(c.name) + ' — ' + esc(c.role || 'sem cargo') + ' · ' + c.total + '% alocado' + (c.free ? ' (' + c.free + '% livre)' : '') + (c.sameRole ? ' · mesmo cargo' : '') + '</option>').join('') : '<option value="">Ninguém mais na equipe deste projeto</option>';
       return '<fieldset class="tr-proj" style="border:1px solid var(--b1);border-radius:var(--r8);padding:8px 12px;margin:0 0 10px"><legend style="font-size:12.5px;font-weight:700;padding:0 6px">' + esc(r.projectName) + ' <span class="set-sub">· ' + r.cards.length + ' card(s) · ' + r.pct + '%</span></legend>'
         + '<div style="margin-bottom:6px"><label class="set-sub" for="tr-dest-' + esc(r.projectId) + '" style="display:block">Quem recebe neste projeto</label><select class="input" id="tr-dest-' + esc(r.projectId) + '" data-pid="' + esc(r.projectId) + '" onchange="Resources.setDest(this)">' + opts + '</select></div>'
@@ -21792,7 +21830,7 @@ const Resources = (() => {
     </div>`;
   }
 
-  return { render, renderTeam, plans, capacityAlerts: () => { try { return plans(); } catch(e) { return []; } }, setTeamFilter, openTransfer, setDest, pickCard, closeTransfer, confirmTransfer };
+  return { render, renderTeam, plans, systemRisks, registerRisk, capacityAlerts: () => { try { return plans(); } catch(e) { return []; } }, setTeamFilter, openTransfer, setDest, pickCard, closeTransfer, confirmTransfer };
 })();
 </script>
 
@@ -21819,7 +21857,8 @@ const MgrPanel = (() => {
     DET.dec = { title: 'Decisões críticas pendentes', html: ul(byP(r => (r.facts.decisions.pendingCritical || []).map(esc)).concat(caps.map(p => '<li><b>Capacidade do time</b>: ' + esc(p.plan.headline) + '. Decisão: priorizar os projetos e ampliar a equipe (detalhe abaixo).</li>'))) + caps.map(p => planHtmlSimple(p)).join('') + fix('decisão crítica') };
     DET.risk = { title: 'Projetos em risco (farol vermelho)', html: ul(rows.filter(r => r.ev.farol === 'vermelho').map(r => '<li><b>' + esc(r.name) + '</b>: ' + [r.ev.atrasadas ? r.ev.atrasadas + ' entrega(s) atrasada(s)' : '', r.ev.riscosCriticos ? r.ev.riscosCriticos + ' risco(s) crítico(s)' : '', r.ev.decisoesCriticas ? r.ev.decisoesCriticas + ' decisão(ões) crítica(s)' : ''].filter(Boolean).join(' · ') + '</li>')) + fix('projeto em risco') };
     DET.cap = { title: 'Capacidade do time', html: plans.length ? plans.map(p => planHtml(p)).join('') : '<div class="rk-empty">Ninguém acima de 100% somando os projetos. 👍</div>' };
-    DET.rsk = { title: 'Riscos críticos em aberto', html: ul(byP(r => (r.facts.risks.top || []).filter(x => x.level === 'crítico').map(x => esc(x.title) + ' (nota ' + x.score + (x.owner ? ', dono ' + esc(x.owner) : ', <b>sem dono</b>') + ')'))) + fix('risco crítico') };
+    const sys = (Resources.systemRisks ? Resources.systemRisks() : []);
+    DET.rsk = { title: 'Riscos críticos em aberto', html: ul(byP(r => (r.facts.risks.top || []).filter(x => x.level === 'crítico').map(x => esc(x.title) + ' (nota ' + x.score + (x.owner ? ', dono ' + esc(x.owner) : ', <b>sem dono</b>') + ')')).concat(sys.map(x => '<li><b>' + esc(x.projectName) + '</b>: ' + esc(x.title) + ' (nota 20, <b>identificado pelo sistema, ainda não registrado</b>) <button class="btn btn-sm" data-perm="business" data-k="' + esc(x.key) + '" data-p="' + esc(x.projectId) + '" onclick="Resources.registerRisk(this.dataset.k, this.dataset.p)"><i class="ti ti-shield-plus"></i>Registrar no Projeto</button></li>'))) + fix('risco crítico') };
     DET.del = { title: 'Entregas atrasadas', html: ul(byP(r => (r.facts.schedule.delayed || []).map(x => esc(x.label) + ' (' + x.daysLate + ' dia(s) de atraso)'))) + fix('entrega atrasada') };
     DET.scp = { title: 'Mudanças de escopo aguardando aprovação', html: ul(byP(r => r.facts.scope.openCount ? [r.facts.scope.openCount + ' mudança(s) · +' + r.facts.scope.daysImpact + ' dia(s) de impacto'] : [])) + fix('mudança de escopo') };
     return { nCrit: rows.reduce((a, r) => a + (r.facts.decisions.pendingCriticalCount || 0), 0) + caps.length, caps: caps.length };
@@ -21841,7 +21880,7 @@ const MgrPanel = (() => {
     let plansAll = []; try { plansAll = Resources.plans(); } catch(e) { plansAll = []; }
     if(v) {
       const sums = buildDetails(v.rows, plansAll), n = x => String(x);
-      const nRisk = v.rows.filter(r => r.ev.farol === 'vermelho').length, nRsk = v.rows.reduce((a, r) => a + (r.ev.riscosCriticos || 0), 0), nDel = v.rows.reduce((a, r) => a + (r.ev.atrasadas || 0), 0), nScp = v.rows.reduce((a, r) => a + (r.facts.scope.openCount || 0), 0);
+      const nRisk = v.rows.filter(r => r.ev.farol === 'vermelho').length, nRsk = v.rows.reduce((a, r) => a + (r.ev.riscosCriticos || 0), 0) + ((Resources.systemRisks ? Resources.systemRisks() : []).length), nDel = v.rows.reduce((a, r) => a + (r.ev.atrasadas || 0), 0), nScp = v.rows.reduce((a, r) => a + (r.facts.scope.openCount || 0), 0);
       k.innerHTML = kpi('dec', 'Decisões críticas', n(sums.nCrit), sums.caps ? 'inclui ' + sums.caps + ' de capacidade do time' : 'aguardando a sua decisão', sums.nCrit ? 'critico' : 'ok')
         + kpi('cap', sums.caps ? 'Time sem reserva' : 'Capacidade do time', n(plansAll.length), sums.caps ? 'pessoa única em vários projetos' : (plansAll.length ? 'acima de 100% somando os projetos' : 'ninguém acima de 100%'), sums.caps ? 'critico' : (plansAll.length ? 'alerta' : 'ok'))
         + kpi('risk', 'Projetos em risco', n(nRisk), 'farol vermelho', nRisk ? 'critico' : 'ok')
