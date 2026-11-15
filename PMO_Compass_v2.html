@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.98.5'
+  version: '2.99.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -18530,7 +18530,7 @@ const ImportUi = (() => {
     el('imp-go').style.opacity = r.rows.length ? '' : '.5';
   }
 
-  function commit() {
+  async function commit() {
     if(!Auth.guard('business')) return;
     const r = ctx.result || compute();
     if(!r.rows.length) { T.show('⚠️ Nada para importar.'); return; }
@@ -18541,7 +18541,15 @@ const ImportUi = (() => {
       else if(ctx.target === 'backlog') n = Agile.addMany(r.rows);
       else if(ctx.target === 'team') {
         const team = DB.get('team') || [];
-        const created = r.rows.map(x => ({ id: 'tm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), ...x }));
+        let rowsOk = r.rows, skipped = [];
+        if(typeof Cloud !== 'undefined' && Cloud.isSignedIn()) { // pessoa única: só entra quem é uma conta ativa; o resto é recusado com o motivo
+          const nk = x => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+          const accounts = (await Cloud.listProfiles()).filter(p => p.active !== false);
+          rowsOk = []; r.rows.forEach(x => { const a = accounts.find(p => nk(p.name) === nk(x.name)); if(a) rowsOk.push({ ...x, name: a.name, userId: a.id }); else skipped.push(x.name); });
+          if(skipped.length) T.show('⚠️ ' + skipped.length + ' nome(s) sem conta no sistema não entraram: ' + skipped.slice(0, 5).join(', ') + (skipped.length > 5 ? '…' : '') + '. Crie a conta em Pessoas e Acesso (ou confira a grafia do nome) e importe de novo.', 9000);
+          if(!rowsOk.length) return;
+        }
+        const created = rowsOk.map(x => ({ id: 'tm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), ...x }));
         DB.set('team', team.concat(created));
         created.forEach(m => Cloud.pushTeamMember(m));
         if(typeof Burnout !== 'undefined') { Burnout.resetCache(); Burnout.render(); }
@@ -19625,6 +19633,8 @@ const Burnout = (() => {
     }).join('');
   }
 
+  // Escolheu a conta: o nome do colaborador é o da conta
+  function pickAccount() { if(!modalCtx || modalCtx.mode !== 'add') return; const sel = document.getElementById('burnout-f-account'), nm = document.getElementById('burnout-f-name'); if(sel && nm && sel.value) nm.value = (sel.options[sel.selectedIndex].text || '').trim(); }
   function openModal() { document.getElementById('modal-burnout').classList.remove('hidden'); }
   function closeModal() { document.getElementById('modal-burnout').classList.add('hidden'); }
   // Lista as contas cadastradas para o vínculo (só Administrador logado na nuvem)
@@ -19674,7 +19684,14 @@ const Burnout = (() => {
   async function saveFromModal() {
     if(!Auth.guard('business')) return;
     ensureLoaded();
-    const name = document.getElementById('burnout-f-name').value.trim();
+    let name = document.getElementById('burnout-f-name').value.trim();
+    // Pessoa única: com a nuvem ligada, colaborador novo só entra se for uma conta cadastrada com acesso ao sistema (o nome vem da conta, sem digitação)
+    if(modalCtx.mode === 'add' && typeof Cloud !== 'undefined' && Cloud.isSignedIn()) {
+      const accSel = document.getElementById('burnout-f-account'), accWrap = document.getElementById('burnout-f-account-wrap');
+      if(!accWrap || accWrap.style.display === 'none') { T.show('⚠️ Só o Administrador adiciona colaborador. Para um gerente, o caminho é dar acesso ao projeto em Pessoas e Acesso: a pessoa entra na equipe sozinha, com a conta ligada.', 7000); return; }
+      if(!accSel || !accSel.value) { T.show('⚠️ Escolha a conta com acesso ao sistema: o colaborador precisa ser uma pessoa cadastrada (não vale só digitar o nome).', 6000); return; }
+      name = (accSel.options[accSel.selectedIndex].text || '').trim();
+    }
     const role = document.getElementById('burnout-f-role').value.trim();
     const alloc = Math.max(0, parseInt(document.getElementById('burnout-f-alloc').value, 10) || 0);
     const pctRaw = document.getElementById('burnout-f-pct').value.trim(), pct = pctRaw === '' ? null : Math.max(0, parseInt(pctRaw, 10) || 0); // vazio = carga automática (nunca vira 0%)
@@ -19743,7 +19760,7 @@ const Burnout = (() => {
     T.show('🗑️ Colaborador removido.');
   }
 
-  return { render, openAdd, openEdit, saveFromModal, deleteFromModal, closeModal, resetCache, effectivePct, signalsOf, useAuto };
+  return { render, openAdd, openEdit, saveFromModal, deleteFromModal, closeModal, resetCache, effectivePct, signalsOf, useAuto, pickAccount };
 })();
 </script>
 
@@ -22697,14 +22714,7 @@ Regras: gere de 3 a 6 subtarefas. Cada nome deve ser um passo específico e veri
 
     <!-- Step 2: Team -->
     <div id="wz-panel-2" style="display:none">
-      <p style="font-size:12.5px;color:var(--t2);margin-bottom:12px">Adicione os colaboradores da equipe. A IA vai monitorar carga e burnout automaticamente.</p>
-      <div id="wz-members" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
-        <div class="g2" style="gap:8px">
-          <input class="input" type="text" placeholder="Nome do colaborador">
-          <input class="input" type="text" placeholder="Papel / função">
-        </div>
-      </div>
-      <button class="btn btn-sm" onclick="Wizard.addMember()"><i class="ti ti-plus"></i>Adicionar Colaborador</button>
+      <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:8px">A equipe é formada por <b>pessoas cadastradas com acesso ao sistema</b>, nunca por nomes digitados. Depois de criar, dê o acesso ao projeto em Pessoas e Acesso: o colaborador entra na equipe sozinho, já ligado à conta, e o sistema passa a calcular a carga dele.</p>
     </div>
 
     <!-- Step 3: AI Context -->
@@ -23749,7 +23759,7 @@ const Messaging = (() => {
       <div><div class="field-label">Alocação neste projeto (%)</div><input class="input" type="number" min="0" max="150" id="burnout-f-alloc" placeholder="Ex: 100 (tempo integral)"><div style="font-size:11px;color:var(--t3);margin-top:4px">Usado para calcular alocação real entre projetos em <a href="#" onclick="R.go('resources');return false" style="color:var(--acc)">Colaboradores</a> — casa pelo nome em todos os projetos deste navegador.</div></div>
       <div><div class="field-label"><label for="burnout-f-pct">Ajuste manual da carga (%) — opcional</label></div><input class="input" type="number" min="0" max="150" id="burnout-f-pct" placeholder="Deixe vazio: o sistema calcula"><div style="font-size:11px;color:var(--t3);margin-top:4px">Só preencha se souber algo que o sistema não enxerga (por exemplo, trabalho fora do Compass). Vazio = carga automática; o ajuste pode ser desfeito a qualquer momento.</div></div>
       <div><div class="field-label">Observação do gerente (opcional)</div><textarea class="input" id="burnout-f-rec" rows="2" style="resize:vertical;font-family:inherit" placeholder="Vazio: o sistema sugere a ação sozinho"></textarea></div>
-      <div data-perm="admin" id="burnout-f-account-wrap" style="display:none"><div class="field-label"><label for="burnout-f-account">Conta de login vinculada</label></div><select class="input" id="burnout-f-account"><option value="">Sem conta vinculada</option></select><div style="font-size:11px;color:var(--t3);margin-top:4px">Liga esta pessoa à conta dela: ela passa a ver e mexer só nos itens em que é a responsável e a apontar as próprias horas. Só o Administrador vincula.</div></div>
+      <div data-perm="admin" id="burnout-f-account-wrap" style="display:none"><div class="field-label"><label for="burnout-f-account">Conta de login (obrigatória para novo colaborador)</label></div><select class="input" id="burnout-f-account" onchange="Burnout.pickAccount()"><option value="">Sem conta vinculada</option></select><div style="font-size:11px;color:var(--t3);margin-top:4px">Liga esta pessoa à conta dela: ela passa a ver e mexer só nos itens em que é a responsável e a apontar as próprias horas. Só o Administrador vincula.</div></div>
     </div>
     <div class="btn-row" style="margin-top:18px;justify-content:flex-end">
       <button class="btn btn-sm btn-red" id="burnout-f-delete-btn" style="display:none" onclick="Burnout.deleteFromModal()"><i class="ti ti-trash"></i>Excluir</button>
@@ -23969,15 +23979,6 @@ const Wizard = (() => {
     else { create(); }
   }
   function back() { if(step > 1) { step--; render(); } }
-  function addMember() {
-    const wrap = document.getElementById('wz-members');
-    if(!wrap) return;
-    const div = document.createElement('div');
-    div.className = 'g2';
-    div.style.gap = '8px';
-    div.innerHTML = '<input class="input" type="text" placeholder="Nome do colaborador"><input class="input" type="text" placeholder="Papel / função">';
-    wrap.appendChild(div);
-  }
   function create() {
     const name = document.getElementById('wz-name')?.value.trim() || 'Novo projeto';
     const client = document.getElementById('wz-client')?.value.trim() || '';
@@ -24013,7 +24014,7 @@ const Wizard = (() => {
       }
     }
   }
-  return { open, close, next, back, addMember, create, sameName };
+  return { open, close, next, back, create, sameName };
 })();
 </script>
 

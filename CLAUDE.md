@@ -278,3 +278,8 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 
 ## Títulos e cabeçalhos curtos (pedido do dono, 15/11/2026)
 - Cabeçalho de tabela e rótulo de campo: **nome curto e intuitivo**, sem "em", "de", unidade por extenso nem parêntese longo ("Fila", "Pai", "Criado", "Prob. (1-5)", "Carga %"). Detalhe vai na dica (?) ou no `title`, não no título. Vale para o catálogo do motor de relatórios e para tabelas novas.
+
+## Colaborador só com conta; teste nunca na base real (pedido do dono, 15/11/2026)
+- **Pessoa única, bloqueada na entrada** (migração `20261115130000`, gatilho `team_member_needs_account`): logado, colaborador novo só entra com nome e **conta ativa** ligada; não se desliga a conta de um colaborador; regravar quem já tem conta mantém o vínculo; manutenção direta sem sessão segue livre. Na tela (nuvem ligada) "Adicionar Colaborador" exige escolher a conta (o nome vem dela) e só o administrador faz; a importação de equipe só aceita nomes que casam com uma conta e informa os recusados; o assistente de novo projeto não tem mais campos de nome solto (a equipe entra pelo acesso em Pessoas e Acesso).
+- **Unificação feita em 15/11/2026**: as grafias "Leandro", "Lendro R" e "Leandro R" da mesma conta viraram **"Leandro R"** nos 4 projetos/quadros (conta, equipe e 6 cards, com o registro "Responsável: de X para Y" no histórico).
+- **Teste não deixa nada na base**: o ciclo do banco (`test:ciclo-db`) usa um projeto descartável (`zzciclo`) criado e apagado por ele, nunca os projetos e quadros reais. Só roda com autorização do dono; se for interrompido, conferir e apagar `zzciclo` e linhas `ZZ-`.
