@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.102.0'
+  version: '2.102.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -7365,7 +7365,10 @@ const DB = (() => {
     return projects;
   }
   function persistProjects() { try { localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects)); } catch(e){} }
-  function listProjects() { return loadProjects(); }
+  // Com conta na nuvem a demonstração (Portal Nexus, Valdori, Beltrano) nunca aparece em lista, painel ou relatório: só existe sem conta
+  const DEMO_IDS = ['nexus', 'valdori', 'beltrano'];
+  const withoutDemo = list => (typeof Cloud !== 'undefined' && Cloud.isSignedIn()) ? list.filter(p => !DEMO_IDS.includes(p.id)) : list;
+  function listProjects() { return withoutDemo(loadProjects()); }
 
   // Substitui a lista local pela lista real da nuvem — chamado uma vez, logo após conectar
   // (Cloud.syncProjects()). "projects" no Supabase é o registro compartilhado de verdade; o que
@@ -7814,7 +7817,7 @@ const DB = (() => {
   // "Não confirmado na nuvem": o projeto foi criado neste navegador e ainda não subiu. Só estes sobem na sincronização;
   // um projeto que sumiu da nuvem (apagado lá) NÃO volta a ser criado por um navegador que ainda tinha a cópia na lista.
   // Só projetos de verdade: o Quadro de tarefas (sem plano, orçamento nem riscos) não entra em portfólio, diretoria, relatórios nem priorização
-  function listPortfolio() { return loadProjects().filter(p => p.methodology !== 'quadro'); }
+  function listPortfolio() { return withoutDemo(loadProjects()).filter(p => p.methodology !== 'quadro'); }
   function markProjectSynced(id) { const p = loadProjects().find(x => x.id === id); if(p && p.unsynced) { delete p.unsynced; persistProjects(); } }
   function createProject(name, client, area) {
     if(!Auth.guard('business')) return null;

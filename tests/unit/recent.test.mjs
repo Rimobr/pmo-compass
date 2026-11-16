@@ -67,7 +67,7 @@ test('sincronização de projetos: a nuvem manda (não recria projeto vazio que 
 });
 
 test('Quadro de tarefas fica fora dos painéis que juntam projetos (portfólio, diretoria, executiva, PMO, relatório, priorização)', () => {
-  assert.ok(html.includes("function listPortfolio() { return loadProjects().filter(p => p.methodology !== 'quadro'); }"));
+  assert.ok(html.includes("function listPortfolio() { return withoutDemo(loadProjects()).filter(p => p.methodology !== 'quadro'); }"));
   const n = (html.match(/DB\.listPortfolio\(\)/g) || []).length;
   assert.ok(n >= 17, 'painéis usando a lista sem quadros: ' + n);
 });

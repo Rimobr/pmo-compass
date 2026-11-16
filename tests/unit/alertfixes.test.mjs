@@ -94,3 +94,6 @@ test('Central de Decisões: ordena por urgência e cada decisão traz porquê, p
   assert.equal(D.build({ projects: [], capacity: [] }).length, 0);
   assert.ok(html.includes('id="mg-center"') && html.includes('MgrPanel.act(this)') && html.includes('pullPortfolio'), 'tela e carga do portfólio');
 });
+test('com conta na nuvem a demonstração nunca aparece em lista de projetos nem em painel', () => {
+  for(const k of ["const withoutDemo = list => (typeof Cloud !== 'undefined' && Cloud.isSignedIn())", 'function listProjects() { return withoutDemo(loadProjects()); }', 'function listPortfolio() { return withoutDemo(loadProjects())']) assert.ok(html.includes(k), k);
+});
