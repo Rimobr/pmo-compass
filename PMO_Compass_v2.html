@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.102.1'
+  version: '2.103.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1094,6 +1094,7 @@ body.icons-failed i[data-fb]::before{
       <button class="si" data-p="drpmo" onclick="R.go('drpmo')" title="Aponte os arquivos que você já tem: sem projeto, o Dr. PMO diz se é quadro ou projeto, a metodologia, os riscos e os buracos; com projeto aberto, o Raio-X aplica os achados depois de você revisar"><i class="ti ti-stethoscope"></i>Diagnóstico - Dr PMO</button>
       <button class="si" data-p="board" onclick="R.go('board')"><i class="ti ti-presentation-analytics"></i>Painel da Diretoria</button>
       <button class="si" data-p="execview" onclick="R.go('execview')"><i class="ti ti-chart-infographic"></i>Painel Executivo</button>
+      <button class="si" data-p="cardcontrol" onclick="R.go('cardcontrol')" title="Todos os cards abertos de todos os projetos: por que estão assim, tempo em cada etapa e o que fazer"><i class="ti ti-list-search"></i>Controle de Cards</button>
       <button class="si" data-p="mgrpanel" onclick="R.go('mgrpanel')" title="Tudo o que está com você: seu time em todos os projetos, o que decidir agora e quem equilibrar"><i class="ti ti-user-star"></i>Painel do Gerente de Projetos</button>
       <button class="si" data-p="pmoview" onclick="R.go('pmoview')"><i class="ti ti-binoculars"></i>Governança do Portfólio</button>
     </div>
@@ -1677,6 +1678,25 @@ body.icons-failed i[data-fb]::before{
     <div class="lbl"><i class="ti ti-history"></i>Decisões Já Tomadas<span class="help-q" data-help="Todo registro de uma decisão de seguir, pausar ou cancelar — com a sugestão da IA que veio antes (quando houve). Avaliar se foi uma boa decisão ajuda a IA a raciocinar melhor da próxima vez." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div id="board-history-root"></div>
   </div>
+</section>
+
+<!-- ■ MODULE: pages/cardcontrol ─ Controle de Cards: todos os cards abertos de todos os projetos e quadros, com o porquê da situação, o tempo em cada etapa, a leitura do sistema e a previsão -->
+<section class="page" id="p-cardcontrol" data-module="pages/cardcontrol">
+  <div class="pg-hdr">
+    <div><div class="pg-title"><i class="ti ti-list-search" style="color:var(--acc)"></i> Controle de Cards<span class="help-q" data-help="Todos os cards abertos de todos os projetos e quadros que você acessa: situação, por que está assim, há quanto tempo está em cada etapa e o que o sistema recomenda. Clique numa linha para ver a linha do tempo do card." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Cada card, em cada projeto: por que está assim, quanto tempo ficou em cada etapa e o que fazer.</div></div>
+  </div>
+  <div class="g4 rc-k" id="cc-kpis" style="margin-bottom:12px"></div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="btn-row" style="align-items:flex-end">
+      <div><label class="set-sub" for="cc-proj" style="display:block">Projeto</label><select class="input" id="cc-proj" onchange="CardControl.render()"><option value="">Todos</option></select></div>
+      <div><label class="set-sub" for="cc-st" style="display:block">Situação</label><select class="input" id="cc-st" onchange="CardControl.render()"><option value="">Todas</option></select></div>
+      <div><label class="set-sub" for="cc-who" style="display:block">Responsável</label><select class="input" id="cc-who" onchange="CardControl.render()"><option value="">Todos</option></select></div>
+      <div><label class="set-sub" for="cc-q" style="display:block">Buscar</label><input class="input" id="cc-q" placeholder="Código ou título…" oninput="CardControl.render()" style="width:190px"></div>
+      <label class="set-sub" style="display:inline-flex;gap:6px;align-items:center;margin-bottom:6px"><input type="checkbox" id="cc-alert" onchange="CardControl.render()">Só com alerta</label>
+      <label class="set-sub" style="display:inline-flex;gap:6px;align-items:center;margin-bottom:6px"><input type="checkbox" id="cc-done" onchange="CardControl.render()">Incluir concluídos</label>
+    </div>
+  </div>
+  <div class="card"><div id="cc-root"></div></div>
 </section>
 
 <!-- ■ MODULE: pages/mgrpanel ─ Painel do Gerente de Projetos: tudo o que está com a gestão em visão de portfólio (o que decidir agora, o time em todos os projetos e a transferência de atividades) -->
@@ -5278,7 +5298,7 @@ const Cloud = (() => {
       try {
         await flush();
         const active = DB.getActiveProjectId();
-        const names = ['wbs_modules', 'wbs_tasks', 'decisions', 'budget_lines', 'cost_actuals', 'scope_changes', 'risks', 'baselines', 'backlog_items', 'sprints', 'impediments', 'time_entries'];
+        const names = ['wbs_modules', 'wbs_tasks', 'decisions', 'budget_lines', 'cost_actuals', 'scope_changes', 'risks', 'baselines', 'backlog_items', 'sprints', 'impediments', 'time_entries', 'project_settings'];
         const res = await Promise.all(names.map(t => fetchAllRows(t, t === 'time_entries' ? 'work_date' : null)));
         const T = Object.fromEntries(names.map((t, i) => [t, res[i]]));
         const by = rows => { const m = new Map(); rows.forEach(r => { if(!m.has(r.project_id)) m.set(r.project_id, []); m.get(r.project_id).push(r); }); return m; };
@@ -5291,6 +5311,7 @@ const Cloud = (() => {
           DB.setForProject(p.id, 'decisions', g('decisions').map(d => ({ id:d.id, severity:d.severity, pct:d.pct, title:d.title, body:d.body, sources:d.sources||[], status:d.status, actions:d.actions||['accept'], resolvedAt:d.resolved_at, origin:d.origin||undefined, createdAt:d.created_at })));
           DB.setForProject(p.id, 'budgetLines', g('budget_lines').map(l => ({ id:l.id, label:l.label, plannedValue:l.planned_value, wbsModuleId:l.wbs_module_id||'', isReserve:!!l.is_reserve, origin:l.origin||undefined })));
           DB.setForProject(p.id, 'costActuals', g('cost_actuals').map(a => ({ id:a.id, label:a.label, amount:a.amount, date:a.entry_date, budgetLineId:a.budget_line_id||'', kind:a.kind })));
+          g('project_settings').forEach(row => { if(row.key) DB.setForProject(p.id, row.key, row.value || {}); });
           ['scope_changes', 'risks', 'baselines', 'backlog_items', 'sprints', 'impediments', 'time_entries'].forEach(t => { const m = ROW[t]; if(m && m.fromDb && m.local) DB.setForProject(p.id, m.local, g(t).map(m.fromDb)); });
         });
         portfolioAt = Date.now();
@@ -8315,7 +8336,7 @@ const Store = (() => {
 
 
 const R = (() => {
-  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','raci','kanban','backlog','sprints','ritos','modelos','mywork','myind','help','xray','drpmo','account','sprintnow','noproject','reports','mgrpanel'];
+  const pages = ['dashboard','decisions','burnout','resources','whatif','lessons','meetings','trail','report','chat','portfolio','prioritization','board','execview','settings','repository','stakeholders','scope','estimates','loop','wbs','budget','risks','hours','statusmsg','baseline','pfkpi','pmoview','raci','kanban','backlog','sprints','ritos','modelos','mywork','myind','help','xray','drpmo','account','sprintnow','noproject','reports','mgrpanel','cardcontrol'];
   function go(id) {
     // Base nova (ou conta sem projeto): só configurações, conta e ajuda existem; o resto convida a criar o primeiro projeto
     if(typeof DB !== 'undefined' && DB.isEmpty() && !['settings', 'account', 'help', 'noproject', 'drpmo'].includes(id)) id = 'noproject';
@@ -8340,10 +8361,11 @@ const R = (() => {
     if(id === 'execview' && typeof ExecView !== 'undefined') ExecView.render();
     if(id === 'resources' && typeof Resources !== 'undefined') Resources.render();
     if(id === 'mgrpanel' && typeof MgrPanel !== 'undefined') MgrPanel.render();
-    if(['mgrpanel', 'board', 'execview', 'pmoview', 'pfkpi', 'resources', 'portfolio'].includes(id) && typeof Cloud !== 'undefined' && Cloud.isSignedIn()) {
+    if(id === 'cardcontrol' && typeof CardControl !== 'undefined') CardControl.render();
+    if(['mgrpanel', 'cardcontrol', 'board', 'execview', 'pmoview', 'pfkpi', 'resources', 'portfolio'].includes(id) && typeof Cloud !== 'undefined' && Cloud.isSignedIn()) {
       Cloud.pullPortfolio().then(changed => {
         if(!changed || !document.getElementById('p-' + id) || !document.getElementById('p-' + id).classList.contains('on')) return;
-        try { ({ mgrpanel: () => MgrPanel.render(), board: () => Board.render(), execview: () => ExecView.render(), pmoview: () => PmoView.render(), pfkpi: () => PfKpi.render(), resources: () => Resources.render(), portfolio: () => Portfolio.render() })[id](); } catch(e) { /* tela fechada */ }
+        try { ({ mgrpanel: () => MgrPanel.render(), cardcontrol: () => CardControl.render(), board: () => Board.render(), execview: () => ExecView.render(), pmoview: () => PmoView.render(), pfkpi: () => PfKpi.render(), resources: () => Resources.render(), portfolio: () => Portfolio.render() })[id](); } catch(e) { /* tela fechada */ }
       });
     }
     if(id === 'budget' && typeof Budget !== 'undefined') Budget.render();
@@ -8404,7 +8426,7 @@ const Nav = (() => {
     wbs:'sbg-planejamento', scope:'sbg-planejamento', estimates:'sbg-planejamento', whatif:'sbg-planejamento', budget:'sbg-planejamento', risks:'sbg-planejamento', baseline:'sbg-planejamento',
     burnout:'sbg-equipe', resources:'sbg-equipe', stakeholders:'sbg-equipe', hours:'sbg-equipe', raci:'sbg-equipe',
     lessons:'sbg-conhecimento', meetings:'sbg-conhecimento', repository:'sbg-conhecimento', chat:'sbg-conhecimento',
-    xray:'sbg-visao', drpmo:'sbg-visao', board:'sbg-visao', execview:'sbg-visao', mgrpanel:'sbg-visao', pmoview:'sbg-visao'
+    xray:'sbg-visao', drpmo:'sbg-visao', board:'sbg-visao', execview:'sbg-visao', mgrpanel:'sbg-visao', cardcontrol:'sbg-visao', pmoview:'sbg-visao'
     // projetos: a lista de projetos do menu (sem página própria)
   };
   // Itens do dia a dia que ficam soltos no menu do projeto (não abrem grupo nem a área "Mais Telas")
@@ -8538,13 +8560,13 @@ const Nav = (() => {
     sbg_equipe: 'Equipe', sbg_conhecimento: 'Conhecimento', sbg_projetos: 'Projetos'
   };
   // Os 4 painéis do topo não pertencem a um grupo, mas ganham a trilha "Painéis › Página"
-  const SECTION_OF = { xray:'Painéis', drpmo:'Painéis', board:'Painéis', execview:'Painéis', mgrpanel:'Painéis', pmoview:'Painéis', dashboard:'Projeto' };
+  const SECTION_OF = { xray:'Painéis', drpmo:'Painéis', board:'Painéis', execview:'Painéis', mgrpanel:'Painéis', cardcontrol:'Painéis', pmoview:'Painéis', dashboard:'Projeto' };
   const PAGE_LABEL = {
     dashboard:'Dashboard', decisions:'Decisões IA', loop:'Loop de Ação', trail:'Trilha', report:'Relatório',
     wbs:'WBS', scope:'Mudanças de Escopo', estimates:'Estimativas IA', whatif:'What-If', budget:'Orçamento e Custos', risks:'Riscos', hours:'Horas', statusmsg:'Mensagem de status', baseline:'Linha de Base', pfkpi:'Indicadores', pmoview:'Visão do PMO', raci:'Matriz RACI', kanban:'Quadro Kanban', backlog:'Backlog', sprints:'Sprints', ritos:'Ritos da sprint', modelos:'Modelos', mywork:'Meu trabalho', myind:'Meus Indicadores',
     burnout:'Burnout Radar', resources:'Colaboradores', stakeholders:'Stakeholders',
     lessons:'Lições Aprendidas', meetings:'Atas e Ações', repository:'Repositório', chat:'Chat contextual',
-    reports:'Central de Relatórios', portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Painel Executivo', mgrpanel:'Painel do Gerente de Projetos', settings:'Configurações', account:'Minha conta', sprintnow:'Sprint atual', help:'Ajuda', xray:'Raio-X do Projeto'
+    reports:'Central de Relatórios', portfolio:'Portfólio', prioritization:'Priorização', board:'Painel da Diretoria', execview:'Painel Executivo', mgrpanel:'Painel do Gerente de Projetos', cardcontrol:'Controle de Cards', settings:'Configurações', account:'Minha conta', sprintnow:'Sprint atual', help:'Ajuda', xray:'Raio-X do Projeto'
   };
 
   function renderBreadcrumb(pageId) {
@@ -8642,6 +8664,7 @@ const CmdK = (() => {
     { label:'Painel da Diretoria', page:'board', icon:'presentation-analytics', group:'Painéis' },
     { label:'Painel Executivo', page:'execview', icon:'chart-infographic', group:'Painéis' },
     { label:'Painel do Gerente de Projetos', page:'mgrpanel', icon:'user-star', group:'Painéis' },
+    { label:'Controle de Cards', page:'cardcontrol', icon:'list-search', group:'Painéis' },
     { label:'Configurações', page:'settings', icon:'settings', group:'Sistema' },
     { label:'Ajuda', page:'help', icon:'help-circle', group:'Sistema' }
   ];
@@ -13578,7 +13601,7 @@ const AccessProfiles = (() => {
   const count = perms => KEYS.filter(k => perms && perms[k]).length;
   // Cada tela exige uma permissão; tela que não está aqui é de todos que têm acesso ao projeto (Meu trabalho, Kanban, Backlog, Sprints, Ritos, WBS, Horas, Matriz RACI, Lições, Ajuda).
   const PAGE_NEEDS = {
-    board: 'view_portfolio', execview: 'view_portfolio', mgrpanel: 'view_team_load', pmoview: 'view_portfolio', pfkpi: 'view_portfolio', portfolio: 'view_portfolio', prioritization: 'view_portfolio',
+    board: 'view_portfolio', execview: 'view_portfolio', mgrpanel: 'view_team_load', cardcontrol: 'view_management', pmoview: 'view_portfolio', pfkpi: 'view_portfolio', portfolio: 'view_portfolio', prioritization: 'view_portfolio',
     reports: 'view_management', xray: 'view_management', drpmo: 'view_management', dashboard: 'view_management', report: 'view_management', baseline: 'view_management', estimates: 'view_management', whatif: 'view_management',
     decisions: 'view_management', loop: 'view_management', trail: 'view_management', statusmsg: 'view_management', scope: 'view_management', stakeholders: 'view_management',
     meetings: 'view_management', repository: 'view_management', chat: 'view_management', modelos: 'view_management', risks: 'view_management',
@@ -21994,6 +22017,137 @@ const DecisionCenter = (() => {
     return out.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title, 'pt-BR'));
   }
   return { build, LV };
+})();
+</script>
+
+<!-- ■ MODULE: services/card-flow ─ Fluxo de cada card: refaz a linha do tempo pelo histórico (quando entrou e saiu de cada etapa, quem moveu, devoluções e o motivo), mede o tempo em cada etapa, compara com a mediana dos cards já concluídos do mesmo projeto e devolve a leitura do sistema (por que está assim, o que fazer e quando deve terminar). Lógica pura, sem DOM. -->
+<script data-module="services/card-flow">
+const CardFlow = (() => {
+  const DAY = 86400000, k = x => String(x == null ? '' : x).trim().toLowerCase();
+  const dd = ms => Math.round(ms / DAY * 10) / 10;
+  const median = a => { const v = a.slice().sort((x, y) => x - y); if(!v.length) return null; const m = v.length >> 1; return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
+  const ts = x => { const t = Date.parse(x); return isNaN(t) ? null : t; };
+  // Refaz a trajetória pelo histórico. cols = colunas do quadro em ordem [{ key, label }]
+  function replay(item, cols, now) {
+    const keyOf = l => (cols.find(c => k(c.label) === k(l)) || {}).key || null, idx = key => cols.findIndex(c => c.key === key);
+    const hist = (item.history || []).filter(Boolean).slice().sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    const created = hist.find(h => !h.field && h.to === 'Card criado');
+    let t0 = ts(created && created.at) || ts(item.createdOn ? item.createdOn + 'T12:00:00Z' : '') || ts(hist[0] && hist[0].at) || now;
+    let cur = cols[0].key, start = t0; const segs = [], moves = [], by0 = (created && created.by) || (hist[0] && hist[0].by) || '';
+    let who = by0;
+    hist.filter(h => h.field === 'Situação').forEach(h => {
+      const to = keyOf(h.to), at = ts(h.at); if(!to || at == null) return;
+      segs.push({ key: cur, from: start, to: at, by: who }); moves.push({ at, by: h.by || '', from: cur, to, backward: idx(to) >= 0 && idx(to) < idx(cur) });
+      cur = to; start = at; who = h.by || '';
+    });
+    if(item.status && item.status !== cur && idx(item.status) >= 0) { // histórico cortado: vale a situação atual
+      const at = moves.length ? moves[moves.length - 1].at : t0; segs.push({ key: cur, from: start, to: at, by: who }); cur = item.status; start = at;
+    }
+    const last = cols[cols.length - 1].key, end = cur === last ? start : now;
+    segs.push({ key: cur, from: start, to: end, by: who });
+    const stageMs = {}; segs.forEach(sg => { stageMs[sg.key] = (stageMs[sg.key] || 0) + Math.max(0, sg.to - sg.from); });
+    const comments = hist.filter(h => !h.field && String(h.to || '').indexOf('Comentário: ') === 0).map(h => ({ at: ts(h.at), by: h.by || '', text: String(h.to).slice(12) }));
+    return { t0, cur, curStart: start, segs, moves, stageMs, totalMs: Math.max(0, end - t0), comments, done: cur === last };
+  }
+  // Referências do projeto: mediana de dias em cada etapa e do início à conclusão (precisa de 3 cards concluídos)
+  function benchmarks(items, cols, now) {
+    const last = cols[cols.length - 1].key, done = (items || []).filter(i => i && i.status === last && i.kind !== 'epico').map(i => replay(i, cols, now));
+    if(done.length < 3) return { n: done.length, stage: {}, cycle: null };
+    const stage = {}; cols.slice(0, -1).forEach(c => { const v = done.map(r => r.stageMs[c.key] || 0).filter(x => x > 0); if(v.length >= 3) stage[c.key] = median(v) / DAY; });
+    return { n: done.length, stage, cycle: median(done.map(r => r.totalMs)) / DAY };
+  }
+  const DEFAULT_DAYS = pos => pos === 0 ? 14 : pos === 'review' ? 3 : 7;
+  // Leitura de um card: etapas, motivos, alertas (com o que fazer) e previsão. o = { bench, due: 'YYYY-MM-DD' do prazo (fim da sprint) }
+  function analyze(item, cols, now, o) {
+    o = o || {}; const bench = o.bench || { stage: {}, cycle: null }, r = replay(item, cols, now), last = cols[cols.length - 1].key, first = cols[0].key;
+    const label = key => (cols.find(c => c.key === key) || {}).label || key, pos = cols.findIndex(c => c.key === r.cur);
+    const stageAge = r.done ? 0 : dd(now - r.curStart), ageDays = dd(r.totalMs);
+    const stages = cols.map(c => ({ key: c.key, label: c.label, days: dd(r.stageMs[c.key] || 0), current: c.key === r.cur })).filter((x, i) => i < cols.length - 1 || r.done);
+    const returns = r.moves.filter(m => m.backward);
+    let lastReturn = null; returns.forEach(m => { const c = r.comments.find(x => x.at != null && x.at >= m.at - 60000 && x.at <= m.at + 180000); lastReturn = { at: m.at, by: m.by, from: label(m.from), to: label(m.to), reason: c ? c.text : '' }; });
+    const alerts = [], add = (level, text, fix) => alerts.push({ level, text, fix });
+    if(!r.done) {
+      const ref = bench.stage[r.cur], lim = ref ? Math.max(2, ref * 1.5) : (pos === 0 ? 14 : (pos === cols.length - 2 && cols.length > 2 ? 3 : 7));
+      if(stageAge > lim) add(stageAge > lim * 2 ? 'high' : 'med', 'Parado há ' + stageAge + ' dia(s) em "' + label(r.cur) + '" ' + (ref ? '(a mediana dos cards deste projeto nesta etapa é ' + (Math.round(ref * 10) / 10) + ' d)' : '(o esperado é até ' + lim + ' d)'),
+        pos === 0 ? 'Decidir hoje se o card entra na sprint ou sai do backlog: card sem dono e sem prazo é esquecido.' : (pos === cols.length - 2 && cols.length > 2) ? 'Cobrar o revisor hoje ou passar a revisão para outra pessoa: card parado em revisão trava a entrega.' : 'Falar com o responsável: o que impede? Dividir o card ou pedir ajuda para destravar.');
+      if(o.due) { const dl = Math.round((ts(o.due + 'T12:00:00Z') - now) / DAY);
+        if(dl < 0) add('high', 'Prazo vencido há ' + (-dl) + ' dia(s) e ainda está em "' + label(r.cur) + '"', 'Replanejar com o responsável: nova data ou corte do que não cabe; avisar quem espera a entrega.');
+        else if(dl <= 2 && pos < cols.length - 2) add('med', 'Vence em ' + dl + ' dia(s) e ainda está em "' + label(r.cur) + '"', 'Priorizar hoje ou negociar a data antes de vencer.'); }
+      if(r.cur !== first && !String(item.assignee || '').trim()) add('high', 'Sem responsável cadastrado', 'Escolher hoje o responsável (pessoa da equipe): sem dono ninguém puxa o card.');
+      if(bench.cycle && ageDays > bench.cycle * 1.5) add('med', 'Aberto há ' + ageDays + ' dia(s); os cards deste projeto levam em média ' + (Math.round(bench.cycle * 10) / 10) + ' d do início à conclusão', 'Rever o que falta: dividir o card ou replanejar a entrega.');
+    }
+    if(returns.length >= 2) add('med', 'Devolvido ' + returns.length + ' vezes' + (lastReturn && lastReturn.reason ? ' (último motivo: ' + lastReturn.reason + ')' : ''), 'Alinhar os critérios de aceite com quem pede antes de retomar: devolução repetida é retrabalho.');
+    let eta = null; if(!r.done && bench.cycle) { const rem = Math.max(0, bench.cycle - ageDays); eta = { days: Math.round(rem), date: new Date(now + rem * DAY).toISOString().slice(0, 10), late: ageDays > bench.cycle }; }
+    const level = alerts.some(a => a.level === 'high') ? 'red' : alerts.length ? 'amb' : 'grn';
+    const why = r.done ? 'Concluído em ' + new Date(r.curStart).toISOString().slice(0, 10) + ' (levou ' + ageDays + ' d)' : 'Em "' + label(r.cur) + '" desde ' + new Date(r.curStart).toISOString().slice(0, 10) + (r.segs.length && r.segs[r.segs.length - 1].by ? ', movido por ' + r.segs[r.segs.length - 1].by : '') + (lastReturn ? '; devolvido de "' + lastReturn.from + '" para "' + lastReturn.to + '"' + (lastReturn.reason ? ': ' + lastReturn.reason : '') : '');
+    const timeline = r.segs.map(sg => ({ key: sg.key, label: label(sg.key), from: new Date(sg.from).toISOString().slice(0, 10), to: sg === r.segs[r.segs.length - 1] && !r.done ? '' : new Date(sg.to).toISOString().slice(0, 10), days: dd(Math.max(0, sg.to - sg.from)), by: sg.by }));
+    return { stageKey: r.cur, stageLabel: label(r.cur), stageAge, ageDays, stages, timeline, returns: returns.length, lastReturn, comments: r.comments.slice(-3).reverse(), alerts, level, eta, why, done: r.done };
+  }
+  return { replay, benchmarks, analyze, median };
+})();
+</script>
+
+<!-- ■ MODULE: pages/cardcontrol-js ─ Controle de Cards: junta os cards de todos os projetos, aplica CardFlow e desenha a lista com o detalhe (linha do tempo, motivos, o que fazer, previsão) -->
+<script data-module="pages/cardcontrol-js">
+const CardControl = (() => {
+  const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const el = id => document.getElementById(id);
+  const fmt = iso => iso ? iso.split('-').reverse().slice(0, 2).join('/') : '—';
+  const LV = { red: ['b-red', 'Crítico'], amb: ['b-amb', 'Atenção'], grn: ['b-grn', 'No ritmo'] };
+  let openKey = null, limit = 150;
+  function gather(includeDone) {
+    const now = Date.now(), out = [], today = new Date().toISOString().slice(0, 10);
+    DB.listProjects().forEach(p => {
+      const all = (DB.getForProject(p.id, 'backlog') || []).filter(i => i && i.kind !== 'epico'), sprints = DB.getForProject(p.id, 'sprints') || [];
+      let cols; try { cols = AgileCalc.cols(AgileCalc.cfgOf(DB.getForProject(p.id, 'agileConfig'))); } catch(e) { cols = AgileCalc.COLS; }
+      const last = cols[cols.length - 1].key, bench = CardFlow.benchmarks(all, cols, now);
+      all.filter(i => includeDone || i.status !== last).forEach(i => {
+        const due = ((sprints.find(x => x.id === i.sprintId) || {}).endOn || '').slice(0, 10);
+        out.push({ p, i, due, a: CardFlow.analyze(i, cols, now, { bench, due }) });
+      });
+    });
+    return { rows: out, today };
+  }
+  function fillSelect(id, values, cur) { const s = el(id); if(!s) return; const first = s.options[0] ? s.options[0].outerHTML : '<option value="">Todos</option>'; s.innerHTML = first + values.map(v => '<option value="' + esc(v) + '"' + (v === cur ? ' selected' : '') + '>' + esc(v) + '</option>').join(''); }
+  function render() {
+    if(!el('cc-root')) return;
+    const incl = !!(el('cc-done') || {}).checked, g = gather(incl);
+    const curP = el('cc-proj').value, curS = el('cc-st').value, curW = el('cc-who').value;
+    fillSelect('cc-proj', [...new Set(g.rows.map(r => r.p.name))].sort((a, b) => a.localeCompare(b, 'pt-BR')), curP);
+    fillSelect('cc-st', [...new Set(g.rows.map(r => r.a.stageLabel))].sort((a, b) => a.localeCompare(b, 'pt-BR')), curS);
+    fillSelect('cc-who', [...new Set(g.rows.map(r => String(r.i.assignee || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), curW);
+    const q = String((el('cc-q') || {}).value || '').toLowerCase(), onlyAlert = !!(el('cc-alert') || {}).checked;
+    const rows = g.rows.filter(r => (!el('cc-proj').value || r.p.name === el('cc-proj').value) && (!el('cc-st').value || r.a.stageLabel === el('cc-st').value) && (!el('cc-who').value || String(r.i.assignee || '').trim() === el('cc-who').value)
+      && (!q || (r.i.id + ' ' + r.i.title).toLowerCase().indexOf(q) >= 0) && (!onlyAlert || r.a.alerts.length)).sort((a, b) => (b.a.level === 'red') - (a.a.level === 'red') || b.a.alerts.length - a.a.alerts.length || b.a.stageAge - a.a.stageAge);
+    const open = g.rows.filter(r => !r.a.done), kp = (lbl, v, sub, tone) => '<div class="kpi"><div class="kpi-lbl">' + lbl + '</div><div class="kpi-val" style="color:' + (tone || 'var(--t1)') + '">' + v + '</div><div class="kpi-delta">' + sub + '</div></div>';
+    const stalled = open.filter(r => r.a.alerts.some(x => x.text.indexOf('Parado') === 0)).length, late = open.filter(r => r.a.alerts.some(x => x.text.indexOf('Prazo vencido') === 0)).length, ret = open.filter(r => r.a.returns > 0).length, withAl = open.filter(r => r.a.alerts.length).length;
+    el('cc-kpis').innerHTML = kp('Cards abertos', open.length, 'em ' + new Set(open.map(r => r.p.id)).size + ' projeto(s) e quadro(s)') + kp('Com alerta', withAl, 'o sistema recomenda agir', withAl ? 'var(--amb)' : 'var(--grn)') + kp('Parados', stalled, 'além do esperado na etapa', stalled ? 'var(--red)' : 'var(--grn)') + kp('Prazo vencido', late, 'ainda abertos', late ? 'var(--red)' : 'var(--grn)') + kp('Devolvidos', ret, 'voltaram de etapa ao menos uma vez', ret ? 'var(--amb)' : 'var(--grn)');
+    if(!g.rows.length) { el('cc-root').innerHTML = '<div class="rk-empty">Nenhum card aberto nos projetos e quadros que você acessa.</div>'; return; }
+    const part = rows.slice(0, limit);
+    el('cc-root').innerHTML = (rows.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Projeto</th><th scope="col">Card</th><th scope="col">Situação</th><th scope="col">Responsável</th><th scope="col" class="num">Na etapa</th><th scope="col" class="num">Aberto há</th><th scope="col">Prazo</th><th scope="col" class="num">Devol.</th><th scope="col">Leitura do sistema</th></tr></thead><tbody>'
+      + part.map(r => { const key = r.p.id + '|' + r.i.id, on = key === openKey, a = r.a;
+        return '<tr data-key="' + esc(key) + '" tabindex="0" style="cursor:pointer' + (on ? ';background:var(--ad)' : '') + '" onclick="CardControl.toggle(this.dataset.key)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();CardControl.toggle(this.dataset.key)}" aria-expanded="' + on + '"><td>' + esc(r.p.name) + '</td><td><b>' + esc(r.i.id) + '</b> · ' + esc(r.i.title || '') + '</td><td>' + esc(a.stageLabel) + '</td><td>' + esc(r.i.assignee || '—') + '</td><td class="num">' + (a.done ? '—' : a.stageAge + ' d') + '</td><td class="num">' + a.ageDays + ' d</td><td>' + (r.due ? fmt(r.due) : '—') + '</td><td class="num">' + (a.returns || '') + '</td><td><span class="badge ' + LV[a.level][0] + '">' + LV[a.level][1] + '</span> ' + esc(a.alerts[0] ? a.alerts[0].text : (a.eta && !a.done ? 'Previsão de término em ' + fmt(a.eta.date) : 'Sem alerta')) + '</td></tr>'
+          + (on ? '<tr><td colspan="9" style="background:var(--s2);padding:12px 14px">' + detail(r) + '</td></tr>' : ''); }).join('')
+      + '</tbody></table></div>' + (rows.length > part.length ? '<div class="btn-row" style="margin-top:8px"><span class="set-sub">Mostrando ' + part.length + ' de ' + rows.length + '.</span><button class="btn btn-sm" onclick="CardControl.more()">Mostrar Mais</button></div>' : '') : '<div class="rk-empty">Nenhum card com esses filtros.</div>');
+    try { if(typeof ColumnDrag !== 'undefined') ColumnAuto.scan(); } catch(e) { /* sem colunas arrastáveis */ }
+  }
+  // Detalhe: por quê, tempo em cada etapa, linha do tempo, o que fazer e previsão
+  function detail(r) {
+    const a = r.a, tot = a.stages.reduce((s, x) => s + x.days, 0) || 1;
+    const bar = '<div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--s3);margin:6px 0">' + a.stages.map((x, i) => '<div title="' + esc(x.label) + ': ' + x.days + ' d" style="width:' + Math.max(2, x.days / tot * 100) + '%;background:' + (x.current ? 'var(--acc)' : ['var(--b3)', 'var(--pur)', 'var(--amb)', 'var(--grn)'][i % 4]) + '"></div>').join('') + '</div>';
+    const legend = a.stages.map(x => '<span class="chip"' + (x.current ? ' style="border-color:var(--acc)"' : '') + '>' + esc(x.label) + ': <b>' + x.days + ' d</b></span>').join(' ');
+    const tl = '<div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Etapa</th><th scope="col">Entrou</th><th scope="col">Saiu</th><th scope="col" class="num">Dias</th><th scope="col">Quem moveu</th></tr></thead><tbody>' + a.timeline.map(t => '<tr><td>' + esc(t.label) + '</td><td>' + fmt(t.from) + '</td><td>' + (t.to ? fmt(t.to) : '<i>aqui agora</i>') + '</td><td class="num">' + t.days + '</td><td>' + esc(t.by || '—') + '</td></tr>').join('') + '</tbody></table></div>';
+    const al = a.alerts.length ? '<ul style="margin:4px 0 0 18px;padding:0;font-size:12.5px;line-height:1.65">' + a.alerts.map(x => '<li><span class="badge ' + (x.level === 'high' ? 'b-red' : 'b-amb') + '">' + (x.level === 'high' ? 'Crítico' : 'Atenção') + '</span> ' + esc(x.text) + '<br><i class="ti ti-bulb" aria-hidden="true" style="color:var(--amb)"></i> <b>Como corrigir:</b> ' + esc(x.fix) + '</li>').join('') + '</ul>' : '<div class="set-sub">Nenhum alerta: o card está dentro do ritmo do projeto.</div>';
+    const cm = a.comments.length ? '<ul style="margin:4px 0 0 18px;padding:0;font-size:12.5px">' + a.comments.map(c => '<li><b>' + esc(c.by) + '</b>' + (c.at ? ' em ' + fmt(new Date(c.at).toISOString().slice(0, 10)) : '') + ': ' + esc(c.text) + '</li>').join('') + '</ul>' : '<div class="set-sub">Sem comentários.</div>';
+    const eta = a.done ? '' : (a.eta ? '<div style="font-size:12.5px;margin-top:6px"><i class="ti ti-chart-line" aria-hidden="true" style="color:var(--acc)"></i> <b>Previsão:</b> ' + (a.eta.late ? 'já passou do tempo típico dos cards deste projeto; sem ajuste, a conclusão é incerta.' : 'pelo ritmo típico do projeto, termina em ~' + a.eta.days + ' dia(s) (' + fmt(a.eta.date) + ').') + '</div>' : '<div class="set-sub" style="margin-top:6px">Previsão: sem dados (o projeto precisa de 3 cards concluídos para medir o ritmo).</div>');
+    return '<div style="font-size:12.5px;line-height:1.6"><b>Por quê:</b> ' + esc(a.why) + '</div>' + bar + '<div style="display:flex;gap:6px;flex-wrap:wrap">' + legend + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:10px"><div><div class="set-sub" style="font-weight:700;text-transform:uppercase">Linha do tempo</div>' + tl + '</div><div><div class="set-sub" style="font-weight:700;text-transform:uppercase">O que o sistema recomenda</div>' + al + '<div class="set-sub" style="font-weight:700;text-transform:uppercase;margin-top:10px">Últimos comentários</div>' + cm + eta + '</div></div>'
+      + '<div class="btn-row" style="margin-top:10px"><button class="btn btn-sm btn-acc" data-pid="' + esc(r.p.id) + '" data-id="' + esc(r.i.id) + '" onclick="CardControl.openCard(this.dataset.pid, this.dataset.id)"><i class="ti ti-external-link"></i>Abrir o Card</button></div>';
+  }
+  function toggle(key) { openKey = key === openKey ? null : key; render(); const r = document.querySelector('#cc-root tr[data-key="' + (openKey || '').replace(/"/g, '') + '"]'); if(r) r.focus(); }
+  function more() { limit += 150; render(); }
+  function openCard(pid, id) { try { DB.switchProject(pid); R.go('kanban'); setTimeout(() => { try { Agile.openItem(id); } catch(e) { /* abre o quadro */ } }, 450); } catch(e) { /* sem acesso */ } }
+  return { render, toggle, more, openCard };
 })();
 </script>
 

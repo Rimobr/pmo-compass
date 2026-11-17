@@ -636,6 +636,10 @@
         "Painel do Gerente de Projetos",
         "view_team_load"
       ],
+      "cardcontrol": [
+        "Controle de Cards",
+        "view_management"
+      ],
       "xray": [
         "Raio-X do Projeto",
         "view_management"

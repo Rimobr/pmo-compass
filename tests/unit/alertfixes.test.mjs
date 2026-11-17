@@ -97,3 +97,26 @@ test('Central de Decisões: ordena por urgência e cada decisão traz porquê, p
 test('com conta na nuvem a demonstração nunca aparece em lista de projetos nem em painel', () => {
   for(const k of ["const withoutDemo = list => (typeof Cloud !== 'undefined' && Cloud.isSignedIn())", 'function listProjects() { return withoutDemo(loadProjects()); }', 'function listPortfolio() { return withoutDemo(loadProjects())']) assert.ok(html.includes(k), k);
 });
+test('Controle de Cards: tempo por etapa pela história, devolução com motivo, alertas com o que fazer e previsão', () => {
+  const { CardFlow: C } = new Function(`${mod('services/card-flow')}\nreturn { CardFlow };`)();
+  const cols = [{ key: 'todo', label: 'A fazer' }, { key: 'doing', label: 'Em andamento' }, { key: 'review', label: 'Em revisão' }, { key: 'done', label: 'Concluído' }];
+  const D = d => `2026-11-${String(d).padStart(2, '0')}T12:00:00.000Z`, now = Date.parse(D(20));
+  const hist = (...ev) => [{ at: D(1), by: 'Ana', field: '', from: '', to: 'Card criado' }].concat(ev);
+  const mv = (d, from, to, by) => ({ at: D(d), by, field: 'Situação', from, to });
+  const feitos = [3, 4, 5].map(n => ({ id: 'D' + n, kind: 'tarefa', status: 'done', history: hist(mv(2, 'A fazer', 'Em andamento', 'Ana'), mv(2 + n, 'Em andamento', 'Em revisão', 'Ana'), mv(3 + n, 'Em revisão', 'Concluído', 'Beto')) }));
+  const bench = C.benchmarks(feitos, cols, now);
+  assert.equal(bench.n, 3); assert.ok(bench.stage.doing >= 3 && bench.cycle > 0);
+  // card parado em revisão há 10 dias, devolvido duas vezes, com prazo vencido e sem responsável na etapa
+  const card = { id: 'US-1', kind: 'historia', status: 'review', assignee: '', history: hist(mv(2, 'A fazer', 'Em andamento', 'Ana'), mv(5, 'Em andamento', 'Em revisão', 'Ana'), mv(6, 'Em revisão', 'Em andamento', 'Beto'), { at: D(6), by: 'Beto', field: '', from: '', to: 'Comentário: faltou o teste do relatório' }, mv(8, 'Em andamento', 'Em revisão', 'Ana'), mv(9, 'Em revisão', 'Em andamento', 'Beto'), mv(10, 'Em andamento', 'Em revisão', 'Ana')) };
+  const a = C.analyze(card, cols, now, { bench, due: '2026-11-15' });
+  assert.equal(a.stageKey, 'review'); assert.equal(a.stageAge, 10); assert.equal(a.returns, 2); assert.equal(a.lastReturn.reason, '' ); 
+  assert.equal(a.timeline.length, 7); assert.equal(a.timeline[1].label, 'Em andamento');
+  const txt = a.alerts.map(x => x.text).join(' | ');
+  assert.match(txt, /Parado há 10 dia/); assert.match(txt, /Prazo vencido há 5/); assert.match(txt, /Sem responsável/); assert.match(txt, /Devolvido 2 vezes/);
+  assert.ok(a.alerts.every(x => x.fix && x.fix.length > 20)); assert.equal(a.level, 'red'); assert.ok(a.eta && a.eta.late);
+  const r1 = C.analyze({ id: 'X', kind: 'tarefa', status: 'doing', assignee: 'Ana', history: hist(mv(2, 'A fazer', 'Em andamento', 'Ana'), { at: D(2), by: 'Ana', field: '', from: '', to: 'Comentário: puxei' }) }, cols, now, { bench });
+  assert.equal(r1.returns, 0); assert.equal(r1.lastReturn, null);
+  const devolvido = C.analyze({ id: 'Y', kind: 'tarefa', status: 'doing', assignee: 'Ana', history: hist(mv(2, 'A fazer', 'Em andamento', 'Ana'), mv(4, 'Em andamento', 'Em revisão', 'Ana'), mv(5, 'Em revisão', 'Em andamento', 'Beto'), { at: D(5), by: 'Beto', field: '', from: '', to: 'Comentário: critério não atendido' }) }, cols, now, { bench });
+  assert.equal(devolvido.lastReturn.reason, 'critério não atendido'); assert.match(devolvido.why, /devolvido de "Em revisão" para "Em andamento": critério não atendido/);
+  for(const k of ['id="p-cardcontrol"', 'CardControl.render()', "cardcontrol: 'view_management'", 'Controle de Cards']) assert.ok(html.includes(k), k);
+});

@@ -21,6 +21,8 @@ const SCENES = [
   ['Painel do Gerente (riscos críticos)', `R.go('mgrpanel'); MgrPanel.toggle('rsk')`, null],
   ['Painel da Diretoria (detalhe do cartão)', `R.go('board'); Board.drill('proj')`, null],
   ['Visão do PMO (detalhe do cartão)', `R.go('pmoview'); PmoView.drill('No prazo')`, null],
+  ['Controle de Cards', `R.go('cardcontrol')`, null],
+  ['Controle de Cards (detalhe do card)', `R.go('cardcontrol'); const r = document.querySelector('#cc-root tr[data-key]'); if(r) CardControl.toggle(r.dataset.key)`, null],
   ['Transferir atividades (janela)', `R.go('mgrpanel'); const b = document.querySelector('#res-team-root [data-k]'); if(b) Resources.openTransfer(b.dataset.k)`, 'modal-transfer'],
   ['Diagnóstico PMO (antes de analisar)', `R.go('drpmo')`, null],
   ['Diagnóstico PMO (resultado)', `R.go('drpmo'); await DrPmo.run([new File(['Tarefa;Prazo;Trocar piso;01/11;Pintar sala;05/11 atraso pendente bloqueado impedimento'], 'tarefas.csv'), new File(['EAP marcos fases cronograma'], 'plano.txt')])`, null],
@@ -44,6 +46,8 @@ const SCENES = [
   ['Rascunho da IA (janela)', `await Models.createWithAi()`, 'modal-models-ai'],
   ['Confirmação de exclusão (janela)', `Dlg.ask({ title: 'Apagar toda a base', body: 'Isso apaga tudo. Não pode ser desfeito.', okLabel: 'Apagar Toda a Base', cancelLabel: 'Manter', danger: true, check: 'Entendo que isso apaga os dados de todas as pessoas' })`, 'modal-dlg']
 ];
+// Para depurar uma cena só: A11Y_ONLY='Controle de Cards' npm run test:a11y
+if (process.env.A11Y_ONLY) for (let n = SCENES.length - 1; n >= 0; n--) if (!SCENES[n][0].includes(process.env.A11Y_ONLY)) SCENES.splice(n, 1);
 
 const SETUP = `
   try { document.getElementById('modal-onboarding').classList.add('hidden'); } catch (e) {}
