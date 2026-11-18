@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.106.0'
+  version: '2.106.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -22113,10 +22113,12 @@ const CardFlow = (() => {
 <!-- ■ MODULE: services/intel-client ─ Cliente da "inteligência" no servidor: no pacote público, os módulos de cálculo viram chamadas à função de borda intel. Resposta em cache; enquanto não chega devolve o valor de reserva e redesenha quando chegar. -->
 <script data-module="services/intel-client">
 const Intel = (() => {
-  const cache = new Map(), pending = new Set();
-  let warned = false;
+  const cache = new Map(), pending = new Set(), last = {};
+  let warned = false, burst = [];
   const key = (fn, args) => fn + '|' + JSON.stringify(args);
   function refresh() {
+    // Trava contra laço: se a entrada muda a cada desenho, no máximo 6 redesenhos em 10 s
+    const now = Date.now(); burst = burst.filter(t => now - t < 10000); if(burst.length >= 6) return; burst.push(now);
     try { if(typeof MgrPanel !== 'undefined') MgrPanel.render(); } catch(e) { /* tela fechada */ }
     try { if(typeof Board !== 'undefined') Board.render(); } catch(e) { /* tela fechada */ }
     try { if(typeof PmoView !== 'undefined') PmoView.render(); } catch(e) { /* tela fechada */ }
@@ -22128,11 +22130,11 @@ const Intel = (() => {
       pending.add(k);
       Cloud.invoke('intel', { fn, args }).then(r => {
         pending.delete(k);
-        if(r && r.ok) { cache.set(k, r.result); if(cache.size > 40) cache.delete(cache.keys().next().value); refresh(); }
+        if(r && r.ok) { cache.set(k, r.result); last[fn] = r.result; if(cache.size > 40) cache.delete(cache.keys().next().value); refresh(); }
         else { cache.set(k, fallback); if(!warned) { warned = true; try { T.show('⚠️ Cálculo indisponível agora (sem conexão ou função não publicada).'); } catch(e) { /* sem aviso */ } } }
       });
     }
-    return fallback;
+    return fn in last ? last[fn] : fallback; // enquanto a nova resposta não chega, vale a última recebida (sem piscar vazio)
   }
   return { get, key };
 })();
