@@ -110,3 +110,20 @@ test('pacote público: o Dr. PMO guarda no navegador só a leitura da resposta d
   const keep = body.slice(a, b);
   assert.ok(keep.includes('function parse(') && !/SYSTEM|ARTIFACTS|function analyze|function prompt/.test(keep), 'só validação');
 });
+test('servidor: Bússola (respond e systemPrompt) e instruções da IA (Prompts) iguais ao app', () => {
+  const core = new Function(sourceOf(html, 'services/compass') + '\nreturn CompassCore;')();
+  const d = { generatedAt: '2026-11-18', canCosts: false, projects: [{ id: 'p1', name: 'Alfa', client: 'X', health: 40, delayed: 2, risks: { critical: 1, top: [] }, decisions: { pendingCritical: ['Escolher fornecedor'] } }], people: [] };
+  for (const q of ['qual projeto está com maior desvio?', 'o que está atrasado?', 'pergunta totalmente livre sem tema']) {
+    assert.deepEqual(FUNCS['CompassCore.respond']({ q, d }), core.respond(q, d), q);
+  }
+  assert.equal(FUNCS['CompassCore.respond']({ q: 'pergunta totalmente livre sem tema', d }).none, true);
+  assert.equal(FUNCS['CompassCore.systemPrompt'](d), core.systemPrompt(d));
+  const keys = ['extraction', 'recovery', 'scope', 'wbs', 'portfolio', 'board'];
+  for (const k of keys) { const t = FUNCS['Prompts.system']({ key: k, brand: 'Marca X' }); assert.ok(t.length > 200 && t.includes('Marca X'), k); }
+  assert.equal(FUNCS['Prompts.system']({ key: 'compass', brand: 'Marca X', args: d }), core.systemPrompt(d));
+  assert.equal(FUNCS['Prompts.system']({ key: 'inexistente', brand: 'x' }), '');
+});
+test('IA: as instruções não ficam mais escritas nos módulos das telas (vêm do cofre Prompts por systemKey)', () => {
+  for (const c of ['EXTRACTION_SYSTEM', 'RECOVERY_SYSTEM', 'SCOPE_AI_SYSTEM', 'WBS_SUGGEST_SYSTEM']) assert.ok(!html.includes('const ' + c + ' = `'), c);
+  for (const k of ['extraction', 'recovery', 'scope', 'wbs', 'portfolio', 'board', 'compass']) assert.ok(html.includes("systemKey: '" + k + "'"), k);
+});

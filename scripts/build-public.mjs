@@ -24,8 +24,17 @@ function drPmoStub(body) {
   const keep = body.slice(body.indexOf('\n', a) + 1, b);
   return "const DrPmoCore = (() => {\n  const clip = (s, n) => String(s == null ? '' : s).replace(/\\s+/g, ' ').trim().slice(0, n);\n" + keep + "\n  return { analyze: docs => Intel.call('DrPmoCore.analyze', docs), pack: docs => Intel.call('DrPmoCore.pack', docs), parse };\n})();";
 }
+// Casca da Bússola: só as sugestões de pergunta ficam no app
+function compassStub(body) {
+  const a = body.indexOf(KEEP_BEGIN), b = body.indexOf(KEEP_END);
+  if (a < 0 || b < a) throw new Error('Marcadores da Bússola não encontrados');
+  const keep = body.slice(body.indexOf('\n', a) + 1, b);
+  return 'const CompassCore = (() => {\n' + keep + "\n  return { SUGGESTIONS, respond: (q, d) => Intel.call('CompassCore.respond', { q, d }), systemPrompt: d => Intel.call('CompassCore.systemPrompt', d) };\n})();";
+}
 const STUBS = {
   'services/dr-pmo': drPmoStub,
+  'services/compass': compassStub,
+  'services/prompts': "const Prompts = { system: (key, brand, args) => Intel.call('Prompts.system', { key, brand, args }) };",
   'services/workload': "const WorkloadCalc = { all: (team, ctx) => Intel.get('WorkloadCalc.all', { team, ctx }, null) || {} };",
   'services/decision-center': "const DecisionCenter = (() => { const LV = s => s >= 85 ? 'crit' : s >= 65 ? 'high' : 'med'; return { build: input => Intel.get('DecisionCenter.build', input, [], { stale: true }), LV }; })();",
 };

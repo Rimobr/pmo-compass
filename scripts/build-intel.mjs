@@ -16,6 +16,8 @@ export const INTEL = [
   { module: 'services/decision-center', name: 'DecisionCenter', funcs: ['build'] },
   { module: 'services/plan-vs-real', name: 'PlanVsReal', funcs: ['allocPlan'] },
   { module: 'services/dr-pmo', name: 'DrPmoCore', funcs: ['analyze', 'pack'] },
+  { module: 'services/compass', name: 'CompassCore', funcs: [{ name: 'respond', call: '(a) => CompassCore.respond(a.q, a.d)' }, { name: 'systemPrompt', call: '(d) => CompassCore.systemPrompt(d)' }] },
+  { module: 'services/prompts', name: 'Prompts', funcs: [{ name: 'system', call: '(a) => Prompts.system(a.key, a.brand, a.args)' }] },
   { module: 'services/workload', name: 'WorkloadCalc', funcs: [{ name: 'all', call: '(a) => WorkloadCalc.all(a.team, a.ctx)' }] },
 ];
 
