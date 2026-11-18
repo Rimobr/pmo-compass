@@ -16,7 +16,16 @@ const check = process.argv.includes('--check');
 // Módulos de inteligência que, no pacote público, viram chamadas ao servidor (função de borda intel).
 // Só valem depois que a função estiver publicada: scripts/intel-live.json {"live": true}. Até lá o dist leva o módulo normal.
 const live = (() => { try { return JSON.parse(fs.readFileSync(path.join(root, 'scripts', 'intel-live.json'), 'utf8')).live === true; } catch(e) { return false; } })();
+const KEEP_BEGIN = '// ▼ NAVEGADOR', KEEP_END = '// ▲ fim do trecho que fica no navegador';
+// Casca do Dr. PMO: mantém no app só o trecho marcado (clip/ENUM/parse) e pede o resto ao servidor
+function drPmoStub(body) {
+  const a = body.indexOf(KEEP_BEGIN), b = body.indexOf(KEEP_END);
+  if (a < 0 || b < a) throw new Error('Marcadores do Dr. PMO não encontrados');
+  const keep = body.slice(body.indexOf('\n', a) + 1, b);
+  return "const DrPmoCore = (() => {\n  const clip = (s, n) => String(s == null ? '' : s).replace(/\\s+/g, ' ').trim().slice(0, n);\n" + keep + "\n  return { analyze: docs => Intel.call('DrPmoCore.analyze', docs), pack: docs => Intel.call('DrPmoCore.pack', docs), parse };\n})();";
+}
 const STUBS = {
+  'services/dr-pmo': drPmoStub,
   'services/workload': "const WorkloadCalc = { all: (team, ctx) => Intel.get('WorkloadCalc.all', { team, ctx }, null) || {} };",
   'services/decision-center': "const DecisionCenter = (() => { const LV = s => s >= 85 ? 'crit' : s >= 65 ? 'high' : 'med'; return { build: input => Intel.get('DecisionCenter.build', input, [], { stale: true }), LV }; })();",
 };
@@ -52,7 +61,7 @@ function buildHtml(src) {
     res += plain(text.slice(last, m.index));
     if (m[0].startsWith('<script')) {
       const mod = (modRe.exec(m[0]) || [])[1];
-      if (live && mod && STUBS[mod]) { res += '<script' + m[1] + '>' + esbuild.transformSync(STUBS[mod], { minify: true, target: 'es2020' }).code.trim() + '</script>'; js++; last = m.index + m[0].length; continue; }
+      if (live && mod && STUBS[mod]) { const code = typeof STUBS[mod] === 'function' ? STUBS[mod](m[2]) : STUBS[mod]; res += '<script' + m[1] + '>' + esbuild.transformSync(code, { minify: true, target: 'es2020' }).code.trim() + '</script>'; js++; last = m.index + m[0].length; continue; }
       const attrs = m[1];
       let body = m[2];
       if (live && mod && FN_STUBS[mod]) FN_STUBS[mod].forEach(x => { const [a, b] = cutFunction(body, x.name); body = body.slice(0, a) + x.stub + body.slice(b); });

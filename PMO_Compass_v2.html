@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.108.3'
+  version: '2.109.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -10938,6 +10938,9 @@ const DrPmoCore = (() => {
     const parts = (docs || []).slice(0, 14).map(d => { const t = clip(d.content, Math.min(1800, Math.max(200, budget))); budget -= t.length; return '<documento nome="' + clip(d.name, 80).replace(/"/g, "'") + '">\n' + (t || '(sem texto legível)') + '\n</documento>'; });
     return 'Analise estes documentos de uma pessoa que ainda não usa o PMO Compass e diga: é um quadro de tarefas ou um projeto? Se for projeto, qual metodologia? Que riscos e buracos já aparecem?\n\n' + parts.join('\n\n');
   }
+  // Instrução e pedido da IA num só objeto (no pacote público vêm do servidor)
+  function pack(docs) { return { system: SYSTEM, prompt: prompt(docs) }; }
+  // ▼ NAVEGADOR: a leitura da resposta da IA fica no app (só valida o formato)
   const ENUM = (v, list, d) => list.includes(String(v)) ? String(v) : d;
   function parse(text) {
     const raw = String(text || ''), i = raw.indexOf('{'), j = raw.lastIndexOf('}');
@@ -10955,7 +10958,8 @@ const DrPmoCore = (() => {
     if(data.formato === 'quadro') data.metodologia = '';
     return { ok: true, data };
   }
-  return { ARTIFACTS, analyze, coverage, profile, risks, gaps, message, prompt, parse, SYSTEM };
+  // ▲ fim do trecho que fica no navegador
+  return { ARTIFACTS, analyze, coverage, profile, risks, gaps, message, prompt, pack, parse, SYSTEM };
 })();
 </script>
 
@@ -11006,11 +11010,15 @@ const DrPmo = (() => {
     const read = await FileIntake.readOnly(fileList);
     const inp = $('drpmo-files-inp'); if(inp) inp.value = ''; const inp2 = $('drpmo-folder-inp'); if(inp2) inp2.value = '';
     if(!read.docs.length) { if(root) root.innerHTML = ''; return; }
-    last = { read, files: Array.from(fileList || []), local: DrPmoCore.analyze(read.docs), ai: null }; render(); { const ap = $('drpmo-apply'); if(ap) ap.innerHTML = ''; }
+    const local = await DrPmoCore.analyze(read.docs); // no pacote público o cálculo vem do servidor
+    if(!local) { if(root) root.innerHTML = '<div class="card"><div class="rk-empty"><i class="ti ti-wifi-off"></i> O diagnóstico precisa de conexão com o servidor agora. Tente de novo em instantes.</div></div>'; return; }
+    last = { read, files: Array.from(fileList || []), local, ai: null }; render(); { const ap = $('drpmo-apply'); if(ap) ap.innerHTML = ''; }
     if(typeof Cloud !== 'undefined' && Cloud.pushAuditEvent) Cloud.pushAuditEvent('compass_question', 'Diagnóstico PMO (Dr. PMO): ' + read.docs.length + ' arquivo(s) analisado(s)', { intent: 'drpmo', docs: read.docs.length });
     if(Store.hasKeyOrCloud()) {
       try {
-        const r = await AI.send([{ role: 'user', content: DrPmoCore.prompt(read.docs) }], { system: DrPmoCore.SYSTEM, progressTitle: 'O Dr. PMO está lendo os seus documentos' });
+        const pk = await DrPmoCore.pack(read.docs);
+        if(!pk) throw new Error('sem instrução');
+        const r = await AI.send([{ role: 'user', content: pk.prompt }], { system: pk.system, progressTitle: 'O Dr. PMO está lendo os seus documentos' });
         last.ai = r && r.text ? DrPmoCore.parse(r.text) : { ok: false, error: (r && r.error) || 'A IA não respondeu.' };
       } catch(e) { last.ai = { ok: false, error: 'A IA não respondeu.' }; }
       render();
@@ -22161,7 +22169,20 @@ const Intel = (() => {
     });
     return ret;
   }
-  return { get, key, cfg };
+  // Chamada com espera, para fluxos que já são assíncronos (Dr. PMO). Devolve o resultado ou null (sem sessão, sem rede ou erro).
+  // Documentos grandes: acima de ~1,8 MB cada texto é reduzido, para caber no limite do servidor.
+  async function call(fn, args) {
+    if(typeof Cloud === 'undefined' || !Cloud.isSignedIn()) return null;
+    let body = args;
+    try { if(JSON.stringify(args).length > 1800000 && Array.isArray(args)) body = args.map(d => (d && typeof d.content === 'string') ? Object.assign({}, d, { content: d.content.slice(0, 6000) }) : d); } catch(e) { body = args; }
+    for(let i = 0; i < 2; i++) {
+      const r = await Cloud.invoke('intel', { fn, args: body });
+      if(r && r.ok) return r.result;
+      await new Promise(res => setTimeout(res, 800));
+    }
+    return null;
+  }
+  return { get, call, key, cfg };
 })();
 </script>
 

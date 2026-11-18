@@ -90,3 +90,23 @@ test('cliente Intel: sessão que ainda não chegou e falha do servidor NÃO fica
   delete globalThis.__I;
   assert.deepEqual(shown, { m1: { pct: 80 } }, 'tentou de novo e mostrou; chamadas=' + calls + ' desenhos=' + renders);
 });
+test('servidor: Dr. PMO (analyze e pack) igual ao do app, para quadro, projeto e sem documentos', () => {
+  const app = new Function(sourceOf(html, 'services/dr-pmo') + '\nreturn DrPmoCore;')();
+  const sets = [
+    [],
+    [{ name: 'tarefas.xlsx', ext: 'xlsx', content: 'Tarefa 1 ana 12/11\nTarefa 2 bruno 15/11' }],
+    [{ name: 'plano.docx', ext: 'docx', content: 'Termo de abertura do projeto. EAP e WBS com fases e marcos. Cronograma detalhado e linha de base.' }, { name: 'sprints.xlsx', ext: 'xlsx', content: 'Sprint 1 backlog historias de usuario scrum retrospectiva' }],
+  ];
+  for (const docs of sets) {
+    assert.deepEqual(FUNCS['DrPmoCore.analyze'](docs), app.analyze(docs));
+    assert.deepEqual(FUNCS['DrPmoCore.pack'](docs), app.pack(docs));
+  }
+  assert.ok(FUNCS['DrPmoCore.pack'](sets[2]).system.length > 100, 'instrução da IA presente');
+});
+test('pacote público: o Dr. PMO guarda no navegador só a leitura da resposta da IA (parse)', () => {
+  const body = sourceOf(html, 'services/dr-pmo');
+  const a = body.indexOf('// ▼ NAVEGADOR'), b = body.indexOf('// ▲ fim do trecho que fica no navegador');
+  assert.ok(a > 0 && b > a, 'marcadores');
+  const keep = body.slice(a, b);
+  assert.ok(keep.includes('function parse(') && !/SYSTEM|ARTIFACTS|function analyze|function prompt/.test(keep), 'só validação');
+});
