@@ -11,7 +11,7 @@ const graves = {
 };
 
 export default [
-  { ignores: ['node_modules/**', 'playwright-report/**', 'test-results/**', 'bugs-export/**', 'supabase/functions/**'] },
+  { ignores: ['node_modules/**', 'playwright-report/**', 'test-results/**', 'bugs-export/**', 'dist/**', 'supabase/functions/**'] },
   { files: ['PMO_Compass_v2.html'], plugins: { html }, languageOptions: { ecmaVersion: 2023, sourceType: 'script' }, rules: graves },
   { files: ['scripts/**/*.mjs', 'tests/**/*.mjs', 'tests/**/*.js', 'eslint.config.mjs'], languageOptions: { ecmaVersion: 2023, sourceType: 'module' }, rules: graves }
 ];

@@ -14,3 +14,12 @@ test('Controle de Cards tem pizza por situação e quadro responsável × situa�
 test('Central de Relatórios tem o tempo por etapa dos cards e o relatório padrão de fluxo', () => {
   assert.ok(src.includes("F('dias_etapa', 'Na etapa (d)'") && src.includes("id: 'p-fluxo'"), 'campos e padrão');
 });
+test('pacote público (dist) existe, está na versão do app e não leva os comentários do fonte', () => {
+  const d = fs.readFileSync(new URL('../../dist/PMO_Compass_v2.html', import.meta.url), 'utf8');
+  const v = (src.match(/version:\s*'([\d.]+)'/) || [])[1];
+  assert.ok(d.includes("version:\"" + v + "\"") || d.includes("version:'" + v + "'"), 'versão do dist');
+  assert.ok(d.indexOf('■ MODULE') < 0, 'sem comentários de módulo');
+  const vj = JSON.parse(fs.readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8'));
+  assert.equal(vj.outputDirectory, 'dist');
+  assert.ok(vj.headers.some(h => h.headers.some(x => x.key === 'Strict-Transport-Security')), 'HSTS');
+});
