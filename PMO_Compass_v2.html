@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.103.0'
+  version: '2.103.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1694,6 +1694,7 @@ body.icons-failed i[data-fb]::before{
       <div><label class="set-sub" for="cc-q" style="display:block">Buscar</label><input class="input" id="cc-q" placeholder="Código ou título…" oninput="CardControl.render()" style="width:190px"></div>
       <label class="set-sub" style="display:inline-flex;gap:6px;align-items:center;margin-bottom:6px"><input type="checkbox" id="cc-alert" onchange="CardControl.render()">Só com alerta</label>
       <label class="set-sub" style="display:inline-flex;gap:6px;align-items:center;margin-bottom:6px"><input type="checkbox" id="cc-done" onchange="CardControl.render()">Incluir concluídos</label>
+      <button class="btn btn-sm" onclick="CardControl.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button><button class="btn btn-sm" onclick="CardControl.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button>
     </div>
   </div>
   <div class="card"><div id="cc-root"></div></div>
@@ -22145,9 +22146,28 @@ const CardControl = (() => {
       + '<div class="btn-row" style="margin-top:10px"><button class="btn btn-sm btn-acc" data-pid="' + esc(r.p.id) + '" data-id="' + esc(r.i.id) + '" onclick="CardControl.openCard(this.dataset.pid, this.dataset.id)"><i class="ti ti-external-link"></i>Abrir o Card</button></div>';
   }
   function toggle(key) { openKey = key === openKey ? null : key; render(); const r = document.querySelector('#cc-root tr[data-key="' + (openKey || '').replace(/"/g, '') + '"]'); if(r) r.focus(); }
+  // Exporta a lista filtrada (Excel ou CSV) com o tempo em cada etapa, um por coluna
+  function exportRows() {
+    const incl = !!(el('cc-done') || {}).checked, g = gather(incl), q = String((el('cc-q') || {}).value || '').toLowerCase(), onlyAlert = !!(el('cc-alert') || {}).checked;
+    const rows = g.rows.filter(r => (!el('cc-proj').value || r.p.name === el('cc-proj').value) && (!el('cc-st').value || r.a.stageLabel === el('cc-st').value) && (!el('cc-who').value || String(r.i.assignee || '').trim() === el('cc-who').value)
+      && (!q || (r.i.id + ' ' + r.i.title).toLowerCase().indexOf(q) >= 0) && (!onlyAlert || r.a.alerts.length));
+    const stages = []; rows.forEach(r => r.a.stages.forEach(x => { if(stages.indexOf(x.label) < 0) stages.push(x.label); }));
+    const head = ['Projeto', 'Código', 'Título', 'Situação', 'Responsável', 'Dias na etapa', 'Dias aberto', 'Prazo', 'Devoluções', 'Nível', 'Alertas', 'Como corrigir', 'Previsão'].concat(stages.map(x => 'Dias: ' + x));
+    const body = rows.map(r => { const a = r.a, by = {}; a.stages.forEach(x => { by[x.label] = x.days; });
+      return [r.p.name, r.i.id, r.i.title || '', a.stageLabel, r.i.assignee || '', a.done ? '' : a.stageAge, a.ageDays, r.due || '', a.returns || 0, LV[a.level][1], a.alerts.map(x => x.text).join(' | '), a.alerts.map(x => x.fix).join(' | '), a.eta && !a.done ? a.eta.date : ''].concat(stages.map(x => by[x] == null ? '' : by[x])); });
+    return [head].concat(body);
+  }
+  function exportXlsx() { const rows = exportRows(); if(rows.length < 2) { T.show('Nada para exportar com esses filtros.'); return; } XlsxExport.download('controle-de-cards-' + XlsxExport.stamp() + '.xlsx', [{ name: 'Controle de Cards', rows }]); }
+  function exportCsv() {
+    const rows = exportRows(); if(rows.length < 2) { T.show('Nada para exportar com esses filtros.'); return; }
+    const q = v => { let t = String(v == null ? '' : v); if(typeof v === 'number') t = t.replace('.', ','); else if(t && '=+-@'.indexOf(t.charAt(0)) >= 0) t = "'" + t; return '"' + t.replace(/"/g, '""') + '"'; };
+    const blob = new Blob([String.fromCharCode(65279) + rows.map(l => l.map(q).join(';')).join(String.fromCharCode(13, 10))], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'controle-de-cards-' + new Date().toISOString().slice(0, 10) + '.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    T.show('📥 CSV exportado.');
+  }
   function more() { limit += 150; render(); }
   function openCard(pid, id) { try { DB.switchProject(pid); R.go('kanban'); setTimeout(() => { try { Agile.openItem(id); } catch(e) { /* abre o quadro */ } }, 450); } catch(e) { /* sem acesso */ } }
-  return { render, toggle, more, openCard };
+  return { render, toggle, more, openCard, exportRows, exportXlsx, exportCsv };
 })();
 </script>
 
