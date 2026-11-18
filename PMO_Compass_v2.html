@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.107.1'
+  version: '2.107.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1706,7 +1706,7 @@ body.icons-failed i[data-fb]::before{
       <div><label class="set-sub" for="cc-q" style="display:block">Buscar</label><input class="input" id="cc-q" placeholder="Código ou título…" oninput="CardControl.render()" style="width:190px"></div>
       <label class="set-sub" style="display:inline-flex;gap:6px;align-items:center;margin-bottom:6px"><input type="checkbox" id="cc-alert" onchange="CardControl.render()">Só com alerta</label>
       <label class="set-sub" style="display:inline-flex;gap:6px;align-items:center;margin-bottom:6px"><input type="checkbox" id="cc-done" onchange="CardControl.render()">Incluir concluídos</label>
-      <button class="btn btn-sm" onclick="CardControl.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button><button class="btn btn-sm" onclick="CardControl.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button>
+      <button class="btn btn-sm" onclick="CardControl.clearFilters()"><i class="ti ti-filter-off"></i>Limpar Filtros</button><button class="btn btn-sm" onclick="CardControl.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button><button class="btn btn-sm" onclick="CardControl.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button>
     </div>
   </div>
   <div class="card" id="cc-matrix" style="margin-bottom:12px"></div>
@@ -22178,10 +22178,10 @@ const CardControl = (() => {
     const q = String((el('cc-q') || {}).value || '').toLowerCase(), onlyAlert = !!(el('cc-alert') || {}).checked;
     const rows = g.rows.filter(r => (!el('cc-proj').value || r.p.name === el('cc-proj').value) && (!el('cc-st').value || r.a.stageLabel === el('cc-st').value) && (!el('cc-who').value || String(r.i.assignee || '').trim() === el('cc-who').value)
       && (!q || (r.i.id + ' ' + r.i.title).toLowerCase().indexOf(q) >= 0) && (!onlyAlert || r.a.alerts.length)).sort((a, b) => (b.a.level === 'red') - (a.a.level === 'red') || b.a.alerts.length - a.a.alerts.length || b.a.stageAge - a.a.stageAge);
-    const open = g.rows.filter(r => !r.a.done), kp = (lbl, v, sub, tone) => '<div class="kpi"><div class="kpi-lbl">' + lbl + '</div><div class="kpi-val" style="color:' + (tone || 'var(--t1)') + '">' + v + '</div><div class="kpi-delta">' + sub + '</div></div>';
+    const open = rows.filter(r => !r.a.done), kp = (lbl, v, sub, tone) => '<div class="kpi"><div class="kpi-lbl">' + lbl + '</div><div class="kpi-val" style="color:' + (tone || 'var(--t1)') + '">' + v + '</div><div class="kpi-delta">' + sub + '</div></div>';
     const stalled = open.filter(r => r.a.alerts.some(x => x.text.indexOf('Parado') === 0)).length, late = open.filter(r => r.a.alerts.some(x => x.text.indexOf('Prazo vencido') === 0)).length, ret = open.filter(r => r.a.returns > 0).length, withAl = open.filter(r => r.a.alerts.length).length;
     el('cc-kpis').innerHTML = kp('Cards abertos', open.length, 'em ' + new Set(open.map(r => r.p.id)).size + ' projeto(s) e quadro(s)') + kp('Com alerta', withAl, 'o sistema recomenda agir', withAl ? 'var(--amb)' : 'var(--grn)') + kp('Parados', stalled, 'além do esperado na etapa', stalled ? 'var(--red)' : 'var(--grn)') + kp('Prazo vencido', late, 'ainda abertos', late ? 'var(--red)' : 'var(--grn)') + kp('Devolvidos', ret, 'voltaram de etapa ao menos uma vez', ret ? 'var(--amb)' : 'var(--grn)');
-    charts(g, q, onlyAlert);
+    charts(g, rows, q, onlyAlert);
     if(!g.rows.length) { el('cc-root').innerHTML = '<div class="rk-empty">Nenhum card aberto nos projetos e quadros que você acessa.</div>'; return; }
     const part = rows.slice(0, limit);
     el('cc-root').innerHTML = (rows.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Projeto</th><th scope="col">Card</th><th scope="col">Situação</th><th scope="col">Responsável</th><th scope="col" class="num">Na etapa</th><th scope="col" class="num">Aberto há</th><th scope="col">Prazo</th><th scope="col" class="num">Devol.</th><th scope="col">Leitura do sistema</th></tr></thead><tbody>'
@@ -22193,20 +22193,21 @@ const CardControl = (() => {
   }
   // Gráficos: pizza por situação (à direita dos números) e quadro Responsável × Situação; clicar filtra a lista
   const PAL = ['var(--b3)', 'var(--pur)', 'var(--amb)', 'var(--grn)', 'var(--acc)', 'var(--red)'];
-  function charts(g, q, onlyAlert) {
+  function charts(g, rows, q, onlyAlert) {
     const base = g.rows.filter(r => (!el('cc-proj').value || r.p.name === el('cc-proj').value) && (!q || (r.i.id + ' ' + r.i.title).toLowerCase().indexOf(q) >= 0) && (!onlyAlert || r.a.alerts.length));
     const sts = [...new Set(g.rows.map(r => r.a.stageLabel))].sort((a, b) => a.localeCompare(b, 'pt-BR')), col = l => PAL[sts.indexOf(l) % PAL.length];
     const who = r => String(r.i.assignee || '').trim(), curW = el('cc-who').value, curS = el('cc-st').value;
-    const pr = base.filter(r => !curW || who(r) === curW), tot = pr.length;
+    const pr = rows, tot = pr.length;
     let off = 0;
     const segs = sts.map(l => ({ l, n: pr.filter(r => r.a.stageLabel === l).length })).filter(x => x.n);
     const ring = segs.map(x => { const pc = x.n / tot * 100, c = '<circle cx="21" cy="21" r="15.9155" fill="none" stroke="' + col(x.l) + '" stroke-width="7" stroke-dasharray="' + pc + ' ' + (100 - pc) + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 21 21)"></circle>'; off += pc; return c; }).join('');
     el('cc-pie').innerHTML = tot ? '<svg viewBox="0 0 42 42" width="132" height="132" role="img" aria-label="Cards por situação: ' + segs.map(x => esc(x.l) + ' ' + x.n).join(', ') + '"><circle cx="21" cy="21" r="15.9155" fill="none" stroke="var(--s3)" stroke-width="7"></circle>' + ring + '<text x="21" y="22" text-anchor="middle" font-size="8" font-weight="700" fill="var(--t1)">' + tot + '</text><text x="21" y="28" text-anchor="middle" font-size="3.4" fill="var(--t2)">cards</text></svg>'
       + '<div class="cc-leg"><div class="set-sub" style="font-weight:700;text-transform:uppercase">Por situação' + (curW ? ' · ' + esc(curW) : '') + '</div>' + segs.map(x => '<button type="button" class="' + (x.l === curS ? 'on' : '') + '" data-st="' + esc(x.l) + '" onclick="CardControl.pickStatus(this.dataset.st)" aria-pressed="' + (x.l === curS) + '"><span class="cc-dot" style="background:' + col(x.l) + '"></span>' + esc(x.l) + ' <b style="margin-left:auto">' + x.n + '</b> <span class="set-sub">' + Math.round(x.n / tot * 100) + '%</span></button>').join('') + '</div>' : '<div class="rk-empty">Sem cards para o gráfico.</div>';
     const names = [...new Set(base.map(who))].sort((a, b) => (!a) - (!b) || a.localeCompare(b, 'pt-BR')), mx = Math.max(1, ...names.flatMap(n => sts.map(l => base.filter(r => who(r) === n && r.a.stageLabel === l).length)));
-    el('cc-matrix').innerHTML = names.length ? '<div class="set-sub" style="font-weight:700;text-transform:uppercase;margin-bottom:6px">Quem está com quê: cards por responsável e situação (clique no número para filtrar)</div><div class="tbl-wrap"><table class="tbl cc-mx" data-nodrag="1"><thead><tr><th scope="col">Responsável</th>' + sts.map(l => '<th scope="col" class="num"><span class="cc-dot" style="background:' + col(l) + ';display:inline-block;margin-right:4px"></span>' + esc(l) + '</th>').join('') + '<th scope="col" class="num">Total</th></tr></thead><tbody>'
-      + names.map(n => '<tr><td>' + (n ? esc(n) : '<i>(sem responsável)</i>') + '</td>' + sts.map(l => { const c = base.filter(r => who(r) === n && r.a.stageLabel === l).length; return '<td class="num">' + (c ? '<button type="button" data-w="' + esc(n) + '" data-st="' + esc(l) + '" onclick="CardControl.pickCell(this.dataset.w, this.dataset.st)" aria-label="' + esc((n || 'Sem responsável') + ', ' + l + ': ' + c + ' card(s). Filtrar') + '">' + c + '</button><div class="cc-bar" style="width:' + Math.max(8, c / mx * 100) + '%;background:' + col(l) + '"></div>' : '<span class="set-sub">·</span>') + '</td>'; }).join('') + '<td class="num"><b>' + base.filter(r => who(r) === n).length + '</b></td></tr>').join('') + '</tbody></table></div>' : '';
+    el('cc-matrix').innerHTML = names.length ? '<div class="set-sub" style="font-weight:700;text-transform:uppercase;margin-bottom:6px">Quem está com quê: cards por responsável e situação (clique no número para filtrar)</div><div class="set-sub" style="margin-bottom:6px">Mostra todos os responsáveis do projeto e da busca, para você navegar; a linha destacada é a pessoa que está filtrada.</div><div class="tbl-wrap"><table class="tbl cc-mx" data-nodrag="1"><thead><tr><th scope="col">Responsável</th>' + sts.map(l => '<th scope="col" class="num"><span class="cc-dot" style="background:' + col(l) + ';display:inline-block;margin-right:4px"></span>' + esc(l) + '</th>').join('') + '<th scope="col" class="num">Total</th></tr></thead><tbody>'
+      + names.map(n => '<tr' + (curW && n === curW ? ' style="background:var(--ad)"' : '') + '><td>' + (n ? esc(n) : '<i>(sem responsável)</i>') + '</td>' + sts.map(l => { const c = base.filter(r => who(r) === n && r.a.stageLabel === l).length; return '<td class="num">' + (c ? '<button type="button" data-w="' + esc(n) + '" data-st="' + esc(l) + '" onclick="CardControl.pickCell(this.dataset.w, this.dataset.st)" aria-label="' + esc((n || 'Sem responsável') + ', ' + l + ': ' + c + ' card(s). Filtrar') + '">' + c + '</button><div class="cc-bar" style="width:' + Math.max(8, c / mx * 100) + '%;background:' + col(l) + '"></div>' : '<span class="set-sub">·</span>') + '</td>'; }).join('') + '<td class="num"><b>' + base.filter(r => who(r) === n).length + '</b></td></tr>').join('') + '</tbody></table></div>' : '';
   }
+  function clearFilters() { ['cc-proj', 'cc-st', 'cc-who'].forEach(id => { if(el(id)) el(id).value = ''; }); if(el('cc-q')) el('cc-q').value = ''; ['cc-alert', 'cc-done'].forEach(id => { if(el(id)) el(id).checked = false; }); limit = 150; render(); }
   function pickStatus(l) { const s = el('cc-st'); s.value = s.value === l ? '' : l; limit = 150; render(); }
   function pickCell(w, l) { const a = el('cc-who'), b = el('cc-st'); if(!w) { a.value = ''; } else a.value = w; b.value = l; limit = 150; render(); }
   // Detalhe: por quê, tempo em cada etapa, linha do tempo, o que fazer e previsão
@@ -22244,7 +22245,7 @@ const CardControl = (() => {
   }
   function more() { limit += 150; render(); }
   function openCard(pid, id) { try { DB.switchProject(pid); R.go('kanban'); setTimeout(() => { try { Agile.openItem(id); } catch(e) { /* abre o quadro */ } }, 450); } catch(e) { /* sem acesso */ } }
-  return { render, toggle, more, pickStatus, pickCell, openCard, exportRows, exportXlsx, exportCsv };
+  return { render, toggle, more, clearFilters, pickStatus, pickCell, openCard, exportRows, exportXlsx, exportCsv };
 })();
 </script>
 
