@@ -11,3 +11,6 @@ test('Controle de Cards tem pizza por situação e quadro responsável × situa�
   assert.ok(src.includes('id="cc-pie"') && src.includes('id="cc-matrix"'), 'áreas dos gráficos');
   assert.ok(/pickStatus, pickCell/.test(src), 'cliques filtram');
 });
+test('Central de Relatórios tem o tempo por etapa dos cards e o relatório padrão de fluxo', () => {
+  assert.ok(src.includes("F('dias_etapa', 'Na etapa (d)'") && src.includes("id: 'p-fluxo'"), 'campos e padrão');
+});

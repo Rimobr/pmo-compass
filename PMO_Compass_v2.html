@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.104.0'
+  version: '2.104.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -18924,12 +18924,15 @@ const ReportEngine = (() => {
   // Cada entidade: rótulo, grupo, permissão da entidade, campo de data usado no período e as linhas (uma por registro do projeto)
   const ENTITIES = {
     cards: { l: 'Cards (backlog e quadro)', perm: null, date: 'criado',
-      rows: (pid, c) => { const sp = {}; c.get(pid, 'sprints').forEach(s => { sp[s.id] = s.name; }); return c.get(pid, 'backlog').map(i => Object.assign({}, i, { _sprint: sp[i.sprintId] || '' })); },
+      rows: (pid, c) => { const sp = {}; c.get(pid, 'sprints').forEach(s => { sp[s.id] = s.name; }); const all = c.get(pid, 'backlog').filter(i => i && i.kind !== 'epico'); let flow = null; try { if(typeof CardFlow !== 'undefined' && typeof AgileCalc !== 'undefined') { const cols = AgileCalc.cols(AgileCalc.cfgOf(c.get(pid, 'agileConfig'))); const now = Date.now(); flow = { cols, bench: CardFlow.benchmarks(all, cols, now), now, last: cols[cols.length - 1].key }; } } catch(e) { flow = null; }
+        return c.get(pid, 'backlog').map(i => { let a = null; if(flow && i.kind !== 'epico') { try { a = CardFlow.analyze(i, flow.cols, flow.now, { bench: flow.bench, due: '' }); } catch(e) { a = null; } } return Object.assign({}, i, { _sprint: sp[i.sprintId] || '', _a: a }); }); },
       fields: [F('id', 'Código', 'texto', 'Identificação', r => r.id), F('titulo', 'Título', 'texto', 'Identificação', r => r.title), F('tipo', 'Tipo', 'texto', 'Identificação', r => lbl(KIND, r.kind)),
         F('situacao', 'Situação', 'texto', 'Andamento', r => lbl(STATUS, r.status)), F('responsavel', 'Responsável', 'texto', 'Andamento', r => r.assignee || ''), F('sprint', 'Sprint', 'texto', 'Andamento', r => r._sprint),
         F('pontos', 'Pontos', 'numero', 'Andamento', r => (r.points === '' || r.points == null) ? null : num(r.points)), F('prioridade_bug', 'Fila', 'numero', 'Andamento', r => r.bugPriority ? num(r.bugPriority) : null),
         F('item_pai', 'Pai', 'texto', 'Ligações', r => r.parentId || ''), F('epico', 'Épico', 'texto', 'Ligações', r => r.epicId || ''),
-        F('criado', 'Criado', 'data', 'Datas', r => iso(r.createdOn)), F('concluido', 'Concluído', 'data', 'Datas', r => iso(r.doneOn))] },
+        F('criado', 'Criado', 'data', 'Datas', r => iso(r.createdOn)), F('concluido', 'Concluído', 'data', 'Datas', r => iso(r.doneOn)),
+        F('dias_etapa', 'Na etapa (d)', 'numero', 'Fluxo', r => (r._a && !r._a.done) ? num(r._a.stageAge) : null), F('dias_aberto_card', 'Aberto (d)', 'numero', 'Fluxo', r => r._a ? num(r._a.ageDays) : null),
+        F('devolucoes', 'Devol.', 'numero', 'Fluxo', r => r._a ? num(r._a.returns || 0) : null), F('alerta', 'Alerta', 'texto', 'Fluxo', r => r._a ? (r._a.alerts[0] ? r._a.alerts[0].text : 'Sem alerta') : '')] },
     riscos: { l: 'Riscos', perm: null, date: 'identificado',
       rows: (pid, c) => c.get(pid, 'risks'),
       fields: [F('id', 'Código', 'texto', 'Identificação', r => r.id), F('titulo', 'Título', 'texto', 'Identificação', r => r.title), F('categoria', 'Categoria', 'texto', 'Identificação', r => r.category || ''),
@@ -19099,6 +19102,7 @@ const ReportEngine = (() => {
     { id: 'p-entr-atr', grupo: 'Entregas (WBS)', nome: 'Entregas atrasadas', desc: 'O prazo planejado já passou e a entrega não foi concluída.', ent: 'entregas', campos: ['nivel', 'entrega', 'nome', 'responsavel', 'fim', 'status', 'avanco'], filtros: [{ campo: 'atrasada', op: 'igual', valor: 'Sim' }], ordem: 'fim' },
     { id: 'p-riscos-niv', grupo: 'Riscos', nome: 'Riscos em aberto por nível', desc: 'Riscos que ainda não foram encerrados, do mais grave ao menos grave.', ent: 'riscos', campos: ['nivel', 'id', 'titulo', 'categoria', 'status', 'responsavel', 'revisao'], filtros: [{ campo: 'status', op: 'diferente', valor: 'Encerrado' }], ordem: 'nivel', dir: 'desc' },
     { id: 'p-riscos-cat', grupo: 'Riscos', nome: 'Riscos por categoria', desc: 'Quantos riscos há em cada categoria e o nível médio.', ent: 'riscos', grupos: ['categoria'], medidas: [{ campo: '*', fn: 'count' }, { campo: 'nivel', fn: 'avg' }], ordem: 'count:*', dir: 'desc' },
+    { id: 'p-fluxo', grupo: 'Cards', nome: 'Fluxo dos cards abertos', desc: 'Há quanto tempo cada card aberto está na etapa atual e no total, devoluções e o alerta do sistema.', ent: 'cards', campos: ['dias_etapa', 'id', 'titulo', 'situacao', 'responsavel', 'dias_aberto_card', 'devolucoes', 'alerta'], filtros: [{ campo: 'situacao', op: 'diferente', valor: 'Concluído' }], ordem: 'dias_etapa', dir: 'desc' },
     { id: 'p-imped', grupo: 'Impedimentos e escopo', nome: 'Impedimentos abertos', desc: 'Há quanto tempo cada impedimento está aberto.', ent: 'impedimentos', campos: ['dias_aberto', 'id', 'titulo', 'responsavel', 'aberto_em'], filtros: [{ campo: 'situacao', op: 'igual', valor: 'Aberto' }], ordem: 'dias_aberto', dir: 'desc' },
     { id: 'p-escopo', grupo: 'Impedimentos e escopo', nome: 'Mudanças de escopo por situação', desc: 'Quantas mudanças há em cada situação e o impacto em dias (e em R$, para quem vê custos).', ent: 'escopo', grupos: ['status'], medidas: [{ campo: '*', fn: 'count' }, { campo: 'impacto_dias', fn: 'sum' }, { campo: 'impacto_custo', fn: 'sum' }], ordem: 'count:*', dir: 'desc', opcional: ['impacto_custo'] },
     { id: 'p-horas-pessoa', grupo: 'Horas e custos', nome: 'Horas por pessoa', desc: 'Total de horas apontadas por pessoa no período.', ent: 'horas', grupos: ['pessoa'], medidas: [{ campo: 'horas', fn: 'sum' }, { campo: '*', fn: 'count' }], periodoCampo: 'data', periodo: true, ordem: 'sum:horas', dir: 'desc' },
