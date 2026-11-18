@@ -36,3 +36,19 @@ test('servidor: plano de capacidade (allocPlan) igual ao do app, nos dois tipos 
   }
   assert.equal(FUNCS['PlanVsReal.allocPlan']({ name: 'Ana', total: 130, receivers: 0, rows }).kind, 'capacity');
 });
+test('cliente Intel: depois de muitas respostas em sequência a tela ainda recebe o resultado final (sem descartar o último redesenho)', async () => {
+  const mod = (html.match(/<script data-module="services\/intel-client">\n?([\s\S]*?)\n?<\/script>/) || [])[1];
+  assert.ok(mod, 'módulo encontrado');
+  let renders = 0, shown = null;
+  const Cloud = { invoke: async (name, body) => { await new Promise(r => setTimeout(r, 15)); return { ok: true, result: body.fn === 'P' ? { plan: body.args.n } : ['decisão ' + body.args.plans.length] }; } };
+  const T = { show() {} };
+  const g = {};
+  const MgrPanel = { render() { renders++; const plans = [1, 2, 3, 4, 5, 6, 7, 8].map(n => globalThis.__Intel.get('P', { n }, null)).filter(Boolean); shown = globalThis.__Intel.get('D', { plans }, []); } };
+  const Intel = new Function('Cloud', 'T', 'MgrPanel', mod + '\nreturn Intel;')(Cloud, T, MgrPanel);
+  globalThis.__Intel = Intel;
+  Intel.cfg.debounce = 5; Intel.cfg.window = 400; Intel.cfg.max = 2;
+  MgrPanel.render();
+  await new Promise(r => setTimeout(r, 2500));
+  delete globalThis.__Intel;
+  assert.deepEqual(shown, ['decisão 8'], 'mostra o cálculo final com os 8 planos; renders=' + renders);
+});

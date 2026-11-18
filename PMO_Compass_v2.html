@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.107.0'
+  version: '2.107.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -22116,11 +22116,15 @@ const Intel = (() => {
   const cache = new Map(), pending = new Set(), last = {};
   let warned = false, burst = [];
   const key = (fn, args) => fn + '|' + JSON.stringify(args);
-  let timer = null;
-  function refresh() { if(timer) return; timer = setTimeout(() => { timer = null; doRefresh(); }, 80); } // junta várias respostas num só redesenho
+  let timer = null, later = null;
+  const cfg = { debounce: 80, window: 10000, max: 6 }; // ajustável só para teste
+  function refresh() { if(timer) return; timer = setTimeout(() => { timer = null; doRefresh(); }, cfg.debounce); } // junta várias respostas num só redesenho
   function doRefresh() {
     // Trava contra laço: se a entrada muda a cada desenho, no máximo 6 redesenhos em 10 s
-    const now = Date.now(); burst = burst.filter(t => now - t < 10000); if(burst.length >= 6) return; burst.push(now);
+    // Passou do limite: não descarta (a resposta mais recente ficaria sem aparecer), adia um único redesenho para quando a janela abrir.
+    const now = Date.now(); burst = burst.filter(t => now - t < cfg.window);
+    if(burst.length >= cfg.max) { if(!later) later = setTimeout(() => { later = null; doRefresh(); }, Math.max(cfg.debounce * 2, cfg.window - (now - burst[0]) + 50)); return; }
+    burst.push(now);
     try { if(typeof MgrPanel !== 'undefined') MgrPanel.render(); } catch(e) { /* tela fechada */ }
     try { if(typeof Board !== 'undefined') Board.render(); } catch(e) { /* tela fechada */ }
     try { if(typeof PmoView !== 'undefined') PmoView.render(); } catch(e) { /* tela fechada */ }
@@ -22138,7 +22142,7 @@ const Intel = (() => {
     }
     return fn in last ? last[fn] : fallback; // enquanto a nova resposta não chega, vale a última recebida (sem piscar vazio)
   }
-  return { get, key };
+  return { get, key, cfg };
 })();
 </script>
 
