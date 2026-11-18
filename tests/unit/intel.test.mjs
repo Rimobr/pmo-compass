@@ -40,7 +40,7 @@ test('cliente Intel: depois de muitas respostas em sequência a tela ainda receb
   const mod = (html.match(/<script data-module="services\/intel-client">\n?([\s\S]*?)\n?<\/script>/) || [])[1];
   assert.ok(mod, 'módulo encontrado');
   let renders = 0, shown = null;
-  const Cloud = { invoke: async (name, body) => { await new Promise(r => setTimeout(r, 15)); return { ok: true, result: body.fn === 'P' ? { plan: body.args.n } : ['decisão ' + body.args.plans.length] }; } };
+  const Cloud = { isSignedIn: () => true, invoke: async (name, body) => { await new Promise(r => setTimeout(r, 15)); return { ok: true, result: body.fn === 'P' ? { plan: body.args.n } : ['decisão ' + body.args.plans.length] }; } };
   const T = { show() {} };
   const g = {};
   const MgrPanel = { render() { renders++; const plans = [1, 2, 3, 4, 5, 6, 7, 8].map(n => globalThis.__Intel.get('P', { n }, null)).filter(Boolean); shown = globalThis.__Intel.get('D', { plans }, []); } };
@@ -62,7 +62,7 @@ test('servidor: carga do time (WorkloadCalc.all) igual à do app, com e sem evid
 });
 test('cliente Intel: o resultado de uma pessoa nunca aparece para outra enquanto a resposta não chega (stale só por opção)', async () => {
   const mod = (html.match(/<script data-module="services\/intel-client">\n?([\s\S]*?)\n?<\/script>/) || [])[1];
-  const Cloud = { invoke: async (name, body) => { await new Promise(r => setTimeout(r, 20)); return { ok: true, result: 'plano de ' + body.args.who }; } };
+  const Cloud = { isSignedIn: () => true, invoke: async (name, body) => { await new Promise(r => setTimeout(r, 20)); return { ok: true, result: 'plano de ' + body.args.who }; } };
   const Intel = new Function('Cloud', 'T', mod + '\nreturn Intel;')(Cloud, { show() {} });
   assert.equal(Intel.get('PlanVsReal.allocPlan', { who: 'Ana' }, null), null);
   await new Promise(r => setTimeout(r, 120));
@@ -71,4 +71,22 @@ test('cliente Intel: o resultado de uma pessoa nunca aparece para outra enquanto
   assert.equal(Intel.get('DecisionCenter.build', { x: 1 }, [], { stale: true }).length, 0);
   await new Promise(r => setTimeout(r, 120));
   assert.equal(Intel.get('DecisionCenter.build', { x: 2 }, [], { stale: true }), 'plano de undefined', 'consulta única com stale devolve a última');
+});
+test('cliente Intel: sessão que ainda não chegou e falha do servidor NÃO ficam guardadas para sempre (tenta de novo e mostra o resultado)', async () => {
+  const mod = (html.match(/<script data-module="services\/intel-client">\n?([\s\S]*?)\n?<\/script>/) || [])[1];
+  let signed = false, calls = 0, fail = true, renders = 0, shown = 'nada';
+  const Cloud = { isSignedIn: () => signed, invoke: async () => { calls++; await new Promise(r => setTimeout(r, 10)); return fail ? null : { ok: true, result: { m1: { pct: 80 } } }; } };
+  const MgrPanel = { render() { renders++; shown = globalThis.__I.get('WorkloadCalc.all', { team: [1] }, null); } };
+  const Intel = new Function('Cloud', 'T', 'MgrPanel', mod + '\nreturn Intel;')(Cloud, { show() {} }, MgrPanel);
+  globalThis.__I = Intel; Intel.cfg.debounce = 5; Intel.cfg.retry = 120;
+  // 1) a página abre e desenha ANTES do login terminar: não chama o servidor e não registra falha
+  MgrPanel.render(); await new Promise(r => setTimeout(r, 50));
+  assert.equal(calls, 0, 'sem sessão não chama o servidor'); assert.equal(shown, null);
+  // 2) o login termina, mas o servidor falha uma vez
+  signed = true; MgrPanel.render(); await new Promise(r => setTimeout(r, 60));
+  assert.equal(calls, 1, 'tentou assim que houve sessão'); assert.equal(shown, null);
+  // 3) o servidor volta: a nova tentativa acontece sozinha e a tela recebe o resultado
+  fail = false; await new Promise(r => setTimeout(r, 500));
+  delete globalThis.__I;
+  assert.deepEqual(shown, { m1: { pct: 80 } }, 'tentou de novo e mostrou; chamadas=' + calls + ' desenhos=' + renders);
 });

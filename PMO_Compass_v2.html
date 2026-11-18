@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.108.1'
+  version: '2.108.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -5717,7 +5717,7 @@ const Cloud = (() => {
   // Chama uma função de borda do Supabase com a sessão da pessoa; devolve os dados ou null (sem sessão, sem rede ou função não publicada).
   async function invoke(name, body) {
     if(!client || !session) return null;
-    try { const { data, error } = await client.functions.invoke(name, { body }); return error ? null : data; } catch(e) { return null; }
+    try { const { data, error } = await client.functions.invoke(name, { body }); if(error) { try { console.warn('Cloud.invoke ' + name + ': ' + (error.message || error)); } catch(e2) { /* sem console */ } return null; } return data; } catch(e) { try { console.warn('Cloud.invoke ' + name + ': ' + (e && e.message || e)); } catch(e2) { /* sem console */ } return null; }
   }
   return { invoke, load, configure, disconnect, setUse, isConfigured, isSignedIn, getEmail, sessionStart, authProvider, renewSession, getUserId, listProfiles, projectContacts, joinTeam, myOpenItems, openItemsForManagers, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
     pullPortfolio, reassignItems, compassDigest, myWorkload, saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, hoursSummary, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, markOnboarded, saveMyDetails, signOut, pullAll, flush,
@@ -22114,11 +22114,13 @@ const CardFlow = (() => {
 <!-- ■ MODULE: services/intel-client ─ Cliente da "inteligência" no servidor: no pacote público, os módulos de cálculo viram chamadas à função de borda intel. Resposta em cache; enquanto não chega devolve o valor de reserva e redesenha quando chegar. -->
 <script data-module="services/intel-client">
 const Intel = (() => {
-  const cache = new Map(), pending = new Set(), last = {};
+  const cache = new Map(), pending = new Set(), failed = new Map(), last = {};
   let warned = false, burst = [];
-  const key = (fn, args) => fn + '|' + JSON.stringify(args);
+  // Chave curta (resumo de 53 bits do conteúdo) para não guardar tabelas inteiras na memória
+  const hash = str => { let h1 = 0xdeadbeef, h2 = 0x41c6ce57; for(let i = 0; i < str.length; i++) { const c = str.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909); return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36); };
+  const key = (fn, args) => fn + '|' + hash(JSON.stringify(args));
   let timer = null, later = null;
-  const cfg = { debounce: 80, window: 10000, max: 6 }; // ajustável só para teste
+  const cfg = { debounce: 80, window: 10000, max: 6, retry: 15000, maxCache: 300 }; // ajustável só para teste
   function refresh() { if(timer) return; timer = setTimeout(() => { timer = null; doRefresh(); }, cfg.debounce); } // junta várias respostas num só redesenho
   function doRefresh() {
     // Trava contra laço: se a entrada muda a cada desenho, no máximo 6 redesenhos em 10 s
@@ -22137,15 +22139,27 @@ const Intel = (() => {
   function get(fn, args, fallback, opts) {
     const k = key(fn, args);
     if(cache.has(k)) return cache.get(k);
-    if(!pending.has(k)) {
-      pending.add(k);
-      Cloud.invoke('intel', { fn, args }).then(r => {
-        pending.delete(k);
-        if(r && r.ok) { cache.set(k, r.result); last[fn] = r.result; if(cache.size > 40) cache.delete(cache.keys().next().value); refresh(); }
-        else { cache.set(k, fallback); if(!warned) { warned = true; try { T.show('⚠️ Cálculo indisponível agora (sem conexão ou função não publicada).'); } catch(e) { /* sem aviso */ } } }
-      });
-    }
-    return (opts && opts.stale && fn in last) ? last[fn] : fallback;
+    const ret = (opts && opts.stale && fn in last) ? last[fn] : fallback;
+    if(pending.has(k)) return ret;
+    const f = failed.get(k); if(f && Date.now() - f < cfg.retry) return ret; // falhou há pouco: espera antes de tentar de novo
+    // Sem sessão (a página ainda está restaurando o login): NÃO conta como falha; a próxima vez que a tela desenhar, tenta de novo
+    if(typeof Cloud === 'undefined' || !Cloud.isSignedIn()) return ret;
+    pending.add(k);
+    Cloud.invoke('intel', { fn, args }).then(r => {
+      pending.delete(k);
+      if(r && r.ok) {
+        failed.delete(k); cache.set(k, r.result); last[fn] = r.result;
+        if(cache.size > cfg.maxCache) cache.delete(cache.keys().next().value);
+        refresh();
+      } else {
+        // Falha NUNCA fica guardada para sempre: tenta de novo depois de cfg.retry e redesenha quando chegar
+        failed.set(k, Date.now());
+        try { console.warn('Intel: o servidor não respondeu a ' + fn + (r && r.error ? ' (' + r.error + ')' : '')); } catch(e) { /* sem console */ }
+        if(!warned) { warned = true; try { T.show('⚠️ Cálculo indisponível agora; tentando de novo em instantes.'); } catch(e) { /* sem aviso */ } }
+        setTimeout(refresh, cfg.retry + 50);
+      }
+    });
+    return ret;
   }
   return { get, key, cfg };
 })();
