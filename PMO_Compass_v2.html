@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.105.0'
+  version: '2.106.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -5714,7 +5714,12 @@ const Cloud = (() => {
     setTimeout(() => location.reload(), 900);
   }
 
-  return { load, configure, disconnect, setUse, isConfigured, isSignedIn, getEmail, sessionStart, authProvider, renewSession, getUserId, listProfiles, projectContacts, joinTeam, myOpenItems, openItemsForManagers, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
+  // Chama uma função de borda do Supabase com a sessão da pessoa; devolve os dados ou null (sem sessão, sem rede ou função não publicada).
+  async function invoke(name, body) {
+    if(!client || !session) return null;
+    try { const { data, error } = await client.functions.invoke(name, { body }); return error ? null : data; } catch(e) { return null; }
+  }
+  return { invoke, load, configure, disconnect, setUse, isConfigured, isSignedIn, getEmail, sessionStart, authProvider, renewSession, getUserId, listProfiles, projectContacts, joinTeam, myOpenItems, openItemsForManagers, updateUserRole, setProjectManager, listAccessProfiles, saveAccessProfile, deleteAccessProfile, setMemberUser, deleteProject,
     pullPortfolio, reassignItems, compassDigest, myWorkload, saveAiKey, deleteAiKey, getAiKeyStatus, sendAi, updateOwnName, doSignIn, doSignInSSO, createAccount, resetPassword, changeOwnPassword, ensureTeamMember, withdrawWhatsapp, projectTeam, notifyProject, listNotices, markNoticesRead, hoursSummary, uploadItemFile, itemFileUrl, wipeLocalData, localKeysToWipe, manageUsers, personDetails, listSkillCatalog, resolveSkills, listReviews, saveReview, listTeamLinks, listTeamNames, pendingWork, reassignWork, mustChangePassword, finishFirstPassword, getMyDetails, markOnboarded, saveMyDetails, signOut, pullAll, flush,
     pushWbsModule, pushWbsTask, deleteWbsModule, deleteWbsTask,
     pushTeamMember, deleteTeamMember, fetchTeamMember, syncAllTeamMembers,
@@ -22102,6 +22107,34 @@ const CardFlow = (() => {
     return { stageKey: r.cur, stageLabel: label(r.cur), stageAge, ageDays, stages, timeline, returns: returns.length, lastReturn, comments: r.comments.slice(-3).reverse(), alerts, level, eta, why, done: r.done };
   }
   return { replay, benchmarks, analyze, median };
+})();
+</script>
+
+<!-- ■ MODULE: services/intel-client ─ Cliente da "inteligência" no servidor: no pacote público, os módulos de cálculo viram chamadas à função de borda intel. Resposta em cache; enquanto não chega devolve o valor de reserva e redesenha quando chegar. -->
+<script data-module="services/intel-client">
+const Intel = (() => {
+  const cache = new Map(), pending = new Set();
+  let warned = false;
+  const key = (fn, args) => fn + '|' + JSON.stringify(args);
+  function refresh() {
+    try { if(typeof MgrPanel !== 'undefined') MgrPanel.render(); } catch(e) { /* tela fechada */ }
+    try { if(typeof Board !== 'undefined') Board.render(); } catch(e) { /* tela fechada */ }
+    try { if(typeof PmoView !== 'undefined') PmoView.render(); } catch(e) { /* tela fechada */ }
+  }
+  function get(fn, args, fallback) {
+    const k = key(fn, args);
+    if(cache.has(k)) return cache.get(k);
+    if(!pending.has(k)) {
+      pending.add(k);
+      Cloud.invoke('intel', { fn, args }).then(r => {
+        pending.delete(k);
+        if(r && r.ok) { cache.set(k, r.result); if(cache.size > 40) cache.delete(cache.keys().next().value); refresh(); }
+        else { cache.set(k, fallback); if(!warned) { warned = true; try { T.show('⚠️ Cálculo indisponível agora (sem conexão ou função não publicada).'); } catch(e) { /* sem aviso */ } } }
+      });
+    }
+    return fallback;
+  }
+  return { get, key };
 })();
 </script>
 

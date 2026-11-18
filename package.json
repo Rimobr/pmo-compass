@@ -1,6 +1,6 @@
 {
   "name": "pmo-compass",
-  "version": "2.105.0",
+  "version": "2.106.0",
   "private": true,
   "scripts": {
     "test:unit": "node tests/run.js && node --test tests/unit/*.test.mjs",
@@ -18,8 +18,10 @@
     "check:secrets": "node scripts/check-secrets.mjs",
     "changelog": "node scripts/build-changelog.mjs",
     "build:public": "node scripts/build-public.mjs",
+    "build:intel": "node scripts/build-intel.mjs",
     "check:public-build": "node scripts/build-public.mjs --check",
-    "check:all": "npm run lint && npm run check:version && npm run check:secrets && npm run check:public-build && npm run check:sql && npm run check:schema && npm run test:unit && npm run test:smoke && npm run test:a11y",
+    "check:intel": "node scripts/build-intel.mjs --check",
+    "check:all": "npm run lint && npm run check:version && npm run check:secrets && npm run check:intel && npm run check:public-build && npm run check:sql && npm run check:schema && npm run test:unit && npm run test:smoke && npm run test:a11y",
     "test:ciclo": "node tests/ciclo/ciclo-regras-navegador.mjs",
     "test:ciclo-db": "node tests/ciclo/ciclo-regras-banco.mjs"
   },

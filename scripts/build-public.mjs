@@ -13,16 +13,26 @@ const esbuild = require('esbuild');
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
 const out = path.join(root, 'dist');
 const check = process.argv.includes('--check');
+// Módulos de inteligência que, no pacote público, viram chamadas ao servidor (função de borda intel).
+// Só valem depois que a função estiver publicada: scripts/intel-live.json {"live": true}. Até lá o dist leva o módulo normal.
+const live = (() => { try { return JSON.parse(fs.readFileSync(path.join(root, 'scripts', 'intel-live.json'), 'utf8')).live === true; } catch(e) { return false; } })();
+const STUBS = {
+  'services/decision-center': "const DecisionCenter = (() => { const LV = s => s >= 85 ? 'crit' : s >= 65 ? 'high' : 'med'; return { build: input => Intel.get('DecisionCenter.build', input, []), LV }; })();",
+};
 const COPY = ['manifest.json', 'sw.js', 'version.json', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
 
 function buildHtml(src) {
   const text = src.replace(/\r\n/g, '\n');
   const re = /<script\b([^>]*)>([\s\S]*?)<\/script>|<style\b([^>]*)>([\s\S]*?)<\/style>/g;
   let res = '', last = 0, m, js = 0, css = 0;
-  const plain = chunk => chunk.replace(/<!--(?!\[if)[\s\S]*?-->/g, '');
+  const plain0 = chunk => chunk.replace(/<!--(?!\[if)[\s\S]*?-->/g, '');
+  const plain = plain0;
+  const modRe = /^\s*<script data-module="([^"]+)"/;
   while ((m = re.exec(text))) {
     res += plain(text.slice(last, m.index));
     if (m[0].startsWith('<script')) {
+      const mod = (modRe.exec(m[0]) || [])[1];
+      if (live && mod && STUBS[mod]) { res += '<script' + m[1] + '>' + esbuild.transformSync(STUBS[mod], { minify: true, target: 'es2020' }).code.trim() + '</script>'; js++; last = m.index + m[0].length; continue; }
       const attrs = m[1], body = m[2], type = (/type\s*=\s*["']([^"']+)["']/i.exec(attrs) || [])[1] || '';
       if (/\bsrc\s*=/.test(attrs) || !body.trim() || (type && !/javascript|module/i.test(type))) res += m[0];
       else { res += '<script' + attrs + '>' + esbuild.transformSync(body, { minify: true, target: 'es2020', legalComments: 'none' }).code.trim() + '</script>'; js++; }
