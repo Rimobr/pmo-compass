@@ -512,6 +512,11 @@
     }
   },
   "functions": {
+    "intel": {
+      "desc": "Calcula no servidor a inteligência do produto (Central de Decisões e plano de capacidade) a partir dos fatos que a pessoa já enxerga; não lê nem grava no banco.",
+      "segredos": "nenhum (só confere a sessão da pessoa)",
+      "quemChama": "o app, logado"
+    },
     "ai-proxy": {
       "desc": "Chama o provedor de IA com a chave guardada da pessoa.",
       "segredos": "chaves de IA por pessoa (tabela `user_ai_keys`)",

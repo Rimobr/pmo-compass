@@ -161,6 +161,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 
 | Função | Para que serve | Segredos que usa | Quem chama |
 |---|---|---|---|
+| `intel` | Calcula no servidor a inteligência do produto (Central de Decisões e plano de capacidade) a partir dos fatos que a pessoa já enxerga; não lê nem grava no banco. | nenhum (só confere a sessão da pessoa) | o app, logado |
 | `ai-proxy` | Chama o provedor de IA com a chave guardada da pessoa. | chaves de IA por pessoa (tabela `user_ai_keys`) | o app, logado |
 | `messaging-admin` | Ações do Administrador em Mensagens (status, confirmação de WhatsApp, teste de pergunta). | WA_*, RESEND_API_KEY | o app, Administrador |
 | `notify-dispatch` | Envia os avisos da fila. | WA_*, RESEND_API_KEY, CRON_SECRET | agendador |
