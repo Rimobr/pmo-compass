@@ -15,7 +15,7 @@ test('servidor: o código gerado dá o mesmo resultado do módulo do app (parida
   assert.ok(FUNCS['DecisionCenter.build'](input).length >= 3, 'gerou decisões');
 });
 test('servidor: só roda o que está na lista fechada e o arquivo gerado está em dia', () => {
-  assert.deepEqual(Object.keys(FUNCS), INTEL.flatMap(x => x.funcs.map(f => x.name + '.' + f)));
+  assert.deepEqual(Object.keys(FUNCS), INTEL.flatMap(x => x.funcs.map(f => x.name + '.' + (typeof f === 'string' ? f : f.name))));
   const cur = fs.readFileSync(new URL('../../supabase/functions/_shared/intel.generated.mjs', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   assert.equal(cur, generate(), 'rode: node scripts/build-intel.mjs');
 });
@@ -51,4 +51,24 @@ test('cliente Intel: depois de muitas respostas em sequência a tela ainda receb
   await new Promise(r => setTimeout(r, 2500));
   delete globalThis.__Intel;
   assert.deepEqual(shown, ['decisão 8'], 'mostra o cálculo final com os 8 planos; renders=' + renders);
+});
+test('servidor: carga do time (WorkloadCalc.all) igual à do app, com e sem evidência', () => {
+  const app = new Function(sourceOf(html, 'services/workload') + '\nreturn WorkloadCalc;')();
+  const team = [{ id: 'm1', name: 'Ana', allocationPct: 100 }, { id: 'm2', name: 'Bia', allocationPct: 100 }, { id: 'm3', name: 'Caio' }];
+  const items = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((c, n) => ({ id: 'US-' + n, title: 'Card ' + c, assignee: n < 6 ? 'Ana' : 'Bia', status: n % 2 ? 'doing' : 'todo', points: 3, kind: 'story' }));
+  const ctx = { items, sprints: [], hours: [], imps: [], today: '2026-11-18', capacity: null };
+  assert.deepEqual(FUNCS['WorkloadCalc.all']({ team, ctx }), app.all(team, ctx));
+  assert.deepEqual(FUNCS['WorkloadCalc.all']({ team, ctx: { ...ctx, items: [] } }), app.all(team, { ...ctx, items: [] }));
+});
+test('cliente Intel: o resultado de uma pessoa nunca aparece para outra enquanto a resposta não chega (stale só por opção)', async () => {
+  const mod = (html.match(/<script data-module="services\/intel-client">\n?([\s\S]*?)\n?<\/script>/) || [])[1];
+  const Cloud = { invoke: async (name, body) => { await new Promise(r => setTimeout(r, 20)); return { ok: true, result: 'plano de ' + body.args.who }; } };
+  const Intel = new Function('Cloud', 'T', mod + '\nreturn Intel;')(Cloud, { show() {} });
+  assert.equal(Intel.get('PlanVsReal.allocPlan', { who: 'Ana' }, null), null);
+  await new Promise(r => setTimeout(r, 120));
+  assert.equal(Intel.get('PlanVsReal.allocPlan', { who: 'Ana' }, null), 'plano de Ana');
+  assert.equal(Intel.get('PlanVsReal.allocPlan', { who: 'Bia' }, null), null, 'Bia não herda o plano da Ana');
+  assert.equal(Intel.get('DecisionCenter.build', { x: 1 }, [], { stale: true }).length, 0);
+  await new Promise(r => setTimeout(r, 120));
+  assert.equal(Intel.get('DecisionCenter.build', { x: 2 }, [], { stale: true }), 'plano de undefined', 'consulta única com stale devolve a última');
 });

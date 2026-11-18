@@ -17,7 +17,8 @@ const check = process.argv.includes('--check');
 // Só valem depois que a função estiver publicada: scripts/intel-live.json {"live": true}. Até lá o dist leva o módulo normal.
 const live = (() => { try { return JSON.parse(fs.readFileSync(path.join(root, 'scripts', 'intel-live.json'), 'utf8')).live === true; } catch(e) { return false; } })();
 const STUBS = {
-  'services/decision-center': "const DecisionCenter = (() => { const LV = s => s >= 85 ? 'crit' : s >= 65 ? 'high' : 'med'; return { build: input => Intel.get('DecisionCenter.build', input, []), LV }; })();",
+  'services/workload': "const WorkloadCalc = { all: (team, ctx) => Intel.get('WorkloadCalc.all', { team, ctx }, null) || {} };",
+  'services/decision-center': "const DecisionCenter = (() => { const LV = s => s >= 85 ? 'crit' : s >= 65 ? 'high' : 'med'; return { build: input => Intel.get('DecisionCenter.build', input, [], { stale: true }), LV }; })();",
 };
 // Troca de UMA função dentro de um módulo (o resto do módulo continua no app). A função precisa ser autocontida.
 const FN_STUBS = {

@@ -15,6 +15,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const INTEL = [
   { module: 'services/decision-center', name: 'DecisionCenter', funcs: ['build'] },
   { module: 'services/plan-vs-real', name: 'PlanVsReal', funcs: ['allocPlan'] },
+  { module: 'services/workload', name: 'WorkloadCalc', funcs: [{ name: 'all', call: '(a) => WorkloadCalc.all(a.team, a.ctx)' }] },
 ];
 
 export function sourceOf(html, moduleId) {
@@ -29,7 +30,7 @@ export function generate() {
   const parts = ['// GERADO por scripts/build-intel.mjs a partir de PMO_Compass_v2.html. NÃO edite aqui.', '// Cada módulo abaixo é o mesmo código do app; a função de borda `intel` só chama o que está em FUNCS.', ''];
   INTEL.forEach(x => { parts.push('// ── ' + x.module + ' ──', sourceOf(html, x.module).trim(), ''); });
   parts.push('export const FUNCS = {');
-  INTEL.forEach(x => x.funcs.forEach(f => parts.push("  '" + x.name + '.' + f + "': (args) => " + x.name + '.' + f + '(args),')));
+  INTEL.forEach(x => x.funcs.forEach(f => { const n = typeof f === 'string' ? f : f.name; parts.push("  '" + x.name + '.' + n + "': " + (typeof f === 'string' ? '(args) => ' + x.name + '.' + f + '(args)' : f.call) + ','); }));
   parts.push('};', '');
   return parts.join('\n');
 }

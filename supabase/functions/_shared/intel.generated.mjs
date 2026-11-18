@@ -207,7 +207,86 @@ const PlanVsReal = (() => {
   return { impediments, decisions, riskReviews, stakeholders, scopeSuggest, scopeReality, meetingDigest, pace, projectRow, fixesOf, allocPlan, days, median };
 })();
 
+// ── services/workload ──
+const WorkloadCalc = (() => {
+  const WIP_NORM = 3, HOURS_DAY = 8, WINDOW = 14, FALLBACK_OPEN = 6; // 3 cards ao mesmo tempo; 8 h por dia; janela de 14 dias; sem outra evidência, 6 cards abertos = 100%
+  const key = s => String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const ms = d => Date.parse(d + 'T00:00:00Z'), diff = (a, b) => Math.round((ms(b) - ms(a)) / 86400000);
+  const addDays = (d, n) => new Date(ms(d) + n * 86400000).toISOString().slice(0, 10);
+  const num = v => Number(v) || 0, r1 = v => Math.round(v * 10) / 10, pl = (n, a, b) => n + ' ' + (n === 1 ? a : b);
+  const isWork = d => { const w = new Date(ms(d)).getUTCDay(); return w >= 1 && w <= 5; };
+  const level = pct => pct == null ? 'sem_dado' : pct >= 85 ? 'critico' : pct >= 60 ? 'atencao' : 'saudavel';
+
+  // ctx: { items, sprints, hours, imps, today, capacity: { nome: pontos na sprint ativa } (opcional) }
+  function compute(m, ctx) {
+    const me = key(m.name), today = ctx.today, alloc = Math.max(0, Math.min(150, m.allocationPct == null || m.allocationPct === '' ? 100 : num(m.allocationPct))) / 100;
+    const mine = (ctx.items || []).filter(i => key(i.assignee) === me && i.kind !== 'epico');
+    const open = mine.filter(i => i.status !== 'done'), doing = open.filter(i => i.status === 'doing' || i.status === 'review');
+    const sprints = ctx.sprints || [], active = sprints.find(s => s.state === 'ativa') || null;
+    const sprintOf = i => sprints.find(s => s.id === i.sprintId);
+    const overdue = open.filter(i => { const s = sprintOf(i); return s && s.endOn && s.endOn < today; });
+    const inSprint = active ? open.filter(i => i.sprintId === active.id) : [];
+    const pts = inSprint.reduce((t, i) => t + num(i.points), 0);
+    const cap = ctx.capacity && ctx.capacity[m.name] != null ? num(ctx.capacity[m.name]) : null;
+    const pointsRatio = active && cap != null && cap > 0 && (pts > 0 || inSprint.length) ? pts / cap : null;
+    // horas apontadas na janela
+    const from = addDays(today, -(WINDOW - 1));
+    const ent = (ctx.hours || []).filter(e => key(e.person) === me && e.date >= from && e.date <= today);
+    const hSum = ent.reduce((t, e) => t + num(e.hours), 0), extra = ent.reduce((t, e) => t + num(e.extra), 0);
+    let workdays = 0; for (let d = from; d <= today; d = addDays(d, 1)) if(isWork(d)) workdays++;
+    const expected = workdays * HOURS_DAY * alloc, hoursRatio = hSum > 0 && expected > 0 ? hSum / expected : null;
+    const days = new Set(ent.map(e => e.date));
+    let streak = 0; { let d = days.has(today) ? today : addDays(today, -1); while(days.has(d)) { streak++; d = addDays(d, -1); } }
+    const imps = (ctx.imps || []).filter(i => i.status === 'aberto' && key(i.owner) === me).length;
+    // carga: média das evidências fortes (horas e pontos × capacidade); sem elas, a quantidade de cards em aberto (confiança baixa)
+    const parts = [];
+    if(hoursRatio != null) parts.push({ v: hoursRatio, w: 0.5 });
+    if(pointsRatio != null) parts.push({ v: pointsRatio, w: 0.5 });
+    let basis = null, confidence = null;
+    if(parts.length) { basis = parts.reduce((t, p) => t + p.v * p.w, 0) / parts.reduce((t, p) => t + p.w, 0); confidence = parts.length === 2 ? 'alta' : 'média'; }
+    else if(open.length) { basis = open.length / FALLBACK_OPEN; confidence = 'baixa'; }
+    const signals = [];
+    if(inSprint.length) signals.push(pl(inSprint.length, 'card', 'cards') + ' na sprint ativa' + (pts ? ' (' + pts + ' pts' + (cap != null && cap > 0 ? ' para uma capacidade de ' + r1(cap) + ' pts' : '') + ')' : ''));
+    else if(open.length) signals.push(pl(open.length, 'card em aberto', 'cards em aberto') + ' (fora de sprint)');
+    if(doing.length > WIP_NORM) signals.push(doing.length + ' cards em andamento ao mesmo tempo (o ideal é até ' + WIP_NORM + ')');
+    if(overdue.length) signals.push(pl(overdue.length, 'card com prazo vencido', 'cards com prazo vencido'));
+    if(hSum > 0) signals.push('média de ' + r1(hSum / Math.max(1, days.size)).toString().replace('.', ',') + ' h por dia lançado nos últimos ' + WINDOW + ' dias');
+    if(streak >= 7) signals.push(streak + ' dias seguidos com horas lançadas, sem folga');
+    if(extra >= 6) signals.push(r1(extra).toString().replace('.', ',') + ' h extras nos últimos ' + WINDOW + ' dias');
+    if(imps) signals.push(pl(imps, 'impedimento aberto sob sua responsabilidade', 'impedimentos abertos sob sua responsabilidade'));
+    if(basis == null) {
+      return { pct: null, level: 'sem_dado', confidence: null, signals: ['Sem cards em aberto nem horas lançadas para calcular a carga'], parts: {}, open: 0, doing: 0, overdue: 0, source: 'auto' };
+    }
+    const pressure = Math.min(18, overdue.length * 6) + Math.min(15, Math.max(0, doing.length - WIP_NORM) * 5) + (streak >= 7 ? 8 : 0) + (extra >= 6 ? 6 : 0) + Math.min(10, imps * 5);
+    const pct = Math.max(0, Math.min(150, Math.round(basis * 100 + pressure)));
+    return { pct, level: level(pct), confidence, signals, source: 'auto', open: open.length, doing: doing.length, overdue: overdue.length, points: pts, capacity: cap,
+      parts: { hoursRatio: hoursRatio == null ? null : Math.round(hoursRatio * 100), pointsRatio: pointsRatio == null ? null : Math.round(pointsRatio * 100), pressure } };
+  }
+
+  // Calcula a equipe toda e acrescenta a sugestão de ação (redistribuir de quem está no limite para quem tem folga)
+  function all(team, ctx) {
+    const out = {}; (team || []).forEach(m => { out[m.id] = compute(m, ctx); });
+    const named = (team || []).map(m => ({ m, r: out[m.id] })).filter(x => x.r.pct != null);
+    const slack = named.filter(x => x.r.pct < 60).sort((a, b) => a.r.pct - b.r.pct);
+    (team || []).forEach(m => {
+      const r = out[m.id]; if(r.pct == null) return;
+      const me = key(m.name);
+      if(r.pct >= 85) {
+        const cand = (ctx.items || []).filter(i => key(i.assignee) === me && i.kind !== 'epico' && i.status === 'todo').sort((a, b) => (b.rank || 0) - (a.rank || 0))[0];
+        const to = slack.find(x => x.m.id !== m.id);
+        if(cand && to) r.suggestion = { text: 'Redistribuir: passe ' + cand.id + ' — ' + cand.title + (num(cand.points) ? ' (' + cand.points + ' pts)' : '') + ' para ' + to.m.name + ', que está com ' + to.r.pct + '% de carga.', cardId: cand.id, toName: to.m.name };
+        else if(r.overdue) r.suggestion = { text: 'Renegocie o prazo ou o escopo dos ' + r.overdue + ' card(s) vencido(s) e não puxe novos cards até aliviar.' };
+        else r.suggestion = { text: 'Sem folga na equipe para redistribuir: renegocie escopo ou prazo, ou inclua mais uma pessoa na sprint.' };
+      } else if(r.pct >= 60) r.suggestion = { text: 'Evite novos cards para ' + m.name + ' nesta sprint e acompanhe os prazos.' };
+      else if(r.pct < 40 && named.some(x => x.r.pct >= 85)) r.suggestion = { text: m.name + ' tem folga e pode receber cards de quem está no limite.' };
+    });
+    return out;
+  }
+  return { compute, all, level, key, WIP_NORM, HOURS_DAY, WINDOW };
+})();
+
 export const FUNCS = {
   'DecisionCenter.build': (args) => DecisionCenter.build(args),
   'PlanVsReal.allocPlan': (args) => PlanVsReal.allocPlan(args),
+  'WorkloadCalc.all': (a) => WorkloadCalc.all(a.team, a.ctx),
 };

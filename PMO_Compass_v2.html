@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.107.2'
+  version: '2.108.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -17627,7 +17627,8 @@ const AutoRefresh = (() => {
     window.addEventListener('online', () => tick());
   }
   if(typeof document !== 'undefined') { if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start(); }
-  return { due, blocked, tick, run, start, EVERY_MS };
+  const idle = () => !blocked(env()); // nada aberto nem sendo digitado: pode redesenhar
+  return { due, blocked, tick, run, start, idle, EVERY_MS };
 })();
 </script>
 
@@ -22128,8 +22129,12 @@ const Intel = (() => {
     try { if(typeof MgrPanel !== 'undefined') MgrPanel.render(); } catch(e) { /* tela fechada */ }
     try { if(typeof Board !== 'undefined') Board.render(); } catch(e) { /* tela fechada */ }
     try { if(typeof PmoView !== 'undefined') PmoView.render(); } catch(e) { /* tela fechada */ }
+    // O que depende da carga do time (Burnout, indicadores, saúde dos projetos) só se redesenha quando nada está sendo editado
+    try { if(typeof AutoRefresh !== 'undefined' && AutoRefresh.idle() && typeof renderAllModules === 'function') renderAllModules(); } catch(e) { /* sem redesenho geral */ }
   }
-  function get(fn, args, fallback) {
+  // opts.stale: enquanto a resposta nova não chega, vale a última da MESMA função. Só para consultas únicas (ex.: a lista de decisões);
+  // nunca para cálculos por pessoa ou por projeto, senão o resultado de um apareceria no outro.
+  function get(fn, args, fallback, opts) {
     const k = key(fn, args);
     if(cache.has(k)) return cache.get(k);
     if(!pending.has(k)) {
@@ -22140,7 +22145,7 @@ const Intel = (() => {
         else { cache.set(k, fallback); if(!warned) { warned = true; try { T.show('⚠️ Cálculo indisponível agora (sem conexão ou função não publicada).'); } catch(e) { /* sem aviso */ } } }
       });
     }
-    return fn in last ? last[fn] : fallback; // enquanto a nova resposta não chega, vale a última recebida (sem piscar vazio)
+    return (opts && opts.stale && fn in last) ? last[fn] : fallback;
   }
   return { get, key, cfg };
 })();
