@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.104.1'
+  version: '2.104.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1698,7 +1698,6 @@ body.icons-failed i[data-fb]::before{
     <div><div class="pg-title"><i class="ti ti-list-search" style="color:var(--acc)"></i> Controle de Cards<span class="help-q" data-help="Todos os cards abertos de todos os projetos e quadros que você acessa: situação, por que está assim, há quanto tempo está em cada etapa e o que o sistema recomenda. Clique numa linha para ver a linha do tempo do card." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Cada card, em cada projeto: por que está assim, quanto tempo ficou em cada etapa e o que fazer.</div></div>
   </div>
   <div class="cc-top"><div class="cc-kpis" id="cc-kpis"></div><div class="card cc-pie" id="cc-pie"></div></div>
-  <div class="card" id="cc-matrix" style="margin-bottom:12px"></div>
   <div class="card" style="margin-bottom:12px">
     <div class="btn-row" style="align-items:flex-end">
       <div><label class="set-sub" for="cc-proj" style="display:block">Projeto</label><select class="input" id="cc-proj" onchange="CardControl.render()"><option value="">Todos</option></select></div>
@@ -1710,6 +1709,7 @@ body.icons-failed i[data-fb]::before{
       <button class="btn btn-sm" onclick="CardControl.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button><button class="btn btn-sm" onclick="CardControl.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button>
     </div>
   </div>
+  <div class="card" id="cc-matrix" style="margin-bottom:12px"></div>
   <div class="card"><div id="cc-root"></div></div>
 </section>
 
