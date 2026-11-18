@@ -62,7 +62,8 @@ if (flags.has('--secrets')) {
 let failed = 0;
 for (const n of targets) {
   console.log(`\n▶ publicando ${n}${PUBLIC.has(n) ? ' (sem JWT; protegida por assinatura/segredo)' : ''}`);
-  if (!run(['functions', 'deploy', n, '--project-ref', ref, ...(PUBLIC.has(n) ? ['--no-verify-jwt'] : [])])) failed++;
+  // --use-api: empacota no servidor do Supabase (não exige Docker nesta máquina)
+  if (!run(['functions', 'deploy', n, '--project-ref', ref, '--use-api', ...(PUBLIC.has(n) ? ['--no-verify-jwt'] : []), ...(flags.has('--yes') ? ['--yes'] : [])])) failed++;
 }
 console.log(failed ? `\n${failed} função(ões) com falha.` : `\n${targets.length} função(ões) publicada(s).`);
 process.exit(failed ? 1 : 0);
