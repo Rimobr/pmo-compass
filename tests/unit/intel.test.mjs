@@ -28,3 +28,11 @@ test('função intel: exige usuário logado, lista fechada, limite de tamanho; s
   const gen = fs.readFileSync(new URL('../../supabase/functions/_shared/intel.generated.mjs', import.meta.url), 'utf8');
   assert.ok(!/document\.|window\.|localStorage|\bDB\.|Cloud\./.test(gen), 'módulo puro');
 });
+test('servidor: plano de capacidade (allocPlan) igual ao do app, nos dois tipos de plano', () => {
+  const app = new Function(sourceOf(html, 'services/plan-vs-real') + '\nreturn PlanVsReal;')();
+  const rows = [{ projectId: 'a', projectName: 'A', pct: 70, priorityValue: 5, openCards: 4 }, { projectId: 'b', projectName: 'B', pct: 60, priorityValue: 2, openCards: 2 }];
+  for (const person of [{ name: 'Ana', total: 130, rows }, { name: 'Ana', total: 130, receivers: 0, rows: rows.map(r => ({ ...r, receivers: 0 })) }, { name: 'Bia', total: 90, rows }]) {
+    assert.deepEqual(FUNCS['PlanVsReal.allocPlan'](person), app.allocPlan(person));
+  }
+  assert.equal(FUNCS['PlanVsReal.allocPlan']({ name: 'Ana', total: 130, receivers: 0, rows }).kind, 'capacity');
+});

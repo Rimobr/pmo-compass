@@ -19,6 +19,25 @@ const live = (() => { try { return JSON.parse(fs.readFileSync(path.join(root, 's
 const STUBS = {
   'services/decision-center': "const DecisionCenter = (() => { const LV = s => s >= 85 ? 'crit' : s >= 65 ? 'high' : 'med'; return { build: input => Intel.get('DecisionCenter.build', input, []), LV }; })();",
 };
+// Troca de UMA função dentro de um módulo (o resto do módulo continua no app). A função precisa ser autocontida.
+const FN_STUBS = {
+  'services/plan-vs-real': [{ name: 'allocPlan', stub: "function allocPlan(person) { return Intel.get('PlanVsReal.allocPlan', person, null); }" }],
+};
+// Acha o fim da função (chaves balanceadas, ignorando textos entre aspas, crases e comentários).
+function cutFunction(code, name) {
+  const start = code.indexOf('function ' + name + '(');
+  if (start < 0) throw new Error('Função não encontrada para trocar: ' + name);
+  let i = code.indexOf('{', start), depth = 0;
+  for (; i < code.length; i++) {
+    const c = code[i], n = code[i + 1];
+    if (c === '/' && n === '/') { i = code.indexOf('\n', i); if (i < 0) break; continue; }
+    if (c === '/' && n === '*') { i = code.indexOf('*/', i) + 1; continue; }
+    if (c === "'" || c === '"' || c === '`') { const q = c; for (i++; i < code.length && code[i] !== q; i++) if (code[i] === '\\') i++; continue; }
+    if (c === '{') depth++;
+    else if (c === '}') { depth--; if (depth === 0) return [start, i + 1]; }
+  }
+  throw new Error('Chaves não fecham em ' + name);
+}
 const COPY = ['manifest.json', 'sw.js', 'version.json', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
 
 function buildHtml(src) {
@@ -33,7 +52,10 @@ function buildHtml(src) {
     if (m[0].startsWith('<script')) {
       const mod = (modRe.exec(m[0]) || [])[1];
       if (live && mod && STUBS[mod]) { res += '<script' + m[1] + '>' + esbuild.transformSync(STUBS[mod], { minify: true, target: 'es2020' }).code.trim() + '</script>'; js++; last = m.index + m[0].length; continue; }
-      const attrs = m[1], body = m[2], type = (/type\s*=\s*["']([^"']+)["']/i.exec(attrs) || [])[1] || '';
+      const attrs = m[1];
+      let body = m[2];
+      if (live && mod && FN_STUBS[mod]) FN_STUBS[mod].forEach(x => { const [a, b] = cutFunction(body, x.name); body = body.slice(0, a) + x.stub + body.slice(b); });
+      const type = (/type\s*=\s*["']([^"']+)["']/i.exec(attrs) || [])[1] || '';
       if (/\bsrc\s*=/.test(attrs) || !body.trim() || (type && !/javascript|module/i.test(type))) res += m[0];
       else { res += '<script' + attrs + '>' + esbuild.transformSync(body, { minify: true, target: 'es2020', legalComments: 'none' }).code.trim() + '</script>'; js++; }
     } else {

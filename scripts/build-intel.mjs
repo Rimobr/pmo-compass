@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const INTEL = [
   { module: 'services/decision-center', name: 'DecisionCenter', funcs: ['build'] },
+  { module: 'services/plan-vs-real', name: 'PlanVsReal', funcs: ['allocPlan'] },
 ];
 
 export function sourceOf(html, moduleId) {
