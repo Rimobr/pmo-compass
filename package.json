@@ -20,6 +20,7 @@
     "build:public": "node scripts/build-public.mjs",
     "build:intel": "node scripts/build-intel.mjs",
     "check:public-build": "node scripts/build-public.mjs --check",
+    "audit:db": "node scripts/audit-db.mjs",
     "check:intel": "node scripts/build-intel.mjs --check",
     "check:all": "npm run lint && npm run check:version && npm run check:secrets && npm run check:intel && npm run check:public-build && npm run check:sql && npm run check:schema && npm run test:unit && npm run test:smoke && npm run test:a11y",
     "test:ciclo": "node tests/ciclo/ciclo-regras-navegador.mjs",

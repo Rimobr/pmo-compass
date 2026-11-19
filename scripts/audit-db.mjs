@@ -1,0 +1,26 @@
+// Auditoria de segurança do banco, SOMENTE LEITURA (só SELECT). Uso: node scripts/audit-db.mjs  (npm run audit:db)
+// Mostra: tabelas sem RLS, políticas abertas, funções executáveis por anon, DEFINER sem search_path, views, buckets e políticas do storage.
+// Leitura humana necessária: INSERT sem USING é normal; o que importa é o WITH CHECK de cada política de INSERT.
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path'; import { fileURLToPath } from 'node:url';
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+for (const line of readFileSync(root + '/.env.deploy', 'utf8').split(/\r?\n/)) { const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/); if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^["']|["']$/g, ''); }
+const ref = process.env.PROJECT_REF || readFileSync(root + '/supabase/.temp/project-ref', 'utf8').trim();
+async function q(sql) {
+  if (!/^\s*(select|with)\b/i.test(sql) || /\b(insert|update|delete|drop|alter|create|grant|revoke|truncate)\b/i.test(sql.replace(/'[^']*'/g, ''))) throw new Error('SQL não é somente leitura');
+  const r = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, { method: 'POST', headers: { Authorization: 'Bearer ' + process.env.SUPABASE_ACCESS_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify({ query: sql }) });
+  const t = await r.text(); if (r.status !== 200 && r.status !== 201) throw new Error(r.status + ' ' + t.slice(0, 200)); return JSON.parse(t);
+}
+const show = (t, rows) => { console.log('\n== ' + t + ' (' + rows.length + ')'); rows.slice(0, 60).forEach(x => console.log('  ' + Object.values(x).join(' | '))); };
+
+show('1. Tabelas do schema public SEM RLS ligado', await q(`select c.relname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind in ('r','p') and not c.relrowsecurity order by 1`));
+show('2. Tabelas com RLS ligado mas SEM nenhuma política (ninguém acessa, exceto o dono)', await q(`select c.relname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and c.relrowsecurity and not exists (select 1 from pg_policies p where p.schemaname='public' and p.tablename=c.relname) order by 1`));
+show('3. Políticas abertas demais (condição "true" ou vazia) em tabelas, por papel', await q(`select tablename, policyname, cmd, roles::text, coalesce(qual,'(sem USING)') as using_, coalesce(with_check,'(sem CHECK)') as check_ from pg_policies where schemaname='public' and (coalesce(qual,'true') in ('true','(true)') or (cmd in ('INSERT','ALL') and coalesce(with_check,'true') in ('true','(true)'))) order by 1,2`));
+show('4. Políticas que valem para anon ou public (sem login)', await q(`select tablename, policyname, cmd, roles::text from pg_policies where schemaname='public' and (roles::text ilike '%anon%' or roles::text ilike '%public%') order by 1,2`));
+show('5. Tabelas com permissão direta para anon (grants)', await q(`select table_name, string_agg(privilege_type, ',') as privs from information_schema.role_table_grants where table_schema='public' and grantee='anon' group by table_name order by 1`));
+show('6. Funções do schema public executáveis por anon/public', await q(`select p.proname, case when p.prosecdef then 'DEFINER' else 'invoker' end as modo, coalesce((select string_agg(distinct a.grantee::regrole::text, ',') from aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a where a.privilege_type='EXECUTE' and (a.grantee=0 or a.grantee::regrole::text='anon')),'') as quem from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prokind='f' and exists (select 1 from aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a where a.privilege_type='EXECUTE' and (a.grantee=0 or a.grantee::regrole::text='anon')) order by 1`));
+show('7. Funções SECURITY DEFINER sem search_path fixo', await q(`select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosecdef and not exists (select 1 from unnest(coalesce(p.proconfig,'{}')) c where c like 'search_path=%') order by 1`));
+show('8. Views sem security_invoker (podem ignorar a RLS)', await q(`select c.relname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='v' and not coalesce((select true from unnest(coalesce(c.reloptions,'{}')) o where o like 'security_invoker=%true%' limit 1), false) order by 1`));
+show('9. Buckets de arquivos públicos', await q(`select id, public::text, coalesce(file_size_limit::text,'sem limite') from storage.buckets order by 1`));
+show('10. Políticas do storage.objects', await q(`select policyname, cmd, roles::text, left(coalesce(qual,''),90) from pg_policies where schemaname='storage' and tablename='objects' order by 1`));
+show('11. Contagem total de tabelas e políticas', await q(`select (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r') as tabelas, (select count(*) from pg_policies where schemaname='public') as politicas, (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prokind='f') as funcoes`));
