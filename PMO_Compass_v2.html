@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.110.0'
+  version: '2.111.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -19162,6 +19162,38 @@ const Reports = (() => {
     html += '<details><summary>Já nas Telas</summary>' + sc.map(s => '<button class="rpt-item" onclick="R.go(\'' + s[0] + '\')"><i class="ti ti-' + s[1] + '"></i> ' + esc(s[2]) + '</button>').join('') + '</details>';
     root.innerHTML = html;
   }
+  // Agrupadores escolhidos na hora (sobrepõem os do relatório): { g: [campo, campo, campo], m: 'cálculo:campo' }; null = o relatório como foi definido
+  let agg = null;
+  const catOf = d => { try { return (ReportEngine.catalog(can)[d.ent] || {}).fields || []; } catch(e) { return []; } };
+  const isNumT = t => t === 'numero' || t === 'dinheiro';
+  const aggState = d => agg || { g: (d.grupos || []).slice(0, 3), m: '' };
+  function withAgg(d) {
+    if(!agg) return d;
+    const x = Object.assign({}, d), gs = agg.g.filter((k, i, a) => k && a.indexOf(k) === i);
+    x.grupos = gs;
+    if(gs.length) { x.ordem = ''; x.dir = 'asc'; // a ordem do relatório original não vale para outros agrupadores: ordena pelos próprios agrupadores
+      const mm = agg.m ? agg.m.split(':') : null;
+      if(mm) x.medidas = [{ fn: mm[0], campo: mm.slice(1).join(':') }]; else if(!(d.medidas || []).length) x.medidas = [{ fn: 'count', campo: '*' }];
+    } else { // sem agrupar: lista os registros
+      x.medidas = [];
+      if(!(x.campos || []).length) x.campos = catOf(d).slice(0, 6).map(c => c.k);
+    }
+    return x;
+  }
+  function aggHtml(d) {
+    const fs = catOf(d), st = aggState(d), txt = fs.filter(c => !isNumT(c.t)), nums = fs.filter(c => isNumT(c.t)), own = (d.medidas || []).length > 0;
+    const pickG = (id, lbl, cur) => '<div><label for="' + id + '">' + lbl + '</label><select class="input" id="' + id + '" onchange="Reports.setAgg(this.id)"><option value="">(Sem)</option>' + txt.map(c => '<option value="' + esc(c.k) + '"' + (c.k === cur ? ' selected' : '') + '>' + esc(c.l) + '</option>').join('') + '</select></div>';
+    const grp = (fn, lbl) => nums.length ? '<optgroup label="' + lbl + '">' + nums.map(c => { const v = fn + ':' + c.k; return '<option value="' + esc(v) + '"' + (v === st.m ? ' selected' : '') + '>' + lbl + ' de ' + esc(c.l) + '</option>'; }).join('') + '</optgroup>' : '';
+    return pickG('rpt-g1', '1º Agrupador', st.g[0] || '') + pickG('rpt-g2', '2º Agrupador', st.g[1] || '') + pickG('rpt-g3', '3º Agrupador', st.g[2] || '')
+      + '<div><label for="rpt-m">Calcular</label><select class="input" id="rpt-m" onchange="Reports.setAgg(this.id)"><option value="">' + (own ? '(Os do Relatório)' : 'Quantidade de Registros') + '</option>' + (own ? '<option value="count:*"' + (st.m === 'count:*' ? ' selected' : '') + '>Quantidade de Registros</option>' : '') + grp('sum', 'Soma') + grp('avg', 'Média') + grp('max', 'Máximo') + grp('min', 'Mínimo') + '</select></div>'
+      + (agg ? '<div class="btn-row"><button class="btn btn-sm" onclick="Reports.resetAgg()"><i class="ti ti-restore"></i>Voltar ao Original</button></div>' : '');
+  }
+  function setAgg(focusId) {
+    agg = { g: ['rpt-g1', 'rpt-g2', 'rpt-g3'].map(id => ($(id) || {}).value || ''), m: ($('rpt-m') || {}).value || '' };
+    renderCtl(); const e = focusId && $(focusId); if(e) e.focus();
+    if(last) run(); // já havia um relatório na tela: refaz com os agrupadores novos
+  }
+  function resetAgg() { agg = null; renderCtl(); if(last) run(); }
   function renderCtl() {
     const box = $('rpt-ctl'), out = $('rpt-out'); if(!box) return;
     const d = defOf(sel);
@@ -19171,7 +19203,7 @@ const Reports = (() => {
     box.innerHTML = '<div class="lbl"><i class="ti ti-file-analytics"></i>' + esc(nameOf(sel)) + '</div><p style="font-size:12.5px;color:var(--t2);line-height:1.6">' + esc(desc) + '</p><div class="rpt-ctl">'
       + (canAll ? '<div><label for="rpt-scope">Projetos</label><select class="input" id="rpt-scope" onchange="Reports.setScope(this.value)"><option value="ativo"' + (scope === 'ativo' ? ' selected' : '') + '>Só o projeto aberto</option><option value="todos"' + (scope === 'todos' ? ' selected' : '') + '>Todos os projetos e quadros</option><option value="escolher"' + (scope === 'escolher' ? ' selected' : '') + '>Escolher projetos…</option></select></div>' : '')
       + (hasPeriod(d) ? '<div><label for="rpt-ini">De</label><input class="input" type="date" id="rpt-ini" value="' + esc(per.inicio) + '" onchange="Reports.setPer()"></div><div><label for="rpt-fim">Até</label><input class="input" type="date" id="rpt-fim" value="' + esc(per.fim) + '" onchange="Reports.setPer()"></div><div class="btn-row"><button class="btn btn-sm" onclick="Reports.quick(7)">7 dias</button><button class="btn btn-sm" onclick="Reports.quick(30)">30 dias</button><button class="btn btn-sm" onclick="Reports.quick(90)">90 dias</button></div>' : '')
-      + '<div class="btn-row"><button class="btn btn-sm btn-acc" onclick="Reports.run()"><i class="ti ti-player-play"></i>Gerar</button></div>' + (canAll && scope === 'escolher' ? pickHtml() : '') + '</div>';
+      + aggHtml(d) + '<div class="btn-row"><button class="btn btn-sm btn-acc" onclick="Reports.run()"><i class="ti ti-player-play"></i>Gerar</button></div>' + (canAll && scope === 'escolher' ? pickHtml() : '') + '</div>';
     if(out && !last) out.innerHTML = '<div class="rk-empty">Toque em Gerar para ver o relatório.</div>';
   }
   function tableHtml(res) {
@@ -19192,8 +19224,8 @@ const Reports = (() => {
     let res; try { res = ReportEngine.run(d, ctx()); } catch(e) { const box = $(target || 'rpt-out'); if(box) box.innerHTML = '<div class="rk-empty">' + esc(e.message || 'Não foi possível gerar o relatório.') + '</div>'; last = null; return null; }
     last = res; lastDef = d; showResult(res, d, target); return res;
   }
-  function run() { const d = defOf(sel); if(!d) return; if(hasPeriod(d) && (!per.inicio || !per.fim)) { quick(30, true); } exec(d, 'rpt-out'); }
-  function open(type, id) { sel = { type, id }; last = null; if(!per.inicio) quick(30, true); renderList(); renderCtl(); }
+  function run() { const d = defOf(sel); if(!d) return; if(hasPeriod(d) && (!per.inicio || !per.fim)) { quick(30, true); } exec(withAgg(d), 'rpt-out'); }
+  function open(type, id) { sel = { type, id }; last = null; agg = null; if(!per.inicio) quick(30, true); renderList(); renderCtl(); }
   function quick(n, silent) { per.fim = today(); per.inicio = addDays(per.fim, -(n - 1)); if(!silent) { renderCtl(); } }
   function setPer() { per.inicio = ($('rpt-ini') || {}).value || ''; per.fim = ($('rpt-fim') || {}).value || ''; }
   function setScope(v) { scope = v === 'todos' ? 'todos' : v === 'escolher' ? 'escolher' : 'ativo'; if(scope === 'escolher' && !chosen) chosen = new Set([DB.getActiveProjectId()]); last = null; renderCtl(); }
@@ -19321,7 +19353,7 @@ const Reports = (() => {
     const nome = d.nome; delete d.nome; B = { editId: '', nome, compartilhar: 'todos', def: d, modo: (d.grupos && d.grupos.length) ? 'agrupar' : 'lista' }; msg('Modelo importado: confira e toque em Salvar Modelo.'); builderRender();
   }
   function openBuilder() { R.go('settings'); SettingsTabs.show('relat'); }
-  return { render, open, run, quick, setPer, setScope, pick, pickAll, exportXlsx, exportCsv, pdf, openBuilder, builderRender, bName, bEnt, bModo, bToggle, bMove, bGroup, bMeasure, bMeasureAdd, bMeasureDel, bFilterAdd, bFilter, bFilterDel, bPer, bOrd, bDir, bTop, bShare, bPreview, bSave, bNew, bEdit, bDelete, bCode, bImport };
+  return { render, open, run, quick, setPer, setScope, setAgg, resetAgg, pick, pickAll, exportXlsx, exportCsv, pdf, openBuilder, builderRender, bName, bEnt, bModo, bToggle, bMove, bGroup, bMeasure, bMeasureAdd, bMeasureDel, bFilterAdd, bFilter, bFilterDel, bPer, bOrd, bDir, bTop, bShare, bPreview, bSave, bNew, bEdit, bDelete, bCode, bImport };
 })();
 </script>
 

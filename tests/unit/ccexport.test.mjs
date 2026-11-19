@@ -28,3 +28,8 @@ test('Controle de Cards: números, pizza e lista usam o mesmo conjunto filtrado;
   assert.ok(src.includes('charts(g, rows, q, onlyAlert)') && src.includes('const pr = rows, tot = pr.length;'), 'pizza segue o filtro');
   assert.ok(src.includes('CardControl.clearFilters()') && /clearFilters, pickStatus/.test(src), 'limpar filtros');
 });
+test('Central de Relatórios: agrupadores escolhidos na hora (até 3) e cálculo à escolha, com "Voltar ao Original"', () => {
+  assert.ok(src.includes('Reports.setAgg(this.id)') && src.includes('Reports.resetAgg()'), 'controles');
+  for (const id of ['rpt-g1', 'rpt-g2', 'rpt-g3', 'rpt-m']) assert.ok(src.includes("'" + id + "'"), id);
+  assert.ok(src.includes('exec(withAgg(d), \'rpt-out\')'), 'o Gerar usa os agrupadores');
+});
