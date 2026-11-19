@@ -118,7 +118,7 @@ test('servidor: Bússola (respond e systemPrompt) e instruções da IA (Prompts)
   }
   assert.equal(FUNCS['CompassCore.respond']({ q: 'pergunta totalmente livre sem tema', d }).none, true);
   assert.equal(FUNCS['CompassCore.systemPrompt'](d), core.systemPrompt(d));
-  const keys = ['extraction', 'recovery', 'scope', 'wbs', 'portfolio', 'board'];
+  const keys = ['extraction', 'recovery', 'scope', 'wbs', 'portfolio', 'board', 'rules'];
   for (const k of keys) { const t = FUNCS['Prompts.system']({ key: k, brand: 'Marca X' }); assert.ok(t.length > 200 && t.includes('Marca X'), k); }
   assert.equal(FUNCS['Prompts.system']({ key: 'compass', brand: 'Marca X', args: d }), core.systemPrompt(d));
   assert.equal(FUNCS['Prompts.system']({ key: 'inexistente', brand: 'x' }), '');
@@ -126,4 +126,17 @@ test('servidor: Bússola (respond e systemPrompt) e instruções da IA (Prompts)
 test('IA: as instruções não ficam mais escritas nos módulos das telas (vêm do cofre Prompts por systemKey)', () => {
   for (const c of ['EXTRACTION_SYSTEM', 'RECOVERY_SYSTEM', 'SCOPE_AI_SYSTEM', 'WBS_SUGGEST_SYSTEM']) assert.ok(!html.includes('const ' + c + ' = `'), c);
   for (const k of ['extraction', 'recovery', 'scope', 'wbs', 'portfolio', 'board', 'compass']) assert.ok(html.includes("systemKey: '" + k + "'"), k);
+});
+test('servidor: instruções de Estimar pontos, Rascunho de documentos e regras gerais da IA iguais às do app', () => {
+  const ag = new Function(sourceOf(html, 'services/agile-ai') + '\nreturn AgileAi;')();
+  const cands = [{ id: 'US-1', title: 'Cadastro de clientes', points: '', kind: 'story', description: 'Tela de cadastro', rank: 1 }, { id: 'US-2', title: 'Relatório grande', points: 13, kind: 'story', rank: 2 }];
+  const hist = [{ id: 'US-0', title: 'Login', points: 5, kind: 'story' }];
+  assert.deepEqual(FUNCS['AgileAi.buildPrompt']({ cands, hist }), ag.buildPrompt(cands, hist));
+  assert.deepEqual(FUNCS['AgileAi.buildPrompt']({ cands, hist: [] }), ag.buildPrompt(cands, []));
+  const mc = new Function(sourceOf(html, 'services/models-calc') + '\n' + sourceOf(html, 'services/models-ai') + '\nreturn ModelsAi;')();
+  const c = { project: { name: 'Alfa', client: 'X' }, today: '2026-11-18', team: [{ name: 'Ana', role: 'Dev' }], wbs: [], risks: [], decisions: [], scope: [], impediments: [], stakeholders: [] };
+  for (const kind of ['5w2h', 'swot', 'comunicacao', 'cutover', 'handover']) assert.deepEqual(FUNCS['ModelsAi.prompt']({ kind, c }), mc.prompt(kind, c), kind);
+  const rules = FUNCS['Prompts.system']({ key: 'rules', brand: 'Marca X' });
+  assert.ok(rules.includes('Marca X') && rules.includes('Regras obrigatórias'));
+  assert.ok(!html.includes('const SYSTEM_RULES = `'), 'regras gerais não ficam mais escritas no módulo AI');
 });

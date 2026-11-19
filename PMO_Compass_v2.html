@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.111.0'
+  version: '2.112.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -9811,24 +9811,16 @@ const AI = (() => {
     openai: { model:'gpt-4o', label:'ChatGPT (OpenAI)' },
     google: { model:'gemini-3.6-flash', label:'Gemini (Google)' }
   };
-  const SYSTEM_RULES = `Você é a IA do ${BRAND.name}, sistema de apoio à decisão para gerentes de projetos.
-
-Regras obrigatórias:
-1. Cite sempre a fonte no contexto abaixo que embasa cada informação (ex: nome da entrega da WBS, da decisão, da ata ou do documento)
-2. Adapte a linguagem: entrega para equipe, risco para controle, valor para executivos
-3. Seja conciso e acionável — direto ao ponto
-4. Se não tiver a informação no contexto abaixo, diga isso explicitamente
-5. Nunca invente dados ou métricas que não estejam no contexto`;
 
   // Monta o system prompt na hora de cada chamada, com os dados reais do projeto ativo —
   // antes disso o contexto vinha fixo (projeto fictício "Portal Nexus"), mesmo com outro projeto ativo.
-  function buildSystem() {
+  function buildSystem(rules) {
     let context = '(não foi possível carregar o contexto do projeto)';
     try { context = ContextBuilder.build(); } catch(e) { console.warn('ContextBuilder falhou', e); }
     let profileBlock = '';
     try { if(typeof PmoProfiles !== 'undefined') profileBlock = PmoProfiles.systemGuidance(); } catch(e) { console.warn('PmoProfiles falhou', e); }
     try { if(typeof Methodology !== 'undefined') profileBlock += (profileBlock ? '\n' : '') + Methodology.systemGuidance(); } catch(e) { console.warn('Methodology falhou', e); }
-    return `${SYSTEM_RULES}${profileBlock ? '\n\n' + profileBlock : ''}\n\nContexto real do projeto ativo:\n${context}`;
+    return `${rules || ''}${profileBlock ? '\n\n' + profileBlock : ''}\n\nContexto real do projeto ativo:\n${context}`;
   }
 
   // Toda chamada de IA mostra tempo decorrido e botão Cancelar após ~1 s; sem etapas reais não há porcentagem.
@@ -9848,6 +9840,12 @@ Regras obrigatórias:
       const sys = await Prompts.system(opts.systemKey, BRAND.name, opts.systemArgs);
       if(!sys) return { error: 'Não consegui carregar a instrução da IA (servidor sem resposta). Verifique a conexão e tente de novo.' };
       opts = Object.assign({}, opts, { system: sys + (opts.systemSuffix || '') });
+    }
+    // Sem instrução explícita: regras gerais (do servidor no pacote público) + perfil + contexto real do projeto
+    if(!(opts && opts.system)) {
+      const rules = await Prompts.system('rules', BRAND.name);
+      if(!rules) return { error: 'Não consegui carregar a instrução da IA (servidor sem resposta). Verifique a conexão e tente de novo.' };
+      opts = Object.assign({}, opts, { system: buildSystem(rules) });
     }
     await Store.ensureKeys();
     const provider = (opts && opts.provider) || Store.getProvider();
@@ -15852,7 +15850,8 @@ const Agile = (() => {
     applyBtn.style.display = 'none'; aiResult = null;
     if(!Store.hasKeyOrCloud()) { box.innerHTML = '<div style="font-size:12.5px;color:var(--t2)"><i class="ti ti-info-circle"></i> Falta a chave de IA. Configure em <button class="link-a" onclick="Agile.closeAi();R.go(\'settings\')">Configurações → Provedor de IA</button> e tente de novo.</div>'; return; }
     box.innerHTML = `<div style="font-size:12.5px;color:var(--t2);display:flex;align-items:center;gap:8px"><i class="ti ti-loader-2" style="animation:fi-spin 1s linear infinite"></i>Analisando ${cands.length} item(ns) com base em ${hist.length} item(ns) já entregues pelo time…</div>`;
-    const p = AgileAi.buildPrompt(cands, hist);
+    const p = await AgileAi.buildPrompt(cands, hist); // no pacote público a instrução vem do servidor
+    if(!p) { box.innerHTML = '<div class="rk-empty"><i class="ti ti-wifi-off"></i> Preciso de conexão com o servidor para estimar. Tente de novo em instantes.</div>'; return; }
     const r = await AI.send([{ role: 'user', content: p.user }], { system: p.system, progressTitle: 'Estimando itens do backlog' });
     if(r.error) { box.innerHTML = `<div class="card-danger" style="border-radius:var(--r8);padding:10px 12px;font-size:12.5px;color:var(--t1)"><i class="ti ti-alert-triangle"></i> Não consegui estimar: ${esc(r.error)}</div>`; return; }
     const parsed = AgileAi.parse(r.text || '', cands.map(c => c.id));
@@ -16146,6 +16145,7 @@ const ModelsAi = (() => {
   const clip = (s, n) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, n);
   const LIMIT = { table: 12, swot: 5, items: 6 };
 
+  // ▼ SERVIDOR: fatos, formato e instrução do rascunho (no pacote público este trecho vem do servidor)
   // Fatos do projeto em texto (a IA só reformula o que está aqui). Nada de valores em R$ nem de dados pessoais além do nome e da função.
   function facts(c) {
     const out = [];
@@ -16195,6 +16195,7 @@ const ModelsAi = (() => {
     const user = 'Modelo: ' + K.label + '. ' + K.help + '\nOrientação: ' + (GUIDE[kind] || '') + '\nFormato exato da resposta: ' + shape(kind);
     return { system, user };
   }
+  // ▲ fim do trecho do servidor
 
   // A resposta da IA vira dado confiável: JSON tolerante a texto em volta, formato do modelo, nada "feito"
   // c (opcional): o mesmo contexto do pedido; com ele, quem aparece como responsável tem de ser da equipe ou das partes interessadas (a IA não inventa gente)
@@ -16346,7 +16347,8 @@ const Models = (() => {
   async function draft() {
     if(!Auth.guard('run_rites')) return; load(); const d = cur(); if(!d) return;
     if(!Store.hasKeyOrCloud()) { T.show('⚠️ Configure a IA em Configurações → Provedor de IA para pedir um rascunho.', 5000); return; }
-    const p = ModelsAi.prompt(d.kind, aiContext());
+    const p = await ModelsAi.prompt(d.kind, aiContext()); // no pacote público a instrução vem do servidor
+    if(!p) { T.show('⚠️ O rascunho precisa de conexão com o servidor agora. Tente de novo em instantes.', 5000); return; }
     const res = await AI.send([{ role: 'user', content: p.user }], { system: p.system, progressTitle: 'A IA está preparando o rascunho' });
     if(!res || res.error) { T.show('❌ ' + ((res && res.error) || 'A IA não respondeu.'), 6000); return; }
     const out = ModelsAi.parse(d.kind, res.text, aiContext());
@@ -22242,6 +22244,14 @@ Responda APENAS com um objeto JSON válido, sem markdown, sem texto antes ou dep
 }
 
 Regras: nunca chame a saúde de "excelente" quando poucas áreas têm informação (diga que há pouco dado) e SEMPRE cite sobrealocação da equipe, riscos críticos e entregas atrasadas quando aparecerem nos dados; sobrealocação acima de 150% pede "escalar". Uma entrada por projeto recebido, na mesma ordem. Só sugira "pausar" ou "escalar" quando houver motivo concreto nos dados (custo bem acima do combinado, risco crítico parado há tempo, valor prometido não realizado apesar do prazo já ter passado) — nunca sem apontar exatamente qual dado sustenta. Nunca invente número, nome de projeto ou risco que não esteja nos dados recebidos. Quando houver histórico de avaliação anterior, leve em conta o que já foi considerado decisão ruim antes, pra não repetir o mesmo raciocínio sem uma justificativa nova.`,
+    rules: (brand) => `Você é a IA do ${brand}, sistema de apoio à decisão para gerentes de projetos.
+
+Regras obrigatórias:
+1. Cite sempre a fonte no contexto abaixo que embasa cada informação (ex: nome da entrega da WBS, da decisão, da ata ou do documento)
+2. Adapte a linguagem: entrega para equipe, risco para controle, valor para executivos
+3. Seja conciso e acionável — direto ao ponto
+4. Se não tiver a informação no contexto abaixo, diga isso explicitamente
+5. Nunca invente dados ou métricas que não estejam no contexto`,
     compass: (brand, d) => CompassCore.systemPrompt(d),
   };
   // key: nome da instrução; brand: nome do produto; args: dados da instrução (só a Bússola usa)

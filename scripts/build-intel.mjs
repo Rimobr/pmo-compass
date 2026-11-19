@@ -17,6 +17,9 @@ export const INTEL = [
   { module: 'services/plan-vs-real', name: 'PlanVsReal', funcs: ['allocPlan'] },
   { module: 'services/dr-pmo', name: 'DrPmoCore', funcs: ['analyze', 'pack'] },
   { module: 'services/compass', name: 'CompassCore', funcs: [{ name: 'respond', call: '(a) => CompassCore.respond(a.q, a.d)' }, { name: 'systemPrompt', call: '(d) => CompassCore.systemPrompt(d)' }] },
+  { module: 'services/models-calc', name: 'ModelsCalc', funcs: [] }, // dependência do ModelsAi
+  { module: 'services/models-ai', name: 'ModelsAi', funcs: [{ name: 'prompt', call: '(a) => ModelsAi.prompt(a.kind, a.c)' }] },
+  { module: 'services/agile-ai', name: 'AgileAi', funcs: [{ name: 'buildPrompt', call: '(a) => AgileAi.buildPrompt(a.cands, a.hist)' }] },
   { module: 'services/prompts', name: 'Prompts', funcs: [{ name: 'system', call: '(a) => Prompts.system(a.key, a.brand, a.args)' }] },
   { module: 'services/workload', name: 'WorkloadCalc', funcs: [{ name: 'all', call: '(a) => WorkloadCalc.all(a.team, a.ctx)' }] },
 ];

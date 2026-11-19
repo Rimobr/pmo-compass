@@ -40,8 +40,19 @@ const STUBS = {
 };
 // Troca de UMA função dentro de um módulo (o resto do módulo continua no app). A função precisa ser autocontida.
 const FN_STUBS = {
+  'services/agile-ai': [{ name: 'buildPrompt', stub: "function buildPrompt(cands, hist) { return Intel.call('AgileAi.buildPrompt', { cands, hist }); }" }],
   'services/plan-vs-real': [{ name: 'allocPlan', stub: "function allocPlan(person) { return Intel.get('PlanVsReal.allocPlan', person, null); }" }],
 };
+// Troca um TRECHO marcado (de uma linha com o marcador de início até a linha do marcador de fim) por outro texto
+const REGION_STUBS = {
+  'services/models-ai': { begin: '// ▼ SERVIDOR', end: '// ▲ fim do trecho do servidor', stub: "function prompt(kind, c) { return Intel.call('ModelsAi.prompt', { kind, c }); }" },
+};
+function cutRegion(code, r) {
+  const a = code.indexOf(r.begin), b = code.indexOf(r.end);
+  if (a < 0 || b < a) throw new Error('Marcadores não encontrados: ' + r.begin);
+  const ls = code.lastIndexOf('\n', a) + 1, be = code.indexOf('\n', b);
+  return code.slice(0, ls) + '  ' + r.stub + code.slice(be < 0 ? code.length : be);
+}
 // Acha o fim da função (chaves balanceadas, ignorando textos entre aspas, crases e comentários).
 function cutFunction(code, name) {
   const start = code.indexOf('function ' + name + '(');
@@ -73,6 +84,7 @@ function buildHtml(src) {
       if (live && mod && STUBS[mod]) { const code = typeof STUBS[mod] === 'function' ? STUBS[mod](m[2]) : STUBS[mod]; res += '<script' + m[1] + '>' + esbuild.transformSync(code, { minify: true, target: 'es2020' }).code.trim() + '</script>'; js++; last = m.index + m[0].length; continue; }
       const attrs = m[1];
       let body = m[2];
+      if (live && mod && REGION_STUBS[mod]) body = cutRegion(body, REGION_STUBS[mod]);
       if (live && mod && FN_STUBS[mod]) FN_STUBS[mod].forEach(x => { const [a, b] = cutFunction(body, x.name); body = body.slice(0, a) + x.stub + body.slice(b); });
       const type = (/type\s*=\s*["']([^"']+)["']/i.exec(attrs) || [])[1] || '';
       if (/\bsrc\s*=/.test(attrs) || !body.trim() || (type && !/javascript|module/i.test(type))) res += m[0];
