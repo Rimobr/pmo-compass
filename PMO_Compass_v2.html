@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.113.1'
+  version: '2.113.2'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -9185,7 +9185,12 @@ const T = (() => {
     if(!wrap) return;
     const el = document.createElement('div');
     el.className = 'toast';
-    el.innerHTML = `<i class="ti ti-check-circle" style="color:var(--grn);font-size:16px"></i>${msg}`;
+    // O texto do aviso quase sempre leva nome de pessoa, card ou projeto: escapa TUDO e libera só marcas fixas sem atributo
+    // livre (ícone do Tabler, negrito, itálico, quebra de linha). Qualquer outra marca aparece como texto, nunca executa.
+    const safeMsg = String(msg == null ? '' : msg).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+      .replace(/&lt;(\/?)(b|strong|i|em)&gt;/g, '<$1$2>').replace(/&lt;br\s*\/?&gt;/g, '<br>')
+      .replace(/&lt;i class=&quot;(ti ti-[a-z0-9-]+)&quot;&gt;&lt;\/i&gt;/g, '<i class="$1"></i>');
+    el.innerHTML = `<i class="ti ti-check-circle" style="color:var(--grn);font-size:16px"></i>${safeMsg}`;
     if(onClick) {
       el.style.cursor = 'pointer';
       el.addEventListener('click', () => { onClick(); el.remove(); });
@@ -11875,7 +11880,7 @@ const Dashboard = (() => {
     if(statusEl) statusEl.innerHTML = emRisco.length ? `<span class="sdot sdot-red"></span>${emRisco.length} em alerta` : '<span class="sdot sdot-grn"></span>Sob controle';
     const kl = (page, label) => `class="kpi kpi-link" role="button" tabindex="0" aria-label="${label}" onclick="R.go('${page}')" onkeydown="R.goKey(event,'${page}')"`;
     bodyEl.innerHTML = `
-      <div ${kl('burnout','Ver Burnout Radar')}><div class="kpi-lbl"><span class="sdot ${emRisco.length?'sdot-red':'sdot-grn'}"></span>Risco burnout</div><div class="kpi-val">${emRisco.length}</div><div class="kpi-delta ${emRisco.length?'c-dn':'c-ne'}">${emRisco.length ? emRisco.map(m=>m.name+' — '+m.workloadPct+'%').join(', ') : 'Nenhum'}</div></div>
+      <div ${kl('burnout','Ver Burnout Radar')}><div class="kpi-lbl"><span class="sdot ${emRisco.length?'sdot-red':'sdot-grn'}"></span>Risco burnout</div><div class="kpi-val">${emRisco.length}</div><div class="kpi-delta ${emRisco.length?'c-dn':'c-ne'}">${emRisco.length ? emRisco.map(m=>escapeHtml(m.name)+' — '+escapeHtml(String(m.workloadPct))+'%').join(', ') : 'Nenhum'}</div></div>
       <div ${kl('burnout','Ver Burnout Radar')}><div class="kpi-lbl"><span class="sdot ${mediaCarga==null?'sdot-acc':(mediaCarga>=70?'sdot-amb':'sdot-grn')}"></span>Sobrecarga média</div><div class="kpi-val">${mediaCarga==null?'—':mediaCarga}${mediaCarga==null?'':'<span class="kpi-unit">%</span>'}</div><div class="kpi-delta c-ne">${mediaCarga==null?'Carga não informada':'Meta: 70%'}</div></div>
       <div ${kl('meetings','Ver Atas e Ações')}><div class="kpi-lbl"><span class="sdot sdot-grn"></span>Reuniões (7 dias)</div><div class="kpi-val">${reunioes7d}</div><div class="kpi-delta c-ne">registradas em Atas e Ações</div></div>
       <div ${kl('resources','Ver Colaboradores')}><div class="kpi-lbl"><span class="sdot ${conflitos?'sdot-amb':'sdot-grn'}"></span>Conflito de alocação</div><div class="kpi-val">${conflitos}</div><div class="kpi-delta ${conflitos?'c-wa':'c-ne'}">${conflitos ? 'Alocação dupla' : 'Nenhum'}</div></div>`;
