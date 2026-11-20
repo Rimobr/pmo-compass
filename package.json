@@ -1,6 +1,6 @@
 {
   "name": "pmo-compass",
-  "version": "2.112.0",
+  "version": "2.113.0",
   "private": true,
   "scripts": {
     "test:unit": "node tests/run.js && node --test tests/unit/*.test.mjs",
@@ -20,9 +20,12 @@
     "build:public": "node scripts/build-public.mjs",
     "build:intel": "node scripts/build-intel.mjs",
     "check:public-build": "node scripts/build-public.mjs --check",
+    "check:vendor": "node scripts/vendor-libs.mjs --check",
+    "test:dist": "node tests/smoke/dist-boot.mjs",
+    "vendor:libs": "node scripts/vendor-libs.mjs",
     "audit:db": "node scripts/audit-db.mjs",
     "check:intel": "node scripts/build-intel.mjs --check",
-    "check:all": "npm run lint && npm run check:version && npm run check:secrets && npm run check:intel && npm run check:public-build && npm run check:sql && npm run check:schema && npm run test:unit && npm run test:smoke && npm run test:a11y",
+    "check:all": "npm run lint && npm run check:version && npm run check:secrets && npm run check:vendor && npm run check:intel && npm run check:public-build && npm run check:sql && npm run check:schema && npm run test:unit && npm run test:smoke && npm run test:dist && npm run test:a11y",
     "test:ciclo": "node tests/ciclo/ciclo-regras-navegador.mjs",
     "test:ciclo-db": "node tests/ciclo/ciclo-regras-banco.mjs"
   },

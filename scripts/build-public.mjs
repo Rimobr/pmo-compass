@@ -45,7 +45,7 @@ const FN_STUBS = {
 };
 // Troca um TRECHO marcado (de uma linha com o marcador de início até a linha do marcador de fim) por outro texto
 const REGION_STUBS = {
-  'services/models-ai': { begin: '// ▼ SERVIDOR', end: '// ▲ fim do trecho do servidor', stub: "function prompt(kind, c) { return Intel.call('ModelsAi.prompt', { kind, c }); }" },
+  'services/models-ai': { begin: '// ▼ SERVIDOR', end: '// ▲ fim do trecho do servidor', stub: "const facts = null, shape = null; /* o return do módulo cita estes nomes */ function prompt(kind, c) { return Intel.call('ModelsAi.prompt', { kind, c }); }" },
 };
 function cutRegion(code, r) {
   const a = code.indexOf(r.begin), b = code.indexOf(r.end);
@@ -101,6 +101,10 @@ function buildHtml(src) {
 const built = buildHtml(fs.readFileSync(path.join(root, 'PMO_Compass_v2.html'), 'utf8'));
 const files = new Map([['PMO_Compass_v2.html', Buffer.from(built.html, 'utf8')]]);
 COPY.forEach(f => { const p = path.join(root, f); if(fs.existsSync(p)) files.set(f, fs.readFileSync(p)); });
+// Bibliotecas de terceiros copiadas para dentro do app (scripts/vendor-libs.mjs): vão inteiras, sem alteração
+const walk = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]);
+const vendorDir = path.join(root, 'vendor');
+if (fs.existsSync(vendorDir)) walk(vendorDir).filter(f => !f.endsWith('MANIFEST.json')).forEach(f => files.set(path.relative(root, f).replace(/\\/g, '/'), fs.readFileSync(f)));
 
 if (check) {
   let bad = 0;
@@ -108,11 +112,12 @@ if (check) {
     const p = path.join(out, name);
     if (!fs.existsSync(p) || !fs.readFileSync(p).equals(buf)) { console.log('✖ dist desatualizado:', name); bad++; }
   }
+  if (fs.existsSync(out)) walk(out).map(f => path.relative(out, f).replace(/\\/g, '/')).forEach(r => { if (!files.has(r)) { console.log('✖ dist com arquivo a mais:', r); bad++; } });
   console.log(bad ? '\nRode: npm run build:public' : '✔ dist/ está igual ao que seria gerado agora.');
   process.exit(bad ? 1 : 0);
 }
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });
-for (const [name, buf] of files) fs.writeFileSync(path.join(out, name), buf);
+for (const [name, buf] of files) { const dst = path.join(out, name); fs.mkdirSync(path.dirname(dst), { recursive: true }); fs.writeFileSync(dst, buf); }
 const src = fs.statSync(path.join(root, 'PMO_Compass_v2.html')).size, dst = built.html.length;
 console.log('dist/ gerado: ' + built.js + ' scripts e ' + built.css + ' estilos minificados; app ' + Math.round(src / 1024) + ' KB → ' + Math.round(dst / 1024) + ' KB.');

@@ -1,0 +1,64 @@
+{
+  "geradoEm": "2026-11-20",
+  "pacotes": [
+    {
+      "pacote": "@supabase/supabase-js",
+      "versao": "2.119.2",
+      "integridade": "sha512-4HvF4G2DwdqjmwPBpz9RHnXWfdK0wSkw4yBhxe64CdeF8gdxsTF9WZuHFuNWtQnHllq71ZDyAghr4Q8nC0m/NA==",
+      "shasum": "c67eb4c1053a3327936ef6c0ce8d2b85984f2e95"
+    },
+    {
+      "pacote": "@tabler/icons-webfont",
+      "versao": "3.6.0",
+      "integridade": "sha512-UiJ3j6m9VEyfNBBYFxa89t1HtC5n1zA6wrQ+Z04zx2hQ6kyHMoj8DnSNSt0/KJipvnIbWgNxDBmGTXA2KjK+SA==",
+      "shasum": "45a75c87cf239c1d6fe55cd46ad7ab80f63d7fed"
+    },
+    {
+      "pacote": "mammoth",
+      "versao": "1.4.9",
+      "integridade": "sha512-Qg9t6HBPeMPIRE6Oyd1DAovgu8ZJ5gAWPzqhBgOQQbNrGbBa5pewxrCqyeMUOm0u4mwYO5KziGYcykmMzdUL2A==",
+      "shasum": "03187d39e28952c83a3aa37e583a3ecb656ba35c"
+    },
+    {
+      "pacote": "pdfjs-dist",
+      "versao": "2.13.216",
+      "integridade": "sha512-qn/9a/3IHIKZarTK6ajeeFXBkG15Lg1Fx99PxU09PAU2i874X8mTcHJYyDJxu7WDfNhV6hM7bRQBZU384anoqQ==",
+      "shasum": "251a11c9c8c6db19baacd833a4e6986c517d1ab3"
+    },
+    {
+      "pacote": "@fontsource/inter",
+      "versao": "5.3.0",
+      "integridade": "sha512-RofMylZmjlJEfELXeNHFWBRcSs75rGU/6bV2S2jfnvv/3rPXPGe0LgUJTklcHZ9lM4OZmAVFhcJPnACfb91A3g==",
+      "shasum": "866278dc2357659f8be1755c8b67f29d3697b440"
+    },
+    {
+      "pacote": "@fontsource/jetbrains-mono",
+      "versao": "5.3.0",
+      "integridade": "sha512-fqDfB5I9f1p1TV486aUgB9t8zP84P0O1FtQR5Ol9vjwPy+S+EIGlVYm1cvj2W5shcZMTg2nZFdVMoH5wFu8a1A==",
+      "shasum": "87bfd849f24b536ed72e89b56ae0d42223697f74"
+    },
+    {
+      "pacote": "xlsx",
+      "versao": "0.18.5",
+      "integridade": "sha512-dmg3LCjBPHZnQp5/F/+nnTa+miPJxUXB6vtk42YjBBKayDNagxGEeIdWApkYPOf3Z3pm3k62Knjzp7lMeTEtFQ==",
+      "shasum": "16711b9113c848076b8a177022799ad356eba7d0"
+    }
+  ],
+  "files": {
+    "supabase/supabase.js": "8816af04d9915dbba1882d6f84f0b402dc40268063a63d9c66d24f52f371c263",
+    "tabler-icons/tabler-icons.min.css": "cb2d6ea9c915d1aa62e3ec41c86a247de4821c15356b1dfb56e49563dd1ed80f",
+    "tabler-icons/fonts/tabler-icons.woff2": "1bd5c71cde80020f2adeb9fb00509c8b4ee10f2f80c91026f4d8c59be2f11923",
+    "mammoth/mammoth.browser.min.js": "fcd0ee3a165091c0500ad69fab72cf397e0cc5110191506333d3aa1805a4871c",
+    "pdfjs/pdf.min.js": "0d5dd9c58fd130d611e843dc0debcaec431ee7ded033fb3cd1835a630663c10d",
+    "pdfjs/pdf.worker.min.js": "8aabdd4151187a12007fae222f429a81de80d30fd828bdec67a3f5b147037ea3",
+    "fonts/inter-latin-300-normal.woff2": "be0276550393a72b94d673505567dceba801511d5e1ca5a87793190dc5d5a6ca",
+    "fonts/inter-latin-400-normal.woff2": "8909904ab6c872eb994093482a88a28eca2cd95912d7b6fecd72103b0dc07edc",
+    "fonts/inter-latin-500-normal.woff2": "f3779f1efccc4bdcdf9c0a02ab95bf6bd092ed09c48c08cedc725889edd1d19f",
+    "fonts/inter-latin-600-normal.woff2": "f9a06e79cd3a2a20951c0f0e28f66dd0e6d3fda73911d640a2125c8fcb78f21a",
+    "fonts/inter-latin-700-normal.woff2": "6f56409fd3d64bb85f7d070bce20749db2d66b6d63cec586cc22d1c761be2491",
+    "fonts/jetbrains-mono-latin-400-normal.woff2": "14425ba9c695763c1547f48a206b7aa60350a33ae23de09f0407877f3fcd89eb",
+    "fonts/jetbrains-mono-latin-500-normal.woff2": "cb182feeed4d798ff6961d3c79f7026279448fca0676438aaecb21f3fc39553a",
+    "xlsx/xlsx.full.min.js": "c9506197caf809a075b6dee1da0d36fb19da7158ffe8a88e7b0c96c5d8623c99",
+    "fonts/fonts.css": "0b1286be36aa9eb9c59d80ccb3fb60d4d905d22c3108a820dd7aaffc6d70a83b"
+  }
+}

@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.112.0'
+  version: '2.113.0'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -34,8 +34,8 @@ document.querySelector('meta[name="description"]').setAttribute('content', BRAND
 <script>document.querySelector('meta[name="apple-mobile-web-app-title"]').setAttribute('content', BRAND.shortName);</script>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.6.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="vendor/fonts/fonts.css">
+<link rel="stylesheet" href="vendor/tabler-icons/tabler-icons.min.css">
 
 <!-- ■ MODULE: core/tokens ─ Design system -->
 <style data-module="core/tokens">
@@ -981,13 +981,11 @@ body.icons-failed i[data-fb]::before{
   }
 
   function verifyAndEscalate() {
-    if(fontAvailable()) return; // fonte principal (jsdelivr) carregou normalmente — nada a fazer
-    // Espelho de reserva: mesmo pacote npm, servido pelo unpkg
-    tryLoadFrom('https://unpkg.com/@tabler/icons-webfont@3.6.0/dist/tabler-icons.min.css', function(){
-      setTimeout(function(){
-        if(!fontAvailable()) applyFallback();
-      }, 1200);
-    });
+    if(fontAvailable()) return; // a fonte de ícones (arquivo do próprio app) carregou normalmente — nada a fazer
+    // Ainda não carregou: espera um pouco e, se continuar faltando, usa os símbolos de reserva
+    setTimeout(function(){
+      if(!fontAvailable()) applyFallback();
+    }, 1200);
   }
 
   function init() {
@@ -4698,7 +4696,7 @@ const Cloud = (() => {
     if(window.supabase) return window.supabase;
     await new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
+      s.src = 'vendor/supabase/supabase.js';
       s.onload = resolve; s.onerror = () => reject(new Error('Falha ao carregar o SDK do Supabase'));
       document.head.appendChild(s);
     });
@@ -10228,20 +10226,20 @@ const FileIntake = (() => {
 
   async function loadPdfJs() {
     if(window.pdfjsLib) return window.pdfjsLib;
-    await loadScript('https://cdn.jsdelivr.net/npm/pdfjs-dist@2.13.216/legacy/build/pdf.min.js');
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.13.216/legacy/build/pdf.worker.min.js';
+    await loadScript('vendor/pdfjs/pdf.min.js');
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdfjs/pdf.worker.min.js';
     return window.pdfjsLib;
   }
 
   async function loadMammoth() {
     if(window.mammoth) return window.mammoth;
-    await loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.4.9/mammoth.browser.min.js');
+    await loadScript('vendor/mammoth/mammoth.browser.min.js');
     return window.mammoth;
   }
 
   async function loadXlsx() {
     if(window.XLSX) return window.XLSX;
-    await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+    await loadScript('vendor/xlsx/xlsx.full.min.js');
     return window.XLSX;
   }
 
@@ -10249,7 +10247,7 @@ const FileIntake = (() => {
   async function extractPdfText(file) {
     const pdfjsLib = await loadPdfJs();
     const buf = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const pdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
     let text = '';
     const maxPages = Math.min(pdf.numPages, 15);
     for(let i = 1; i <= maxPages; i++) {
@@ -16674,7 +16672,7 @@ const XlsxExport = (() => {
     if(window.XLSX) return Promise.resolve(window.XLSX);
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.src = 'vendor/xlsx/xlsx.full.min.js';
       s.onload = () => window.XLSX ? resolve(window.XLSX) : reject(new Error('biblioteca de Excel indisponível'));
       s.onerror = () => reject(new Error('sem acesso à biblioteca de Excel'));
       document.head.appendChild(s);
@@ -18608,7 +18606,7 @@ const ImportUi = (() => {
     if(window.XLSX) return Promise.resolve(window.XLSX);
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.src = 'vendor/xlsx/xlsx.full.min.js';
       s.onload = () => resolve(window.XLSX);
       s.onerror = () => reject(new Error('Falha ao carregar o leitor de Excel'));
       document.head.appendChild(s);
