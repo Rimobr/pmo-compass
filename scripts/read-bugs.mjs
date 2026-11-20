@@ -109,7 +109,8 @@ const main = async () => { try {
   const files = bugs.flatMap(b => (b.attachments || []).map(a => ({ bug: b.id, ...a })));
   if (files.length) {
     const keys = await (await fetch(`https://api.supabase.com/v1/projects/${ref}/api-keys?reveal=true`, { headers: { Authorization: `Bearer ${token}` } })).json();
-    service = (keys.find(k => k.name === 'service_role') || {}).api_key;
+    if (Array.isArray(keys)) service = (keys.find(k => k.name === 'service_role') || {}).api_key;
+    else console.error('  ! sem permissão para ler as chaves do projeto (' + String((keys && keys.message) || 'resposta inesperada').slice(0, 80) + '): os prints não serão baixados, só o texto dos bugs.');
   }
   const saved = {};
   for (const f of files) {
