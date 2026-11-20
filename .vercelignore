@@ -4,7 +4,7 @@
 .github
 docs
 scripts
-supabase
+/supabase
 tests
 node_modules
 test-results

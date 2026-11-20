@@ -35,7 +35,7 @@ ok(await pg.evaluate(`typeof DrPmoCore.analyze === 'function' && typeof DrPmoCor
 
 // 2) bibliotecas locais carregam sob a política de conteúdo
 const load = src => pg.evaluate(`new Promise(res => { const s = document.createElement('script'); s.src = ${JSON.stringify(src)}; s.onload = () => res(true); s.onerror = () => res(false); document.head.appendChild(s); })`);
-for (const [src, g] of [['vendor/supabase/supabase.js', 'supabase.createClient'], ['vendor/pdfjs/pdf.min.js', 'pdfjsLib.getDocument'], ['vendor/mammoth/mammoth.browser.min.js', 'mammoth.extractRawText'], ['vendor/xlsx/xlsx.full.min.js', 'XLSX.read']]) {
+for (const [src, g] of [['vendor/supabase-js/supabase.js', 'supabase.createClient'], ['vendor/pdfjs/pdf.min.js', 'pdfjsLib.getDocument'], ['vendor/mammoth/mammoth.browser.min.js', 'mammoth.extractRawText'], ['vendor/xlsx/xlsx.full.min.js', 'XLSX.read']]) {
   ok((await load(src)) && await pg.evaluate(`typeof window.${g.split('.')[0]} !== 'undefined' && typeof window.${g} === 'function'`), 'biblioteca ' + src);
 }
 ok(await pg.evaluate(`new Promise(res => { try { const w = new Worker('vendor/pdfjs/pdf.worker.min.js'); w.onerror = () => res(false); setTimeout(() => { w.terminate(); res(true); }, 600); } catch (e) { res(false); } })`), 'worker do leitor de PDF abre sob a política');

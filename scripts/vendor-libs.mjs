@@ -16,7 +16,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const vendor = path.join(root, 'vendor');
 // pacote@versão → arquivos (origem dentro do pacote → destino em vendor/); "dir" copia a pasta inteira
 export const LIBS = [
-  { pkg: '@supabase/supabase-js', version: '2.119.2', files: { 'dist/umd/supabase.js': 'supabase/supabase.js' } },
+  { pkg: '@supabase/supabase-js', version: '2.119.2', files: { 'dist/umd/supabase.js': 'supabase-js/supabase.js' } },
   { pkg: '@tabler/icons-webfont', version: '3.6.0', files: { 'dist/tabler-icons.min.css': 'tabler-icons/tabler-icons.min.css', 'dist/fonts/tabler-icons.woff2': 'tabler-icons/fonts/tabler-icons.woff2' } }, // só a fonte que o CSS usa (woff2: todos os navegadores atuais)
   { pkg: 'mammoth', version: '1.4.9', files: { 'mammoth.browser.min.js': 'mammoth/mammoth.browser.min.js' } },
   { pkg: 'pdfjs-dist', version: '2.13.216', files: { 'legacy/build/pdf.min.js': 'pdfjs/pdf.min.js', 'legacy/build/pdf.worker.min.js': 'pdfjs/pdf.worker.min.js' } },

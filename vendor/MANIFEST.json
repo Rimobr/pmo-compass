@@ -45,7 +45,7 @@
     }
   ],
   "files": {
-    "supabase/supabase.js": "8816af04d9915dbba1882d6f84f0b402dc40268063a63d9c66d24f52f371c263",
+    "supabase-js/supabase.js": "8816af04d9915dbba1882d6f84f0b402dc40268063a63d9c66d24f52f371c263",
     "tabler-icons/tabler-icons.min.css": "cb2d6ea9c915d1aa62e3ec41c86a247de4821c15356b1dfb56e49563dd1ed80f",
     "tabler-icons/fonts/tabler-icons.woff2": "1bd5c71cde80020f2adeb9fb00509c8b4ee10f2f80c91026f4d8c59be2f11923",
     "mammoth/mammoth.browser.min.js": "fcd0ee3a165091c0500ad69fab72cf397e0cc5110191506333d3aa1805a4871c",

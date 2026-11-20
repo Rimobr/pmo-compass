@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.113.0'
+  version: '2.113.1'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -4696,7 +4696,7 @@ const Cloud = (() => {
     if(window.supabase) return window.supabase;
     await new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'vendor/supabase/supabase.js';
+      s.src = 'vendor/supabase-js/supabase.js';
       s.onload = resolve; s.onerror = () => reject(new Error('Falha ao carregar o SDK do Supabase'));
       document.head.appendChild(s);
     });
