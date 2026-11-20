@@ -16,6 +16,16 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const MAX_BYTES = 2_000_000;
+// Limite de uso por pessoa: no máximo LIMIT chamadas por janela (por instância da função; protege contra abuso e custo, não contra ataque distribuído).
+const LIMIT = 300, WINDOW_MS = 60_000;
+const hits = new Map<string, number[]>();
+function tooMany(user: string): number {
+  const now = Date.now(), list = (hits.get(user) || []).filter((t) => now - t < WINDOW_MS);
+  if (list.length >= LIMIT) { hits.set(user, list); return Math.max(1, Math.ceil((WINDOW_MS - (now - list[0])) / 1000)); }
+  list.push(now); hits.set(user, list);
+  if (hits.size > 5000) for (const [k, v] of hits) if (!v.length || now - v[v.length - 1] > WINDOW_MS) hits.delete(k); // limpeza
+  return 0;
+}
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 
 Deno.serve(async (req) => {
@@ -26,6 +36,9 @@ Deno.serve(async (req) => {
   if (!auth) return json({ error: "sem sessão" }, 401);
   const who = await fetch(Deno.env.get("SUPABASE_URL")! + "/auth/v1/user", { headers: { authorization: auth, apikey: Deno.env.get("SUPABASE_ANON_KEY") || "" } }).catch(() => null);
   if (!who || !who.ok) return json({ error: "sessão inválida" }, 401);
+  const me = await who.json().catch(() => null);
+  const wait = tooMany(String(me && me.id || "?"));
+  if (wait) return new Response(JSON.stringify({ error: "muitas chamadas; tente de novo em instantes" }), { status: 429, headers: { ...CORS, "Content-Type": "application/json", "Retry-After": String(wait) } });
   const raw = await req.text();
   if (raw.length > MAX_BYTES) return json({ error: "entrada grande demais" }, 413);
   let body: any; try { body = JSON.parse(raw); } catch { return json({ error: "JSON inválido" }, 400); }

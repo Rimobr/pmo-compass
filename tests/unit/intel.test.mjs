@@ -140,3 +140,8 @@ test('servidor: instruções de Estimar pontos, Rascunho de documentos e regras 
   assert.ok(rules.includes('Marca X') && rules.includes('Regras obrigatórias'));
   assert.ok(!html.includes('const SYSTEM_RULES = `'), 'regras gerais não ficam mais escritas no módulo AI');
 });
+test('função intel: limite de uso por pessoa (429 com Retry-After) além do login e da lista fechada', () => {
+  const fn = fs.readFileSync(new URL('../../supabase/functions/intel/index.ts', import.meta.url), 'utf8');
+  assert.ok(fn.includes('LIMIT = 300') && fn.includes('status: 429') && fn.includes('"Retry-After"'), 'limite por pessoa');
+  assert.ok(fn.indexOf('tooMany(') < fn.indexOf('JSON.parse(raw)'), 'o limite vale antes de ler e calcular');
+});
