@@ -106,7 +106,19 @@ await pg.evaluate(`R.go('cardcontrol')`); await pg.waitForTimeout(400);
 ok((await heads()) === h2, 'Colunas: a ordem escolhida continua depois de recarregar a página');
 await pg.evaluate(`CardControl.colsReset()`); await pg.waitForTimeout(150);
 ok((await heads()) === h0, 'Colunas: "Restaurar Padrão" volta ao padrão (campos e ordem)');
-await pg.focus('#cc-cols-panel .cc-chip[data-c=card] input'); await pg.keyboard.press('Escape'); await pg.waitForTimeout(100);
+// Uma só fonte da ordem: arrastar o título NA TABELA muda também a seleção do painel
+await pg.evaluate('CardControl.colsToggle(true)'); await pg.waitForTimeout(500);
+await pg.dragAndDrop('#cc-root thead th:nth-child(5)', '#cc-root thead th:nth-child(3)', { targetPosition: { x: 4, y: 8 } }); await pg.waitForTimeout(400);
+const hT = await heads();
+const chips = () => pg.evaluate("[...document.querySelectorAll('#cc-cols-panel .cc-chip.on label')].map(l => l.textContent.replace(' (sempre)', '').trim()).join('|')");
+ok(hT === 'Projeto|Card|Na etapa|Situação|Responsável|Aberto há|Prazo|Devol.|Leitura do sistema', 'Tabela: arrastar o título muda a ordem das colunas', hT);
+ok((await chips()) === hT, 'Tabela e painel: a ordem dos títulos e a das colunas marcadas são a mesma depois de arrastar na tabela', (await chips()) + ' != ' + hT);
+await pg.reload({ waitUntil: 'domcontentloaded' }); await pg.waitForTimeout(1200);
+await pg.evaluate("R.go('cardcontrol'); CardControl.colsToggle(true)"); await pg.waitForTimeout(500);
+ok((await heads()) === hT && (await chips()) === hT, 'Tabela e painel: a ordem arrastada na tabela continua igual nos dois depois de recarregar');
+await pg.evaluate('CardControl.colsReset()'); await pg.waitForTimeout(150);
+ok((await heads()) === h0 && (await chips()) === h0, 'Tabela e painel: Restaurar Padrão volta os dois ao padrão');
+await pg.focus('#cc-cols-panel .cc-chip[data-c=proj] input'); await pg.keyboard.press('Escape'); await pg.waitForTimeout(100);
 ok(await pg.evaluate(`document.getElementById('cc-cols-panel').hidden && document.getElementById('cc-cols-btn').textContent.trim() === 'Colunas' && !document.getElementById('cc-cols-btn').classList.contains('btn-acc')`), 'Colunas: Esc (ou clicar em Concluir) esconde a seleção e o botão volta a Colunas');
 // Período: o que a tela mostra precisa bater com o seletor, com o cartão "Concluídos" e com a linha de escopo
 await pg.evaluate(`CardControl.clearFilters(); const pn = DB.listProjects().concat(DB.listPortfolio ? [] : []).find(p => p.id === DB.getActiveProjectId()); window.__pn = pn ? pn.name : ''; const s = document.getElementById('cc-proj'); if (window.__pn) s.value = window.__pn; CardControl.render()`); await pg.waitForTimeout(200);

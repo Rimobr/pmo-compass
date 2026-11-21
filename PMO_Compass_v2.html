@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.113.12'
+  version: '2.113.13'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -17032,6 +17032,8 @@ const ColumnDrag = (() => {
   function apply(table) {
     const head = table.tHead.rows[0], n = head.cells.length;
     const st = stateFor(table, n);
+    // tabela com dono (data-col-sync): ordens guardadas em versões antigas não valem, a ordem vem da própria tela
+    if(table.dataset.colSync) st.order = null;
     const order = st.order || Array.from({ length: n }, (_, i) => i);
     allRows(table).forEach(r => {
       const cells = [...r.cells];
@@ -17050,6 +17052,12 @@ const ColumnDrag = (() => {
   function move(table, from, to, after) {
     const n = table.tHead.rows[0].cells.length, st = stateFor(table, n);
     const cur = st.order || Array.from({ length: n }, (_, i) => i);
+    if(table.dataset.colSync) {
+      // A ordem pertence à tela (ex.: Controle de Cards): só diz como ficou; quem guarda e redesenha é o dono
+      const next = moveOrder(cur, from, to, after), head = [...table.tHead.rows[0].cells], text = ci => ((head.find(c => +c.dataset.ci === ci) || {}).textContent || '').replace(/\s+/g, ' ').trim();
+      table.dispatchEvent(new CustomEvent('coldrag', { bubbles: true, detail: { order: next.map(text) } }));
+      return;
+    }
     st.order = moveOrder(cur, from, to, after);
     persist(table, st); apply(table);
   }
@@ -22377,6 +22385,13 @@ const CardControl = (() => {
       + '<button type="button" class="btn btn-sm" onclick="CardControl.colsReset()"><i class="ti ti-restore"></i>Restaurar Padrão</button></div><div class="set-sub" style="margin-top:6px"><b>Salvo automaticamente</b> a cada marcação ou arrasto. Marque o que quer ver e arraste as marcadas para mudar a ordem. <b>Clique em Concluir</b> (botão acima, ou Esc) para esconder esta seleção. Vale só para este navegador; a exportação leva todas as colunas.</div>';
   }
   // Painel aberto: o botão vira "Concluir" (destacado) para deixar claro como esconder a seleção; fechado: volta a "Colunas"
+  // Arrastar o título na tabela muda a MESMA ordem do painel: uma só fonte (pmo_cc_cols_v1)
+  document.addEventListener('coldrag', e => {
+    const t = e.target; if(!t || !t.closest || !t.closest('#cc-root') || !e.detail || !Array.isArray(e.detail.order)) return;
+    const ids = e.detail.order.map(x => (COLS.find(c => c.l === x) || {}).id).filter(Boolean);
+    if(ids.length < 2 || ids.length !== visible().length) return;
+    saveCols(ids); render(); const p = el('cc-cols-panel'); if(p && !p.hidden) colsPanel();
+  });
   function colsToggle(force) {
     const p = el('cc-cols-panel'), b = el('cc-cols-btn'); if(!p) return; const open = typeof force === 'boolean' ? force : p.hidden;
     p.hidden = !open;
@@ -22468,7 +22483,7 @@ const CardControl = (() => {
     charts(g, rows);
     if(!g.rows.length) { el('cc-root').innerHTML = '<div class="rk-empty">Nenhum card nos projetos e quadros que você acessa.</div>'; return; }
     const part = rows.slice(0, limit), vis = visible();
-    el('cc-root').innerHTML = (rows.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr>' + vis.map(c => c.th).join('') + '</tr></thead><tbody>'
+    el('cc-root').innerHTML = (rows.length ? '<div class="tbl-wrap"><table class="tbl" data-col-sync="1"><thead><tr>' + vis.map(c => c.th).join('') + '</tr></thead><tbody>'
       + part.map(r => { const key = r.p.id + '|' + r.i.id, on = key === openKey, a = r.a;
         return '<tr data-key="' + esc(key) + '" tabindex="0" style="cursor:pointer' + (on ? ';background:var(--ad)' : '') + '" onclick="CardControl.toggle(this.dataset.key)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();CardControl.toggle(this.dataset.key)}" aria-expanded="' + on + '">' + vis.map(c => c.td(r)).join('') + '</tr>'
           + (on ? '<tr><td colspan="' + vis.length + '" style="background:var(--s2);padding:12px 14px">' + detail(r) + '</td></tr>' : ''); }).join('')
