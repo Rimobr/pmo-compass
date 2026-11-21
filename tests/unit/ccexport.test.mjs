@@ -23,9 +23,9 @@ test('pacote público (dist) existe, está na versão do app e não leva os come
   assert.equal(vj.outputDirectory, 'dist');
   assert.ok(vj.headers.some(h => h.headers.some(x => x.key === 'Strict-Transport-Security')), 'HSTS');
 });
-test('Controle de Cards: números, pizza e lista usam o mesmo conjunto filtrado; quadro navega e há "Limpar Filtros"', () => {
+test('Controle de Cards: números, pizza, quadro e exportação usam o MESMO conjunto filtrado (filt/pass) e há "Limpar Filtros"', () => {
   assert.ok(src.includes('const open = rows.filter(r => !r.a.done)'), 'números do topo seguem o filtro');
-  assert.ok(src.includes('charts(g, rows, q, onlyAlert)') && src.includes('const pr = rows, tot = pr.length;'), 'pizza segue o filtro');
+  assert.ok(src.includes('charts(g, rows);') && src.includes('const base = rows;') && src.includes('const pass = (r, fl, skip)') && src.includes('const pr = rows, tot = pr.length;'), 'pizza segue o filtro');
   assert.ok(src.includes('CardControl.clearFilters()') && /clearFilters, pickStatus/.test(src), 'limpar filtros');
 });
 test('Central de Relatórios: agrupadores escolhidos na hora (até 3) e cálculo à escolha, com "Voltar ao Original"', () => {
