@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.113.6'
+  version: '2.113.7'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1702,13 +1702,16 @@ body.icons-failed i[data-fb]::before{
       <div><label class="set-sub" for="cc-st" style="display:block">Situação</label><select class="input" id="cc-st" onchange="CardControl.render()"><option value="">Todas</option></select></div>
       <div><label class="set-sub" for="cc-who" style="display:block">Responsável</label><select class="input" id="cc-who" onchange="CardControl.render()"><option value="">Todos</option></select></div>
       <div><label class="set-sub" for="cc-kind" style="display:block">Tipo</label><select class="input" id="cc-kind" onchange="CardControl.render()"><option value="">Todos</option></select></div>
+      <div><label class="set-sub" for="cc-per" style="display:block">Período</label><select class="input" id="cc-per" onchange="CardControl.render()"><option value="now">Abertos agora</option></select></div>
       <div><label class="set-sub" for="cc-q" style="display:block">Buscar</label><input class="input" id="cc-q" placeholder="Código ou título…" oninput="CardControl.render()" style="width:190px"></div>
       <label class="set-sub" style="display:inline-flex;gap:6px;align-items:center;margin-bottom:6px"><input type="checkbox" id="cc-alert" onchange="CardControl.render()">Só com alerta</label>
       <label class="set-sub" style="display:inline-flex;gap:6px;align-items:center;margin-bottom:6px"><input type="checkbox" id="cc-done" onchange="CardControl.render()">Incluir concluídos</label>
       <button class="btn btn-sm" onclick="CardControl.clearFilters()"><i class="ti ti-filter-off"></i>Limpar Filtros</button><button class="btn btn-sm" onclick="CardControl.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button><button class="btn btn-sm" onclick="CardControl.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button><button class="btn btn-sm" id="cc-cols-btn" aria-expanded="false" aria-controls="cc-cols-panel" onclick="CardControl.colsToggle()"><i class="ti ti-columns-3"></i>Colunas</button>
     </div>
     <div id="cc-cols-panel" hidden style="margin-top:10px;padding-top:10px;border-top:1px solid var(--b1)"></div>
+    <div id="cc-scope" class="set-sub" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--b1)" role="status" aria-live="polite"></div>
   </div>
+  <div class="card" id="cc-evo" style="margin-bottom:12px"></div>
   <div class="card" id="cc-matrix" style="margin-bottom:12px"></div>
   <div class="card"><div id="cc-root"></div></div>
 </section>
@@ -22289,18 +22292,27 @@ const CardControl = (() => {
   const fmt = iso => iso ? iso.split('-').reverse().slice(0, 2).join('/') : '—';
   const LV = { red: ['b-red', 'Crítico'], amb: ['b-amb', 'Atenção'], grn: ['b-grn', 'No ritmo'] };
   let openKey = null, limit = 150;
-  function gather(includeDone) {
-    const now = Date.now(), out = [], today = new Date().toISOString().slice(0, 10);
+  const isoAdd = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  // Data em que o card foi concluído: a gravada ou, na falta, a última passagem para a coluna final no histórico
+  function doneDate(i, lastLabel) {
+    if(i.doneOn) return String(i.doneOn).slice(0, 10);
+    const h = (i.history || []).filter(x => x && x.field === 'Situação' && x.to === lastLabel).pop();
+    return h && h.at ? String(h.at).slice(0, 10) : '';
+  }
+  function gather() {
+    const now = Date.now(), out = [], sprintsBy = {}, today = new Date().toISOString().slice(0, 10);
     DB.listProjects().forEach(p => {
       const all = (DB.getForProject(p.id, 'backlog') || []).filter(i => i && i.kind !== 'epico'), sprints = DB.getForProject(p.id, 'sprints') || [];
       let cols; try { cols = AgileCalc.cols(AgileCalc.cfgOf(DB.getForProject(p.id, 'agileConfig'))); } catch(e) { cols = AgileCalc.COLS; }
       const last = cols[cols.length - 1].key, bench = CardFlow.benchmarks(all, cols, now);
-      all.filter(i => includeDone || i.status !== last).forEach(i => {
-        const due = ((sprints.find(x => x.id === i.sprintId) || {}).endOn || '').slice(0, 10);
-        out.push({ p, i, due, a: CardFlow.analyze(i, cols, now, { bench, due }) });
+      sprintsBy[p.id] = sprints;
+      const lastLabel = (cols[cols.length - 1] || {}).label || '';
+      all.forEach(i => {
+        const sp = sprints.find(x => x.id === i.sprintId) || null, due = ((sp || {}).endOn || '').slice(0, 10);
+        out.push({ p, i, due, sp, a: CardFlow.analyze(i, cols, now, { bench, due }), dn: i.status === last ? doneDate(i, lastLabel) : '' });
       });
     });
-    return { rows: out, today };
+    return { rows: out, today, sprintsBy };
   }
   const KIND_LBL = { bug: 'Bug', historia: 'História', tarefa: 'Tarefa', epico: 'Épico' };
   const wkey = r => String(r.i.assignee || '').trim();
@@ -22330,9 +22342,27 @@ const CardControl = (() => {
   function colsSet(id, on) { const cur = new Set(visible().map(c => c.id)); if(on) cur.add(id); else cur.delete(id); try { localStorage.setItem(COLS_KEY, JSON.stringify(COLS.filter(c => cur.has(c.id)).map(c => c.id))); } catch(e) { /* sem armazenamento: vale só nesta tela */ } render(); }
   function colsReset() { try { localStorage.removeItem(COLS_KEY); } catch(e) { /* nada a limpar */ } colsPanel(); render(); }
   // Um só conjunto de filtros para a lista, os números, a pizza, o quadro, os seletores e a exportação
-  const filt = () => ({ proj: el('cc-proj').value, st: el('cc-st').value, who: el('cc-who').value, kind: el('cc-kind') ? el('cc-kind').value : '', q: String((el('cc-q') || {}).value || '').toLowerCase(), alert: !!(el('cc-alert') || {}).checked });
-  const pass = (r, fl, skip) => (skip === 'proj' || !fl.proj || r.p.name === fl.proj) && (skip === 'st' || !fl.st || r.a.stageLabel === fl.st) && (skip === 'who' || !fl.who || wkey(r) === fl.who) && (skip === 'kind' || !fl.kind || r.i.kind === fl.kind)
-    && (!fl.q || (r.i.id + ' ' + r.i.title).toLowerCase().indexOf(fl.q) >= 0) && (!fl.alert || r.a.alerts.length);
+  const filt = g => ({ proj: el('cc-proj').value, st: el('cc-st').value, who: el('cc-who').value, kind: el('cc-kind') ? el('cc-kind').value : '', per: (el('cc-per') || {}).value || 'now', done: !!(el('cc-done') || {}).checked, today: g ? g.today : new Date().toISOString().slice(0, 10), q: String((el('cc-q') || {}).value || '').toLowerCase(), alert: !!(el('cc-alert') || {}).checked });
+  // Janelas de tempo das entregas (datas ISO, inclusive nas duas pontas) e a janela anterior de mesmo tamanho, para comparar
+  const monthStart = (iso, back) => { const d = new Date(iso.slice(0, 7) + '-01T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() - back); return d.toISOString().slice(0, 10); };
+  function winOf(per, today) {
+    const m = /^d(\d+)$/.exec(per);
+    if(m) { const n = +m[1], from = isoAdd(today, -(n - 1)); return { from, to: today, prev: [isoAdd(from, -n), isoAdd(from, -1)] }; }
+    if(per === 'mt') return { from: monthStart(today, 0), to: today, prev: [monthStart(today, 1), isoAdd(monthStart(today, 0), -1)] };
+    if(per === 'mp') return { from: monthStart(today, 1), to: isoAdd(monthStart(today, 0), -1), prev: [monthStart(today, 2), isoAdd(monthStart(today, 1), -1)] };
+    return null;
+  }
+  const PER_LBL = { d15: 'Entregues nos últimos 15 dias', d30: 'Entregues nos últimos 30 dias', d90: 'Entregues nos últimos 90 dias', mt: 'Entregues neste mês', mp: 'Entregues no mês passado' };
+  const inWin = (r, w) => !!(r.a.done && r.dn && r.dn >= w[0] && r.dn <= w[1]);
+  function periodOk(r, fl) {
+    const p = fl.per;
+    if(p === 'now') return fl.done || !r.a.done;
+    if(p === 'active') return !!(r.sp && r.sp.state === 'ativa');
+    if(p.indexOf('sp:') === 0) return !!(r.sp && r.sp.name === p.slice(3));
+    const w = winOf(p, fl.today); return w ? inWin(r, [w.from, w.to]) : true;
+  }
+  const pass = (r, fl, skip) => { const sk = n => !!skip && skip.split(',').indexOf(n) >= 0; return (sk('proj') || !fl.proj || r.p.name === fl.proj) && (sk('st') || !fl.st || r.a.stageLabel === fl.st) && (sk('who') || !fl.who || wkey(r) === fl.who) && (sk('kind') || !fl.kind || r.i.kind === fl.kind) && (sk('per') || periodOk(r, fl))
+    && (!fl.q || (r.i.id + ' ' + r.i.title).toLowerCase().indexOf(fl.q) >= 0) && (!fl.alert || r.a.alerts.length); };
   function facet(id, keyFn, skip, fl, all, labelFn, cmp) {
     const s = el(id); if(!s) return; const cur = s.value, first = s.options[0] ? s.options[0].outerHTML : '<option value="">Todos</option>', cnt = {};
     all.filter(r => pass(r, fl, skip)).forEach(r => { const k = keyFn(r); if(k) cnt[k] = (cnt[k] || 0) + 1; });
@@ -22341,20 +22371,28 @@ const CardControl = (() => {
   }
   function render() {
     if(!el('cc-root')) return;
-    const incl = !!(el('cc-done') || {}).checked, g = gather(incl);
-    const fl = filt();
+    const g = gather(), fl = filt(g);
     // Cada seletor mostra só o que existe dentro dos OUTROS filtros, com a contagem; o escolhido nunca some
     const byName = (x, y) => x.localeCompare(y, 'pt-BR');
     facet('cc-proj', r => r.p.name, 'proj', fl, g.rows, null, byName);
     facet('cc-st', r => r.a.stageLabel, 'st', fl, g.rows, null, byName);
     facet('cc-who', wkey, 'who', fl, g.rows, null, byName);
     facet('cc-kind', r => r.i.kind, 'kind', fl, g.rows, k => KIND_LBL[k] || k, (x, y) => byName(KIND_LBL[x] || x, KIND_LBL[y] || y));
+    facetPer(g, fl);
     const rows = g.rows.filter(r => pass(r, fl)).sort((a, b) => (b.a.level === 'red') - (a.a.level === 'red') || b.a.alerts.length - a.a.alerts.length || b.a.stageAge - a.a.stageAge);
     const open = rows.filter(r => !r.a.done), kp = (lbl, v, sub, tone) => '<div class="kpi"><div class="kpi-lbl">' + lbl + '</div><div class="kpi-val" style="color:' + (tone || 'var(--t1)') + '">' + v + '</div><div class="kpi-delta">' + sub + '</div></div>';
     const stalled = open.filter(r => r.a.alerts.some(x => x.text.indexOf('Parado') === 0)).length, late = open.filter(r => r.a.alerts.some(x => x.text.indexOf('Prazo vencido') === 0)).length, ret = open.filter(r => r.a.returns > 0).length, withAl = open.filter(r => r.a.alerts.length).length;
-    el('cc-kpis').innerHTML = kp('Cards abertos', open.length, 'em ' + new Set(open.map(r => r.p.id)).size + ' projeto(s) e quadro(s)') + kp('Com alerta', withAl, 'o sistema recomenda agir', withAl ? 'var(--amb)' : 'var(--grn)') + kp('Parados', stalled, 'além do esperado na etapa', stalled ? 'var(--red)' : 'var(--grn)') + kp('Prazo vencido', late, 'ainda abertos', late ? 'var(--red)' : 'var(--grn)') + kp('Devolvidos', ret, 'voltaram de etapa ao menos uma vez', ret ? 'var(--amb)' : 'var(--grn)');
+    const doneRows = rows.filter(r => r.a.done), win = winOf(fl.per, fl.today);
+    let doneSub;
+    if(win) { const prev = g.rows.filter(r => pass(r, fl, 'per') && inWin(r, win.prev)).length, d = doneRows.length - prev; doneSub = prev || doneRows.length ? (d === 0 ? 'igual ao período anterior (' + prev + ')' : (d > 0 ? '+' : '') + d + ' em relação ao período anterior (' + prev + ')') : 'sem entregas no período nem no anterior'; }
+    else if(fl.per === 'now') doneSub = 'no histórico: escolha um Período para ver quando';
+    else doneSub = 'dos ' + rows.length + ' cards do período';
+    const doneTotal = fl.per === 'now' ? g.rows.filter(r => r.a.done && pass(r, fl, 'per')).length : doneRows.length;
+    scopeLine(g, fl, rows);
+    evoRender(g, fl);
+    el('cc-kpis').innerHTML = kp('Concluídos', doneTotal, doneSub, doneTotal ? 'var(--grn)' : '') + kp('Cards abertos', open.length, 'em ' + new Set(open.map(r => r.p.id)).size + ' projeto(s) e quadro(s)') + kp('Com alerta', withAl, 'o sistema recomenda agir', withAl ? 'var(--amb)' : 'var(--grn)') + kp('Parados', stalled, 'além do esperado na etapa', stalled ? 'var(--red)' : 'var(--grn)') + kp('Prazo vencido', late, 'ainda abertos', late ? 'var(--red)' : 'var(--grn)') + kp('Devolvidos', ret, 'voltaram de etapa ao menos uma vez', ret ? 'var(--amb)' : 'var(--grn)');
     charts(g, rows);
-    if(!g.rows.length) { el('cc-root').innerHTML = '<div class="rk-empty">Nenhum card aberto nos projetos e quadros que você acessa.</div>'; return; }
+    if(!g.rows.length) { el('cc-root').innerHTML = '<div class="rk-empty">Nenhum card nos projetos e quadros que você acessa.</div>'; return; }
     const part = rows.slice(0, limit), vis = visible();
     el('cc-root').innerHTML = (rows.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr>' + vis.map(c => c.th).join('') + '</tr></thead><tbody>'
       + part.map(r => { const key = r.p.id + '|' + r.i.id, on = key === openKey, a = r.a;
@@ -22379,7 +22417,73 @@ const CardControl = (() => {
     el('cc-matrix').innerHTML = names.length ? '<div class="set-sub" style="font-weight:700;text-transform:uppercase;margin-bottom:6px">Quem está com quê: cards por responsável e situação (clique no número para filtrar)</div><div class="set-sub" style="margin-bottom:6px">Respeita todos os filtros acima. Para ver as outras pessoas, use Limpar Filtros; a linha destacada é a pessoa filtrada.</div><div class="tbl-wrap"><table class="tbl cc-mx" data-nodrag="1"><thead><tr><th scope="col">Responsável</th>' + cols.map(l => '<th scope="col" class="num"><span class="cc-dot" style="background:' + col(l) + ';display:inline-block;margin-right:4px"></span>' + esc(l) + '</th>').join('') + '<th scope="col" class="num">Total</th></tr></thead><tbody>'
       + names.map(n => '<tr' + (curW && n === curW ? ' style="background:var(--ad)"' : '') + '><td>' + (n ? esc(n) : '<i>(sem responsável)</i>') + '</td>' + cols.map(l => { const c = base.filter(r => who(r) === n && r.a.stageLabel === l).length; return '<td class="num">' + (c ? '<button type="button" data-w="' + esc(n) + '" data-st="' + esc(l) + '" onclick="CardControl.pickCell(this.dataset.w, this.dataset.st)" aria-label="' + esc((n || 'Sem responsável') + ', ' + l + ': ' + c + ' card(s). Filtrar') + '">' + c + '</button><div class="cc-bar" style="width:' + Math.max(8, c / mx * 100) + '%;background:' + col(l) + '"></div>' : '<span class="set-sub">·</span>') + '</td>'; }).join('') + '<td class="num"><b>' + base.filter(r => who(r) === n).length + '</b></td></tr>').join('') + '</tbody></table></div>' : '';
   }
-  function clearFilters() { ['cc-proj', 'cc-st', 'cc-who', 'cc-kind'].forEach(id => { if(el(id)) el(id).value = ''; }); if(el('cc-q')) el('cc-q').value = ''; ['cc-alert', 'cc-done'].forEach(id => { if(el(id)) el(id).checked = false; }); limit = 150; render(); }
+  // Seletor de Período: cada opção traz quantos cards entram nela, dentro dos outros filtros; a escolhida nunca some
+  function facetPer(g, fl) {
+    const s = el('cc-per'); if(!s) return; const cur = s.value || 'now';
+    const sprintNames = []; g.rows.forEach(r => { if(r.sp && sprintNames.findIndex(x => x.name === r.sp.name) < 0) sprintNames.push({ name: r.sp.name, start: r.sp.startOn || '' }); });
+    sprintNames.sort((a, b) => b.start.localeCompare(a.start));
+    const opts = [['now', 'Abertos agora'], ['active', 'Sprint ativa']].concat(sprintNames.map(x => ['sp:' + x.name, 'Sprint: ' + x.name])).concat(['d15', 'd30', 'd90', 'mt', 'mp'].map(k => [k, PER_LBL[k]]));
+    s.innerHTML = opts.map(([v, l]) => { const n = g.rows.filter(r => pass(r, fl, 'per') && periodOk(r, Object.assign({}, fl, { per: v }))).length; return (n || v === cur || v === 'now') ? '<option value="' + esc(v) + '"' + (v === cur ? ' selected' : '') + '>' + esc(l) + ' (' + n + ')</option>' : ''; }).join('');
+  }
+  // Uma frase que diz exatamente o que os números e a lista estão mostrando
+  function scopeLine(g, fl, rows) {
+    const box = el('cc-scope'); if(!box) return; const fmtD = iso => iso ? iso.split('-').reverse().join('/') : '', w = winOf(fl.per, fl.today);
+    let what;
+    if(fl.per === 'now') what = fl.done ? 'cards abertos agora e concluídos (todo o histórico)' : 'cards abertos agora (use "Incluir concluídos" ou um Período para ver o que foi entregue)';
+    else if(fl.per === 'active') { const sp = rows.map(r => r.sp).find(Boolean); what = 'cards da sprint ativa' + (sp ? ' (' + fmtD(sp.startOn) + ' a ' + fmtD(sp.endOn) + ')' : ''); }
+    else if(fl.per.indexOf('sp:') === 0) { const sp = rows.map(r => r.sp).find(Boolean); what = 'cards de ' + esc(fl.per.slice(3)) + (sp ? ' (' + fmtD(sp.startOn) + ' a ' + fmtD(sp.endOn) + ')' : '') + ': os concluídos e os que ficaram'; }
+    else what = esc(PER_LBL[fl.per] || '') + ' (concluídos de ' + fmtD(w.from) + ' a ' + fmtD(w.to) + ')';
+    const done = rows.filter(r => r.a.done).length, undated = g.rows.filter(r => r.a.done && !r.dn).length;
+    box.innerHTML = '<b>Mostrando:</b> ' + what + ' · <b>' + rows.length + '</b> card(s): ' + done + ' concluído(s) e ' + (rows.length - done) + ' em aberto.' + (undated && w ? ' <span title="Sem data de conclusão gravada, não entram nos períodos por data.">' + undated + ' concluído(s) sem data não entram.</span>' : '');
+  }
+  // Evolução das entregas: por sprint (entraram, concluídos, transbordo), por semana ou por mês; segue Projeto, Responsável, Tipo e Busca
+  let evoMode = 'sprint';
+  function evoSet(m) { evoMode = m; render(); }
+  const pct = (a, b) => b ? Math.round(a / b * 100) : null;
+  function weekStart(iso) { const d = new Date(iso + 'T00:00:00Z'), k = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - k); return d.toISOString().slice(0, 10); }
+  function evoRender(g, fl) {
+    const box = el('cc-evo'); if(!box) return; const fmtD = iso => iso ? iso.split('-').reverse().slice(0, 2).join('/') : '';
+    const base = g.rows.filter(r => pass(r, fl, 'st,per')), today = fl.today;
+    let lines = [], cols = [], note = '', closed = [];
+    if(evoMode === 'sprint') {
+      const map = {};
+      const ensure = (p, sp) => { const k = p.id + '|' + sp.id; return map[k] || (map[k] = { p, sp, members: 0, done: 0, openAfter: 0, left: 0, leftLate: 0 }); };
+      base.forEach(r => {
+        if(r.sp) { const e = ensure(r.p, r.sp); e.members++; if(r.a.done) e.done++; else e.openAfter++; }
+        (r.i.history || []).forEach(h => { if(h && h.field === 'Sprint' && h.from && h.from !== '(vazio)' && h.from !== (r.sp || {}).name) { const sp = (g.sprintsBy[r.p.id] || []).find(x => x.name === h.from); if(sp) { const e = ensure(r.p, sp); e.left++; if(sp.endOn && String(h.at || '').slice(0, 10) >= sp.endOn.slice(0, 10)) e.leftLate++; } } });
+      });
+      const many = new Set(Object.values(map).map(e => e.p.id)).size > 1;
+      lines = Object.values(map).map(e => { const entered = e.members + e.left, ended = e.sp.state === 'encerrada', carry = ended ? e.openAfter + e.leftLate : null; return { label: (many ? e.p.name + ' · ' : '') + e.sp.name, sub: fmtD(e.sp.startOn) + ' a ' + fmtD(e.sp.endOn), start: e.sp.startOn || '', entered, done: e.done, carry, ended, active: e.sp.state === 'ativa' }; })
+        .filter(x => x.entered > 0).sort((a, b) => a.start.localeCompare(b.start)).slice(-8);
+      closed = lines.filter(x => x.ended);
+      note = 'Entraram = cards que estão na sprint mais os que saíram dela. Transbordo = o que não terminou até o fim da sprint (ficou aberto ou foi movido depois do fim). Sprint em andamento ainda não tem transbordo.';
+    } else {
+      const n = evoMode === 'week' ? 8 : 6, keys = [];
+      for(let k = n - 1; k >= 0; k--) keys.push(evoMode === 'week' ? isoAdd(weekStart(today), -7 * k) : monthStart(today, k));
+      lines = keys.map((st, ix) => { const en = ix === keys.length - 1 ? today : (evoMode === 'week' ? isoAdd(st, 6) : isoAdd(keys[ix + 1], -1)); const dn = base.filter(r => r.a.done && r.dn && r.dn >= st && r.dn <= en).length;
+        return { label: evoMode === 'week' ? 'Semana de ' + fmtD(st) : st.slice(5, 7) + '/' + st.slice(0, 4), sub: ix === keys.length - 1 ? 'em andamento' : fmtD(st) + ' a ' + fmtD(en), done: dn, entered: null, carry: null, ended: ix < keys.length - 1, active: ix === keys.length - 1 }; });
+      closed = lines.filter(x => x.ended);
+      note = 'Cards concluídos em cada ' + (evoMode === 'week' ? 'semana (segunda a domingo)' : 'mês') + ', pela data de conclusão. O período em andamento ainda está contando.';
+    }
+    const mx = Math.max(1, ...lines.map(x => x.done)), tab = (m, l) => '<button type="button" class="btn btn-sm' + (evoMode === m ? ' btn-acc' : '') + '" aria-pressed="' + (evoMode === m) + '" onclick="CardControl.evoSet(\'' + m + '\')">' + l + '</button>';
+    // leitura e como corrigir
+    let read = '';
+    if(closed.length < 2) read = '<b>Sem dados suficientes</b> para a tendência: são precisos pelo menos 2 períodos encerrados' + (evoMode === 'sprint' ? ' (sprints encerradas com cards)' : '') + '.';
+    else {
+      const a = closed[closed.length - 1], b = closed[closed.length - 2], last3 = closed.slice(-3), avg = Math.round(last3.reduce((t, x) => t + x.done, 0) / last3.length * 10) / 10, d = a.done - b.done;
+      const name = evoMode === 'sprint' ? a.label : (evoMode === 'week' ? 'a ' + a.label.toLowerCase() : 'o mês ' + a.label);
+      if(d > 0) read = '<b>Melhorando:</b> ' + name + ' entregou ' + a.done + ' card(s), contra ' + b.done + ' no período anterior (+' + d + '). <b>Como manter:</b> use a média de ' + avg + ' card(s) dos últimos ' + last3.length + ' períodos como referência para planejar o próximo.';
+      else if(d < 0) read = '<b>Atenção, em queda:</b> ' + name + ' entregou ' + a.done + ' card(s), contra ' + b.done + ' no período anterior (' + d + '). <b>Como corrigir:</b> planeje o próximo período pela média real de ' + avg + ' card(s), em vez do que foi prometido' + (a.carry ? '; ' + a.carry + ' card(s) transbordaram, comece por eles' : '') + '; e tire de andamento o que está parado (veja "Parados" acima).';
+      else read = '<b>Estável:</b> ' + name + ' entregou ' + a.done + ' card(s), igual ao período anterior. <b>Como melhorar:</b> o ritmo médio é ' + avg + ' card(s); para subir, reduza o que fica em andamento ao mesmo tempo.';
+      if(evoMode === 'sprint' && a.entered) { const pa = pct(a.done, a.entered), pb = b.entered ? pct(b.done, b.entered) : null; read += ' Entrega de ' + pa + '% do que entrou' + (pb != null ? ' (antes ' + pb + '%)' : '') + (a.carry != null ? ', transbordo de ' + a.carry + ' card(s)' : '') + '.'; }
+    }
+    const table = lines.length ? '<div class="tbl-wrap"><table class="tbl" data-nodrag="1"><thead><tr><th scope="col">' + (evoMode === 'sprint' ? 'Sprint' : (evoMode === 'week' ? 'Semana' : 'Mês')) + '</th>' + (evoMode === 'sprint' ? '<th scope="col" class="num">Entraram</th>' : '') + '<th scope="col" class="num">Concluídos</th>' + (evoMode === 'sprint' ? '<th scope="col" class="num">Transbordo</th><th scope="col" class="num">Entregue</th>' : '') + '<th scope="col" style="width:30%"><span class="sr-only">Gráfico</span></th></tr></thead><tbody>'
+      + lines.map(x => '<tr><td>' + esc(x.label) + (x.sub ? ' <span class="set-sub">' + esc(x.sub) + '</span>' : '') + '</td>' + (evoMode === 'sprint' ? '<td class="num">' + x.entered + '</td>' : '') + '<td class="num"><b>' + x.done + '</b></td>' + (evoMode === 'sprint' ? '<td class="num">' + (x.carry == null ? '—' : x.carry) + '</td><td class="num">' + (pct(x.done, x.entered) == null ? '—' : pct(x.done, x.entered) + '%') + '</td>' : '') + '<td><div class="cc-bar" style="width:' + Math.max(4, x.done / mx * 100) + '%;background:var(--b3);opacity:' + (x.active ? '.55' : '1') + '" aria-hidden="true"></div></td></tr>').join('') + '</tbody></table></div>'
+      : '<div class="rk-empty">Sem cards ' + (evoMode === 'sprint' ? 'em sprints' : 'concluídos') + ' para mostrar com esses filtros.</div>';
+    box.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px"><div class="set-sub" style="font-weight:700;text-transform:uppercase">Evolução das entregas</div><div class="btn-row" role="group" aria-label="Agrupar a evolução">' + tab('sprint', 'Por sprint') + tab('week', 'Por semana') + tab('month', 'Por mês') + '</div></div>'
+      + '<div style="margin-bottom:8px">' + read + '</div>' + table + '<div class="set-sub" style="margin-top:6px">' + esc(note) + ' Segue Projeto, Responsável, Tipo e Busca; não segue Situação nem Período.</div>';
+  }
+  function clearFilters() { ['cc-proj', 'cc-st', 'cc-who', 'cc-kind'].forEach(id => { if(el(id)) el(id).value = ''; }); if(el('cc-per')) el('cc-per').value = 'now'; if(el('cc-q')) el('cc-q').value = ''; ['cc-alert', 'cc-done'].forEach(id => { if(el(id)) el(id).checked = false; }); limit = 150; render(); }
   function pickStatus(l) { const s = el('cc-st'); s.value = s.value === l ? '' : l; limit = 150; render(); }
   function pickCell(w, l) { const a = el('cc-who'), b = el('cc-st'); if(!w) { a.value = ''; } else a.value = w; b.value = l; limit = 150; render(); }
   // Detalhe: por quê, tempo em cada etapa, linha do tempo, o que fazer e previsão
@@ -22398,12 +22502,12 @@ const CardControl = (() => {
   function toggle(key) { openKey = key === openKey ? null : key; render(); const r = document.querySelector('#cc-root tr[data-key="' + (openKey || '').replace(/"/g, '') + '"]'); if(r) r.focus(); }
   // Exporta a lista filtrada (Excel ou CSV) com o tempo em cada etapa, um por coluna
   function exportRows() {
-    const incl = !!(el('cc-done') || {}).checked, g = gather(incl), fl = filt();
+    const g = gather(), fl = filt(g);
     const rows = g.rows.filter(r => pass(r, fl));
     const stages = []; rows.forEach(r => r.a.stages.forEach(x => { if(stages.indexOf(x.label) < 0) stages.push(x.label); }));
-    const head = ['Projeto', 'Código', 'Título', 'Situação', 'Responsável', 'Dias na etapa', 'Dias aberto', 'Prazo', 'Devoluções', 'Nível', 'Alertas', 'Como corrigir', 'Previsão'].concat(stages.map(x => 'Dias: ' + x));
+    const head = ['Projeto', 'Código', 'Título', 'Tipo', 'Situação', 'Responsável', 'Dias na etapa', 'Dias aberto', 'Prazo', 'Concluído em', 'Devoluções', 'Nível', 'Alertas', 'Como corrigir', 'Previsão'].concat(stages.map(x => 'Dias: ' + x));
     const body = rows.map(r => { const a = r.a, by = {}; a.stages.forEach(x => { by[x.label] = x.days; });
-      return [r.p.name, r.i.id, r.i.title || '', a.stageLabel, r.i.assignee || '', a.done ? '' : a.stageAge, a.ageDays, r.due || '', a.returns || 0, LV[a.level][1], a.alerts.map(x => x.text).join(' | '), a.alerts.map(x => x.fix).join(' | '), a.eta && !a.done ? a.eta.date : ''].concat(stages.map(x => by[x] == null ? '' : by[x])); });
+      return [r.p.name, r.i.id, r.i.title || '', KIND_LBL[r.i.kind] || r.i.kind || '', a.stageLabel, r.i.assignee || '', a.done ? '' : a.stageAge, a.ageDays, r.due || '', r.dn || '', a.returns || 0, LV[a.level][1], a.alerts.map(x => x.text).join(' | '), a.alerts.map(x => x.fix).join(' | '), a.eta && !a.done ? a.eta.date : ''].concat(stages.map(x => by[x] == null ? '' : by[x])); });
     return [head].concat(body);
   }
   function exportXlsx() { const rows = exportRows(); if(rows.length < 2) { T.show('Nada para exportar com esses filtros.'); return; } XlsxExport.download('controle-de-cards-' + XlsxExport.stamp() + '.xlsx', [{ name: 'Controle de Cards', rows }]); }
@@ -22416,7 +22520,7 @@ const CardControl = (() => {
   }
   function more() { limit += 150; render(); }
   function openCard(pid, id) { try { DB.switchProject(pid); R.go('kanban'); setTimeout(() => { try { Agile.openItem(id); } catch(e) { /* abre o quadro */ } }, 450); } catch(e) { /* sem acesso */ } }
-  return { render, toggle, more, colsToggle, colsSet, colsReset, clearFilters, pickStatus, pickCell, openCard, exportRows, exportXlsx, exportCsv };
+  return { render, toggle, more, evoSet, colsToggle, colsSet, colsReset, clearFilters, pickStatus, pickCell, openCard, exportRows, exportXlsx, exportCsv };
 })();
 </script>
 
