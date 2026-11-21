@@ -64,6 +64,18 @@ const bugRows = await rows('#cc-root tr[data-key]');
 ok(bugN > 0 && bugRows === bugN && bugRows < total, 'Controle de Cards: tipo Bug mostra só os bugs (' + bugRows + ' de ' + total + ', igual à contagem do seletor)', 'seletor ' + bugN);
 await pg.evaluate(`CardControl.clearFilters()`); await pg.waitForTimeout(200);
 ok(await rows('#cc-root tr[data-key]') === total && await pg.evaluate(`document.getElementById('cc-kind').value === ''`), 'Controle de Cards: "Limpar" zera o tipo também');
+// Coerência: com um responsável filtrado, o Tipo (contagem), a lista, a pizza e o quadro Responsável × Situação mostram o mesmo conjunto
+await pg.evaluate(`CardControl.clearFilters(); const w = document.getElementById('cc-who'); const names = [...w.options].map(o => o.value).filter(Boolean); w.value = names[0]; CardControl.render()`); await pg.waitForTimeout(250);
+const co = await pg.evaluate(`(() => {
+  const n = id => [...document.querySelectorAll('#' + id + ' option')].map(o => [o.value, Number((o.textContent.match(/[(]([0-9]+)[)]/) || [])[1])]);
+  const list = document.querySelectorAll('#cc-root tr[data-key]').length, who = document.getElementById('cc-who').value;
+  const kinds = n('cc-kind').filter(x => x[0]).reduce((a, x) => a + x[1], 0), sts = n('cc-st').filter(x => x[0]).reduce((a, x) => a + x[1], 0);
+  const pie = Number((document.querySelector('#cc-pie text') || {}).textContent || 0);
+  const mxNames = [...document.querySelectorAll('#cc-matrix tbody tr td:first-child')].map(t => t.textContent.trim());
+  return { list, kinds, sts, pie, who, mxNames };
+})()`);
+ok(co.list > 0 && co.kinds === co.list && co.sts === co.list && co.pie === co.list, 'Controle de Cards: Tipo, Situação, pizza e lista concordam com o responsável filtrado', JSON.stringify(co));
+ok(co.mxNames.length === 1 && co.mxNames[0] === co.who, 'Controle de Cards: o quadro Responsável × Situação mostra só o responsável filtrado', JSON.stringify(co.mxNames));
 ok(!errs.length, 'nenhum erro de JavaScript', errs.slice(0, 2).join(' | '));
 await b.close(); srv.close();
 console.log(fail ? `\n${fail} falha(s).` : '\nFiltro por tipo: tudo certo.');

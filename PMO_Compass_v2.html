@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.113.4'
+  version: '2.113.5'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -22302,23 +22302,32 @@ const CardControl = (() => {
     return { rows: out, today };
   }
   const KIND_LBL = { bug: 'Bug', historia: 'História', tarefa: 'Tarefa', epico: 'Épico' };
-  const kindOk = r => { const k = el('cc-kind'); return !k || !k.value || r.i.kind === k.value; };
-  function fillSelect(id, values, cur) { const s = el(id); if(!s) return; const first = s.options[0] ? s.options[0].outerHTML : '<option value="">Todos</option>'; s.innerHTML = first + values.map(v => '<option value="' + esc(v) + '"' + (v === cur ? ' selected' : '') + '>' + esc(v) + '</option>').join(''); }
+  const wkey = r => String(r.i.assignee || '').trim();
+  // Um só conjunto de filtros para a lista, os números, a pizza, o quadro, os seletores e a exportação
+  const filt = () => ({ proj: el('cc-proj').value, st: el('cc-st').value, who: el('cc-who').value, kind: el('cc-kind') ? el('cc-kind').value : '', q: String((el('cc-q') || {}).value || '').toLowerCase(), alert: !!(el('cc-alert') || {}).checked });
+  const pass = (r, fl, skip) => (skip === 'proj' || !fl.proj || r.p.name === fl.proj) && (skip === 'st' || !fl.st || r.a.stageLabel === fl.st) && (skip === 'who' || !fl.who || wkey(r) === fl.who) && (skip === 'kind' || !fl.kind || r.i.kind === fl.kind)
+    && (!fl.q || (r.i.id + ' ' + r.i.title).toLowerCase().indexOf(fl.q) >= 0) && (!fl.alert || r.a.alerts.length);
+  function facet(id, keyFn, skip, fl, all, labelFn, cmp) {
+    const s = el(id); if(!s) return; const cur = s.value, first = s.options[0] ? s.options[0].outerHTML : '<option value="">Todos</option>', cnt = {};
+    all.filter(r => pass(r, fl, skip)).forEach(r => { const k = keyFn(r); if(k) cnt[k] = (cnt[k] || 0) + 1; });
+    const keys = Object.keys(cnt); if(cur && !(cur in cnt)) keys.push(cur);
+    s.innerHTML = first + keys.sort(cmp).map(k => '<option value="' + esc(k) + '"' + (k === cur ? ' selected' : '') + '>' + esc(labelFn ? labelFn(k) : k) + ' (' + (cnt[k] || 0) + ')</option>').join('');
+  }
   function render() {
     if(!el('cc-root')) return;
     const incl = !!(el('cc-done') || {}).checked, g = gather(incl);
-    const curP = el('cc-proj').value, curS = el('cc-st').value, curW = el('cc-who').value;
-    fillSelect('cc-proj', [...new Set(g.rows.map(r => r.p.name))].sort((a, b) => a.localeCompare(b, 'pt-BR')), curP);
-    fillSelect('cc-st', [...new Set(g.rows.map(r => r.a.stageLabel))].sort((a, b) => a.localeCompare(b, 'pt-BR')), curS);
-    fillSelect('cc-who', [...new Set(g.rows.map(r => String(r.i.assignee || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), curW);
-    { const ks = el('cc-kind'), curK = ks ? ks.value : ''; if(ks) ks.innerHTML = '<option value="">Todos</option>' + Object.keys(KIND_LBL).filter(k => g.rows.some(r => r.i.kind === k) || k === curK).map(k => '<option value="' + k + '"' + (k === curK ? ' selected' : '') + '>' + KIND_LBL[k] + ' (' + g.rows.filter(r => r.i.kind === k).length + ')</option>').join(''); }
-    const q = String((el('cc-q') || {}).value || '').toLowerCase(), onlyAlert = !!(el('cc-alert') || {}).checked;
-    const rows = g.rows.filter(r => (!el('cc-proj').value || r.p.name === el('cc-proj').value) && (!el('cc-st').value || r.a.stageLabel === el('cc-st').value) && (!el('cc-who').value || String(r.i.assignee || '').trim() === el('cc-who').value) && kindOk(r)
-      && (!q || (r.i.id + ' ' + r.i.title).toLowerCase().indexOf(q) >= 0) && (!onlyAlert || r.a.alerts.length)).sort((a, b) => (b.a.level === 'red') - (a.a.level === 'red') || b.a.alerts.length - a.a.alerts.length || b.a.stageAge - a.a.stageAge);
+    const fl = filt();
+    // Cada seletor mostra só o que existe dentro dos OUTROS filtros, com a contagem; o escolhido nunca some
+    const byName = (x, y) => x.localeCompare(y, 'pt-BR');
+    facet('cc-proj', r => r.p.name, 'proj', fl, g.rows, null, byName);
+    facet('cc-st', r => r.a.stageLabel, 'st', fl, g.rows, null, byName);
+    facet('cc-who', wkey, 'who', fl, g.rows, null, byName);
+    facet('cc-kind', r => r.i.kind, 'kind', fl, g.rows, k => KIND_LBL[k] || k, (x, y) => byName(KIND_LBL[x] || x, KIND_LBL[y] || y));
+    const rows = g.rows.filter(r => pass(r, fl)).sort((a, b) => (b.a.level === 'red') - (a.a.level === 'red') || b.a.alerts.length - a.a.alerts.length || b.a.stageAge - a.a.stageAge);
     const open = rows.filter(r => !r.a.done), kp = (lbl, v, sub, tone) => '<div class="kpi"><div class="kpi-lbl">' + lbl + '</div><div class="kpi-val" style="color:' + (tone || 'var(--t1)') + '">' + v + '</div><div class="kpi-delta">' + sub + '</div></div>';
     const stalled = open.filter(r => r.a.alerts.some(x => x.text.indexOf('Parado') === 0)).length, late = open.filter(r => r.a.alerts.some(x => x.text.indexOf('Prazo vencido') === 0)).length, ret = open.filter(r => r.a.returns > 0).length, withAl = open.filter(r => r.a.alerts.length).length;
     el('cc-kpis').innerHTML = kp('Cards abertos', open.length, 'em ' + new Set(open.map(r => r.p.id)).size + ' projeto(s) e quadro(s)') + kp('Com alerta', withAl, 'o sistema recomenda agir', withAl ? 'var(--amb)' : 'var(--grn)') + kp('Parados', stalled, 'além do esperado na etapa', stalled ? 'var(--red)' : 'var(--grn)') + kp('Prazo vencido', late, 'ainda abertos', late ? 'var(--red)' : 'var(--grn)') + kp('Devolvidos', ret, 'voltaram de etapa ao menos uma vez', ret ? 'var(--amb)' : 'var(--grn)');
-    charts(g, rows, q, onlyAlert);
+    charts(g, rows);
     if(!g.rows.length) { el('cc-root').innerHTML = '<div class="rk-empty">Nenhum card aberto nos projetos e quadros que você acessa.</div>'; return; }
     const part = rows.slice(0, limit);
     el('cc-root').innerHTML = (rows.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Projeto</th><th scope="col">Card</th><th scope="col">Situação</th><th scope="col">Responsável</th><th scope="col" class="num">Na etapa</th><th scope="col" class="num">Aberto há</th><th scope="col">Prazo</th><th scope="col" class="num">Devol.</th><th scope="col">Leitura do sistema</th></tr></thead><tbody>'
@@ -22330,8 +22339,8 @@ const CardControl = (() => {
   }
   // Gráficos: pizza por situação (à direita dos números) e quadro Responsável × Situação; clicar filtra a lista
   const PAL = ['var(--b3)', 'var(--pur)', 'var(--amb)', 'var(--grn)', 'var(--acc)', 'var(--red)'];
-  function charts(g, rows, q, onlyAlert) {
-    const base = g.rows.filter(r => (!el('cc-proj').value || r.p.name === el('cc-proj').value) && kindOk(r) && (!q || (r.i.id + ' ' + r.i.title).toLowerCase().indexOf(q) >= 0) && (!onlyAlert || r.a.alerts.length));
+  function charts(g, rows) {
+    const base = rows; // o quadro mostra o mesmo conjunto da lista: respeita projeto, situação, responsável, tipo, busca e alerta
     const sts = [...new Set(g.rows.map(r => r.a.stageLabel))].sort((a, b) => a.localeCompare(b, 'pt-BR')), col = l => PAL[sts.indexOf(l) % PAL.length];
     const who = r => String(r.i.assignee || '').trim(), curW = el('cc-who').value, curS = el('cc-st').value;
     const pr = rows, tot = pr.length;
@@ -22340,9 +22349,9 @@ const CardControl = (() => {
     const ring = segs.map(x => { const pc = x.n / tot * 100, c = '<circle cx="21" cy="21" r="15.9155" fill="none" stroke="' + col(x.l) + '" stroke-width="7" stroke-dasharray="' + pc + ' ' + (100 - pc) + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 21 21)"></circle>'; off += pc; return c; }).join('');
     el('cc-pie').innerHTML = tot ? '<svg viewBox="0 0 42 42" width="132" height="132" role="img" aria-label="Cards por situação: ' + segs.map(x => esc(x.l) + ' ' + x.n).join(', ') + '"><circle cx="21" cy="21" r="15.9155" fill="none" stroke="var(--s3)" stroke-width="7"></circle>' + ring + '<text x="21" y="22" text-anchor="middle" font-size="8" font-weight="700" fill="var(--t1)">' + tot + '</text><text x="21" y="28" text-anchor="middle" font-size="3.4" fill="var(--t2)">cards</text></svg>'
       + '<div class="cc-leg"><div class="set-sub" style="font-weight:700;text-transform:uppercase">Por situação' + (curW ? ' · ' + esc(curW) : '') + '</div>' + segs.map(x => '<button type="button" class="' + (x.l === curS ? 'on' : '') + '" data-st="' + esc(x.l) + '" onclick="CardControl.pickStatus(this.dataset.st)" aria-pressed="' + (x.l === curS) + '"><span class="cc-dot" style="background:' + col(x.l) + '"></span>' + esc(x.l) + ' <b style="margin-left:auto">' + x.n + '</b> <span class="set-sub">' + Math.round(x.n / tot * 100) + '%</span></button>').join('') + '</div>' : '<div class="rk-empty">Sem cards para o gráfico.</div>';
-    const names = [...new Set(base.map(who))].sort((a, b) => (!a) - (!b) || a.localeCompare(b, 'pt-BR')), mx = Math.max(1, ...names.flatMap(n => sts.map(l => base.filter(r => who(r) === n && r.a.stageLabel === l).length)));
-    el('cc-matrix').innerHTML = names.length ? '<div class="set-sub" style="font-weight:700;text-transform:uppercase;margin-bottom:6px">Quem está com quê: cards por responsável e situação (clique no número para filtrar)</div><div class="set-sub" style="margin-bottom:6px">Mostra todos os responsáveis do projeto e da busca, para você navegar; a linha destacada é a pessoa que está filtrada.</div><div class="tbl-wrap"><table class="tbl cc-mx" data-nodrag="1"><thead><tr><th scope="col">Responsável</th>' + sts.map(l => '<th scope="col" class="num"><span class="cc-dot" style="background:' + col(l) + ';display:inline-block;margin-right:4px"></span>' + esc(l) + '</th>').join('') + '<th scope="col" class="num">Total</th></tr></thead><tbody>'
-      + names.map(n => '<tr' + (curW && n === curW ? ' style="background:var(--ad)"' : '') + '><td>' + (n ? esc(n) : '<i>(sem responsável)</i>') + '</td>' + sts.map(l => { const c = base.filter(r => who(r) === n && r.a.stageLabel === l).length; return '<td class="num">' + (c ? '<button type="button" data-w="' + esc(n) + '" data-st="' + esc(l) + '" onclick="CardControl.pickCell(this.dataset.w, this.dataset.st)" aria-label="' + esc((n || 'Sem responsável') + ', ' + l + ': ' + c + ' card(s). Filtrar') + '">' + c + '</button><div class="cc-bar" style="width:' + Math.max(8, c / mx * 100) + '%;background:' + col(l) + '"></div>' : '<span class="set-sub">·</span>') + '</td>'; }).join('') + '<td class="num"><b>' + base.filter(r => who(r) === n).length + '</b></td></tr>').join('') + '</tbody></table></div>' : '';
+    const names = [...new Set(base.map(who))].sort((a, b) => (!a) - (!b) || a.localeCompare(b, 'pt-BR')), cols = sts.filter(l => base.some(r => r.a.stageLabel === l)), mx = Math.max(1, ...names.flatMap(n => cols.map(l => base.filter(r => who(r) === n && r.a.stageLabel === l).length)));
+    el('cc-matrix').innerHTML = names.length ? '<div class="set-sub" style="font-weight:700;text-transform:uppercase;margin-bottom:6px">Quem está com quê: cards por responsável e situação (clique no número para filtrar)</div><div class="set-sub" style="margin-bottom:6px">Respeita todos os filtros acima. Para ver as outras pessoas, use Limpar Filtros; a linha destacada é a pessoa filtrada.</div><div class="tbl-wrap"><table class="tbl cc-mx" data-nodrag="1"><thead><tr><th scope="col">Responsável</th>' + cols.map(l => '<th scope="col" class="num"><span class="cc-dot" style="background:' + col(l) + ';display:inline-block;margin-right:4px"></span>' + esc(l) + '</th>').join('') + '<th scope="col" class="num">Total</th></tr></thead><tbody>'
+      + names.map(n => '<tr' + (curW && n === curW ? ' style="background:var(--ad)"' : '') + '><td>' + (n ? esc(n) : '<i>(sem responsável)</i>') + '</td>' + cols.map(l => { const c = base.filter(r => who(r) === n && r.a.stageLabel === l).length; return '<td class="num">' + (c ? '<button type="button" data-w="' + esc(n) + '" data-st="' + esc(l) + '" onclick="CardControl.pickCell(this.dataset.w, this.dataset.st)" aria-label="' + esc((n || 'Sem responsável') + ', ' + l + ': ' + c + ' card(s). Filtrar') + '">' + c + '</button><div class="cc-bar" style="width:' + Math.max(8, c / mx * 100) + '%;background:' + col(l) + '"></div>' : '<span class="set-sub">·</span>') + '</td>'; }).join('') + '<td class="num"><b>' + base.filter(r => who(r) === n).length + '</b></td></tr>').join('') + '</tbody></table></div>' : '';
   }
   function clearFilters() { ['cc-proj', 'cc-st', 'cc-who', 'cc-kind'].forEach(id => { if(el(id)) el(id).value = ''; }); if(el('cc-q')) el('cc-q').value = ''; ['cc-alert', 'cc-done'].forEach(id => { if(el(id)) el(id).checked = false; }); limit = 150; render(); }
   function pickStatus(l) { const s = el('cc-st'); s.value = s.value === l ? '' : l; limit = 150; render(); }
@@ -22363,9 +22372,8 @@ const CardControl = (() => {
   function toggle(key) { openKey = key === openKey ? null : key; render(); const r = document.querySelector('#cc-root tr[data-key="' + (openKey || '').replace(/"/g, '') + '"]'); if(r) r.focus(); }
   // Exporta a lista filtrada (Excel ou CSV) com o tempo em cada etapa, um por coluna
   function exportRows() {
-    const incl = !!(el('cc-done') || {}).checked, g = gather(incl), q = String((el('cc-q') || {}).value || '').toLowerCase(), onlyAlert = !!(el('cc-alert') || {}).checked;
-    const rows = g.rows.filter(r => (!el('cc-proj').value || r.p.name === el('cc-proj').value) && (!el('cc-st').value || r.a.stageLabel === el('cc-st').value) && (!el('cc-who').value || String(r.i.assignee || '').trim() === el('cc-who').value) && kindOk(r)
-      && (!q || (r.i.id + ' ' + r.i.title).toLowerCase().indexOf(q) >= 0) && (!onlyAlert || r.a.alerts.length));
+    const incl = !!(el('cc-done') || {}).checked, g = gather(incl), fl = filt();
+    const rows = g.rows.filter(r => pass(r, fl));
     const stages = []; rows.forEach(r => r.a.stages.forEach(x => { if(stages.indexOf(x.label) < 0) stages.push(x.label); }));
     const head = ['Projeto', 'Código', 'Título', 'Situação', 'Responsável', 'Dias na etapa', 'Dias aberto', 'Prazo', 'Devoluções', 'Nível', 'Alertas', 'Como corrigir', 'Previsão'].concat(stages.map(x => 'Dias: ' + x));
     const body = rows.map(r => { const a = r.a, by = {}; a.stages.forEach(x => { by[x.label] = x.days; });
