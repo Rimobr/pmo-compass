@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.113.10'
+  version: '2.113.11'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -376,6 +376,8 @@ html[data-theme="light"] .sidebar{--sb-dark:93%}
 .cc-chip{display:inline-flex;gap:4px;align-items:center;border:1px solid var(--b1);border-radius:8px;padding:3px 8px;font-size:12px;color:var(--t2)}
 .cc-chip.on{cursor:grab;background:var(--s2);color:var(--t1)}.cc-chip.on:active{cursor:grabbing}.cc-chip label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
 .cc-chip .ti-grip-vertical{color:var(--t3);font-size:14px}.cc-chip.cc-over{outline:2px dashed var(--acc);outline-offset:1px}
+.cc-filt.cc-filt3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:600px){.cc-filt.cc-filt3{grid-template-columns:minmax(0,1fr)}}
 .cc-listbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;margin-bottom:10px}
 .cc-act{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-top:12px}
 @media(min-width:1500px){.cc-filt{grid-template-columns:repeat(6,minmax(0,1fr))}}
@@ -1704,7 +1706,8 @@ body.icons-failed i[data-fb]::before{
   <div class="pg-hdr">
     <div><div class="pg-title"><i class="ti ti-list-search" style="color:var(--acc)"></i> Controle de Cards<span class="help-q" data-help="Todos os cards abertos de todos os projetos e quadros que você acessa: situação, por que está assim, há quanto tempo está em cada etapa e o que o sistema recomenda. Clique numa linha para ver a linha do tempo do card." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><div class="pg-sub">Cada card, em cada projeto: por que está assim, quanto tempo ficou em cada etapa e o que fazer.</div></div>
   </div>
-  <div class="cc-top"><div class="cc-kpis" id="cc-kpis"></div><div class="card cc-pie" id="cc-pie"></div></div>
+  <div class="pg-tabs" role="tablist" aria-label="Controle de Cards"><button class="pg-tab" id="cc-tab-cards" role="tab" aria-selected="true" aria-controls="cc-pane-cards" onclick="CardControl.tab('cards')"><i class="ti ti-list-search"></i>Cards</button><button class="pg-tab" id="cc-tab-evo" role="tab" aria-selected="false" aria-controls="cc-pane-evo" onclick="CardControl.tab('evo')"><i class="ti ti-chart-bar"></i>Evolução das Entregas</button></div>
+  <div id="cc-pane-cards" role="tabpanel" aria-labelledby="cc-tab-cards">
   <div class="card" style="margin-bottom:12px">
     <div class="cc-filt">
       <div><label class="set-sub" for="cc-per">Período</label><select class="input" id="cc-per" onchange="CardControl.render()"><option value="now">Abertos agora</option></select></div>
@@ -1720,13 +1723,25 @@ body.icons-failed i[data-fb]::before{
     </div>
     <div id="cc-scope" class="set-sub" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--b1)" role="status" aria-live="polite"></div>
   </div>
-  <div class="card" id="cc-evo" style="margin-bottom:12px"></div>
+  <div class="cc-top"><div class="cc-kpis" id="cc-kpis"></div><div class="card cc-pie" id="cc-pie"></div></div>
   <div class="card" id="cc-matrix" style="margin-bottom:12px"></div>
   <div class="card">
     <div class="cc-listbar"><div class="set-sub" id="cc-listinfo" aria-live="polite"></div>
       <div class="btn-row"><button class="btn btn-sm" id="cc-cols-btn" aria-expanded="false" aria-controls="cc-cols-panel" onclick="CardControl.colsToggle()"><i class="ti ti-columns-3"></i>Colunas</button><button class="btn btn-sm" onclick="CardControl.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button><button class="btn btn-sm" onclick="CardControl.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button></div></div>
     <div id="cc-cols-panel" hidden style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--b1)"></div>
     <div id="cc-root"></div>
+  </div>
+  </div>
+  <div id="cc-pane-evo" role="tabpanel" aria-labelledby="cc-tab-evo" hidden>
+    <div class="card" style="margin-bottom:12px">
+      <div class="cc-filt cc-filt3">
+        <div><label class="set-sub" for="ev-proj">Projeto</label><select class="input" id="ev-proj" onchange="CardControl.render()"><option value="">Todos</option></select></div>
+        <div><label class="set-sub" for="ev-who">Responsável</label><select class="input" id="ev-who" onchange="CardControl.render()"><option value="">Todos</option></select></div>
+        <div><label class="set-sub" for="ev-kind">Tipo</label><select class="input" id="ev-kind" onchange="CardControl.render()"><option value="">Todos</option></select></div>
+      </div>
+      <div class="cc-act"><div class="set-sub" id="ev-scope" role="status" aria-live="polite"></div><div class="btn-row"><button class="btn btn-sm" onclick="CardControl.evoClear()"><i class="ti ti-filter-off"></i>Limpar Filtros</button></div></div>
+      <div id="cc-evo" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--b1)"></div>
+    </div>
   </div>
 </section>
 
@@ -22438,7 +22453,11 @@ const CardControl = (() => {
     const doneTotal = fl.per === 'now' ? g.rows.filter(r => r.a.done && pass(r, fl, 'per')).length : doneRows.length;
     scopeLine(g, fl, rows);
     { const li = el('cc-listinfo'); if(li) li.innerHTML = '<b>Lista:</b> ' + rows.length + ' card(s)' + (rows.length > limit ? ', mostrando os ' + limit + ' primeiros' : ''); }
-    evoRender(g, fl);
+    // A evolução é outro contexto (aba própria): tem os seus filtros e nada do que está nos filtros dos Cards mexe nela
+    { const fe = { proj: el('ev-proj').value, who: el('ev-who').value, kind: el('ev-kind').value, st: '', per: 'all', q: '', alert: false, today: g.today };
+      facet('ev-proj', r => r.p.name, 'proj', fe, g.rows, null, byName); facet('ev-who', wkey, 'who', fe, g.rows, null, byName);
+      facet('ev-kind', r => r.i.kind, 'kind', fe, g.rows, k => KIND_LBL[k] || k, (x, y) => byName(KIND_LBL[x] || x, KIND_LBL[y] || y));
+      evoRender(g, Object.assign(fe, { proj: el('ev-proj').value, who: el('ev-who').value, kind: el('ev-kind').value })); }
     el('cc-kpis').innerHTML = kp('Concluídos', doneTotal, doneSub, doneTotal ? 'var(--grn)' : '') + kp('Cards abertos', open.length, 'em ' + new Set(open.map(r => r.p.id)).size + ' projeto(s) e quadro(s)') + kp('Com alerta', withAl, 'o sistema recomenda agir', withAl ? 'var(--amb)' : 'var(--grn)') + kp('Parados', stalled, 'além do esperado na etapa', stalled ? 'var(--red)' : 'var(--grn)') + kp('Prazo vencido', late, 'ainda abertos', late ? 'var(--red)' : 'var(--grn)') + kp('Devolvidos', ret, 'voltaram de etapa ao menos uma vez', ret ? 'var(--amb)' : 'var(--grn)');
     charts(g, rows);
     if(!g.rows.length) { el('cc-root').innerHTML = '<div class="rk-empty">Nenhum card nos projetos e quadros que você acessa.</div>'; return; }
@@ -22495,11 +22514,18 @@ const CardControl = (() => {
   // Evolução das entregas: por sprint (entraram, concluídos, transbordo), por semana ou por mês; segue Projeto, Responsável, Tipo e Busca
   let evoMode = 'sprint';
   function evoSet(m) { evoMode = m; render(); }
+  function evoClear() { ['ev-proj', 'ev-who', 'ev-kind'].forEach(id => { if(el(id)) el(id).value = ''; }); render(); }
+  // Abas: Cards (filtros, números, pizza, quadro e lista, tudo sob os mesmos filtros) e Evolução das Entregas (filtros próprios)
+  function tab(t) {
+    const evo = t === 'evo';
+    [['cards', !evo], ['evo', evo]].forEach(([k, on]) => { const p = el('cc-pane-' + k), b = el('cc-tab-' + k); if(p) p.hidden = !on; if(b) b.setAttribute('aria-selected', String(on)); });
+    render();
+  }
   const pct = (a, b) => b ? Math.round(a / b * 100) : null;
   function weekStart(iso) { const d = new Date(iso + 'T00:00:00Z'), k = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - k); return d.toISOString().slice(0, 10); }
   function evoRender(g, fl) {
     const box = el('cc-evo'); if(!box) return; const fmtD = iso => iso ? iso.split('-').reverse().slice(0, 2).join('/') : '';
-    const base = g.rows.filter(r => pass(r, fl, 'st,per')), today = fl.today;
+    const base = g.rows.filter(r => pass(r, fl)), today = fl.today;
     let lines = [], cols = [], note = '', closed = [];
     if(evoMode === 'sprint') {
       const map = {};
@@ -22537,7 +22563,8 @@ const CardControl = (() => {
       + lines.map(x => '<tr><td>' + esc(x.label) + (x.sub ? ' <span class="set-sub">' + esc(x.sub) + '</span>' : '') + '</td>' + (evoMode === 'sprint' ? '<td class="num">' + x.entered + '</td>' : '') + '<td class="num"><b>' + x.done + '</b></td>' + (evoMode === 'sprint' ? '<td class="num">' + (x.carry == null ? '—' : x.carry) + '</td><td class="num">' + (pct(x.done, x.entered) == null ? '—' : pct(x.done, x.entered) + '%') + '</td>' : '') + '<td><div class="cc-bar" style="width:' + Math.max(4, x.done / mx * 100) + '%;background:var(--b3);opacity:' + (x.active ? '.55' : '1') + '" aria-hidden="true"></div></td></tr>').join('') + '</tbody></table></div>'
       : '<div class="rk-empty">Sem cards ' + (evoMode === 'sprint' ? 'em sprints' : 'concluídos') + ' para mostrar com esses filtros.</div>';
     box.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px"><div class="set-sub" style="font-weight:700;text-transform:uppercase">Evolução das entregas</div><div class="btn-row" role="group" aria-label="Agrupar a evolução">' + tab('sprint', 'Por sprint') + tab('week', 'Por semana') + tab('month', 'Por mês') + '</div></div>'
-      + '<div style="margin-bottom:8px">' + read + '</div>' + table + '<div class="set-sub" style="margin-top:6px">' + esc(note) + ' Segue Projeto, Responsável, Tipo e Busca; não segue Situação nem Período.</div>';
+      + '<div style="margin-bottom:8px">' + read + '</div>' + table + '<div class="set-sub" style="margin-top:6px">' + esc(note) + '</div>';
+    const sc = el('ev-scope'); if(sc) sc.innerHTML = '<b>Mostrando:</b> ' + (evoMode === 'sprint' ? 'as últimas 8 sprints' : evoMode === 'week' ? 'as últimas 8 semanas' : 'os últimos 6 meses') + ' · ' + esc(fl.proj || 'todos os projetos e quadros') + ' · ' + esc(fl.who || 'todos os responsáveis') + ' · ' + esc(fl.kind ? (KIND_LBL[fl.kind] || fl.kind) : 'todos os tipos') + ' · ' + base.length + ' card(s) considerados. Independe dos filtros da aba Cards.';
   }
   function clearFilters() { ['cc-proj', 'cc-st', 'cc-who', 'cc-kind'].forEach(id => { if(el(id)) el(id).value = ''; }); if(el('cc-per')) el('cc-per').value = 'now'; if(el('cc-q')) el('cc-q').value = ''; ['cc-alert'].forEach(id => { if(el(id)) el(id).checked = false; }); limit = 150; render(); }
   function pickStatus(l) { const s = el('cc-st'); s.value = s.value === l ? '' : l; limit = 150; render(); }
@@ -22576,7 +22603,7 @@ const CardControl = (() => {
   }
   function more() { limit += 150; render(); }
   function openCard(pid, id) { try { DB.switchProject(pid); R.go('kanban'); setTimeout(() => { try { Agile.openItem(id); } catch(e) { /* abre o quadro */ } }, 450); } catch(e) { /* sem acesso */ } }
-  return { render, toggle, more, evoSet, colsToggle, colsSet, colsMove, colsDragStart, colsDragOver, colsDragLeave, colsDrop, colsKey, colsReset, clearFilters, pickStatus, pickCell, openCard, exportRows, exportXlsx, exportCsv };
+  return { render, toggle, more, tab, evoClear, evoSet, colsToggle, colsSet, colsMove, colsDragStart, colsDragOver, colsDragLeave, colsDrop, colsKey, colsReset, clearFilters, pickStatus, pickCell, openCard, exportRows, exportXlsx, exportCsv };
 })();
 </script>
 

@@ -128,6 +128,13 @@ await setPer('all'); const pa = await perInfo();
 ok(pa.ids.includes('US-5') && pa.ids.includes('US-1') && pa.rows === pa.n, 'Período: "Tudo" traz abertos e concluídos (no lugar da caixa Incluir concluídos)', JSON.stringify(pa));
 await setPer('now'); const pn0 = await perInfo();
 ok(!pn0.ids.includes('US-5') && pn0.concl >= 2, 'Período: "Abertos agora" esconde os concluídos mas o cartão conta o histórico', JSON.stringify(pn0));
+// Abas: o que obedece aos filtros fica logo abaixo deles; a evolução é outra aba, com filtros próprios
+const ord = await pg.evaluate(`(() => { const q = id => document.getElementById(id), before = (a, b) => !!(q(a).compareDocumentPosition(q(b)) & Node.DOCUMENT_POSITION_FOLLOWING); return { filtrosAntes: before('cc-per', 'cc-kpis') && before('cc-kpis', 'cc-matrix') && before('cc-matrix', 'cc-root'), evoFora: !q('cc-pane-cards').contains(q('cc-evo')), evoOculta: q('cc-pane-evo').hidden, aba: q('cc-tab-cards').getAttribute('aria-selected') }; })()`);
+ok(ord.filtrosAntes && ord.evoFora && ord.evoOculta && ord.aba === 'true', 'Abas: filtros primeiro, depois números, quadro e lista; a evolução fica em outra aba', JSON.stringify(ord));
+await pg.evaluate(`CardControl.tab('evo')`); await pg.waitForTimeout(150);
+const ab = await pg.evaluate(`({ cards: document.getElementById('cc-pane-cards').hidden, evo: document.getElementById('cc-pane-evo').hidden, sel: document.getElementById('cc-tab-evo').getAttribute('aria-selected') })`);
+ok(ab.cards && !ab.evo && ab.sel === 'true', 'Abas: Evolução das Entregas troca o painel e marca a aba', JSON.stringify(ab));
+await pg.evaluate(`document.getElementById('ev-proj').value = window.__pn; CardControl.render()`); await pg.waitForTimeout(150);
 // Evolução das entregas
 const evo = () => pg.evaluate(`(() => { const t = document.querySelectorAll('#cc-evo tbody tr'); return { n: t.length, first: t[0] ? [...t[0].cells].map(c => c.textContent.trim()) : [], text: document.getElementById('cc-evo').textContent }; })()`);
 const e1 = await evo();
@@ -140,6 +147,12 @@ await pg.evaluate(`CardControl.evoSet('week')`); await pg.waitForTimeout(150);
 const ew = await evo(); ok(ew.n === 8, 'Evolução por semana: 8 semanas', String(ew.n));
 const sumW = await pg.evaluate(`[...document.querySelectorAll('#cc-evo tbody tr')].reduce((a, r) => a + Number(r.cells[1].textContent), 0)`);
 ok(sumW >= 1, 'Evolução por semana: o concluído de 3 dias atrás aparece', String(sumW));
+// Independência: mexer nos filtros dos Cards não muda a evolução, e limpar os da evolução não mexe nos Cards
+const evoAntes = (await evo()).text;
+await pg.evaluate(`CardControl.tab('cards'); document.getElementById('cc-per').value = 'd15'; document.getElementById('cc-who').value = ''; CardControl.render()`); await pg.waitForTimeout(150);
+ok((await evo()).text === evoAntes, 'Abas: filtrar os Cards (Período) não muda a Evolução');
+await pg.evaluate(`CardControl.evoClear()`); await pg.waitForTimeout(150);
+ok(await pg.evaluate(`document.getElementById('cc-per').value === 'd15' && document.getElementById('ev-proj').value === ''`), 'Abas: limpar os filtros da Evolução não mexe nos filtros dos Cards');
 await pg.evaluate(`CardControl.clearFilters()`); await pg.waitForTimeout(150);
 ok(await pg.evaluate(`document.getElementById('cc-per').value === 'now'`), 'Período: "Limpar Filtros" volta a Abertos agora');
 ok(!errs.length, 'nenhum erro de JavaScript', errs.slice(0, 2).join(' | '));

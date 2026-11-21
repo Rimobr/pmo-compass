@@ -23,7 +23,7 @@ const SCENES = [
   ['Visão do PMO (detalhe do cartão)', `R.go('pmoview'); PmoView.drill('No prazo')`, null],
   ['Controle de Cards', `R.go('cardcontrol')`, null],
   ['Controle de Cards (escolher colunas)', `R.go('cardcontrol'); CardControl.colsToggle()`, null],
-  ['Controle de Cards (entregas no período e evolução)', `R.go('cardcontrol'); document.getElementById('cc-per').value = 'd90'; CardControl.render(); CardControl.evoSet('week')`, null],
+  ['Controle de Cards (entregas no período e evolução)', `R.go('cardcontrol'); document.getElementById('cc-per').value = 'd90'; CardControl.render(); CardControl.tab('evo'); CardControl.evoSet('week')`, null],
   ['Controle de Cards (detalhe do card)', `R.go('cardcontrol'); const r = document.querySelector('#cc-root tr[data-key]'); if(r) CardControl.toggle(r.dataset.key)`, null],
   ['Transferir atividades (janela)', `R.go('mgrpanel'); const b = document.querySelector('#res-team-root [data-k]'); if(b) Resources.openTransfer(b.dataset.k)`, 'modal-transfer'],
   ['Diagnóstico PMO (antes de analisar)', `R.go('drpmo')`, null],
