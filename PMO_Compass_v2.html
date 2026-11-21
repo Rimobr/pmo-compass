@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.113.11'
+  version: '2.113.12'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1728,7 +1728,7 @@ body.icons-failed i[data-fb]::before{
   <div class="card">
     <div class="cc-listbar"><div class="set-sub" id="cc-listinfo" aria-live="polite"></div>
       <div class="btn-row"><button class="btn btn-sm" id="cc-cols-btn" aria-expanded="false" aria-controls="cc-cols-panel" onclick="CardControl.colsToggle()"><i class="ti ti-columns-3"></i>Colunas</button><button class="btn btn-sm" onclick="CardControl.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button><button class="btn btn-sm" onclick="CardControl.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button></div></div>
-    <div id="cc-cols-panel" hidden style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--b1)"></div>
+    <div id="cc-cols-panel" hidden onkeydown="if(event.key==='Escape'&&!event.defaultPrevented){CardControl.colsToggle(false)}" style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--b1)"></div>
     <div id="cc-root"></div>
   </div>
   </div>
@@ -22374,9 +22374,15 @@ const CardControl = (() => {
       + full.map(c => { const isOn = on.has(c.id);
         return '<span class="cc-chip' + (isOn ? ' on' : '') + '" data-c="' + c.id + '"' + (isOn ? ' draggable="true" tabindex="0" title="Arraste para mudar a ordem (ou Alt + seta esquerda/direita)" ondragstart="CardControl.colsDragStart(event)" ondragover="CardControl.colsDragOver(event)" ondragleave="CardControl.colsDragLeave(event)" ondrop="CardControl.colsDrop(event)" onkeydown="CardControl.colsKey(event)"' : '') + '>'
           + (isOn ? '<i class="ti ti-grip-vertical" aria-hidden="true"></i>' : '') + '<label><input type="checkbox" data-c="' + c.id + '"' + (isOn ? ' checked' : '') + (c.req ? ' disabled' : '') + ' onchange="CardControl.colsSet(this.dataset.c, this.checked)">' + esc(c.l) + (c.req ? ' (sempre)' : '') + '</label></span>'; }).join('')
-      + '<button type="button" class="btn btn-sm" onclick="CardControl.colsReset()"><i class="ti ti-restore"></i>Restaurar Padrão</button></div><div class="set-sub" style="margin-top:6px">Marque o que quer ver e arraste as colunas marcadas para mudar a ordem. Vale só para este navegador; a exportação leva todas as colunas.</div>';
+      + '<button type="button" class="btn btn-sm" onclick="CardControl.colsReset()"><i class="ti ti-restore"></i>Restaurar Padrão</button></div><div class="set-sub" style="margin-top:6px"><b>Salvo automaticamente</b> a cada marcação ou arrasto. Marque o que quer ver e arraste as marcadas para mudar a ordem. <b>Clique em Concluir</b> (botão acima, ou Esc) para esconder esta seleção. Vale só para este navegador; a exportação leva todas as colunas.</div>';
   }
-  function colsToggle() { const p = el('cc-cols-panel'), b = el('cc-cols-btn'); if(!p) return; const open = p.hidden; p.hidden = !open; if(b) b.setAttribute('aria-expanded', String(open)); if(open) colsPanel(); }
+  // Painel aberto: o botão vira "Concluir" (destacado) para deixar claro como esconder a seleção; fechado: volta a "Colunas"
+  function colsToggle(force) {
+    const p = el('cc-cols-panel'), b = el('cc-cols-btn'); if(!p) return; const open = typeof force === 'boolean' ? force : p.hidden;
+    p.hidden = !open;
+    if(b) { b.setAttribute('aria-expanded', String(open)); b.classList.toggle('btn-acc', open); b.innerHTML = open ? '<i class="ti ti-check"></i>Concluir' : '<i class="ti ti-columns-3"></i>Colunas'; b.title = open ? 'Fechar a seleção de colunas (as escolhas já estão salvas)' : 'Escolher as colunas da lista e a ordem'; }
+    if(open) colsPanel(); else if(b) b.focus();
+  }
   function colsSet(id, on) {
     const ids = visible().map(c => c.id), at = ids.indexOf(id);
     if(on && at < 0) { const di = x => COLS.findIndex(c => c.id === x), pos = ids.findIndex(x => di(x) > di(id)); if(pos < 0) ids.push(id); else ids.splice(pos, 0, id); }
@@ -22401,7 +22407,7 @@ const CardControl = (() => {
     if(at < 0) return; ids.splice(after ? at + 1 : at, 0, from); saveCols(ids); colsPanel(); render();
     const chip = document.querySelector('#cc-cols-panel .cc-chip[data-c="' + from + '"]'); if(chip) chip.focus();
   }
-  function colsKey(e) { const c = chipOf(e); if(!c || !e.altKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return; e.preventDefault(); colsMove(c.dataset.c, e.key === 'ArrowLeft' ? -1 : 1); }
+  function colsKey(e) { if(e.key === 'Escape') { e.preventDefault(); colsToggle(false); return; } const c = chipOf(e); if(!c || !e.altKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return; e.preventDefault(); colsMove(c.dataset.c, e.key === 'ArrowLeft' ? -1 : 1); }
   function colsReset() { try { localStorage.removeItem(COLS_KEY); } catch(e) { /* nada a limpar */ } colsPanel(); render(); }
   // Um só conjunto de filtros para a lista, os números, a pizza, o quadro, os seletores e a exportação
   const filt = g => ({ proj: el('cc-proj').value, st: el('cc-st').value, who: el('cc-who').value, kind: el('cc-kind') ? el('cc-kind').value : '', per: (el('cc-per') || {}).value || 'now', today: g ? g.today : new Date().toISOString().slice(0, 10), q: String((el('cc-q') || {}).value || '').toLowerCase(), alert: !!(el('cc-alert') || {}).checked });

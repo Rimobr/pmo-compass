@@ -85,6 +85,7 @@ const heads = () => pg.evaluate(`[...document.querySelectorAll('#cc-root thead t
 const h0 = await heads();
 ok(h0 === 'Projeto|Card|Situação|Responsável|Na etapa|Aberto há|Prazo|Devol.|Leitura do sistema', 'Colunas: o padrão continua igual ao de antes', h0);
 await pg.evaluate(`CardControl.colsToggle()`); await pg.waitForTimeout(100);
+ok(await pg.evaluate(`document.getElementById('cc-cols-btn').textContent.trim() === 'Concluir' && document.getElementById('cc-cols-btn').classList.contains('btn-acc') && /Salvo automaticamente/.test(document.getElementById('cc-cols-panel').textContent)`), 'Colunas: com o painel aberto o botão vira Concluir (destacado) e o painel diz que salva sozinho');
 ok(await pg.evaluate(`!document.getElementById('cc-cols-panel').hidden && document.getElementById('cc-cols-btn').getAttribute('aria-expanded') === 'true' && document.querySelectorAll('#cc-cols-panel input[type=checkbox]').length === 10 && document.querySelector('#cc-cols-panel input[data-c=card]').disabled`), 'Colunas: o painel abre com as 10 opções e "Card" não sai');
 await pg.evaluate(`CardControl.colsSet('age', false); CardControl.colsSet('kind', true)`); await pg.waitForTimeout(150);
 const h1 = await heads();
@@ -105,6 +106,8 @@ await pg.evaluate(`R.go('cardcontrol')`); await pg.waitForTimeout(400);
 ok((await heads()) === h2, 'Colunas: a ordem escolhida continua depois de recarregar a página');
 await pg.evaluate(`CardControl.colsReset()`); await pg.waitForTimeout(150);
 ok((await heads()) === h0, 'Colunas: "Restaurar Padrão" volta ao padrão (campos e ordem)');
+await pg.focus('#cc-cols-panel .cc-chip[data-c=card] input'); await pg.keyboard.press('Escape'); await pg.waitForTimeout(100);
+ok(await pg.evaluate(`document.getElementById('cc-cols-panel').hidden && document.getElementById('cc-cols-btn').textContent.trim() === 'Colunas' && !document.getElementById('cc-cols-btn').classList.contains('btn-acc')`), 'Colunas: Esc (ou clicar em Concluir) esconde a seleção e o botão volta a Colunas');
 // Período: o que a tela mostra precisa bater com o seletor, com o cartão "Concluídos" e com a linha de escopo
 await pg.evaluate(`CardControl.clearFilters(); const pn = DB.listProjects().concat(DB.listPortfolio ? [] : []).find(p => p.id === DB.getActiveProjectId()); window.__pn = pn ? pn.name : ''; const s = document.getElementById('cc-proj'); if (window.__pn) s.value = window.__pn; CardControl.render()`); await pg.waitForTimeout(200);
 const perInfo = () => pg.evaluate(`(() => {
