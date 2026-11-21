@@ -94,8 +94,15 @@ ok(['Bug', 'História', 'Tarefa'].includes(cell), 'Colunas: a coluna Tipo traz o
 await pg.reload({ waitUntil: 'domcontentloaded' }); await pg.waitForTimeout(1200);
 await pg.evaluate(`R.go('cardcontrol')`); await pg.waitForTimeout(400);
 ok((await heads()) === h1, 'Colunas: a escolha continua depois de recarregar a página');
+await pg.evaluate(`CardControl.colsToggle(); CardControl.colsMove('who', -1)`); await pg.waitForTimeout(150);
+const h2 = await heads();
+ok(h2 === 'Projeto|Card|Tipo|Responsável|Situação|Aberto há|Prazo|Devol.|Leitura do sistema', 'Colunas: ◀ muda a ordem (Responsável passa antes de Situação)', h2);
+ok(await pg.evaluate(`document.querySelectorAll('#cc-cols-panel button[aria-label^="Mover"]').length === 2 * document.querySelectorAll('#cc-root thead th').length && document.querySelector('#cc-cols-panel button[aria-label="Mover Projeto para a esquerda"]').disabled`), 'Colunas: cada coluna tem ◀ ▶ e a primeira não anda para a esquerda');
+await pg.reload({ waitUntil: 'domcontentloaded' }); await pg.waitForTimeout(1200);
+await pg.evaluate(`R.go('cardcontrol')`); await pg.waitForTimeout(400);
+ok((await heads()) === h2, 'Colunas: a ordem escolhida continua depois de recarregar a página');
 await pg.evaluate(`CardControl.colsReset()`); await pg.waitForTimeout(150);
-ok((await heads()) === h0, 'Colunas: "Restaurar Padrão" volta ao padrão');
+ok((await heads()) === h0, 'Colunas: "Restaurar Padrão" volta ao padrão (campos e ordem)');
 // Período: o que a tela mostra precisa bater com o seletor, com o cartão "Concluídos" e com a linha de escopo
 await pg.evaluate(`CardControl.clearFilters(); const pn = DB.listProjects().concat(DB.listPortfolio ? [] : []).find(p => p.id === DB.getActiveProjectId()); window.__pn = pn ? pn.name : ''; const s = document.getElementById('cc-proj'); if (window.__pn) s.value = window.__pn; CardControl.render()`); await pg.waitForTimeout(200);
 const perInfo = () => pg.evaluate(`(() => {
@@ -112,8 +119,11 @@ ok(p15.ids.includes('US-5') && !p15.ids.includes('US-6') && p15.rows === p15.n &
 ok(/concluídos de/.test(p15.scope) && new RegExp(p15.rows + ' card').test(p15.scope), 'Período: a linha de escopo diz o que está sendo mostrado', p15.scope);
 await setPer('d90'); const p90 = await perInfo();
 ok(p90.ids.includes('US-5') && p90.ids.includes('US-6') && p90.rows === p90.n, 'Período: últimos 90 dias traz também o concluído de 40 dias atrás', JSON.stringify(p90));
-await setPer('sp:Sprint 1'); const ps = await perInfo();
+const spVal = await pg.evaluate(`([...document.querySelectorAll('#cc-per option')].find(o => /^Sprint 1 /.test(o.textContent)) || {}).value`); ok(!!spVal, 'Período: a sprint aparece com nome e datas, agrupada em "Sprints"');
+await setPer(spVal); const ps = await perInfo();
 ok(ps.ids.includes('US-5') && ps.ids.includes('US-6') && !ps.ids.includes('US-1') && ps.rows === ps.n, 'Período: escolher uma sprint traz os cards dela (concluídos inclusive)', JSON.stringify(ps));
+await setPer('all'); const pa = await perInfo();
+ok(pa.ids.includes('US-5') && pa.ids.includes('US-1') && pa.rows === pa.n, 'Período: "Tudo" traz abertos e concluídos (no lugar da caixa Incluir concluídos)', JSON.stringify(pa));
 await setPer('now'); const pn0 = await perInfo();
 ok(!pn0.ids.includes('US-5') && pn0.concl >= 2, 'Período: "Abertos agora" esconde os concluídos mas o cartão conta o histórico', JSON.stringify(pn0));
 // Evolução das entregas
