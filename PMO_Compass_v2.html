@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.113.9'
+  version: '2.113.10'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -373,6 +373,9 @@ html[data-theme="light"] .sidebar{--sb-dark:93%}
 .proj-pick-list label:hover{background:var(--s2)}
 .cc-filt{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 12px;align-items:end}
 .cc-filt label{display:block;margin-bottom:3px}.cc-filt .input{width:100%;min-width:0}.cc-filt-q{grid-column:span 1}
+.cc-chip{display:inline-flex;gap:4px;align-items:center;border:1px solid var(--b1);border-radius:8px;padding:3px 8px;font-size:12px;color:var(--t2)}
+.cc-chip.on{cursor:grab;background:var(--s2);color:var(--t1)}.cc-chip.on:active{cursor:grabbing}.cc-chip label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+.cc-chip .ti-grip-vertical{color:var(--t3);font-size:14px}.cc-chip.cc-over{outline:2px dashed var(--acc);outline-offset:1px}
 .cc-listbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;margin-bottom:10px}
 .cc-act{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-top:12px}
 @media(min-width:1500px){.cc-filt{grid-template-columns:repeat(6,minmax(0,1fr))}}
@@ -22352,11 +22355,11 @@ const CardControl = (() => {
   const saveCols = ids => { try { localStorage.setItem(COLS_KEY, JSON.stringify(ids)); } catch(e) { /* sem armazenamento: vale só nesta tela */ } };
   function colsPanel() {
     const p = el('cc-cols-panel'); if(!p) return; const vis = visible(), on = new Set(vis.map(c => c.id)), full = vis.concat(COLS.filter(c => !on.has(c.id)));
-    p.innerHTML = '<div class="set-sub" style="font-weight:700;text-transform:uppercase;margin-bottom:6px">Colunas da lista: o que aparece e em que ordem</div><div style="display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center">'
-      + full.map(c => { const i = vis.findIndex(x => x.id === c.id), isOn = i >= 0;
-        return '<span class="set-sub" style="display:inline-flex;gap:4px;align-items:center;border:1px solid var(--b1);border-radius:8px;padding:3px 6px"><label style="display:inline-flex;gap:5px;align-items:center"><input type="checkbox" data-c="' + c.id + '"' + (isOn ? ' checked' : '') + (c.req ? ' disabled' : '') + ' onchange="CardControl.colsSet(this.dataset.c, this.checked)">' + esc(c.l) + (c.req ? ' (sempre)' : '') + '</label>'
-          + (isOn ? '<button type="button" class="btn btn-sm" style="padding:0 5px" aria-label="Mover ' + esc(c.l) + ' para a esquerda" title="Mover para a esquerda"' + (i === 0 ? ' disabled' : '') + ' onclick="CardControl.colsMove(\'' + c.id + '\', -1)">◀</button><button type="button" class="btn btn-sm" style="padding:0 5px" aria-label="Mover ' + esc(c.l) + ' para a direita" title="Mover para a direita"' + (i === vis.length - 1 ? ' disabled' : '') + ' onclick="CardControl.colsMove(\'' + c.id + '\', 1)">▶</button>' : '') + '</span>'; }).join('')
-      + '<button type="button" class="btn btn-sm" onclick="CardControl.colsReset()"><i class="ti ti-restore"></i>Restaurar Padrão</button></div><div class="set-sub" style="margin-top:6px">Marque para mostrar, use ◀ ▶ para mudar a ordem. Também dá para arrastar o título da coluna na tabela. A escolha vale só para este navegador; a exportação continua levando todas as colunas.</div>';
+    p.innerHTML = '<div class="set-sub" style="font-weight:700;text-transform:uppercase;margin-bottom:6px">Colunas da lista</div><div style="display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center">'
+      + full.map(c => { const isOn = on.has(c.id);
+        return '<span class="cc-chip' + (isOn ? ' on' : '') + '" data-c="' + c.id + '"' + (isOn ? ' draggable="true" tabindex="0" title="Arraste para mudar a ordem (ou Alt + seta esquerda/direita)" ondragstart="CardControl.colsDragStart(event)" ondragover="CardControl.colsDragOver(event)" ondragleave="CardControl.colsDragLeave(event)" ondrop="CardControl.colsDrop(event)" onkeydown="CardControl.colsKey(event)"' : '') + '>'
+          + (isOn ? '<i class="ti ti-grip-vertical" aria-hidden="true"></i>' : '') + '<label><input type="checkbox" data-c="' + c.id + '"' + (isOn ? ' checked' : '') + (c.req ? ' disabled' : '') + ' onchange="CardControl.colsSet(this.dataset.c, this.checked)">' + esc(c.l) + (c.req ? ' (sempre)' : '') + '</label></span>'; }).join('')
+      + '<button type="button" class="btn btn-sm" onclick="CardControl.colsReset()"><i class="ti ti-restore"></i>Restaurar Padrão</button></div><div class="set-sub" style="margin-top:6px">Marque o que quer ver e arraste as colunas marcadas para mudar a ordem. Vale só para este navegador; a exportação leva todas as colunas.</div>';
   }
   function colsToggle() { const p = el('cc-cols-panel'), b = el('cc-cols-btn'); if(!p) return; const open = p.hidden; p.hidden = !open; if(b) b.setAttribute('aria-expanded', String(open)); if(open) colsPanel(); }
   function colsSet(id, on) {
@@ -22368,8 +22371,22 @@ const CardControl = (() => {
   function colsMove(id, dir) {
     const ids = visible().map(c => c.id), i = ids.indexOf(id), j = i + dir; if(i < 0 || j < 0 || j >= ids.length) return;
     [ids[i], ids[j]] = [ids[j], ids[i]]; saveCols(ids); colsPanel(); render();
-    const b = document.querySelector('#cc-cols-panel button[aria-label^="Mover ' + (COLS.find(c => c.id === id) || {}).l + ' para a ' + (dir < 0 ? 'esquerda' : 'direita') + '"]'); if(b && !b.disabled) b.focus();
+    const chip = document.querySelector('#cc-cols-panel .cc-chip[data-c="' + id + '"]'); if(chip) chip.focus();
   }
+  let dragCol = null;
+  const chipOf = e => e.target && e.target.closest ? e.target.closest('.cc-chip[data-c]') : null;
+  function colsDragStart(e) { const c = chipOf(e); if(!c) return; dragCol = c.dataset.c; try { e.dataTransfer.setData('text/plain', dragCol); e.dataTransfer.effectAllowed = 'move'; } catch(x) { /* arrasto sem dados: o id fica em dragCol */ } }
+  function colsDragOver(e) { const c = chipOf(e); if(!c || !dragCol || c.dataset.c === dragCol) return; e.preventDefault(); c.classList.add('cc-over'); }
+  function colsDragLeave(e) { const c = chipOf(e); if(c) c.classList.remove('cc-over'); }
+  // Solta antes do alvo se o ponteiro está na metade esquerda dele, depois se está na direita
+  function colsDrop(e) {
+    const c = chipOf(e); if(!c || !dragCol) return; e.preventDefault(); c.classList.remove('cc-over');
+    const to = c.dataset.c, from = dragCol; dragCol = null; if(to === from) return;
+    const r = c.getBoundingClientRect(), after = e.clientX >= r.left + r.width / 2, ids = visible().map(x => x.id).filter(x => x !== from), at = ids.indexOf(to);
+    if(at < 0) return; ids.splice(after ? at + 1 : at, 0, from); saveCols(ids); colsPanel(); render();
+    const chip = document.querySelector('#cc-cols-panel .cc-chip[data-c="' + from + '"]'); if(chip) chip.focus();
+  }
+  function colsKey(e) { const c = chipOf(e); if(!c || !e.altKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return; e.preventDefault(); colsMove(c.dataset.c, e.key === 'ArrowLeft' ? -1 : 1); }
   function colsReset() { try { localStorage.removeItem(COLS_KEY); } catch(e) { /* nada a limpar */ } colsPanel(); render(); }
   // Um só conjunto de filtros para a lista, os números, a pizza, o quadro, os seletores e a exportação
   const filt = g => ({ proj: el('cc-proj').value, st: el('cc-st').value, who: el('cc-who').value, kind: el('cc-kind') ? el('cc-kind').value : '', per: (el('cc-per') || {}).value || 'now', today: g ? g.today : new Date().toISOString().slice(0, 10), q: String((el('cc-q') || {}).value || '').toLowerCase(), alert: !!(el('cc-alert') || {}).checked });
@@ -22559,7 +22576,7 @@ const CardControl = (() => {
   }
   function more() { limit += 150; render(); }
   function openCard(pid, id) { try { DB.switchProject(pid); R.go('kanban'); setTimeout(() => { try { Agile.openItem(id); } catch(e) { /* abre o quadro */ } }, 450); } catch(e) { /* sem acesso */ } }
-  return { render, toggle, more, evoSet, colsToggle, colsSet, colsMove, colsReset, clearFilters, pickStatus, pickCell, openCard, exportRows, exportXlsx, exportCsv };
+  return { render, toggle, more, evoSet, colsToggle, colsSet, colsMove, colsDragStart, colsDragOver, colsDragLeave, colsDrop, colsKey, colsReset, clearFilters, pickStatus, pickCell, openCard, exportRows, exportXlsx, exportCsv };
 })();
 </script>
 

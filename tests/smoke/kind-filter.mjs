@@ -94,10 +94,12 @@ ok(['Bug', 'História', 'Tarefa'].includes(cell), 'Colunas: a coluna Tipo traz o
 await pg.reload({ waitUntil: 'domcontentloaded' }); await pg.waitForTimeout(1200);
 await pg.evaluate(`R.go('cardcontrol')`); await pg.waitForTimeout(400);
 ok((await heads()) === h1, 'Colunas: a escolha continua depois de recarregar a página');
-await pg.evaluate(`CardControl.colsToggle(); CardControl.colsMove('who', -1)`); await pg.waitForTimeout(150);
+await pg.evaluate('CardControl.colsToggle()'); await pg.waitForTimeout(100);
+// arrasto de verdade: solta Responsável na metade esquerda de Situação (fica antes dela)
+await pg.dragAndDrop('#cc-cols-panel .cc-chip[data-c=who]', '#cc-cols-panel .cc-chip[data-c=st]', { targetPosition: { x: 4, y: 8 } }); await pg.waitForTimeout(200);
 const h2 = await heads();
-ok(h2 === 'Projeto|Card|Tipo|Responsável|Situação|Aberto há|Prazo|Devol.|Leitura do sistema', 'Colunas: ◀ muda a ordem (Responsável passa antes de Situação)', h2);
-ok(await pg.evaluate(`document.querySelectorAll('#cc-cols-panel button[aria-label^="Mover"]').length === 2 * document.querySelectorAll('#cc-root thead th').length && document.querySelector('#cc-cols-panel button[aria-label="Mover Projeto para a esquerda"]').disabled`), 'Colunas: cada coluna tem ◀ ▶ e a primeira não anda para a esquerda');
+ok(h2 === 'Projeto|Card|Tipo|Responsável|Situação|Aberto há|Prazo|Devol.|Leitura do sistema', 'Colunas: arrastar muda a ordem (Responsável passa antes de Situação)', h2);
+ok(await pg.evaluate('document.querySelectorAll("#cc-cols-panel .cc-chip[draggable=true]").length === document.querySelectorAll("#cc-root thead th").length && !document.querySelector("#cc-cols-panel button[aria-label^=Mover]") && !document.querySelector("#cc-cols-panel .cc-chip:not(.on)[draggable]")'), 'Colunas: só as marcadas se arrastam e não há botões de seta');
 await pg.reload({ waitUntil: 'domcontentloaded' }); await pg.waitForTimeout(1200);
 await pg.evaluate(`R.go('cardcontrol')`); await pg.waitForTimeout(400);
 ok((await heads()) === h2, 'Colunas: a ordem escolhida continua depois de recarregar a página');
