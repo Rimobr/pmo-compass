@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.113.8'
+  version: '2.113.9'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -373,6 +373,7 @@ html[data-theme="light"] .sidebar{--sb-dark:93%}
 .proj-pick-list label:hover{background:var(--s2)}
 .cc-filt{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 12px;align-items:end}
 .cc-filt label{display:block;margin-bottom:3px}.cc-filt .input{width:100%;min-width:0}.cc-filt-q{grid-column:span 1}
+.cc-listbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;margin-bottom:10px}
 .cc-act{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-top:12px}
 @media(min-width:1500px){.cc-filt{grid-template-columns:repeat(6,minmax(0,1fr))}}
 @media(max-width:600px){.cc-filt{grid-template-columns:repeat(2,minmax(0,1fr))}.cc-filt-q{grid-column:span 2}}
@@ -1712,14 +1713,18 @@ body.icons-failed i[data-fb]::before{
     </div>
     <div class="cc-act">
       <label class="set-sub" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="cc-alert" onchange="CardControl.render()">Só com alerta</label>
-      <div class="btn-row"><button class="btn btn-sm" onclick="CardControl.clearFilters()"><i class="ti ti-filter-off"></i>Limpar Filtros</button><button class="btn btn-sm" id="cc-cols-btn" aria-expanded="false" aria-controls="cc-cols-panel" onclick="CardControl.colsToggle()"><i class="ti ti-columns-3"></i>Colunas</button><button class="btn btn-sm" onclick="CardControl.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button><button class="btn btn-sm" onclick="CardControl.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button></div>
+      <div class="btn-row"><button class="btn btn-sm" onclick="CardControl.clearFilters()"><i class="ti ti-filter-off"></i>Limpar Filtros</button></div>
     </div>
-    <div id="cc-cols-panel" hidden style="margin-top:10px;padding-top:10px;border-top:1px solid var(--b1)"></div>
     <div id="cc-scope" class="set-sub" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--b1)" role="status" aria-live="polite"></div>
   </div>
   <div class="card" id="cc-evo" style="margin-bottom:12px"></div>
   <div class="card" id="cc-matrix" style="margin-bottom:12px"></div>
-  <div class="card"><div id="cc-root"></div></div>
+  <div class="card">
+    <div class="cc-listbar"><div class="set-sub" id="cc-listinfo" aria-live="polite"></div>
+      <div class="btn-row"><button class="btn btn-sm" id="cc-cols-btn" aria-expanded="false" aria-controls="cc-cols-panel" onclick="CardControl.colsToggle()"><i class="ti ti-columns-3"></i>Colunas</button><button class="btn btn-sm" onclick="CardControl.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button><button class="btn btn-sm" onclick="CardControl.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button></div></div>
+    <div id="cc-cols-panel" hidden style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--b1)"></div>
+    <div id="cc-root"></div>
+  </div>
 </section>
 
 <!-- ■ MODULE: pages/mgrpanel ─ Painel do Gerente de Projetos: tudo o que está com a gestão em visão de portfólio (o que decidir agora, o time em todos os projetos e a transferência de atividades) -->
@@ -22415,6 +22420,7 @@ const CardControl = (() => {
     else doneSub = 'dos ' + rows.length + ' cards do período';
     const doneTotal = fl.per === 'now' ? g.rows.filter(r => r.a.done && pass(r, fl, 'per')).length : doneRows.length;
     scopeLine(g, fl, rows);
+    { const li = el('cc-listinfo'); if(li) li.innerHTML = '<b>Lista:</b> ' + rows.length + ' card(s)' + (rows.length > limit ? ', mostrando os ' + limit + ' primeiros' : ''); }
     evoRender(g, fl);
     el('cc-kpis').innerHTML = kp('Concluídos', doneTotal, doneSub, doneTotal ? 'var(--grn)' : '') + kp('Cards abertos', open.length, 'em ' + new Set(open.map(r => r.p.id)).size + ' projeto(s) e quadro(s)') + kp('Com alerta', withAl, 'o sistema recomenda agir', withAl ? 'var(--amb)' : 'var(--grn)') + kp('Parados', stalled, 'além do esperado na etapa', stalled ? 'var(--red)' : 'var(--grn)') + kp('Prazo vencido', late, 'ainda abertos', late ? 'var(--red)' : 'var(--grn)') + kp('Devolvidos', ret, 'voltaram de etapa ao menos uma vez', ret ? 'var(--amb)' : 'var(--grn)');
     charts(g, rows);
