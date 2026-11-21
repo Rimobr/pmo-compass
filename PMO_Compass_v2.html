@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.113.5'
+  version: '2.113.6'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1705,8 +1705,9 @@ body.icons-failed i[data-fb]::before{
       <div><label class="set-sub" for="cc-q" style="display:block">Buscar</label><input class="input" id="cc-q" placeholder="Código ou título…" oninput="CardControl.render()" style="width:190px"></div>
       <label class="set-sub" style="display:inline-flex;gap:6px;align-items:center;margin-bottom:6px"><input type="checkbox" id="cc-alert" onchange="CardControl.render()">Só com alerta</label>
       <label class="set-sub" style="display:inline-flex;gap:6px;align-items:center;margin-bottom:6px"><input type="checkbox" id="cc-done" onchange="CardControl.render()">Incluir concluídos</label>
-      <button class="btn btn-sm" onclick="CardControl.clearFilters()"><i class="ti ti-filter-off"></i>Limpar Filtros</button><button class="btn btn-sm" onclick="CardControl.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button><button class="btn btn-sm" onclick="CardControl.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button>
+      <button class="btn btn-sm" onclick="CardControl.clearFilters()"><i class="ti ti-filter-off"></i>Limpar Filtros</button><button class="btn btn-sm" onclick="CardControl.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button><button class="btn btn-sm" onclick="CardControl.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button><button class="btn btn-sm" id="cc-cols-btn" aria-expanded="false" aria-controls="cc-cols-panel" onclick="CardControl.colsToggle()"><i class="ti ti-columns-3"></i>Colunas</button>
     </div>
+    <div id="cc-cols-panel" hidden style="margin-top:10px;padding-top:10px;border-top:1px solid var(--b1)"></div>
   </div>
   <div class="card" id="cc-matrix" style="margin-bottom:12px"></div>
   <div class="card"><div id="cc-root"></div></div>
@@ -22303,6 +22304,31 @@ const CardControl = (() => {
   }
   const KIND_LBL = { bug: 'Bug', historia: 'História', tarefa: 'Tarefa', epico: 'Épico' };
   const wkey = r => String(r.i.assignee || '').trim();
+  // Colunas da lista: a pessoa escolhe quais aparecem (fica neste navegador). "Card" é a identificação da linha e não sai.
+  const COLS = [
+    { id: 'proj', l: 'Projeto', def: true, th: '<th scope="col">Projeto</th>', td: r => '<td>' + esc(r.p.name) + '</td>' },
+    { id: 'card', l: 'Card', req: true, def: true, th: '<th scope="col">Card</th>', td: r => '<td><b>' + esc(r.i.id) + '</b> · ' + esc(r.i.title || '') + '</td>' },
+    { id: 'kind', l: 'Tipo', def: false, th: '<th scope="col">Tipo</th>', td: r => '<td>' + esc(KIND_LBL[r.i.kind] || r.i.kind || '—') + '</td>' },
+    { id: 'st', l: 'Situação', def: true, th: '<th scope="col">Situação</th>', td: r => '<td>' + esc(r.a.stageLabel) + '</td>' },
+    { id: 'who', l: 'Responsável', def: true, th: '<th scope="col">Responsável</th>', td: r => '<td>' + esc(r.i.assignee || '—') + '</td>' },
+    { id: 'age', l: 'Na etapa', def: true, th: '<th scope="col" class="num">Na etapa</th>', td: r => '<td class="num">' + (r.a.done ? '—' : r.a.stageAge + ' d') + '</td>' },
+    { id: 'open', l: 'Aberto há', def: true, th: '<th scope="col" class="num">Aberto há</th>', td: r => '<td class="num">' + r.a.ageDays + ' d</td>' },
+    { id: 'due', l: 'Prazo', def: true, th: '<th scope="col">Prazo</th>', td: r => '<td>' + (r.due ? fmt(r.due) : '—') + '</td>' },
+    { id: 'ret', l: 'Devol.', def: true, th: '<th scope="col" class="num">Devol.</th>', td: r => '<td class="num">' + (r.a.returns || '') + '</td>' },
+    { id: 'read', l: 'Leitura do sistema', def: true, th: '<th scope="col">Leitura do sistema</th>', td: r => { const a = r.a; return '<td><span class="badge ' + LV[a.level][0] + '">' + LV[a.level][1] + '</span> ' + esc(a.alerts[0] ? a.alerts[0].text : (a.eta && !a.done ? 'Previsão de término em ' + fmt(a.eta.date) : 'Sem alerta')) + '</td>'; } }
+  ];
+  const COLS_KEY = 'pmo_cc_cols_v1';
+  function savedCols() { try { const a = JSON.parse(localStorage.getItem(COLS_KEY) || 'null'); return Array.isArray(a) ? a.filter(x => typeof x === 'string') : null; } catch(e) { return null; } }
+  function visible() { const a = savedCols(), set = a ? new Set(a) : null; return COLS.filter(c => c.req || (set ? set.has(c.id) : c.def)); }
+  function colsPanel() {
+    const p = el('cc-cols-panel'); if(!p) return; const vis = new Set(visible().map(c => c.id));
+    p.innerHTML = '<div class="set-sub" style="font-weight:700;text-transform:uppercase;margin-bottom:6px">Colunas que aparecem na lista</div><div style="display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center">'
+      + COLS.map(c => '<label class="set-sub" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" data-c="' + c.id + '"' + (vis.has(c.id) ? ' checked' : '') + (c.req ? ' disabled' : '') + ' onchange="CardControl.colsSet(this.dataset.c, this.checked)">' + esc(c.l) + (c.req ? ' (sempre)' : '') + '</label>').join('')
+      + '<button type="button" class="btn btn-sm" onclick="CardControl.colsReset()"><i class="ti ti-restore"></i>Restaurar Padrão</button></div><div class="set-sub" style="margin-top:6px">A escolha vale só para este navegador. A exportação continua levando todas as colunas.</div>';
+  }
+  function colsToggle() { const p = el('cc-cols-panel'), b = el('cc-cols-btn'); if(!p) return; const open = p.hidden; p.hidden = !open; if(b) b.setAttribute('aria-expanded', String(open)); if(open) colsPanel(); }
+  function colsSet(id, on) { const cur = new Set(visible().map(c => c.id)); if(on) cur.add(id); else cur.delete(id); try { localStorage.setItem(COLS_KEY, JSON.stringify(COLS.filter(c => cur.has(c.id)).map(c => c.id))); } catch(e) { /* sem armazenamento: vale só nesta tela */ } render(); }
+  function colsReset() { try { localStorage.removeItem(COLS_KEY); } catch(e) { /* nada a limpar */ } colsPanel(); render(); }
   // Um só conjunto de filtros para a lista, os números, a pizza, o quadro, os seletores e a exportação
   const filt = () => ({ proj: el('cc-proj').value, st: el('cc-st').value, who: el('cc-who').value, kind: el('cc-kind') ? el('cc-kind').value : '', q: String((el('cc-q') || {}).value || '').toLowerCase(), alert: !!(el('cc-alert') || {}).checked });
   const pass = (r, fl, skip) => (skip === 'proj' || !fl.proj || r.p.name === fl.proj) && (skip === 'st' || !fl.st || r.a.stageLabel === fl.st) && (skip === 'who' || !fl.who || wkey(r) === fl.who) && (skip === 'kind' || !fl.kind || r.i.kind === fl.kind)
@@ -22329,11 +22355,11 @@ const CardControl = (() => {
     el('cc-kpis').innerHTML = kp('Cards abertos', open.length, 'em ' + new Set(open.map(r => r.p.id)).size + ' projeto(s) e quadro(s)') + kp('Com alerta', withAl, 'o sistema recomenda agir', withAl ? 'var(--amb)' : 'var(--grn)') + kp('Parados', stalled, 'além do esperado na etapa', stalled ? 'var(--red)' : 'var(--grn)') + kp('Prazo vencido', late, 'ainda abertos', late ? 'var(--red)' : 'var(--grn)') + kp('Devolvidos', ret, 'voltaram de etapa ao menos uma vez', ret ? 'var(--amb)' : 'var(--grn)');
     charts(g, rows);
     if(!g.rows.length) { el('cc-root').innerHTML = '<div class="rk-empty">Nenhum card aberto nos projetos e quadros que você acessa.</div>'; return; }
-    const part = rows.slice(0, limit);
-    el('cc-root').innerHTML = (rows.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Projeto</th><th scope="col">Card</th><th scope="col">Situação</th><th scope="col">Responsável</th><th scope="col" class="num">Na etapa</th><th scope="col" class="num">Aberto há</th><th scope="col">Prazo</th><th scope="col" class="num">Devol.</th><th scope="col">Leitura do sistema</th></tr></thead><tbody>'
+    const part = rows.slice(0, limit), vis = visible();
+    el('cc-root').innerHTML = (rows.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr>' + vis.map(c => c.th).join('') + '</tr></thead><tbody>'
       + part.map(r => { const key = r.p.id + '|' + r.i.id, on = key === openKey, a = r.a;
-        return '<tr data-key="' + esc(key) + '" tabindex="0" style="cursor:pointer' + (on ? ';background:var(--ad)' : '') + '" onclick="CardControl.toggle(this.dataset.key)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();CardControl.toggle(this.dataset.key)}" aria-expanded="' + on + '"><td>' + esc(r.p.name) + '</td><td><b>' + esc(r.i.id) + '</b> · ' + esc(r.i.title || '') + '</td><td>' + esc(a.stageLabel) + '</td><td>' + esc(r.i.assignee || '—') + '</td><td class="num">' + (a.done ? '—' : a.stageAge + ' d') + '</td><td class="num">' + a.ageDays + ' d</td><td>' + (r.due ? fmt(r.due) : '—') + '</td><td class="num">' + (a.returns || '') + '</td><td><span class="badge ' + LV[a.level][0] + '">' + LV[a.level][1] + '</span> ' + esc(a.alerts[0] ? a.alerts[0].text : (a.eta && !a.done ? 'Previsão de término em ' + fmt(a.eta.date) : 'Sem alerta')) + '</td></tr>'
-          + (on ? '<tr><td colspan="9" style="background:var(--s2);padding:12px 14px">' + detail(r) + '</td></tr>' : ''); }).join('')
+        return '<tr data-key="' + esc(key) + '" tabindex="0" style="cursor:pointer' + (on ? ';background:var(--ad)' : '') + '" onclick="CardControl.toggle(this.dataset.key)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();CardControl.toggle(this.dataset.key)}" aria-expanded="' + on + '">' + vis.map(c => c.td(r)).join('') + '</tr>'
+          + (on ? '<tr><td colspan="' + vis.length + '" style="background:var(--s2);padding:12px 14px">' + detail(r) + '</td></tr>' : ''); }).join('')
       + '</tbody></table></div>' + (rows.length > part.length ? '<div class="btn-row" style="margin-top:8px"><span class="set-sub">Mostrando ' + part.length + ' de ' + rows.length + '.</span><button class="btn btn-sm" onclick="CardControl.more()">Mostrar Mais</button></div>' : '') : '<div class="rk-empty">Nenhum card com esses filtros.</div>');
     try { if(typeof ColumnDrag !== 'undefined') ColumnAuto.scan(); } catch(e) { /* sem colunas arrastáveis */ }
   }
@@ -22390,7 +22416,7 @@ const CardControl = (() => {
   }
   function more() { limit += 150; render(); }
   function openCard(pid, id) { try { DB.switchProject(pid); R.go('kanban'); setTimeout(() => { try { Agile.openItem(id); } catch(e) { /* abre o quadro */ } }, 450); } catch(e) { /* sem acesso */ } }
-  return { render, toggle, more, clearFilters, pickStatus, pickCell, openCard, exportRows, exportXlsx, exportCsv };
+  return { render, toggle, more, colsToggle, colsSet, colsReset, clearFilters, pickStatus, pickCell, openCard, exportRows, exportXlsx, exportCsv };
 })();
 </script>
 

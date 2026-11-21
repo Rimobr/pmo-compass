@@ -22,6 +22,7 @@ const SCENES = [
   ['Painel da Diretoria (detalhe do cartão)', `R.go('board'); Board.drill('proj')`, null],
   ['Visão do PMO (detalhe do cartão)', `R.go('pmoview'); PmoView.drill('No prazo')`, null],
   ['Controle de Cards', `R.go('cardcontrol')`, null],
+  ['Controle de Cards (escolher colunas)', `R.go('cardcontrol'); CardControl.colsToggle()`, null],
   ['Controle de Cards (detalhe do card)', `R.go('cardcontrol'); const r = document.querySelector('#cc-root tr[data-key]'); if(r) CardControl.toggle(r.dataset.key)`, null],
   ['Transferir atividades (janela)', `R.go('mgrpanel'); const b = document.querySelector('#res-team-root [data-k]'); if(b) Resources.openTransfer(b.dataset.k)`, 'modal-transfer'],
   ['Diagnóstico PMO (antes de analisar)', `R.go('drpmo')`, null],

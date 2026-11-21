@@ -497,6 +497,12 @@
       "kind": "preferência",
       "logout": "apaga",
       "deleteProject": "nao"
+    },
+    "pmo_cc_cols_v1": {
+      "desc": "Colunas escolhidas na lista do Controle de Cards.",
+      "kind": "preferência",
+      "logout": "apaga",
+      "deleteProject": "nao"
     }
   },
   "buckets": {

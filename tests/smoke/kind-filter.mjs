@@ -76,6 +76,23 @@ const co = await pg.evaluate(`(() => {
 })()`);
 ok(co.list > 0 && co.kinds === co.list && co.sts === co.list && co.pie === co.list, 'Controle de Cards: Tipo, Situação, pizza e lista concordam com o responsável filtrado', JSON.stringify(co));
 ok(co.mxNames.length === 1 && co.mxNames[0] === co.who, 'Controle de Cards: o quadro Responsável × Situação mostra só o responsável filtrado', JSON.stringify(co.mxNames));
+// Colunas da lista: a pessoa escolhe quais aparecem (e a escolha fica no navegador)
+await pg.evaluate(`CardControl.clearFilters()`); await pg.waitForTimeout(150);
+const heads = () => pg.evaluate(`[...document.querySelectorAll('#cc-root thead th')].map(t => t.textContent.trim()).join('|')`);
+const h0 = await heads();
+ok(h0 === 'Projeto|Card|Situação|Responsável|Na etapa|Aberto há|Prazo|Devol.|Leitura do sistema', 'Colunas: o padrão continua igual ao de antes', h0);
+await pg.evaluate(`CardControl.colsToggle()`); await pg.waitForTimeout(100);
+ok(await pg.evaluate(`!document.getElementById('cc-cols-panel').hidden && document.getElementById('cc-cols-btn').getAttribute('aria-expanded') === 'true' && document.querySelectorAll('#cc-cols-panel input[type=checkbox]').length === 10 && document.querySelector('#cc-cols-panel input[data-c=card]').disabled`), 'Colunas: o painel abre com as 10 opções e "Card" não sai');
+await pg.evaluate(`CardControl.colsSet('age', false); CardControl.colsSet('kind', true)`); await pg.waitForTimeout(150);
+const h1 = await heads();
+ok(h1 === 'Projeto|Card|Tipo|Situação|Responsável|Aberto há|Prazo|Devol.|Leitura do sistema', 'Colunas: tira "Na etapa" e põe "Tipo"', h1);
+const cell = await pg.evaluate(`document.querySelector('#cc-root tbody tr[data-key] td:nth-child(3)').textContent.trim()`);
+ok(['Bug', 'História', 'Tarefa'].includes(cell), 'Colunas: a coluna Tipo traz o tipo do card', cell);
+await pg.reload({ waitUntil: 'domcontentloaded' }); await pg.waitForTimeout(1200);
+await pg.evaluate(`R.go('cardcontrol')`); await pg.waitForTimeout(400);
+ok((await heads()) === h1, 'Colunas: a escolha continua depois de recarregar a página');
+await pg.evaluate(`CardControl.colsReset()`); await pg.waitForTimeout(150);
+ok((await heads()) === h0, 'Colunas: "Restaurar Padrão" volta ao padrão');
 ok(!errs.length, 'nenhum erro de JavaScript', errs.slice(0, 2).join(' | '));
 await b.close(); srv.close();
 console.log(fail ? `\n${fail} falha(s).` : '\nFiltro por tipo: tudo certo.');

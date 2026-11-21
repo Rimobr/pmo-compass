@@ -149,6 +149,7 @@ Para que serve: saber, sem procurar no código, **o que o sistema guarda, onde, 
 | `pmo_cloud_v1` | Escolha da nuvem: só quando a pessoa usa outro projeto Supabase ou escolhe usar só este navegador (localOnly). O padrão é a nuvem, sem gravar nada aqui. | conexão | preserva | nao |
 | `pmo_after_wipe` | Aviso mostrado uma vez depois de sair (fica na sessão da aba). | sessão | apaga | nao |
 | `pmo_sec_` | Quais seções recolhíveis estão abertas ou fechadas (`pmo_sec_<seção>`). | preferência | apaga | nao |
+| `pmo_cc_cols_v1` | Colunas escolhidas na lista do Controle de Cards. | preferência | apaga | nao |
 
 ## Pastas de arquivos (Storage)
 
