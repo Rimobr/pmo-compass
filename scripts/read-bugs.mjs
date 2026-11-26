@@ -6,6 +6,8 @@
 // REGRA DA CORREÇÃO AUTOMÁTICA (dono): só entra card do tipo BUG que esteja em "Em andamento". Os outros bugs em aberto são só listados.
 //
 //   node scripts/read-bugs.mjs "ClãGuard"                 # bugs PRONTOS PARA CORREÇÃO (Em andamento) do projeto cujo nome contém o texto
+//   node scripts/read-bugs.mjs --id <id> --take US-007    # GRAVA o "primeiro contato": comentário "Recebido pela correção automática…" nos bugs em Em andamento
+//   (Personalizar quadro → Correção Automática: desligada = nada é exportado, recebido nem baixado; a publicação "auto" ou "approve" é informada na saída)
 //   node scripts/read-bugs.mjs "ClãGuard" --all           # só leitura: todos os bugs, inclusive os de outras situações (não corrigir os de fora de Em andamento)
 //   node scripts/read-bugs.mjs "ClãGuard" --out C:\caminho\pasta
 //   node scripts/read-bugs.mjs --list                     # lista TODOS os projetos e quadros (id | tipo | nome | bugs em aberto)
@@ -63,6 +65,28 @@ const main = async () => { try {
   }
   if (!projs.length) { console.error('Id de projeto não encontrado. Use --list.'); { process.exitCode = 1; return; } }
   const p = projs[0];
+  const cfgRow = await q(`select value from public.project_settings where project_id = ${lit(p.id)} and key = 'agileConfig'`);
+  const fix = (cfgRow[0] && cfgRow[0].value && cfgRow[0].value.autoFix) || {}, fixOn = fix.on !== false, publish = fix.publish === 'approve' ? 'approve' : 'auto';
+  console.log('Correção automática: ' + (fixOn ? 'LIGADA' : 'DESLIGADA') + ' neste quadro · publicação: ' + (publish === 'auto' ? 'AUTOMÁTICA depois dos testes (desenvolvimento/testes)' : 'SÓ COM APROVAÇÃO (produção)') + '.');
+  if (!fixOn && (val('--mark') || val('--take') || !flag('--all'))) { console.error('A correção automática está desligada neste quadro (Personalizar quadro). Nada foi exportado nem gravado.'); process.exitCode = val('--mark') || val('--take') ? 2 : 0; return; }
+  if (val('--take')) {
+    // Primeiro contato: quem abriu o bug vê no próprio card que ele foi recebido
+    const ids = val('--take').split(',').map(x => x.trim()).filter(Boolean), by = 'Claude Code (correção automática)', now = new Date();
+    const rows = await q(`select id, status, history from public.backlog_items where project_id = ${lit(p.id)} and kind = 'bug' and id in (${ids.map(lit).join(',')})`);
+    const miss = ids.filter(i => !rows.find(r => r.id === i)); if (miss.length) console.error('Não é bug deste projeto (ignorado): ' + miss.join(', '));
+    for (const row of rows) {
+      if (row.status !== READY) { console.error(`  ${row.id}: não está em "Em andamento", não recebi.`); process.exitCode = 2; continue; }
+      const hist = Array.isArray(row.history) ? row.history.slice() : [], last = f => { for (let i = hist.length - 1; i >= 0; i--) if (f(hist[i])) return i; return -1; };
+      const moved = last(h => h && h.field === 'Situação'), took = last(h => h && !h.field && /^claude code/i.test(h.by || '') && String(h.to).startsWith('Comentário: Recebido pela correção automática'));
+      if (took > moved) { console.log(`  ${row.id}: já tinha sido recebido.`); continue; }
+      const when = now.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '');
+      hist.push({ at: now.toISOString(), by, field: '', from: '', to: 'Comentário: Recebido pela correção automática em ' + when + '; em análise.' });
+      while (hist.length > 300) { const k = hist.findIndex((h, i) => i > 0 && !(h && !h.field && String(h.to).startsWith('Comentário: '))); if (k < 0) break; hist.splice(k, 1); } // criação e comentários nunca saem do corte (auditoria)
+      await q(`update public.backlog_items set history = ${lit(JSON.stringify(hist))}::jsonb, updated_at = now() where project_id = ${lit(p.id)} and id = ${lit(row.id)} and status = ${lit(READY)}`);
+      console.log(`  ${row.id}: recebido (primeiro contato registrado no card).`);
+    }
+    { process.exitCode = process.exitCode || 0; return; }
+  }
   if (val('--mark')) {
     const ids = val('--mark').split(',').map(x => x.trim()).filter(Boolean);
     const LABEL = 'Auto Corrigido!', SEP = ' — ', room = 100; // a nota usa até 100 caracteres; o rótulo fica fora da conta e é somado no fim

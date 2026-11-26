@@ -79,7 +79,28 @@ ok(!!fc1, 'Cartão (US-008): clicar em "Anexos e evidências" abre a escolha de 
 if (fc1) { await fc1.setFiles({ name: 'print.png', mimeType: 'image/png', buffer: Buffer.from('x') }); await pg.waitForTimeout(150); }
 ok(await pg.evaluate(`/print[.]png/.test(document.getElementById('ai-files-pend').textContent) && /1 arquivo/.test(document.getElementById('ai-evid-n').textContent)`), 'Cartão (US-008): o arquivo escolhido aparece junto do título e do clipe');
 ok(!!(await abre('#ai-evid-btn')), 'Cartão (US-008): o clipe continua abrindo a escolha de arquivo');
+// US-010: botão Enviar grava na hora, sem fechar o cartão (clique e Ctrl+Enter)
+await pg.evaluate(`document.getElementById('modal-agile-item').classList.add('hidden'); Agile.openItem('US-2')`); await pg.waitForTimeout(300);
+ok(await pg.evaluate(`document.getElementById('ai-send').disabled`), 'Cartão (US-010): sem texto, o botão Enviar fica desligado');
+await pg.fill('#ai-note', 'Enviado pelo botão'); await pg.click('#ai-send'); await pg.waitForTimeout(300);
+const st1 = await pg.evaluate(`({ aberto: !document.getElementById('modal-agile-item').classList.contains('hidden'), topo: (document.getElementById('ai-lastnotes').children[0] || {}).textContent || '', campo: document.getElementById('ai-note').value, desl: document.getElementById('ai-send').disabled, gravado: (DB.get('backlog').find(x => x.id === 'US-2').history || []).filter(h => h.to === 'Comentário: Enviado pelo botão').length })`);
+ok(st1.aberto && /Enviado pelo botão/.test(st1.topo) && st1.campo === '' && st1.desl && st1.gravado === 1, 'Cartão (US-010): Enviar grava, o comentário aparece no topo e o cartão continua aberto', JSON.stringify(st1));
+await pg.fill('#ai-note', 'Enviado pelo teclado'); await pg.press('#ai-note', 'Control+Enter'); await pg.waitForTimeout(300);
+ok(await pg.evaluate(`/Enviado pelo teclado/.test((document.getElementById('ai-lastnotes').children[0] || {}).textContent) && !document.getElementById('modal-agile-item').classList.contains('hidden')`), 'Cartão (US-010): Ctrl+Enter também envia');
+await pg.evaluate(`document.getElementById('modal-agile-item').classList.add('hidden'); Agile.openItem()`); await pg.waitForTimeout(250);
+ok(await pg.evaluate(`document.getElementById('ai-send-row').style.display === 'none'`), 'Cartão (US-010): em card novo (ainda não salvo) o botão não aparece');
 await pg.evaluate(`document.getElementById('modal-agile-item').classList.add('hidden')`);
+// Correção automática: selo no cartão e liga/desliga em Personalizar quadro
+await pg.evaluate(`R.go('kanban')`); await pg.waitForTimeout(250);
+const selo = () => pg.evaluate(`[...document.querySelectorAll('.kb-card')].filter(c => /Aguardando correção|Em análise|Corrigido, revisar/.test(c.textContent)).map(c => c.dataset.id + ':' + c.textContent.match(/Aguardando correção|Em análise|Corrigido, revisar/)[0]).join(',')`);
+ok((await selo()) === 'US-4:Aguardando correção', 'Correção automática: só o bug em Em andamento mostra "Aguardando correção"', await selo());
+await pg.evaluate(`(() => { const b = DB.get('backlog'), it = b.find(x => x.id === 'US-4'); it.history = [{ at: '2026-11-26T10:00:00Z', by: 'Claude Code (correção automática)', field: '', from: '', to: 'Comentário: Recebido pela correção automática em 26/11 10:00; em análise.' }]; DB.set('backlog', b); Agile.resetCache(); Agile.render ? Agile.render() : R.go('dashboard'); R.go('kanban'); })()`); await pg.waitForTimeout(300);
+ok((await selo()) === 'US-4:Em análise', 'Correção automática: depois do primeiro contato o selo vira "Em análise"', await selo());
+await pg.evaluate(`Agile.openBoardCfg(); document.getElementById('ab-fix-on').checked = false; document.getElementById('ab-fix-pub').value = 'approve'; Agile.saveBoardCfg()`); await pg.waitForTimeout(300);
+ok((await selo()) === '' && await pg.evaluate(`const c = DB.get('agileConfig').autoFix; c.on === false && c.publish === 'approve'`), 'Correção automática: desligada em Personalizar quadro, o selo some e a escolha é gravada', await selo());
+await pg.evaluate(`Agile.openBoardCfg()`); await pg.waitForTimeout(150);
+ok(await pg.evaluate(`!document.getElementById('ab-fix-on').checked && document.getElementById('ab-fix-pub').value === 'approve'`), 'Correção automática: a janela reabre com a escolha gravada');
+await pg.evaluate(`document.getElementById('ab-fix-on').checked = true; document.getElementById('ab-fix-pub').value = 'auto'; Agile.saveBoardCfg()`); await pg.waitForTimeout(250);
 
 // Controle de Cards
 // sem sessão, a lista de projetos inclui o projeto local deste teste (com sessão ele só mostra o que vem da nuvem)

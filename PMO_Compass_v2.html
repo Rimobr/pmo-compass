@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.113.14'
+  version: '2.113.15'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1944,7 +1944,7 @@ body.icons-failed i[data-fb]::before{
   <div class="card" data-sec="ler-bugs" data-tint="2" id="bugs-ai-card">
     <div class="lbl"><i class="ti ti-bug"></i>Ler os bugs com uma IA (para corrigir outro sistema)<span class="help-q" data-help="Os relatos dos bugs (passo a passo, o que se esperava, o que aconteceu) e os prints anexados podem ser entregues a uma IA, como o Claude Code, que lê, reproduz e corrige o sistema testado. O PMO Compass só fornece a lista, em modo leitura." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin:0 0 10px"><b>É possível, e é só leitura.</b> Cada bug registrado no Backlog (com o passo a passo e as evidências anexadas) vira uma pasta que a IA do <b>outro sistema</b> lê direto. Assim quem testa registra aqui, e quem corrige não precisa copiar nada à mão. O projeto aberto agora é <b id="bugs-ai-proj">—</b>.</p>
-    <p style="font-size:12.5px;color:var(--t1);line-height:1.65;margin:0 0 10px" id="bugs-ai-rule"><b>Quais bugs entram na correção automática:</b> só os cards do tipo <b>Bug</b> que estejam em <b>Em andamento</b>. Para pedir a correção, mova o bug para Em andamento; os bugs em outras situações são apenas listados.</p>
+    <p style="font-size:12.5px;color:var(--t1);line-height:1.65;margin:0 0 10px" id="bugs-ai-rule"><b>Quais bugs entram na correção automática:</b> só os cards do tipo <b>Bug</b> que estejam em <b>Em andamento</b>. Para pedir a correção, mova o bug para Em andamento; os bugs em outras situações são apenas listados. Cada quadro liga ou desliga a correção e escolhe a publicação em <b>Personalizar quadro → Correção Automática</b>; ao pegar um bug, a IA avisa no próprio card.</p>
     <ol style="font-size:12.5px;color:var(--t1);line-height:1.7;margin:0 0 10px;padding-left:20px">
       <li><b>Abra a IA no sistema a corrigir</b> (por exemplo o Claude Code na pasta do ClãGuard Pro) e cole o <b>pedido pronto</b> abaixo. A habilidade <code>analise-pmo-compass</code> faz o resto: lê os bugs e os prints, corrige o código daquele sistema e roda os testes. Se o nome do projeto ou quadro não bater, ela lista todos e pergunta qual é.</li>
       <li><b>Acompanhe aqui.</b> Os bugs corrigidos vão sozinhos para <b>Em revisão</b>, e a descrição do card recebe, no fim, um bloco entre linhas de asteriscos com "<o que foi feito> — Auto Corrigido!" (a descrição tem até 100 caracteres; a frase final é somada) no histórico do card. Revise e conclua você mesmo; cada bug é filho de uma entrega, então o progresso da entrega acompanha.</li>
@@ -2313,6 +2313,7 @@ table th.num,table td.num{text-align:right;white-space:nowrap}
 <!-- ■ MODULE: pages/agile-css -->
 <style data-module="pages/agile-css">
 .kb-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.ai-send-row{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:6px}
 .kb-filter{display:flex;gap:8px 18px;flex-wrap:wrap;align-items:center;margin:0 0 10px;font-size:12.5px;color:var(--t2)}
 .kb-f{display:inline-flex;gap:6px;align-items:center;max-width:100%}.kb-f .input{width:auto;min-width:150px;max-width:100%}
 .rt-step{display:flex;gap:8px;align-items:flex-start;text-align:left;padding:8px 12px;flex:1 1 170px}
@@ -2533,10 +2534,12 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     </div>
     <div class="field-group" id="ai-epic-grp" style="display:none"><div class="field-label"><label for="ai-epic">Épico</label><span class="help-q" data-help="O épico é um grupo grande de entregas (por exemplo, Relatórios). A história ou tarefa escolhe aqui o épico a que pertence; o progresso do épico é calculado das histórias ligadas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><select class="input" id="ai-epic" onchange="Agile.sugRender()"></select><div class="ai-sug" id="ai-sug-epic"></div></div>
     <div class="field-group" id="ai-status-grp"><div class="field-label"><label for="ai-status">Situação</label></div><select class="input" id="ai-status"><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="review">Em revisão</option><option value="done">Concluído</option></select></div>
+    <div id="ai-autofix" class="set-sub" style="display:none;margin:-4px 0 8px"></div>
     <div class="field-group"><div class="field-label"><label for="ai-desc">Descrição e critérios de aceite</label></div><textarea class="input ai-same" id="ai-desc" rows="4" maxlength="2000" style="font-family:inherit"></textarea></div>
     <div id="ai-work" style="display:none;margin-top:10px">
       <div class="field-group"><div class="field-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span><label for="ai-note">Comentário da atividade</label><span class="help-q" data-help="O que foi feito e o resultado (ex.: testei os 3 cenários, tudo aprovado). Os comentários ficam dentro deste campo (o mais recente no topo), com o seu nome, a data e a hora, e só podem ser acrescentados: não dá para editar nem apagar (auditoria). Algumas colunas exigem o comentário para entrar. O clipe anexa evidências (prints, PDF, planilha; até 5 MB cada); também dá para colar o print com Ctrl+V." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></span><span style="display:inline-flex;align-items:center;gap:6px"><span id="ai-evid-n" style="font-size:12px;color:var(--t2)"></span><button type="button" class="btn btn-sm" id="ai-evid-btn" title="Anexar evidências (prints, PDF, planilha; até 5 MB cada). Também dá para colar o print com Ctrl+V" aria-label="Anexar evidências" onclick="document.getElementById('ai-evid').click()"><i class="ti ti-paperclip"></i></button></span></div>
-        <div class="ai-cm ai-same"><div class="ai-cm-log" id="ai-lastnotes" role="log" tabindex="0" aria-label="Comentários anteriores deste card (somente leitura)"></div><textarea class="ai-cm-in" id="ai-note" rows="2" maxlength="500" placeholder="Escreva um novo comentário (só dá para acrescentar)"></textarea></div>
+        <div class="ai-cm ai-same"><div class="ai-cm-log" id="ai-lastnotes" role="log" tabindex="0" aria-label="Comentários anteriores deste card (somente leitura)"></div><textarea class="ai-cm-in" id="ai-note" oninput="Agile.sendState()" onkeydown="Agile.noteKey(event)" rows="2" maxlength="500" placeholder="Escreva um novo comentário (só dá para acrescentar)"></textarea></div>
+        <div class="ai-send-row" id="ai-send-row"><span class="set-sub">Ctrl+Enter envia sem fechar o cartão</span><button type="button" class="btn btn-sm btn-acc" id="ai-send" disabled onclick="Agile.sendNote()"><i class="ti ti-send"></i>Enviar</button></div>
         <input id="ai-evid" type="file" multiple hidden aria-label="Evidências" onchange="Agile.evidCount()" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/csv,.xlsx"></div>
       <div id="ai-files" style="margin-top:10px"></div>
       <div class="set-sub" id="ai-work-hint"></div>
@@ -2644,6 +2647,12 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div id="ab-policy" style="margin-bottom:12px"></div>
     <div class="lbl">Como os itens entram no quadro<span class="help-q" data-help="Scrum (padrão): todo item nasce no Backlog, é estimado e priorizado, e só entra no quadro quando entra numa sprint (Planejar sprint). O quadro mostra apenas a sprint ativa. Kanban contínuo: os itens são criados e importados direto no quadro, e o limite de itens em andamento controla o fluxo. Se o quadro tiver sprints (como o Quadro de tarefas, em que a sprint é só uma janela de tempo), vale a mesma regra: o quadro mostra a sprint ativa e só se movimenta o card que está numa sprint." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <select class="input" id="ab-entry" aria-label="Como os itens entram no quadro" style="margin-bottom:12px"><option value="scrum">Scrum — pelo Backlog e pela sprint (recomendado)</option><option value="kanban">Kanban contínuo — itens criados direto no quadro (a sprint, se houver, é só a janela de tempo)</option></select>
+    <div class="lbl">Correção Automática<span class="help-q" data-help="Com a correção ligada, o bug movido para Em andamento é pego pela IA, que avisa no cartão, corrige, testa e leva para Em revisão. A publicação pode ser automática (desenvolvimento e testes) ou só com aprovação (produção)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div style="margin-bottom:12px;font-size:12.5px;color:var(--t1)">
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input type="checkbox" id="ab-fix-on">Ligada neste quadro: corrigir os bugs que estiverem em <b>Em andamento</b></label>
+      <label for="ab-fix-pub" class="set-sub" style="display:block;margin-bottom:3px">Publicação depois dos testes</label>
+      <select class="input" id="ab-fix-pub"><option value="auto">Automática (desenvolvimento e testes)</option><option value="approve">Só com aprovação (produção)</option></select>
+    </div>
     <div class="lbl">Informações Que Aparecem no Cartão<span class="help-q" data-help="Cartões mais enxutos deixam o quadro mais limpo; o título sempre aparece. Quem decide é a gestão (gerente do projeto, Scrum Master, PO ou administrador). Os dados continuam salvos no item mesmo escondidos." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div id="ab-card" style="display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--t1)"></div>
     <div class="btn-row" style="margin-top:14px;justify-content:space-between">
@@ -13351,7 +13360,18 @@ const AgileCalc = (() => {
   const colLabel = (cfg, key) => { const c = cols(cfg).find(x => x.key === key); return c ? c.label : (key === 'done' ? 'Concluído' : 'A fazer'); };
   const cfgOf = cfg => ({ columns: cols(cfg), card: { ...DEFAULT_CARD, ...((cfg && cfg.card) || {}) }, wip: { doing: DEFAULT_CFG.wip.doing, review: DEFAULT_CFG.wip.review, ...((cfg && cfg.wip) || {}) }, reservePct: cfg && cfg.reservePct != null ? Math.max(0, Math.min(50, Number(cfg.reservePct) || 0)) : DEFAULT_CFG.reservePct,
     // 'scrum' (padrão): o item nasce no Backlog, é priorizado e planejado numa sprint; o quadro só mostra a sprint. 'kanban': fluxo contínuo, itens entram direto no quadro.
-    entry: cfg && cfg.entry === 'kanban' ? 'kanban' : 'scrum' });
+    entry: cfg && cfg.entry === 'kanban' ? 'kanban' : 'scrum',
+    // Correção automática: ligada por padrão; publicação automática enquanto for desenvolvimento/testes ('approve' em produção)
+    autoFix: { on: !(cfg && cfg.autoFix && cfg.autoFix.on === false), publish: cfg && cfg.autoFix && cfg.autoFix.publish === 'approve' ? 'approve' : 'auto' } });
+  // Situação de um bug na correção automática, lida do histórico: 'wait' (Em andamento, ainda não recebido), 'working' (recebido depois da última mudança de situação) ou 'fixed' (a correção levou a Em revisão)
+  function autoFixState(it, on) {
+    if(!on || !it || it.kind !== 'bug') return '';
+    const h = Array.isArray(it.history) ? it.history : [], sys = x => !!x && /^claude code/i.test(String(x.by || ''));
+    const last = f => { for(let i = h.length - 1; i >= 0; i--) if(f(h[i])) return i; return -1; };
+    const moved = last(x => x && x.field === 'Situação');
+    if(it.status === 'doing') return last(x => x && !x.field && sys(x) && String(x.to).startsWith('Comentário: Recebido pela correção automática')) > moved ? 'working' : 'wait';
+    return it.status === 'review' && moved >= 0 && sys(h[moved]) ? 'fixed' : '';
+  }
 
   // Por coluna: quantos itens, limite (0 = sem limite) e se passou do limite
   function wip(items, cfg) {
@@ -13589,7 +13609,7 @@ const AgileCalc = (() => {
     return advice;
   }
 
-  return { sprintReading, setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, epicStats, suggestPoints, suggestEpic, bugSevRank, suggestBugPosition, isBackward, doneByDay, trendLine, isOpenBug, byPriority, bugQueue, placeBug, compactQueue, bugParentError, assigneeError, sprintAssigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+  return { sprintReading, setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, epicStats, suggestPoints, suggestEpic, bugSevRank, suggestBugPosition, isBackward, doneByDay, trendLine, isOpenBug, byPriority, bugQueue, placeBug, compactQueue, bugParentError, assigneeError, sprintAssigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, autoFixState, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
 })();
 </script>
 
@@ -14668,6 +14688,7 @@ const Agile = (() => {
     const act = Auth.can('update_own'), noSp = sprintLocked(i);
     return `<div class="kb-card"${act ? `${noSp ? '' : ` draggable="true" ondragstart="Agile.dragStart(event,'${esc(i.id)}')"`} ondragend="this.classList.remove('dragging')" onclick="Agile.openItem('${esc(i.id)}')"` : ''} role="group" data-id="${esc(i.id)}" aria-label="${esc(i.id)}: ${esc(i.title)}">
       ${top ? `<div class="kb-meta">${top}</div>` : ''}
+      ${fixChip(i) ? `<div class="kb-meta">${fixChip(i)}</div>` : ''}
       ${act ? `<button type="button" class="kb-title kb-open" aria-label="Abrir ${esc(i.id)}: ${esc(i.title)}" onclick="event.stopPropagation();Agile.openItem('${esc(i.id)}')">${esc(i.title)}</button>` : `<span class="kb-title">${esc(i.title)}</span>`}
       ${bottom ? `<div class="kb-meta">${bottom}</div>` : ''}
       <div class="kb-mv" data-perm="update_own">${prev && canTouch(i, prev, true) ? `<button class="btn btn-sm" aria-label="Mover ${esc(i.id)} para ${lbl(prev)}" onclick="event.stopPropagation();Agile.move('${esc(i.id)}',-1)">◀</button>` : ''}${next && canTouch(i, next, true) ? `<button class="btn btn-sm" aria-label="Mover ${esc(i.id)} para ${lbl(next)}" onclick="event.stopPropagation();Agile.move('${esc(i.id)}',1)">▶</button>` : ''}</div></div>`;
@@ -14771,6 +14792,7 @@ const Agile = (() => {
     boardDraft = { policy: policy(), columns: AgileCalc.cols(cfg).map(c => ({ key: c.key, label: c.label, wip: Number(cfg.wip[c.key]) || 0 })), card: { ...cfg.card }, entry: cfg.entry, lanes: JSON.parse(JSON.stringify(AgileCalc.normLanes(DB.get('boardLanes')))) };
     renderBoardCfg();
     document.getElementById('ab-entry').value = cfg.entry;
+    document.getElementById('ab-fix-on').checked = cfg.autoFix.on; document.getElementById('ab-fix-pub').value = cfg.autoFix.publish;
     document.getElementById('modal-agile-board').classList.remove('hidden');
   }
   function renderBoardCfg() {
@@ -14865,7 +14887,7 @@ const Agile = (() => {
     before.forEach((c, i) => { if(!after.some(a => a.key === c.key)) items.filter(it => it.status === c.key).forEach(it => { it.status = before[Math.max(0, i - 1)].key; pushItem(it); }); });
     // 0 é gravado de propósito ("sem limite"), para não voltar ao limite padrão das colunas Em andamento/Em revisão
     const wip = {}; d.columns.forEach(c => { if(c.key !== 'todo' && c.key !== 'done') wip[c.key] = c.wip; });
-    cfg = AgileCalc.cfgOf({ columns: after, wip, card: d.card, reservePct: cfg.reservePct, entry: document.getElementById('ab-entry').value });
+    cfg = AgileCalc.cfgOf({ columns: after, wip, card: d.card, reservePct: cfg.reservePct, entry: document.getElementById('ab-entry').value, autoFix: { on: document.getElementById('ab-fix-on').checked, publish: document.getElementById('ab-fix-pub').value } });
     saveItems(); DB.set('agileConfig', cfg);
     if(typeof Cloud !== 'undefined') Cloud.pushProjectSetting(DB.getActiveProjectId(), 'agileConfig', cfg);
     const lanes = { lanes: AgileCalc.normLanes({ lanes: d.lanes }) };
@@ -15342,12 +15364,13 @@ const Agile = (() => {
     fillSprintSelect(it ? it.sprintId : presetSprint);
     fillParent(it ? it.parentId : '', it ? it.id : '');
     kindChanged();
-    renderChildren(it); renderFiles(it); renderHistory(it); renderLastNotes(it);
+    renderChildren(it); renderFiles(it); renderHistory(it); renderLastNotes(it); autoFixLine(it);
     applyItemMode(it, full);
     if(it && it.kind === 'epico' || (!it && preset === 'epico' && !isBoardNow())) ['ai-work', 'ai-check'].forEach(id => { const e = document.getElementById(id); if(e) e.style.display = 'none'; }); // o épico não tem comentário nem lista de tarefas
     sugRender();
     { const ks = document.getElementById('ai-kind'); Array.from(ks.options).forEach(o => { if(o.value === 'epico') o.hidden = o.disabled = isBoardNow() || (!!it && it.kind !== 'epico'); }); if(it && it.kind === 'epico') ks.disabled = true; } // épico só se cria novo (não se converte) e não existe no Quadro
     document.getElementById('modal-agile-item').classList.remove('hidden');
+    sendState();
     document.getElementById(full ? 'ai-title' : 'ai-note').focus();
   }
   // ───────── Lista de tarefas do cartão ─────────
@@ -15383,7 +15406,34 @@ const Agile = (() => {
     el.innerHTML = list.length ? list.slice().reverse().map(h => { const d = new Date(h.at); return '<div><b>' + esc(h.by) + '</b> <span class="ai-cm-d">' + (isNaN(d) ? '' : pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes())) + '</span> — ' + esc(String(h.to).slice(12)) + '</div>'; }).join('') : '<div class="ai-cm-e">Nenhum comentário ainda. Os comentários só podem ser acrescentados; não dá para editar nem apagar (auditoria).</div>';
     el.scrollTop = 0;
   }
+  // Botão Enviar: grava o comentário (e os arquivos escolhidos) na hora, sem fechar o cartão. Só em card já salvo e com algo a enviar.
+  let sending = false;
+  function sendState() {
+    const row = document.getElementById('ai-send-row'), b = document.getElementById('ai-send'), i = document.getElementById('ai-evid'); if(!row || !b) return;
+    row.style.display = itemCtx ? '' : 'none';
+    b.disabled = sending || !(val('ai-note').trim() || (i && i.files && i.files.length));
+  }
+  function noteKey(e) { if((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); sendNote(); } }
+  async function sendNote() {
+    if(sending || !itemCtx) return; load(); if(!findAny(itemCtx)) return;
+    const i = document.getElementById('ai-evid'), id = itemCtx; if(!val('ai-note').trim() && !(i && i.files && i.files.length)) return;
+    sending = true; sendState();
+    try {
+      const ev = await collectEvidence(); if(ev === false) return;
+      load(); const it = findAny(id); if(!it || itemCtx !== id) return;
+      applyEvidence(it, ev); saveItems(); pushItem(it);
+      document.getElementById('ai-note').value = ''; if(i) i.value = '';
+      renderFiles(it); renderHistory(it); renderLastNotes(it); autoFixLine(it); renderAll();
+      T.show('✅ Comentário enviado em ' + it.id + '. O cartão continua aberto.');
+      const n = document.getElementById('ai-note'); if(n) n.focus();
+    } finally { sending = false; sendState(); }
+  }
+  // Correção automática: o selo do cartão sai do próprio histórico (nada é gravado a mais)
+  const FIX_LBL = { wait: ['b-amb', 'Aguardando correção', 'Bug em Em andamento: entra na próxima rodada da correção automática'], working: ['b-acc', 'Em análise', 'A correção automática recebeu este bug e está trabalhando nele'], fixed: ['b-grn', 'Corrigido, revisar', 'A correção automática levou este bug a Em revisão: confira e conclua'] };
+  const fixChip = i => { const s = AgileCalc.autoFixState(i, cfg && cfg.autoFix && cfg.autoFix.on); return s ? '<span class="badge ' + FIX_LBL[s][0] + '" title="' + FIX_LBL[s][2] + '">' + FIX_LBL[s][1] + '</span>' : ''; };
+  function autoFixLine(it) { const el = document.getElementById('ai-autofix'); if(!el) return; load(); const s = it ? AgileCalc.autoFixState(it, cfg && cfg.autoFix && cfg.autoFix.on) : ''; el.style.display = s ? '' : 'none'; el.innerHTML = s ? 'Correção automática: ' + fixChip(it) + ' ' + FIX_LBL[s][2] + '.' : ''; }
   function evidCount() {
+    sendState();
     const i = document.getElementById('ai-evid'), n = document.getElementById('ai-evid-n'), p = document.getElementById('ai-files-pend'), q = i && i.files ? i.files.length : 0;
     if(n) n.textContent = q ? q + ' arquivo(s)' : '';
     if(p) p.textContent = q ? q + ' arquivo(s) escolhido(s): ' + [...i.files].map(x => x.name).join(', ') + '. Entram no card ao salvar.' : '';
@@ -15964,7 +16014,7 @@ const Agile = (() => {
 
   function renderAll() { renderKanban(); renderBacklog(); renderSprints(); renderDashboard(); renderDue(); }
   function render() { renderAll(); }
-  return { histFilter, render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, setBoardKind, setBacklogKind, rank, setSprintOf, renamePerson, setBacklogQuery, setShowDone,
+  return { sendNote, sendState, noteKey, histFilter, render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, setBoardKind, setBacklogKind, rank, setSprintOf, renamePerson, setBacklogQuery, setShowDone,
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, checkDates, openRules, closeRules, editRule, ruleField, ruleAct, ruleAddAct, ruleDelAct, ruleCancel, ruleSave, toggleRule, deleteRule, renderDue, openDue, closeDue, dueChoose, runDue, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
     aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, setPolicyMove, setPolicyCol, openImpediments, closeImpediments, resolveImpediment, setPolicyBehalf, addGate, removeGate, setGate, setTemplate, checkToggle, checkAdd, checkDel, openBehalf, closeBehalf, confirmBehalf, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,

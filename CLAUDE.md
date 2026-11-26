@@ -355,9 +355,16 @@ Skills: usar `boas-praticas-desenvolvimento` (e `padrao-telas` quando houver tel
 
 ## Correção automática: só Bug em "Em andamento" (regra do dono, 26/11/2026)
 - A correção pela habilidade `analise-pmo-compass` só pega card do tipo **Bug** que esteja em **Em andamento**: `read-bugs.mjs` exporta só esses, lista os demais bugs em aberto como "fora da correção automática" (`--all` é só leitura) e `--mark` recusa bug de outra situação. Regra escrita na plataforma (Configurações → Ler os bugs com uma IA, `#bugs-ai-rule`) e na habilidade (as duas cópias). Para pedir a correção, a gestão move o bug para Em andamento.
-- Pendente de decisão do dono (não implementado): parâmetro na plataforma para automatizar o processo e o "primeiro contato" automático no card.
+- Parâmetro, primeiro contato e selo: ver a seção seguinte (aprovados pelo dono em 26/11/2026).
 
 ## Correções do quadro PMO Compass e filtros do Kanban (26/11/2026, 2.113.14)
 - **Kanban**: os filtros **Sprint** e **Tipo de card** ficam logo acima das colunas, com rótulo (`.kb-filter`, antes ficavam no topo, longe do quadro), com a contagem "Mostrando X de Y cards"; com o filtro de tipo o **limite por coluna conta todos os cards** e a coluna diz "1 de 2 · limite 3"; a raia "Geral" diz o tipo filtrado.
 - **US-009**: os comentários do cartão aparecem do **mais recente para o mais antigo**, sem rolar (antes era do mais antigo ao mais novo; esta regra substitui a de 10/11/2026).
 - **US-008**: o título **Anexos e evidências** é um botão com a mesma função do clipe, aparece mesmo sem anexo e mostra os arquivos escolhidos antes de salvar (a lista fica dentro da área do comentário).
+
+## Botão Enviar e Correção Automática por quadro (aprovado pelo dono, 26/11/2026, 2.113.15)
+- **US-010**: no cartão, botão **Enviar** (e Ctrl+Enter) grava o comentário e os arquivos escolhidos **sem fechar o cartão** (`Agile.sendNote`); desligado sem nada a enviar; não aparece em card ainda não salvo. "Salvar" continua como antes.
+- **Parâmetro por quadro** (Personalizar quadro → Correção Automática; `agileConfig.autoFix = {on, publish}`, sem migração): **ligada** por padrão e **publicação automática** ("desenvolvimento e testes") por decisão do dono. **AO ENTRAR EM PRODUÇÃO "fechar as portas": mudar a publicação de cada quadro para "Só com aprovação (produção)"** e rever esta regra.
+- **Primeiro contato**: `read-bugs.mjs --id <id> --take US-x` grava o comentário "Recebido pela correção automática em dd/mm hh:mm; em análise." nos bugs em Em andamento (não repete). Correção desligada: nada é exportado, recebido nem baixado.
+- **Selo no cartão**, calculado do histórico (`AgileCalc.autoFixState`, nada gravado a mais): "Aguardando correção" (Em andamento, sem primeiro contato depois da última mudança de situação), "Em análise" (recebido) e "Corrigido, revisar" (a correção levou a Em revisão).
+- **Etapa 2** (execução sozinha em rotina na nuvem do Claude): aprovada pelo dono; depende de o dono cadastrar o token do banco no ambiente da nuvem (nunca no chat).
