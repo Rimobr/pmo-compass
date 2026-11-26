@@ -6,7 +6,7 @@
 <meta name="description" content="PMO Compass — Gestão de projetos com IA para apoio à decisão">
 <meta name="theme-color" content="#0d1117">
 <title>PMO Compass</title>
-<script>window.BRAND={name:"PMO Compass",shortName:"PMO Compass",tagline:"Gest\xE3o de projetos com IA para apoio \xE0 decis\xE3o",version:"2.113.15"},document.title=BRAND.name,document.querySelector('meta[name="description"]').setAttribute("content",BRAND.name+" \u2014 "+BRAND.tagline);</script>
+<script>window.BRAND={name:"PMO Compass",shortName:"PMO Compass",tagline:"Gest\xE3o de projetos com IA para apoio \xE0 decis\xE3o",version:"2.113.16"},document.title=BRAND.name,document.querySelector('meta[name="description"]').setAttribute("content",BRAND.name+" \u2014 "+BRAND.tagline);</script>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0d1117">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1298,11 +1298,16 @@
     <div id="ab-policy" style="margin-bottom:12px"></div>
     <div class="lbl">Como os itens entram no quadro<span class="help-q" data-help="Scrum (padrão): todo item nasce no Backlog, é estimado e priorizado, e só entra no quadro quando entra numa sprint (Planejar sprint). O quadro mostra apenas a sprint ativa. Kanban contínuo: os itens são criados e importados direto no quadro, e o limite de itens em andamento controla o fluxo. Se o quadro tiver sprints (como o Quadro de tarefas, em que a sprint é só uma janela de tempo), vale a mesma regra: o quadro mostra a sprint ativa e só se movimenta o card que está numa sprint." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <select class="input" id="ab-entry" aria-label="Como os itens entram no quadro" style="margin-bottom:12px"><option value="scrum">Scrum — pelo Backlog e pela sprint (recomendado)</option><option value="kanban">Kanban contínuo — itens criados direto no quadro (a sprint, se houver, é só a janela de tempo)</option></select>
-    <div class="lbl">Correção Automática<span class="help-q" data-help="Com a correção ligada, o bug movido para Em andamento é pego pela IA, que avisa no cartão, corrige, testa e leva para Em revisão. A publicação pode ser automática (desenvolvimento e testes) ou só com aprovação (produção)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
+    <div class="lbl">Correção Automática<span class="help-q" data-help="Com a correção ligada, quando alguém pede a análise, a IA pega os bugs em Em andamento, avisa no cartão, corrige, testa e leva para Em revisão. A publicação pode ser automática (desenvolvimento e testes) ou só com aprovação (produção)." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div style="margin-bottom:12px;font-size:12.5px;color:var(--t1)">
       <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input type="checkbox" id="ab-fix-on">Ligada neste quadro: corrigir os bugs que estiverem em <b>Em andamento</b></label>
       <label for="ab-fix-pub" class="set-sub" style="display:block;margin-bottom:3px">Publicação depois dos testes</label>
       <select class="input" id="ab-fix-pub"><option value="auto">Automática (desenvolvimento e testes)</option><option value="approve">Só com aprovação (produção)</option></select>
+      <div id="ab-fix-sched" style="margin-top:10px;padding:10px 12px;border:1px dashed var(--b2);border-radius:8px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><b>Execução Sozinha</b><span class="badge b-amb">Próxima Fase</span></div>
+        <div class="set-sub" style="margin-bottom:8px">Rodar a correção em horários definidos, sem ninguém pedir. <b>Ainda não executa nada</b>: por enquanto a correção começa quando alguém pede "Analise PMO Compass".</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap"><span style="display:inline-flex;flex-direction:column;gap:3px"><label class="set-sub" for="ab-sched-freq">Frequência</label><select class="input" id="ab-sched-freq" disabled style="width:auto"><option>A cada 2 horas</option></select></span><span style="display:inline-flex;flex-direction:column;gap:3px"><label class="set-sub" for="ab-sched-days">Dias</label><select class="input" id="ab-sched-days" disabled style="width:auto"><option>Segunda a sexta</option></select></span><span style="display:inline-flex;flex-direction:column;gap:3px"><label class="set-sub" for="ab-sched-hours">Horário</label><select class="input" id="ab-sched-hours" disabled style="width:auto"><option>Das 8h às 20h</option></select></span></div>
+      </div>
     </div>
     <div class="lbl">Informações Que Aparecem no Cartão<span class="help-q" data-help="Cartões mais enxutos deixam o quadro mais limpo; o título sempre aparece. Quem decide é a gestão (gerente do projeto, Scrum Master, PO ou administrador). Os dados continuam salvos no item mesmo escondidos." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <div id="ab-card" style="display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--t1)"></div>

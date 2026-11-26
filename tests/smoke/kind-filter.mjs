@@ -100,6 +100,7 @@ await pg.evaluate(`Agile.openBoardCfg(); document.getElementById('ab-fix-on').ch
 ok((await selo()) === '' && await pg.evaluate(`const c = DB.get('agileConfig').autoFix; c.on === false && c.publish === 'approve'`), 'Correção automática: desligada em Personalizar quadro, o selo some e a escolha é gravada', await selo());
 await pg.evaluate(`Agile.openBoardCfg()`); await pg.waitForTimeout(150);
 ok(await pg.evaluate(`!document.getElementById('ab-fix-on').checked && document.getElementById('ab-fix-pub').value === 'approve'`), 'Correção automática: a janela reabre com a escolha gravada');
+ok(await pg.evaluate(`(() => { const b = document.getElementById('ab-fix-sched'); return !!b && /Próxima Fase/.test(b.textContent) && /Ainda não executa nada/.test(b.textContent) && b.querySelectorAll('select').length === 3 && [...b.querySelectorAll('select')].every(s => s.disabled); })()`), 'Execução sozinha: aparece como "Próxima Fase", desligada e dizendo que ainda não executa nada');
 await pg.evaluate(`document.getElementById('ab-fix-on').checked = true; document.getElementById('ab-fix-pub').value = 'auto'; Agile.saveBoardCfg()`); await pg.waitForTimeout(250);
 
 // Controle de Cards
