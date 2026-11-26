@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.113.13'
+  version: '2.113.14'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1944,6 +1944,7 @@ body.icons-failed i[data-fb]::before{
   <div class="card" data-sec="ler-bugs" data-tint="2" id="bugs-ai-card">
     <div class="lbl"><i class="ti ti-bug"></i>Ler os bugs com uma IA (para corrigir outro sistema)<span class="help-q" data-help="Os relatos dos bugs (passo a passo, o que se esperava, o que aconteceu) e os prints anexados podem ser entregues a uma IA, como o Claude Code, que lê, reproduz e corrige o sistema testado. O PMO Compass só fornece a lista, em modo leitura." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div>
     <p style="font-size:12.5px;color:var(--t2);line-height:1.65;margin:0 0 10px"><b>É possível, e é só leitura.</b> Cada bug registrado no Backlog (com o passo a passo e as evidências anexadas) vira uma pasta que a IA do <b>outro sistema</b> lê direto. Assim quem testa registra aqui, e quem corrige não precisa copiar nada à mão. O projeto aberto agora é <b id="bugs-ai-proj">—</b>.</p>
+    <p style="font-size:12.5px;color:var(--t1);line-height:1.65;margin:0 0 10px" id="bugs-ai-rule"><b>Quais bugs entram na correção automática:</b> só os cards do tipo <b>Bug</b> que estejam em <b>Em andamento</b>. Para pedir a correção, mova o bug para Em andamento; os bugs em outras situações são apenas listados.</p>
     <ol style="font-size:12.5px;color:var(--t1);line-height:1.7;margin:0 0 10px;padding-left:20px">
       <li><b>Abra a IA no sistema a corrigir</b> (por exemplo o Claude Code na pasta do ClãGuard Pro) e cole o <b>pedido pronto</b> abaixo. A habilidade <code>analise-pmo-compass</code> faz o resto: lê os bugs e os prints, corrige o código daquele sistema e roda os testes. Se o nome do projeto ou quadro não bater, ela lista todos e pergunta qual é.</li>
       <li><b>Acompanhe aqui.</b> Os bugs corrigidos vão sozinhos para <b>Em revisão</b>, e a descrição do card recebe, no fim, um bloco entre linhas de asteriscos com "<o que foi feito> — Auto Corrigido!" (a descrição tem até 100 caracteres; a frase final é somada) no histórico do card. Revise e conclua você mesmo; cada bug é filho de uma entrega, então o progresso da entrega acompanha.</li>
@@ -1951,7 +1952,7 @@ body.icons-failed i[data-fb]::before{
     </ol>
     <div class="field-group"><div class="field-label"><label for="bugs-ai-prompt">1 · Pedido pronto (cole na sessão do outro sistema)</label></div><div class="prov-inp-row"><input class="input" id="bugs-ai-prompt" readonly style="font-size:12.5px"><button class="btn btn-sm btn-acc" onclick="BugsAi.copy('prompt')"><i class="ti ti-copy"></i>Copiar Pedido</button></div></div>
     <div class="field-group"><div class="field-label"><label for="bugs-ai-cmd">2 · Comando manual de exportação (sem a habilidade)</label></div><div class="prov-inp-row"><input class="input" id="bugs-ai-cmd" readonly style="font-family:var(--font-mono);font-size:12px"><button class="btn btn-sm" onclick="BugsAi.copy('cmd')"><i class="ti ti-copy"></i>Copiar</button></div></div>
-    <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer;margin:8px 0"><input type="checkbox" id="bugs-ai-all" onchange="BugsAi.render()"> Incluir também os bugs já concluídos (<code>--all</code>)</label>
+    <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer;margin:8px 0"><input type="checkbox" id="bugs-ai-all" onchange="BugsAi.render()"> Incluir todos os bugs, só para leitura (<code>--all</code>)</label>
     <div class="set-sub"><i class="ti ti-shield-lock"></i> <b>Cuidados.</b> Precisa do Node instalado e do token de acesso do Supabase no arquivo <code>.env.deploy</code> (<code>SUPABASE_ACCESS_TOKEN</code>), que só o administrador tem. A leitura <b>não grava nada</b> no banco; a chave de serviço só gera links de 5 minutos para baixar os prints. A única gravação é a baixa automática: o bug corrigido e testado vai para <b>Em revisão</b> com o comentário no histórico (nunca para Concluído). A pasta <code>bugs-export</code> não vai para o repositório nem para o ar, mas pode conter dados pessoais nos prints: não a compartilhe fora de quem corrige.</div>
   </div>
   </div><!-- /settings-panel-ia -->
@@ -2312,6 +2313,8 @@ table th.num,table td.num{text-align:right;white-space:nowrap}
 <!-- ■ MODULE: pages/agile-css -->
 <style data-module="pages/agile-css">
 .kb-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.kb-filter{display:flex;gap:8px 18px;flex-wrap:wrap;align-items:center;margin:0 0 10px;font-size:12.5px;color:var(--t2)}
+.kb-f{display:inline-flex;gap:6px;align-items:center;max-width:100%}.kb-f .input{width:auto;min-width:150px;max-width:100%}
 .rt-step{display:flex;gap:8px;align-items:flex-start;text-align:left;padding:8px 12px;flex:1 1 170px}
 .rt-step i{font-size:18px;color:var(--acc);margin-top:2px;flex-shrink:0}
 .rt-step b{display:block;font-size:12.5px;color:var(--t1)}
@@ -2401,8 +2404,6 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div class="btn-row" id="kb-actions"></div>
   </div>
   <div class="kb-bar">
-    <select class="input" id="kb-sprint" aria-label="Sprint exibida no quadro" onchange="Agile.setBoardSprint(this.value)"></select>
-    <select class="input" id="kb-kind" aria-label="Filtrar o quadro por tipo" onchange="Agile.setBoardKind(this.value)"></select>
     <button class="btn btn-sm" data-perm="manage_backlog" onclick="Agile.openRules()" title="Regras que rodam sozinhas: quando o item muda de coluna, é criado ou recebe responsável, atribui, altera dados ou avisa"><i class="ti ti-bolt"></i>Automações</button>
     <button class="btn btn-sm" data-perm="manage_backlog" onclick="Agile.openBoardCfg()"><i class="ti ti-adjustments"></i>Personalizar quadro<span class="help-q" data-help="Renomeie as colunas, acrescente colunas do seu fluxo (por exemplo Em teste ou Aguardando cliente), defina o limite de itens em andamento de cada uma (WIP) e escolha quais informações aparecem em cada cartão. As colunas A fazer e Concluído são fixas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></button>
     <span id="kb-imp"></span>
@@ -2411,6 +2412,11 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
   </div>
   <div class="sprint-due-slot"></div>
   <div id="kb-sprint-bar" role="status" aria-live="polite" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;margin:0 0 10px"></div>
+  <div class="kb-filter" role="group" aria-label="Filtros do quadro">
+    <span class="kb-f"><label for="kb-sprint">Sprint</label><select class="input" id="kb-sprint" onchange="Agile.setBoardSprint(this.value)"></select></span>
+    <span class="kb-f"><label for="kb-kind">Tipo de card</label><select class="input" id="kb-kind" onchange="Agile.setBoardKind(this.value)"></select></span>
+    <span id="kb-count" role="status" aria-live="polite"></span>
+  </div>
   <div id="kb-root"></div>
 </section>
 
@@ -2529,12 +2535,12 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div class="field-group" id="ai-status-grp"><div class="field-label"><label for="ai-status">Situação</label></div><select class="input" id="ai-status"><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="review">Em revisão</option><option value="done">Concluído</option></select></div>
     <div class="field-group"><div class="field-label"><label for="ai-desc">Descrição e critérios de aceite</label></div><textarea class="input ai-same" id="ai-desc" rows="4" maxlength="2000" style="font-family:inherit"></textarea></div>
     <div id="ai-work" style="display:none;margin-top:10px">
-      <div class="field-group"><div class="field-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span><label for="ai-note">Comentário da atividade</label><span class="help-q" data-help="O que foi feito e o resultado (ex.: testei os 3 cenários, tudo aprovado). Os comentários ficam dentro deste campo, com o seu nome, a data e a hora, e só podem ser acrescentados: não dá para editar nem apagar (auditoria). Algumas colunas exigem o comentário para entrar. O clipe anexa evidências (prints, PDF, planilha; até 5 MB cada); também dá para colar o print com Ctrl+V." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></span><span style="display:inline-flex;align-items:center;gap:6px"><span id="ai-evid-n" style="font-size:12px;color:var(--t2)"></span><button type="button" class="btn btn-sm" id="ai-evid-btn" title="Anexar evidências (prints, PDF, planilha; até 5 MB cada). Também dá para colar o print com Ctrl+V" aria-label="Anexar evidências" onclick="document.getElementById('ai-evid').click()"><i class="ti ti-paperclip"></i></button></span></div>
+      <div class="field-group"><div class="field-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span><label for="ai-note">Comentário da atividade</label><span class="help-q" data-help="O que foi feito e o resultado (ex.: testei os 3 cenários, tudo aprovado). Os comentários ficam dentro deste campo (o mais recente no topo), com o seu nome, a data e a hora, e só podem ser acrescentados: não dá para editar nem apagar (auditoria). Algumas colunas exigem o comentário para entrar. O clipe anexa evidências (prints, PDF, planilha; até 5 MB cada); também dá para colar o print com Ctrl+V." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></span><span style="display:inline-flex;align-items:center;gap:6px"><span id="ai-evid-n" style="font-size:12px;color:var(--t2)"></span><button type="button" class="btn btn-sm" id="ai-evid-btn" title="Anexar evidências (prints, PDF, planilha; até 5 MB cada). Também dá para colar o print com Ctrl+V" aria-label="Anexar evidências" onclick="document.getElementById('ai-evid').click()"><i class="ti ti-paperclip"></i></button></span></div>
         <div class="ai-cm ai-same"><div class="ai-cm-log" id="ai-lastnotes" role="log" tabindex="0" aria-label="Comentários anteriores deste card (somente leitura)"></div><textarea class="ai-cm-in" id="ai-note" rows="2" maxlength="500" placeholder="Escreva um novo comentário (só dá para acrescentar)"></textarea></div>
         <input id="ai-evid" type="file" multiple hidden aria-label="Evidências" onchange="Agile.evidCount()" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/csv,.xlsx"></div>
+      <div id="ai-files" style="margin-top:10px"></div>
       <div class="set-sub" id="ai-work-hint"></div>
     </div>
-    <div id="ai-files" style="display:none;margin-top:10px"></div>
     <div id="ai-check" style="display:none;margin-top:10px"></div>
     <div id="ai-children" style="display:none;margin-top:10px"></div>
     <details id="ai-hist" style="display:none;margin-top:10px">
@@ -14593,7 +14599,10 @@ const Agile = (() => {
     const keyOf = i => keys.includes(i.status) ? i.status : (i.status === 'done' ? 'done' : keys[0]);
     const allShown = boardItems(), kindSel = document.getElementById('kb-kind');
     if(kindSel) kindSel.innerHTML = '<option value="">Todos os tipos</option>' + [['bug', 'Bug'], ['historia', 'História'], ['tarefa', 'Tarefa']].map(([k, l]) => '<option value="' + k + '"' + (boardKind === k ? ' selected' : '') + '>' + l + ' (' + allShown.filter(i => i.kind === k).length + ')</option>').join('');
-    const list = allShown.filter(i => !boardKind || i.kind === boardKind).map(i => (keys.includes(i.status) ? i : { ...i, status: keyOf(i) })).sort(sortByRank), stats = AgileCalc.wip(list, cfg);
+    const mapped = allShown.map(i => (keys.includes(i.status) ? i : { ...i, status: keyOf(i) }));
+    // O limite da coluna é do trabalho real: conta todos os cards, mesmo os que o filtro de tipo esconde
+    const list = mapped.filter(i => !boardKind || i.kind === boardKind).sort(sortByRank), stats = AgileCalc.wip(mapped, cfg);
+    { const kc = document.getElementById('kb-count'); if(kc) kc.textContent = boardKind ? 'Mostrando ' + list.length + ' de ' + mapped.length + ' card(s)' : mapped.length + ' card(s) no quadro'; }
     const open = impediments().filter(x => x.status === 'aberto').length;
     const imp = document.getElementById('kb-imp');
     if(imp) imp.innerHTML = open ? `<button class="btn btn-sm" onclick="Agile.openImpediments()"><i class="ti ti-alert-octagon"></i>${open} impedimento(s) aberto(s)</button>` : '';
@@ -14612,7 +14621,7 @@ const Agile = (() => {
       const mine = rows.filter(i => i.status === col.key), st = wipStats ? wipStats.find(x => x.key === col.key) : { count: mine.length, limit: 0, over: false };
       const cards = mine.map(i => card(i)).join('') || '<div style="font-size:11.5px;color:var(--t3);padding:6px 2px">Nenhum item</div>';
       return `<div class="kb-col${st.over ? ' over-wip' : ''}" data-status="${esc(col.key)}" ondragover="Agile.dragOver(event)" ondragleave="this.classList.remove('drop')" ondrop="Agile.drop(event,'${esc(col.key)}')" role="group" aria-label="${esc(col.label)}: ${st.count} item(ns)">
-        <div class="kb-hdr"><b>${esc(col.label)}</b><span class="kb-count">${st.count}${st.limit ? ' / ' + st.limit : ''}</span>${st.over ? '<span class="badge b-red">limite excedido</span>' : ''}</div>${cards}</div>`;
+        <div class="kb-hdr"><b>${esc(col.label)}</b><span class="kb-count">${wipStats && boardKind ? mine.length + ' de ' + st.count + (st.limit ? ' · limite ' + st.limit : '') : st.count + (st.limit ? ' / ' + st.limit : '')}</span>${st.over ? '<span class="badge b-red">limite excedido</span>' : ''}</div>${cards}</div>`;
     }).join('') + '</div>';
     // Raia geral (sempre, sem filtro) e, abaixo, as raias filtradas; todas recolhíveis (o estado fica salvo neste navegador)
     const lanes = AgileCalc.normLanes(DB.get('boardLanes')).filter(l => !AgileCalc.laneEmpty(l));
@@ -14620,7 +14629,7 @@ const Agile = (() => {
     const desc = l => [l.kinds.length ? 'tipo: ' + l.kinds.map(kindName).join(', ') : '', l.assignees.length ? 'responsável: ' + l.assignees.map(a => a === AgileCalc.NO_ASSIGNEE ? 'sem responsável' : a).join(', ') : '', l.estimate ? (l.estimate === 'sem' ? 'sem estimativa' : 'com estimativa') : ''].filter(Boolean).join(' · ');
     const laneHtml = (id, tint, name, meta, count, body) => `<div class="card kb-lane" data-sec="lane-${esc(id)}" data-tint="${tint}"><div class="lbl"><i class="ti ti-layout-rows"></i>${esc(name)} <span class="badge">${count}</span> <span class="kb-lane-meta">${esc(meta)}</span></div>${body}</div>`;
     root.innerHTML = emptyHint + (lanes.length
-      ? laneHtml('geral', 1, 'Geral', 'todos os itens, sem filtro', list.length, grid(list, stats)) + lanes.map((l, n) => { const rows = list.filter(i => AgileCalc.laneMatch(l, i)); return laneHtml(l.id, (n % 3) + 2, l.name, desc(l), rows.length, grid(rows, null)); }).join('')
+      ? laneHtml('geral', 1, 'Geral', boardKind ? 'todos os itens do tipo ' + kindName(boardKind) : 'todos os itens, sem filtro', list.length, grid(list, stats)) + lanes.map((l, n) => { const rows = list.filter(i => AgileCalc.laneMatch(l, i)); return laneHtml(l.id, (n % 3) + 2, l.name, desc(l), rows.length, grid(rows, null)); }).join('')
       : grid(list, stats));
     if(lanes.length && typeof Sec !== 'undefined') Sec.restore(root);
   }
@@ -15367,14 +15376,18 @@ const Agile = (() => {
       m.classList.remove('hidden'); setTimeout(() => ta.focus(), 30);
     });
   }
-  // Os comentários do card ficam DENTRO do campo de comentário (só leitura, do mais antigo ao mais novo); o novo é escrito na caixa de baixo
+  // Os comentários do card ficam DENTRO do campo de comentário (só leitura, o MAIS RECENTE PRIMEIRO, sem precisar rolar); o novo é escrito na caixa de baixo
   function renderLastNotes(it) {
     const el = document.getElementById('ai-lastnotes'); if(!el) return;
     const list = it && Array.isArray(it.history) ? it.history.filter(h => h && !h.field && String(h.to).startsWith('Comentário: ')) : [];
-    el.innerHTML = list.length ? list.map(h => { const d = new Date(h.at); return '<div><b>' + esc(h.by) + '</b> <span class="ai-cm-d">' + (isNaN(d) ? '' : pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes())) + '</span> — ' + esc(String(h.to).slice(12)) + '</div>'; }).join('') : '<div class="ai-cm-e">Nenhum comentário ainda. Os comentários só podem ser acrescentados; não dá para editar nem apagar (auditoria).</div>';
-    el.scrollTop = el.scrollHeight;
+    el.innerHTML = list.length ? list.slice().reverse().map(h => { const d = new Date(h.at); return '<div><b>' + esc(h.by) + '</b> <span class="ai-cm-d">' + (isNaN(d) ? '' : pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes())) + '</span> — ' + esc(String(h.to).slice(12)) + '</div>'; }).join('') : '<div class="ai-cm-e">Nenhum comentário ainda. Os comentários só podem ser acrescentados; não dá para editar nem apagar (auditoria).</div>';
+    el.scrollTop = 0;
   }
-  function evidCount() { const i = document.getElementById('ai-evid'), n = document.getElementById('ai-evid-n'); if(n) n.textContent = i && i.files && i.files.length ? i.files.length + ' arquivo(s)' : ''; }
+  function evidCount() {
+    const i = document.getElementById('ai-evid'), n = document.getElementById('ai-evid-n'), p = document.getElementById('ai-files-pend'), q = i && i.files ? i.files.length : 0;
+    if(n) n.textContent = q ? q + ' arquivo(s)' : '';
+    if(p) p.textContent = q ? q + ' arquivo(s) escolhido(s): ' + [...i.files].map(x => x.name).join(', ') + '. Entram no card ao salvar.' : '';
+  }
   function addHist(it, text) { if(!Array.isArray(it.history)) it.history = []; it.history.push({ at: new Date().toISOString(), by: (typeof Auth !== 'undefined' && Auth.getName()) || 'Sistema', field: '', from: '', to: text }); }
   function renderCheck() {
     const box = document.getElementById('ai-check'); if(!box) return;
@@ -15579,8 +15592,11 @@ const Agile = (() => {
   function renderFiles(it) {
     const el = document.getElementById('ai-files'); if(!el) return;
     const list = (it && Array.isArray(it.attachments)) ? it.attachments : [];
-    el.style.display = list.length ? '' : 'none';
-    el.innerHTML = list.length ? '<div class="field-label"><i class="ti ti-paperclip"></i> Anexos e evidências</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">' + list.map(a => '<span style="display:inline-flex;gap:2px"><button type="button" class="btn btn-sm" onclick="Agile.openFile(\'' + esc(a.path) + '\')"><i class="ti ti-' + (String(a.type).startsWith('image/') ? 'photo' : 'file') + '"></i>' + esc(a.name) + '</button><button type="button" class="btn btn-sm" title="Excluir este anexo" aria-label="Excluir o anexo ' + esc(a.name) + '" onclick="Agile.removeFile(\'' + esc(a.path) + '\')"><i class="ti ti-x"></i></button></span>').join('') + '</div>' : '';
+    el.style.display = '';
+    // O título é um botão com a mesma função do clipe: escolher o arquivo para anexar
+    const head = '<div class="field-label"><button type="button" class="link-a" id="ai-files-add" style="padding:0;font:inherit" title="Anexar evidências (o mesmo que o clipe): prints, PDF, planilha, até 5 MB cada" onclick="document.getElementById(\'ai-evid\').click()"><i class="ti ti-paperclip"></i> Anexos e evidências</button></div><div class="set-sub" id="ai-files-pend"></div>';
+    el.innerHTML = list.length ? head + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">' + list.map(a => '<span style="display:inline-flex;gap:2px"><button type="button" class="btn btn-sm" onclick="Agile.openFile(\'' + esc(a.path) + '\')"><i class="ti ti-' + (String(a.type).startsWith('image/') ? 'photo' : 'file') + '"></i>' + esc(a.name) + '</button><button type="button" class="btn btn-sm" title="Excluir este anexo" aria-label="Excluir o anexo ' + esc(a.name) + '" onclick="Agile.removeFile(\'' + esc(a.path) + '\')"><i class="ti ti-x"></i></button></span>').join('') + '</div>' : head + '<div class="set-sub">Nenhum anexo. Clique no título (ou no clipe) para anexar; também dá para colar o print com Ctrl+V.</div>';
+    evidCount();
   }
   // Mudança de escopo no meio da sprint: só na sprint ativa, com o motivo registrado na descrição e na trilha
   let urgent = null;

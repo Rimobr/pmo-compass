@@ -158,3 +158,12 @@ test('sugestões do cartão: pontos por cards parecidos já entregues, épico pe
   assert.equal(AgileCalc.suggestBugPosition([], 0), 1);
   for (const k of ['function sugRender()', 'function sugUse(what, v)', 'id="ai-sug-asg"', 'id="ai-sug-pts"', 'id="ai-sug-epic"', 'const prioFor = sev =>', "Agile.prioFor($('bug-f-sev').value)"]) assert.ok(html.includes(k), k);
 });
+
+test('correção automática: só Bug em "Em andamento" é exportado e recebe baixa (regra do dono)', () => {
+  const rb = readFileSync(join(root, 'scripts/read-bugs.mjs'), 'utf8');
+  assert.ok(rb.includes("const READY = 'doing'"), 'situação pronta');
+  assert.ok(rb.includes('open.filter(b => b.status === READY)'), 'exporta só os prontos');
+  assert.ok(rb.includes('if (row.status !== READY)'), 'baixa só em Em andamento');
+  assert.ok(rb.includes('Fora da correção automática'), 'lista os que ficaram de fora');
+  assert.ok(readFileSync(join(root, 'PMO_Compass_v2.html'), 'utf8').includes('id="bugs-ai-rule"'), 'regra escrita na plataforma');
+});

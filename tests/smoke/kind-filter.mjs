@@ -56,6 +56,30 @@ const kopts = await pg.evaluate(`[...document.querySelectorAll('#kb-kind option'
 ok(kopts === 'Todos os tipos|Bug (2)|História (1)|Tarefa (1)', 'Kanban: contagem por tipo continua inteira com o filtro ligado', kopts);
 await pg.evaluate(`Agile.setBoardKind('')`); await pg.waitForTimeout(150);
 ok(await rows('.kb-card') === 4, 'Kanban: Todos os tipos volta aos 4 cards');
+// O filtro fica logo acima das colunas, com rótulo; o limite por coluna conta todos os cards, mesmo com o filtro ligado
+const pos = await pg.evaluate(`(() => { const r = document.getElementById('kb-root'), p = r.previousElementSibling; return { junto: p.classList.contains('kb-filter') && p.contains(document.getElementById('kb-sprint')) && p.contains(document.getElementById('kb-kind')), rotulos: [...p.querySelectorAll('label')].map(l => l.textContent).join('|'), n: document.getElementById('kb-count').textContent }; })()`);
+ok(pos.junto && pos.rotulos === 'Sprint|Tipo de card' && pos.n === '4 cards no quadro', 'Kanban: filtros logo acima das colunas, com rótulo e a contagem do quadro', JSON.stringify(pos));
+const hdr = () => pg.evaluate(`document.querySelector('.kb-col[data-status=doing] .kb-count').textContent`);
+const h2all = await hdr();
+await pg.evaluate(`Agile.setBoardKind('bug')`); await pg.waitForTimeout(150);
+const h2bug = await hdr(), nbug = await pg.evaluate(`document.getElementById('kb-count').textContent`);
+ok(/^2( \/ \d+)?$/.test(h2all) && /^1 de 2( · limite \d+)?$/.test(h2bug) && nbug === 'Mostrando 2 de 4 cards', 'Kanban: com o filtro, a coluna diz "1 de 2" (o limite conta todos) e a linha diz quantos mostra', h2all + ' | ' + h2bug + ' | ' + nbug);
+await pg.evaluate(`Agile.setBoardKind('')`); await pg.waitForTimeout(150);
+
+// Cartão (bugs US-008 e US-009 do quadro PMO Compass)
+await pg.evaluate(`(() => { const b = DB.get('backlog'), it = b.find(x => x.id === 'US-2'); it.history = [{ at: '2026-10-11T10:00:00Z', by: 'Rita', field: '', from: '', to: 'Comentário: primeiro pedido' }, { at: '2026-10-12T10:00:00Z', by: 'Rita', field: '', from: '', to: 'Comentário: pedido mais recente' }]; DB.set('backlog', b); Agile.resetCache(); Agile.openItem('US-2'); })()`);
+await pg.waitForTimeout(300);
+// a janela de sessão (do ambiente de teste, com sessão simulada) não pode cobrir o cartão
+await pg.evaluate(`document.getElementById('modal-session') && document.getElementById('modal-session').remove()`);
+const cm = await pg.evaluate(`(() => { const l = document.getElementById('ai-lastnotes'); return { primeiro: (l.children[0] || {}).textContent || '', topo: l.scrollTop }; })()`);
+ok(/pedido mais recente/.test(cm.primeiro) && cm.topo === 0, 'Cartão (US-009): o comentário mais recente aparece primeiro, sem rolar', JSON.stringify(cm));
+const abre = async sel => { try { const [fc] = await Promise.all([pg.waitForEvent('filechooser', { timeout: 4000 }), pg.click(sel, { timeout: 4000 })]); return fc; } catch (e) { return null; } };
+const fc1 = await abre('#ai-files-add');
+ok(!!fc1, 'Cartão (US-008): clicar em "Anexos e evidências" abre a escolha de arquivo, mesmo sem anexo');
+if (fc1) { await fc1.setFiles({ name: 'print.png', mimeType: 'image/png', buffer: Buffer.from('x') }); await pg.waitForTimeout(150); }
+ok(await pg.evaluate(`/print[.]png/.test(document.getElementById('ai-files-pend').textContent) && /1 arquivo/.test(document.getElementById('ai-evid-n').textContent)`), 'Cartão (US-008): o arquivo escolhido aparece junto do título e do clipe');
+ok(!!(await abre('#ai-evid-btn')), 'Cartão (US-008): o clipe continua abrindo a escolha de arquivo');
+await pg.evaluate(`document.getElementById('modal-agile-item').classList.add('hidden')`);
 
 // Controle de Cards
 // sem sessão, a lista de projetos inclui o projeto local deste teste (com sessão ele só mostra o que vem da nuvem)

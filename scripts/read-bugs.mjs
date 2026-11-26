@@ -3,8 +3,10 @@
 // Serve para quem vai corrigir o sistema do projeto (ex.: ClãGuard Pro) ler os relatos e ver os prints direto,
 // sem copiar nada à mão: o PMO Compass guarda o controle, o outro sistema recebe a lista.
 //
-//   node scripts/read-bugs.mjs "ClãGuard"                 # bugs em aberto do projeto cujo nome contém o texto
-//   node scripts/read-bugs.mjs "ClãGuard" --all           # inclui os já concluídos
+// REGRA DA CORREÇÃO AUTOMÁTICA (dono): só entra card do tipo BUG que esteja em "Em andamento". Os outros bugs em aberto são só listados.
+//
+//   node scripts/read-bugs.mjs "ClãGuard"                 # bugs PRONTOS PARA CORREÇÃO (Em andamento) do projeto cujo nome contém o texto
+//   node scripts/read-bugs.mjs "ClãGuard" --all           # só leitura: todos os bugs, inclusive os de outras situações (não corrigir os de fora de Em andamento)
 //   node scripts/read-bugs.mjs "ClãGuard" --out C:\caminho\pasta
 //   node scripts/read-bugs.mjs --list                     # lista TODOS os projetos e quadros (id | tipo | nome | bugs em aberto)
 //   node scripts/read-bugs.mjs --id <id-do-projeto>       # escolhe pelo id exato (use depois do --list)
@@ -42,9 +44,10 @@ const lit = s => `'${String(s).replace(/'/g, "''")}'`;
 const slug = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'projeto';
 const safe = s => String(s).replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);
 
+const READY = 'doing'; // "Em andamento": a única situação em que a correção automática pega um bug
 const plain = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-const allProjects = () => q(`select p.id, p.name, p.client, p.methodology, (select count(*) from public.backlog_items b where b.project_id = p.id and b.kind = 'bug' and b.status <> 'done') as bugs from public.projects p order by p.name`);
-const showList = rows => rows.map(p => `  ${p.id} | ${p.methodology === 'quadro' ? 'Quadro ' : 'Projeto'} | ${p.name}${p.client ? ' (' + p.client + ')' : ''} | ${p.bugs} bug(s) em aberto`).join('\n');
+const allProjects = () => q(`select p.id, p.name, p.client, p.methodology, (select count(*) from public.backlog_items b where b.project_id = p.id and b.kind = 'bug' and b.status <> 'done') as bugs, (select count(*) from public.backlog_items b where b.project_id = p.id and b.kind = 'bug' and b.status = 'doing') as ready from public.projects p order by p.name`);
+const showList = rows => rows.map(p => `  ${p.id} | ${p.methodology === 'quadro' ? 'Quadro ' : 'Projeto'} | ${p.name}${p.client ? ' (' + p.client + ')' : ''} | ${p.bugs} bug(s) em aberto, ${p.ready} em Em andamento (prontos para correção)`).join('\n');
 
 const main = async () => { try {
   if (flag('--list')) { console.log('Projetos e quadros (id | tipo | nome | bugs em aberto):\n' + showList(await allProjects())); { process.exitCode = 0; return; } }
@@ -79,7 +82,7 @@ const main = async () => { try {
       const first = team.filter(m => plain(m.name).trim().split(' ')[0] === by.split(' ')[0]); return first.length === 1 ? first[0].name : null;
     };
     for (const row of rows) {
-      if (row.status === 'done') { console.error(`  ${row.id}: já concluído, não mexi.`); continue; }
+      if (row.status !== READY) { console.error(`  ${row.id}: não está em "Em andamento", não mexi (a correção automática só dá baixa em bug em Em andamento).`); process.exitCode = 2; continue; }
       const hist = (Array.isArray(row.history) ? row.history : []).concat([
         { at: now, by, field: 'Situação', from: ({ todo: 'A fazer', doing: 'Em andamento', review: 'Em revisão' })[row.status] || row.status, to: 'Em revisão' },
       ]);
@@ -93,14 +96,16 @@ const main = async () => { try {
       await q(`update public.backlog_items set status = 'review', done_on = null, ${back && back !== row.assignee ? 'assignee = ' + lit(back) + ', ' : ''}description = ${lit(desc)}, history = ${lit(JSON.stringify(hist))}::jsonb, updated_at = now() where project_id = ${lit(p.id)} and id = ${lit(row.id)}`);
       console.log(`  ${row.id}: movido para Em revisão` + (back ? `, devolvido a ${back} (quem abriu)` : ', responsável mantido (não achei quem abriu na equipe)') + `; descrição recebeu o bloco: "${comment}"`);
     }
-    { process.exitCode = 0; return; }
+    { process.exitCode = process.exitCode || 0; return; }
   }
-  const bugs = await q(`select b.id, b.title, b.status, b.description, b.parent_id, par.title as parent_title, b.sprint_id, s.name as sprint_name, b.attachments, b.created_on, b.bug_priority
+  const open = await q(`select b.id, b.title, b.status, b.description, b.parent_id, par.title as parent_title, b.sprint_id, s.name as sprint_name, b.attachments, b.created_on, b.bug_priority
     from public.backlog_items b
     left join public.backlog_items par on par.project_id = b.project_id and par.id = b.parent_id
     left join public.sprints s on s.project_id = b.project_id and s.id = b.sprint_id
     where b.project_id = ${lit(p.id)} and b.kind = 'bug' ${flag('--all') ? '' : "and b.status <> 'done'"}
     order by b.bug_priority asc nulls last, b.created_on desc, b.id`);
+  // Só o que está em "Em andamento" vai para a correção; --all é leitura de tudo
+  const bugs = flag('--all') ? open : open.filter(b => b.status === READY), waiting = flag('--all') ? [] : open.filter(b => b.status !== READY);
   const out = outIdx >= 0 ? args[outIdx + 1] : join(root, 'bugs-export', slug(p.name));
   mkdirSync(join(out, 'anexos'), { recursive: true });
 
@@ -124,7 +129,7 @@ const main = async () => { try {
     } catch (e) { console.error(`  ! anexo ${f.name} (${f.bug}): ${e.message}`); }
   }
   const STATUS = { todo: 'A fazer', doing: 'Em andamento', review: 'Em revisão', done: 'Concluído' };
-  const md = [`# Bugs — ${p.name}${p.client ? ' (' + p.client + ')' : ''}`, '', `Exportado do PMO Compass em ${new Date().toLocaleString('pt-BR')} · ${bugs.length} bug(s)${flag('--all') ? '' : ' em aberto'}.`, '',
+  const md = [`# Bugs — ${p.name}${p.client ? ' (' + p.client + ')' : ''}`, '', `Exportado do PMO Compass em ${new Date().toLocaleString('pt-BR')} · ${bugs.length} bug(s)${flag('--all') ? ' (leitura de todos: corrigir só os que estão em Em andamento)' : ' prontos para correção (em Em andamento)'}.`, '',
     'Os bugs vêm na ORDEM DE PRIORIDADE definida pela gestão (P1 primeiro; sem prioridade por último): corrija nessa ordem. Cada bug é filho de uma entrega do projeto. A descrição segue a ordem: caminho no sistema, gravidade, passo a passo, o que se esperava, o que aconteceu e o contexto técnico.', ''];
   for (const b of bugs) {
     md.push(`## ${b.id} — ${b.title}`, '', `- **Situação:** ${STATUS[b.status] || b.status}`, `- **Prioridade:** ${b.bug_priority ? 'P' + b.bug_priority + ' (posição ' + b.bug_priority + ' na fila; 1 = corrigir primeiro)' : 'sem prioridade definida'}`, `- **Entrega (item pai):** ${b.parent_id ? b.parent_id + ' — ' + (b.parent_title || '') : 'sem item pai (bug antigo)'}`, `- **Sprint:** ${b.sprint_name || 'fora de sprint (backlog)'}`, `- **Registrado em:** ${b.created_on || '—'}`, '', '```text', b.description || '(sem descrição)', '```', '');
@@ -132,7 +137,9 @@ const main = async () => { try {
     if (an.length) { md.push('**Anexos:**', ''); an.forEach(a => md.push(`- [${a.name}](${a.rel})`)); md.push(''); }
     else if ((b.attachments || []).length) md.push('_(há anexos, mas não foi possível baixá-los)_', '');
   }
+  if (waiting.length) md.push('## Fora da correção automática (não estão em "Em andamento")', '', 'Para corrigir, a gestão move o card para **Em andamento** no PMO Compass.', '', ...waiting.map(b => `- ${b.id} — ${b.title} (${STATUS[b.status] || b.status})`), '');
   writeFileSync(join(out, 'bugs.md'), md.join('\n'));
-  console.log(`${bugs.length} bug(s) de "${p.name}" exportados para ${out}${files.length ? ` (${Object.values(saved).flat().length}/${files.length} anexo(s))` : ''}.`);
+  if (waiting.length) console.log('Fora da correção automática (não estão em "Em andamento"): ' + waiting.map(b => b.id + ' (' + (STATUS[b.status] || b.status) + ')').join(', ') + '.');
+  console.log(`${bugs.length} bug(s) de "${p.name}" ${flag('--all') ? 'exportados' : 'prontos para correção (Em andamento) exportados'} para ${out}${files.length ? ` (${Object.values(saved).flat().length}/${files.length} anexo(s))` : ''}.`);
 } catch (e) { console.error('Falha: ' + String(e.message).slice(0, 300)); process.exitCode = 1; } };
 await main();
