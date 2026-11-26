@@ -40,3 +40,15 @@ test('script: respeita a configuração do quadro e registra o primeiro contato'
   assert.ok(rb.includes("val('--take')") && rb.includes('Comentário: Recebido pela correção automática em '), 'primeiro contato');
   assert.ok(rb.includes('SÓ COM APROVAÇÃO (produção)'), 'informa a publicação');
 });
+test('próximo passo do bug: mover, aguardar, em análise, revisar, desligada ou nada', () => {
+  const h = (status, history = [], c = null) => AgileCalc.autoFixHint(bug(status, history), c);
+  assert.equal(h('todo'), 'move');
+  assert.equal(h('doing'), 'wait');
+  assert.equal(h('doing', [took()]), 'working');
+  assert.equal(h('review', [move('Em revisão', 'Claude Code (correção automática)')]), 'fixed');
+  assert.equal(h('review', [move('Em revisão', 'Rita')]), '');
+  assert.equal(h('done'), '');
+  assert.equal(h('todo', [], { autoFix: { on: false } }), 'off');
+  assert.equal(h('doing', [], { autoFix: { on: false } }), 'off');
+  assert.equal(AgileCalc.autoFixHint({ kind: 'historia', status: 'todo' }, null), '');
+});

@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.113.16'
+  version: '2.113.17'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -238,7 +238,7 @@ body.is-board [onclick*="openPlanNext"],body.is-board #as-goal-grp,body.is-board
 .sb-proj-area.more .sb-more-chev{transform:rotate(180deg)}
 .kb-top{position:relative;container:kbtop/inline-size}
 .kb-burn{display:inline-flex;align-items:center;gap:8px;margin-left:auto;font-size:11px;color:var(--t2);white-space:nowrap}
-.kb-burn svg{display:block;height:36px;width:auto}
+.kb-burn svg{display:block;width:auto}
 .kb-burn .kbb-bar{fill:var(--acc);fill-opacity:.28;stroke:var(--acc);stroke-width:1}
 .kb-burn .kbb-v{fill:var(--t1);font-size:11px;font-weight:700;text-anchor:middle;paint-order:stroke;stroke:var(--s1);stroke-width:3px;stroke-linejoin:round}
 .kb-burn .kbb-x{fill:var(--t2);font-size:11px;text-anchor:middle}
@@ -248,6 +248,8 @@ body.is-board [onclick*="openPlanNext"],body.is-board #as-goal-grp,body.is-board
 /* tela larga e sem aviso de metodologia: o gráfico ocupa todo o espaço livre à direita, abaixo dos botões do topo, até a linha do seletor de sprint */
 @container kbtop (min-width:1060px){.kb-top:not(:has(.m-notice)) .kb-burn{position:absolute;right:0;top:28px;bottom:0;width:clamp(300px,calc(100% - 680px),700px);margin:0;align-items:stretch;gap:10px;white-space:normal}
 .kb-burn .kbb-head{width:118px;flex:none;display:flex;flex-direction:column;justify-content:center;gap:4px;font-size:11px;color:var(--t2);line-height:1.35}}
+.kb-burn .kbb-day{cursor:pointer;outline:none}.kb-burn .kbb-day:hover .kbb-bar,.kb-burn .kbb-day.on .kbb-bar{fill-opacity:.75}.kb-burn .kbb-day:focus-visible .kbb-hit{stroke:var(--acc);stroke-width:2}
+.kb-burn .kbb-hit{fill:transparent}.kb-burn .kbb-trend{pointer-events:none}.kb-burn svg:not(.kbb-lgs){max-height:none}
 @media(max-width:600px){.kb-burn{display:none!important}}
 body.is-board .btn-epic{display:none!important}
 .ag-epic{background:var(--s2);border-left:3px solid var(--acc);margin-top:6px}
@@ -2411,6 +2413,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     <div id="kb-burn" class="kb-burn" hidden></div>
   </div>
   </div>
+  <div id="kb-day" class="card" hidden role="region" aria-live="polite" aria-label="Cards entregues no dia escolhido" style="margin:0 0 10px;padding:10px 12px"></div>
   <div class="sprint-due-slot"></div>
   <div id="kb-sprint-bar" role="status" aria-live="polite" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;margin:0 0 10px"></div>
   <div class="kb-filter" role="group" aria-label="Filtros do quadro">
@@ -2533,8 +2536,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
       <div class="field-group ai-sprint-grp"><div class="field-label"><label for="ai-sprint">Sprint</label></div><select class="input" id="ai-sprint"></select></div>
     </div>
     <div class="field-group" id="ai-epic-grp" style="display:none"><div class="field-label"><label for="ai-epic">Épico</label><span class="help-q" data-help="O épico é um grupo grande de entregas (por exemplo, Relatórios). A história ou tarefa escolhe aqui o épico a que pertence; o progresso do épico é calculado das histórias ligadas." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></div><select class="input" id="ai-epic" onchange="Agile.sugRender()"></select><div class="ai-sug" id="ai-sug-epic"></div></div>
-    <div class="field-group" id="ai-status-grp"><div class="field-label"><label for="ai-status">Situação</label></div><select class="input" id="ai-status"><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="review">Em revisão</option><option value="done">Concluído</option></select></div>
-    <div id="ai-autofix" class="set-sub" style="display:none;margin:-4px 0 8px"></div>
+    <div class="field-group" id="ai-status-grp"><div class="field-label"><label for="ai-status">Situação</label></div><select class="input" id="ai-status" onchange="Agile.fixPreview()"><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="review">Em revisão</option><option value="done">Concluído</option></select></div>
+    <div id="ai-autofix" class="set-sub" role="status" aria-live="polite" style="display:none;margin:-2px 0 10px;padding:8px 10px;border-left:3px solid var(--acc);background:var(--s2);border-radius:6px;line-height:1.5;color:var(--t1)"></div>
     <div class="field-group"><div class="field-label"><label for="ai-desc">Descrição e critérios de aceite</label></div><textarea class="input ai-same" id="ai-desc" rows="4" maxlength="2000" style="font-family:inherit"></textarea></div>
     <div id="ai-work" style="display:none;margin-top:10px">
       <div class="field-group"><div class="field-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span><label for="ai-note">Comentário da atividade</label><span class="help-q" data-help="O que foi feito e o resultado (ex.: testei os 3 cenários, tudo aprovado). Os comentários ficam dentro deste campo (o mais recente no topo), com o seu nome, a data e a hora, e só podem ser acrescentados: não dá para editar nem apagar (auditoria). Algumas colunas exigem o comentário para entrar. O clipe anexa evidências (prints, PDF, planilha; até 5 MB cada); também dá para colar o print com Ctrl+V." onclick="event.stopPropagation();HelpTip.toggle(this)">?</span></span><span style="display:inline-flex;align-items:center;gap:6px"><span id="ai-evid-n" style="font-size:12px;color:var(--t2)"></span><button type="button" class="btn btn-sm" id="ai-evid-btn" title="Anexar evidências (prints, PDF, planilha; até 5 MB cada). Também dá para colar o print com Ctrl+V" aria-label="Anexar evidências" onclick="document.getElementById('ai-evid').click()"><i class="ti ti-paperclip"></i></button></span></div>
@@ -6748,6 +6751,7 @@ const BugReport = (() => {
     $('bug-f-sev').value = 'atrapalha'; $('bug-f-path').value = suggestPath();
     $('bug-files-hint').textContent = cloud ? 'ou cole o print aqui com Ctrl+V · até 6 arquivos de 5 MB (imagem, PDF, planilha ou texto)' : 'Anexos precisam da conexão com a nuvem. Sem ela, descreva bem o bug e guarde o print para enviar à equipe.';
     document.querySelector('label[for="bug-f-files"]').style.display = cloud ? '' : 'none';
+    $('bug-f-next').innerHTML = Agile.fixNewBug();
     $('modal-bug').classList.remove('hidden');
     setTimeout(() => $(parentId ? 'bug-f-title' : 'bug-f-parent').focus(), 50);
   }
@@ -13368,6 +13372,14 @@ const AgileCalc = (() => {
     entry: cfg && cfg.entry === 'kanban' ? 'kanban' : 'scrum',
     // Correção automática: ligada por padrão; publicação automática enquanto for desenvolvimento/testes ('approve' em produção)
     autoFix: { on: !(cfg && cfg.autoFix && cfg.autoFix.on === false), publish: cfg && cfg.autoFix && cfg.autoFix.publish === 'approve' ? 'approve' : 'auto' } });
+  // Próximo passo de um bug: 'move' (mover para Em andamento), 'wait', 'working', 'fixed', 'off' (correção desligada no quadro) ou '' (nada a dizer)
+  function autoFixHint(it, c) {
+    if(!it || it.kind !== 'bug' || it.status === 'done') return '';
+    const k = cfgOf(c), keys = k.columns.map(x => x.key), pos = keys.indexOf(it.status), doing = keys.indexOf('doing'), before = pos < 0 || pos < doing;
+    if(!k.autoFix.on) return (before || it.status === 'doing') ? 'off' : '';
+    if(it.status === 'doing' || it.status === 'review') return autoFixState(it, true);
+    return before ? 'move' : '';
+  }
   // Situação de um bug na correção automática, lida do histórico: 'wait' (Em andamento, ainda não recebido), 'working' (recebido depois da última mudança de situação) ou 'fixed' (a correção levou a Em revisão)
   function autoFixState(it, on) {
     if(!on || !it || it.kind !== 'bug') return '';
@@ -13614,7 +13626,7 @@ const AgileCalc = (() => {
     return advice;
   }
 
-  return { sprintReading, setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, epicStats, suggestPoints, suggestEpic, bugSevRank, suggestBugPosition, isBackward, doneByDay, trendLine, isOpenBug, byPriority, bugQueue, placeBug, compactQueue, bugParentError, assigneeError, sprintAssigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, autoFixState, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
+  return { sprintReading, setOffDay, COLS, cols, colLabel, DEFAULT_CARD, KINDS, bugsOf, parentOptions, epicStats, suggestPoints, suggestEpic, bugSevRank, suggestBugPosition, isBackward, doneByDay, trendLine, isOpenBug, byPriority, bugQueue, placeBug, compactQueue, bugParentError, assigneeError, sprintAssigneeError, matchPerson, DEFAULT_CFG, workingDays, personRhythm, teamCapacity, loadAdvice, planSprint, cfgOf, autoFixState, autoFixHint, wip, moveTo, normLanes, laneMatch, laneEmpty, NO_ASSIGNEE, neighbor, sprintStats, velocity, forecast, nextId, addDays, diffDays, pts, sum };
 })();
 </script>
 
@@ -14579,21 +14591,38 @@ const Agile = (() => {
     const lgLine = '<svg viewBox="0 0 14 8" width="14" height="8" aria-hidden="true" style="width:14px;height:8px;flex:none"><line x1="1" y1="4" x2="13" y2="4" class="kbb-trend"/></svg>';
     let W, H, top, base, step, bw;
     if(big) { W = cw - 128; H = ch; top = 15; base = H - 16; step = (W - 8) / days.length; bw = Math.max(6, Math.min(30, step * 0.62)); }
-    else { step = 17; W = days.length * step + 4; H = 36; top = 14; base = H - 2; bw = 10; }
+    else { step = 17; W = days.length * step + 4; H = 50; top = 14; base = H - 15; bw = 10; }
     const ph = base - top, xc = i => 4 + step * i + step / 2, yv = v => base - v / max * ph, rr = Math.min(3, bw / 3);
     let g = '<line class="kbb-base" x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '"/>';
+    // Dia sob a barra sem sobrepor: com espaço, todos os dias; em sprint longa, só os dias com entrega (e nunca colados)
+    const roomy = step >= 16; let lastLbl = -99;
     days.forEach((d, i) => {
-      if(big) g += '<text class="kbb-x" x="' + xc(i) + '" y="' + (base + 13) + '">' + esc(d.date.slice(8)) + '</text>';
-      if(d.n <= 0 || d.future) return;
+      const fits = roomy || (d.n > 0 && !d.future && xc(i) - lastLbl >= 16);
+      if(fits) lastLbl = xc(i);
+      const lbl = '<text class="kbb-x" x="' + xc(i) + '" y="' + (base + 12) + '">' + (fits ? esc(d.date.slice(8)) : '') + '</text>';
+      if(d.n <= 0 || d.future) { if(big && roomy) g += lbl; return; }
+      const full = d.date.split('-').reverse().join('/');
       const h = d.n / max * ph, x = xc(i) - bw / 2, y = base - h;
-      g += '<path class="kbb-bar" d="M' + x + ' ' + base + 'V' + (y + rr) + 'Q' + x + ' ' + y + ' ' + (x + rr) + ' ' + y + 'H' + (x + bw - rr) + 'Q' + (x + bw) + ' ' + y + ' ' + (x + bw) + ' ' + (y + rr) + 'V' + base + 'Z"><title>' + esc(d.date.split('-').reverse().join('/')) + ': ' + d.n + ' card(s) concluído(s)</title></path><text class="kbb-v" x="' + xc(i) + '" y="' + (y - 3) + '">' + d.n + '</text>';
+      g += '<g class="kbb-day' + (burnSel === d.date ? ' on' : '') + '" tabindex="0" role="button" aria-label="' + esc(full + ': ' + d.n + ' card(s) concluído(s). Ver quais') + '" data-d="' + esc(d.date) + '" onclick="Agile.burnDay(this.dataset.d)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();Agile.burnDay(this.dataset.d)}"><rect class="kbb-hit" x="' + (xc(i) - step / 2) + '" y="0" width="' + step + '" height="' + H + '"/>' + lbl + '<path class="kbb-bar" d="M' + x + ' ' + base + 'V' + (y + rr) + 'Q' + x + ' ' + y + ' ' + (x + rr) + ' ' + y + 'H' + (x + bw - rr) + 'Q' + (x + bw) + ' ' + y + ' ' + (x + bw) + ' ' + (y + rr) + 'V' + base + 'Z"><title>' + esc(full) + ': ' + d.n + ' card(s) concluído(s). Clique para ver quais.</title></path><text class="kbb-v" x="' + xc(i) + '" y="' + (y - 3) + '">' + d.n + '</text></g>';
     });
     if(trend) g += '<polyline class="kbb-trend" points="' + trend.map((v, i) => xc(i).toFixed(1) + ',' + yv(v).toFixed(1)).join(' ') + '"/>';
-    const svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" style="width:' + W + 'px;height:' + H + 'px;flex:none" role="img" aria-label="Cards concluídos por dia na ' + esc(act.name) + '. ' + esc(resumo) + '">' + g + '</svg>';
+    const svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" style="width:' + W + 'px;height:' + H + 'px;flex:none" role="group" aria-label="Cards concluídos por dia na ' + esc(act.name) + '. ' + esc(resumo) + '. Clique em um dia para ver os cards.">' + g + '</svg>';
     box.innerHTML = big
       ? '<div class="kbb-head"><b style="color:var(--t1);font-size:12px">Cards concluídos por dia</b><span>' + total + ' no total</span>' + (trend ? '<span class="kbb-lg">' + lgLine + 'tendência</span>' : '<span>tendência a partir do 3º dia</span>') + '</div>' + svg
       : '<span>Concluídos por dia</span>' + svg + (trend ? '<span class="kbb-lg">' + lgLine + 'tendência</span>' : '');
   }
+  // Clicar num dia mostra quais cards foram entregues nele (e quem entregou); clicar de novo fecha
+  function burnDay(date) { burnSel = burnSel === date ? '' : date; load(); burnChart(active()); renderBurnDay(); const b = document.querySelector('#kb-burn .kbb-day[data-d="' + String(date).replace(/[^0-9-]/g, '') + '"]'); if(b) b.focus(); }
+  function renderBurnDay() {
+    const box = document.getElementById('kb-day'); if(!box) return; const act = active();
+    const list = burnSel && act ? items.filter(i => i.sprintId === act.id && i.status === 'done' && i.doneOn === burnSel) : [];
+    if(!list.length) { burnSel = ''; box.hidden = true; box.innerHTML = ''; return; }
+    const who = i => { let n = ''; try { n = (typeof MyInd !== 'undefined' && MyInd.ownerOf(i)) || ''; } catch(e) { n = ''; } return n || i.assignee || ''; };
+    box.hidden = false;
+    box.innerHTML = '<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:6px"><b>Entregas de ' + esc(burnSel.split('-').reverse().join('/')) + ': ' + list.length + ' card(s)</b><button type="button" class="btn btn-sm" onclick="Agile.burnDay(\'' + esc(burnSel) + '\')" aria-label="Fechar a lista das entregas do dia"><i class="ti ti-x"></i>Fechar</button></div>'
+      + list.map(i => '<div style="padding:3px 0;font-size:12.5px"><button type="button" class="link-a" style="padding:0" onclick="Agile.openItem(\'' + esc(i.id) + '\')">' + esc(i.id) + ' · ' + esc(i.title) + '</button><span style="color:var(--t2)">' + (who(i) ? ' — entregue por ' + esc(who(i)) : '') + ' · ' + esc(AgileCalc.KINDS[i.kind] || i.kind || '') + '</span></div>').join('');
+  }
+  let burnSel = '';
   let burnT = null;
   window.addEventListener('resize', () => { clearTimeout(burnT); burnT = setTimeout(() => { try { const pg = document.getElementById('p-kanban'); if(pg && pg.classList.contains('on')) { load(); burnChart(active()); } } catch(e) { /* o gráfico nunca derruba a tela */ } }, 150); });
   try { const kt = document.querySelector('.kb-top'); if(kt && window.ResizeObserver) new ResizeObserver(() => { clearTimeout(burnT); burnT = setTimeout(() => { try { const pg = document.getElementById('p-kanban'); if(pg && pg.classList.contains('on')) { load(); burnChart(active()); } } catch(e) { /* o gráfico nunca derruba a tela */ } }, 150); }).observe(kt); } catch(e) { /* sem ResizeObserver: vale o resize da janela */ }
@@ -14601,6 +14630,7 @@ const Agile = (() => {
     const root = document.getElementById('kb-root'); if(!root) return;
     load();
     try { burnChart(active()); } catch(e) { const bb = document.getElementById('kb-burn'); if(bb) bb.hidden = true; }
+    try { renderBurnDay(); } catch(e) { /* o detalhe do dia nunca derruba o quadro */ }
     const sel = document.getElementById('kb-sprint');
     const act = active(), stateLbl = { ativa:'ativa', planejada:'planejada', encerrada:'encerrada' };
     const ord = { ativa:0, planejada:1, encerrada:2 };
@@ -15434,9 +15464,26 @@ const Agile = (() => {
     } finally { sending = false; sendState(); }
   }
   // Correção automática: o selo do cartão sai do próprio histórico (nada é gravado a mais)
-  const FIX_LBL = { wait: ['b-amb', 'Aguardando correção', 'Bug em Em andamento: entra na próxima rodada da correção automática'], working: ['b-acc', 'Em análise', 'A correção automática recebeu este bug e está trabalhando nele'], fixed: ['b-grn', 'Corrigido, revisar', 'A correção automática levou este bug a Em revisão: confira e conclua'] };
+  const FIX_LBL = { wait: ['b-amb', 'Aguardando correção', 'Bug em Em andamento: aguarda alguém pedir a análise'], working: ['b-acc', 'Em análise', 'A correção automática recebeu este bug e está trabalhando nele'], fixed: ['b-grn', 'Corrigido, revisar', 'A correção automática levou este bug a Em revisão: confira e conclua'] };
   const fixChip = i => { const s = AgileCalc.autoFixState(i, cfg && cfg.autoFix && cfg.autoFix.on); return s ? '<span class="badge ' + FIX_LBL[s][0] + '" title="' + FIX_LBL[s][2] + '">' + FIX_LBL[s][1] + '</span>' : ''; };
-  function autoFixLine(it) { const el = document.getElementById('ai-autofix'); if(!el) return; load(); const s = it ? AgileCalc.autoFixState(it, cfg && cfg.autoFix && cfg.autoFix.on) : ''; el.style.display = s ? '' : 'none'; el.innerHTML = s ? 'Correção automática: ' + fixChip(it) + ' ' + FIX_LBL[s][2] + '.' : ''; }
+  function fixText(state) {
+    const dl = '<b>' + esc(AgileCalc.colLabel(cfg, 'doing')) + '</b>', next = '<b>Próximo passo:</b> ';
+    return { move: next + 'para pedir a correção, mova este bug para ' + dl + ' (com responsável e sprint).', wait: next + 'aguardando alguém pedir a análise ("Analise PMO Compass") no projeto deste quadro.', working: 'A correção automática recebeu este bug e está trabalhando nele.',
+      fixed: next + 'confira e conclua, ou devolva com o motivo; para pedir nova correção, mova para ' + dl + '.', off: 'A correção automática está desligada neste quadro (Personalizar quadro → Correção Automática).' }[state] || '';
+  }
+  function autoFixLine(it) {
+    const el = document.getElementById('ai-autofix'); if(!el) return; load();
+    const state = it ? AgileCalc.autoFixHint(it, cfg) : '';
+    el.style.display = state ? '' : 'none'; el.innerHTML = state ? (FIX_LBL[state] ? fixChip(it) + ' ' : '<i class="ti ti-robot" aria-hidden="true"></i> ') + fixText(state) : '';
+  }
+  // Ao trocar o Tipo ou a Situação no cartão (antes de salvar), o texto já acompanha a escolha
+  function fixPreview() {
+    load(); const it = itemCtx ? findAny(itemCtx) : null; if(!it) { autoFixLine(null); return; }
+    const kind = val('ai-kind') || it.kind, status = val('ai-status') || it.status;
+    autoFixLine(Object.assign({}, it, { kind, status }, status !== it.status || kind !== it.kind ? { history: [] } : null));
+  }
+  // Frase do formulário "Relatar um Bug": o que fazer depois de criar
+  function fixNewBug() { load(); return cfg && cfg.autoFix && cfg.autoFix.on ? '<b>Depois de criar:</b> para pedir a correção, mova o bug para <b>' + esc(AgileCalc.colLabel(cfg, 'doing')) + '</b> (com responsável e sprint). Em "A fazer" ele só fica registrado.' : 'A correção automática está desligada neste quadro: o bug fica registrado para a equipe.'; }
   function evidCount() {
     sendState();
     const i = document.getElementById('ai-evid'), n = document.getElementById('ai-evid-n'), p = document.getElementById('ai-files-pend'), q = i && i.files ? i.files.length : 0;
@@ -15546,6 +15593,7 @@ const Agile = (() => {
     const kind = document.getElementById('ai-kind').value, isEpic = kind === 'epico', board = isBoardNow();
     ['ai-points', 'ai-assignee', 'ai-sprint'].forEach(id => { const e = document.getElementById(id), g = e && (e.closest('.field-group') || e); if(g) g.style.display = isEpic ? 'none' : ''; });
     document.getElementById('ai-status-grp').style.display = (isEpic || !itemCtx) ? 'none' : '';
+    fixPreview();
     document.getElementById('ai-epic-grp').style.display = (!isEpic && !board && (kind === 'historia' || kind === 'tarefa')) ? '' : 'none';
     if(!isEpic && !board && (kind === 'historia' || kind === 'tarefa')) { load(); const cur = itemCtx ? findAny(itemCtx) : null; fillEpic(cur ? cur.epicId : ''); }
     const wk = document.getElementById('ai-work'), ck = document.getElementById('ai-check');
@@ -16019,7 +16067,7 @@ const Agile = (() => {
 
   function renderAll() { renderKanban(); renderBacklog(); renderSprints(); renderDashboard(); renderDue(); }
   function render() { renderAll(); }
-  return { sendNote, sendState, noteKey, histFilter, render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, setBoardKind, setBacklogKind, rank, setSprintOf, renamePerson, setBacklogQuery, setShowDone,
+  return { burnDay, fixPreview, fixNewBug, sendNote, sendState, noteKey, histFilter, render, resetCache, renderDashboard, move, dragStart, dragOver, drop, setBoardSprint, setBoardKind, setBacklogKind, rank, setSprintOf, renamePerson, setBacklogQuery, setShowDone,
     openItem, closeItem, saveItem, deleteItem, openSprint, closeSprint, saveSprint, deleteSprint, startSprint, closeSprintNow, checkDates, openRules, closeRules, editRule, ruleField, ruleAct, ruleAddAct, ruleDelAct, ruleCancel, ruleSave, toggleRule, deleteRule, renderDue, openDue, closeDue, dueChoose, runDue, exportXlsx,
     titles, sprintRefs, addMany, openPlan, openPlanNext, closePlan, recalcPlan, applyPlan, setDaysOff, useTeamCapacity,
     aiEstimate, applyAi, closeAi, openBoardCfg, closeBoardCfg, saveBoardCfg, resetBoardCfg, addCol, removeCol, addLane, removeLane, setLaneName, setLaneEstimate, setLaneSel, toggleLane, setPolicyMove, setPolicyCol, openImpediments, closeImpediments, resolveImpediment, setPolicyBehalf, addGate, removeGate, setGate, setTemplate, checkToggle, checkAdd, checkDel, openBehalf, closeBehalf, confirmBehalf, moveCol, colDragStart, colDragOver, colDrop, setColLabel, setColWip, setCardField,
@@ -24783,6 +24831,7 @@ const Messaging = (() => {
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label class="btn btn-sm" for="bug-f-files" style="cursor:pointer"><i class="ti ti-paperclip"></i>Anexar arquivo</label><input type="file" id="bug-f-files" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.txt,.csv,.xlsx" style="position:absolute;width:1px;height:1px;opacity:0" onchange="BugReport.addFiles(this.files);this.value=''"><span style="font-size:11.5px;color:var(--t3)" id="bug-files-hint">ou cole o print aqui com Ctrl+V · até 6 arquivos de 5 MB (imagem, PDF, planilha ou texto)</span></div>
         <div id="bug-files" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div></div>
       <p style="font-size:11.5px;color:var(--t3);line-height:1.5;margin:0"><i class="ti ti-info-circle"></i> Vão junto, automaticamente, a versão do sistema, a tela em que você está, o seu perfil e o tamanho da janela. Nenhuma senha ou chave é enviada.</p>
+      <p id="bug-f-next" style="font-size:12.5px;color:var(--t1);line-height:1.5;margin:0;padding:8px 10px;border-left:3px solid var(--acc);background:var(--s2);border-radius:6px"></p>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-pri" id="bug-send" onclick="BugReport.send()"><i class="ti ti-send"></i>Criar o Bug</button><button class="btn" onclick="BugReport.close()">Cancelar</button></div>
     </div>
   </div>

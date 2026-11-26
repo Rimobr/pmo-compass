@@ -102,6 +102,30 @@ await pg.evaluate(`Agile.openBoardCfg()`); await pg.waitForTimeout(150);
 ok(await pg.evaluate(`!document.getElementById('ab-fix-on').checked && document.getElementById('ab-fix-pub').value === 'approve'`), 'Correção automática: a janela reabre com a escolha gravada');
 ok(await pg.evaluate(`(() => { const b = document.getElementById('ab-fix-sched'); return !!b && /Próxima Fase/.test(b.textContent) && /Ainda não executa nada/.test(b.textContent) && b.querySelectorAll('select').length === 3 && [...b.querySelectorAll('select')].every(s => s.disabled); })()`), 'Execução sozinha: aparece como "Próxima Fase", desligada e dizendo que ainda não executa nada');
 await pg.evaluate(`document.getElementById('ab-fix-on').checked = true; document.getElementById('ab-fix-pub').value = 'auto'; Agile.saveBoardCfg()`); await pg.waitForTimeout(250);
+// Próximo passo no cartão de todo Bug
+const passo = async id => { await pg.evaluate(`document.getElementById('modal-agile-item').classList.add('hidden'); Agile.openItem('${id}')`); await pg.waitForTimeout(200); return pg.evaluate(`(() => { const e = document.getElementById('ai-autofix'); return e.style.display === 'none' ? '' : e.textContent.replace(/\\s+/g, ' ').trim(); })()`); };
+await pg.evaluate(`(() => { const b = DB.get('backlog'); b.find(x => x.id === 'US-4').history = []; DB.set('backlog', b); Agile.resetCache(); })()`);
+const pTodo = await passo('US-3');
+ok(/Próximo passo: para pedir a correção, mova este bug para Em andamento/.test(pTodo), 'Próximo passo: bug em "A fazer" diz para mover para Em andamento', pTodo);
+await pg.selectOption('#ai-status', 'doing'); await pg.waitForTimeout(100);
+const pPrev = await pg.evaluate(`document.getElementById('ai-autofix').textContent`);
+ok(/Aguardando correção/.test(pPrev) && /aguardando alguém pedir a análise/.test(pPrev), 'Próximo passo: ao escolher Em andamento no cartão, o texto já acompanha', pPrev);
+const pDoing = await passo('US-4');
+ok(/Aguardando correção/.test(pDoing) && /aguardando alguém pedir a análise/.test(pDoing), 'Próximo passo: bug em andamento diz que aguarda o pedido de análise', pDoing);
+ok((await passo('US-2')) === '', 'Próximo passo: card que não é bug não mostra nada');
+await pg.evaluate(`document.getElementById('modal-agile-item').classList.add('hidden'); BugReport.open('US-1')`); await pg.waitForTimeout(250);
+const pNew = await pg.evaluate(`document.getElementById('bug-f-next').textContent`);
+ok(/Depois de criar: para pedir a correção, mova o bug para Em andamento/.test(pNew), 'Próximo passo: o formulário "Relatar um Bug" já diz o que fazer depois de criar', pNew);
+await pg.evaluate(`BugReport.close()`);
+// Gráfico "Concluídos por dia": o dia aparece sob a barra e o clique mostra os cards entregues nele
+await pg.evaluate(`(() => { const b = DB.get('backlog'), it = b.find(x => x.id === 'US-1'); it.status = 'done'; it.doneOn = '2026-11-20'; DB.set('backlog', b); Agile.resetCache(); R.go('dashboard'); R.go('kanban'); })()`); await pg.waitForTimeout(500);
+const gd = await pg.evaluate(`(() => { const g = document.querySelector('#kb-burn .kbb-day[data-d="2026-11-20"]'); return g ? { dia: (g.querySelector('.kbb-x') || {}).textContent, n: (g.querySelector('.kbb-v') || {}).textContent, rot: g.getAttribute('aria-label') } : null; })()`);
+ok(gd && gd.dia === '20' && gd.n === '1' && gd.rot.startsWith('20/11/2026: 1'), 'Entregas por dia: a barra mostra o dia embaixo e diz a data e a quantidade', JSON.stringify(gd));
+await pg.click('#kb-burn .kbb-day[data-d="2026-11-20"] .kbb-bar'); await pg.waitForTimeout(250);
+const dl = await pg.evaluate(`(() => { const b = document.getElementById('kb-day'); return { aberto: !b.hidden, texto: b.textContent.replace(/\\s+/g, ' ') }; })()`);
+ok(dl.aberto && dl.texto.includes('Entregas de 20/11/2026: 1 card') && /US-1 · Cadastro/.test(dl.texto), 'Entregas por dia: clicar na barra lista os cards entregues naquele dia', JSON.stringify(dl));
+await pg.focus('#kb-burn .kbb-day[data-d="2026-11-20"]'); await pg.keyboard.press('Enter'); await pg.waitForTimeout(200);
+ok(await pg.evaluate(`document.getElementById('kb-day').hidden`), 'Entregas por dia: Enter no mesmo dia fecha a lista (funciona no teclado)');
 
 // Controle de Cards
 // sem sessão, a lista de projetos inclui o projeto local deste teste (com sessão ele só mostra o que vem da nuvem)
