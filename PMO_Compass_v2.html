@@ -20,7 +20,7 @@ window.BRAND = {
   name: 'PMO Compass',
   shortName: 'PMO Compass',
   tagline: 'Gestão de projetos com IA para apoio à decisão',
-  version: '2.113.17'
+  version: '2.113.18'
 };
 document.title = BRAND.name;
 document.querySelector('meta[name="description"]').setAttribute('content', BRAND.name + ' — ' + BRAND.tagline);
@@ -1727,6 +1727,7 @@ body.icons-failed i[data-fb]::before{
   </div>
   <div class="cc-top"><div class="cc-kpis" id="cc-kpis"></div><div class="card cc-pie" id="cc-pie"></div></div>
   <div class="card" id="cc-matrix" style="margin-bottom:12px"></div>
+  <div class="card" id="cc-rework" style="margin-bottom:12px"></div>
   <div class="card">
     <div class="cc-listbar"><div class="set-sub" id="cc-listinfo" aria-live="polite"></div>
       <div class="btn-row"><button class="btn btn-sm" id="cc-cols-btn" aria-expanded="false" aria-controls="cc-cols-panel" onclick="CardControl.colsToggle()"><i class="ti ti-columns-3"></i>Colunas</button><button class="btn btn-sm" onclick="CardControl.exportXlsx()"><i class="ti ti-file-spreadsheet"></i>Exportar Excel</button><button class="btn btn-sm" onclick="CardControl.exportCsv()"><i class="ti ti-download"></i>Exportar CSV</button></div></div>
@@ -2549,6 +2550,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
     </div>
     <div id="ai-check" style="display:none;margin-top:10px"></div>
     <div id="ai-children" style="display:none;margin-top:10px"></div>
+    <details id="ai-flow" style="display:none;margin-top:10px">
+      <summary class="field-label" style="cursor:pointer"><i class="ti ti-route"></i> Tempo por Etapa e Voltas<span id="ai-flow-n"></span></summary>
+      <div id="ai-flow-body"></div>
+    </details>
     <details id="ai-hist" style="display:none;margin-top:10px">
       <summary class="field-label" style="cursor:pointer"><i class="ti ti-history"></i> Histórico do card<span id="ai-hist-n"></span></summary>
       <input class="input" id="ai-hist-q" type="search" placeholder="Pesquisar no histórico (quem, campo, valor…)" aria-label="Pesquisar no histórico do card" oninput="Agile.histFilter()" style="margin:6px 0">
@@ -13356,7 +13361,7 @@ const AgileCalc = (() => {
   const diffDays = (a, b) => Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / DAY);
   // Colunas do quadro: "todo" sempre a primeira e "done" sempre a última; no meio de 0 a 5 colunas livres (nome técnico curto, rótulo à vontade)
   const KEY_RE = /^[a-z0-9]{1,12}$/;
-  const DEFAULT_CARD = { id: true, kind: true, points: true, assignee: true, sprint: true, bugs: true, attachments: true, checklist: true, due: true };
+  const DEFAULT_CARD = { id: true, kind: true, points: true, assignee: true, sprint: true, bugs: true, attachments: true, checklist: true, due: true, returns: true };
   function cols(cfg) {
     const raw = cfg && Array.isArray(cfg.columns) ? cfg.columns : null;
     if(!raw) return COLS.map(c => ({ ...c }));
@@ -14525,6 +14530,20 @@ const Agile = (() => {
     const d = new Date(h.at), when = isNaN(d) ? '' : d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + ' {' + pad2(d.getHours()) + 'h:' + pad2(d.getMinutes()) + 'm}';
     return 'LOG - ' + when + '- ' + h.by + ' < ' + (h.field ? 'Campo "' + h.field + '" De ' + h.from + ' Para ' + h.to : h.to) + '>';
   }
+  // Tempo em cada etapa e voltas deste card, lidos do próprio histórico (dias corridos)
+  const flowOf = it => typeof CardFlow === 'undefined' ? null : CardFlow.analyze(it, AgileCalc.cols(cfg), Date.now(), {});
+  function renderFlow(it) {
+    const box = document.getElementById('ai-flow'); if(!box) return; load();
+    const a = it && it.kind !== 'epico' ? flowOf(it) : null;
+    box.style.display = a ? '' : 'none'; box.open = false;
+    const n = document.getElementById('ai-flow-n'), body = document.getElementById('ai-flow-body'); if(!a) { if(n) n.textContent = ''; if(body) body.innerHTML = ''; return; }
+    n.textContent = ' · aberto há ' + a.ageDays + ' d' + (a.returns ? ' · voltou ' + a.returns + '×' : ' · sem voltas');
+    const d = t => new Date(t).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    body.innerHTML = '<div class="tbl-wrap"><table class="tbl" data-nodrag="1"><thead><tr><th scope="col">Etapa</th><th scope="col" class="num">Dias</th></tr></thead><tbody>' + a.stages.map(x => '<tr><td>' + esc(x.label) + (x.current && !a.done ? ' <span class="badge b-acc">aqui agora</span>' : '') + '</td><td class="num">' + x.days + '</td></tr>').join('') + '</tbody></table></div>'
+      + (a.returns ? '<div style="margin-top:8px;font-size:12.5px;line-height:1.6"><b>Voltas por etapa de origem:</b> ' + a.returnsBy.map(x => 'voltou de <b>' + esc(x.label) + '</b>: ' + x.count).join(' · ') + '</div><ul style="margin:4px 0 0 18px;padding:0;font-size:12.5px;line-height:1.6">' + a.returnList.slice().reverse().map(x => '<li>' + d(x.at) + ': de <b>' + esc(x.from) + '</b> para ' + esc(x.to) + ' · quem devolveu: ' + esc(x.by || '—') + ' · quem tinha enviado: ' + esc(x.sent) + (x.reason ? ' · motivo: ' + esc(x.reason) : '') + '</li>').join('') + '</ul>' : '<div class="set-sub" style="margin-top:6px">Este card nunca voltou de etapa.</div>')
+      + '<div class="set-sub" style="margin-top:6px">Dias corridos, somando todas as passagens por cada etapa, pelo histórico do card.</div>';
+  }
+  const returnChip = i => { const a = (Array.isArray(i.history) && i.history.some(h => h && h.field === 'Situação')) ? flowOf(i) : null; return a && a.returns ? '<span class="chip" title="' + esc(a.returnsBy.map(x => 'Voltou de ' + x.label + ': ' + x.count).join('; ')) + '"><i class="ti ti-arrow-back-up"></i>voltou ' + a.returns + '×</span>' : ''; };
   function renderHistory(it) {
     const box = document.getElementById('ai-hist'); if(!box) return;
     const list = it && Array.isArray(it.history) ? it.history : [];
@@ -14718,7 +14737,7 @@ const Agile = (() => {
     const rel = i.kind === 'bug' ? (i.parentId ? `<span class="chip" title="Este bug é filho do item ${esc(i.parentId)}"><i class="ti ti-corner-down-right"></i>de ${esc(i.parentId)}</span>` : '<span class="badge b-amb" title="Bug antigo, sem item pai: abra o cartão e escolha o item">sem item pai</span>') : (kidsAll.length ? `<span class="chip" title="Bugs ligados a este item"><i class="ti ti-bug"></i>${kidsOpen.length}/${kidsAll.length} bug(s)</span>` : '');
     const att = (Array.isArray(i.attachments) && i.attachments.length) ? `<span class="chip" title="Anexos do bug"><i class="ti ti-paperclip"></i>${i.attachments.length}</span>` : '';
     const chk = Array.isArray(i.checklist) && i.checklist.length ? `<span class="chip" title="Tarefas concluídas do cartão"><i class="ti ti-checklist"></i>${i.checklist.filter(c => c.done).length}/${i.checklist.length}</span>` : '';
-    const bottom = [f.bugs && rel, f.attachments && att, f.checklist && chk, f.assignee && (i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'), f.sprint && sp && `<span class="chip">${esc(sp.name)}</span>`, f.due && dueChip].filter(Boolean).join('');
+    const bottom = [f.returns && returnChip(i), f.bugs && rel, f.attachments && att, f.checklist && chk, f.assignee && (i.assignee ? `<span class="chip"><i class="ti ti-user"></i>${esc(i.assignee)}</span>` : '<span class="chip">sem responsável</span>'), f.sprint && sp && `<span class="chip">${esc(sp.name)}</span>`, f.due && dueChip].filter(Boolean).join('');
     // O cartão é um grupo; só o título é o botão de abrir (botão dentro de botão não é acessível por leitor de tela)
     const act = Auth.can('update_own'), noSp = sprintLocked(i);
     return `<div class="kb-card"${act ? `${noSp ? '' : ` draggable="true" ondragstart="Agile.dragStart(event,'${esc(i.id)}')"`} ondragend="this.classList.remove('dragging')" onclick="Agile.openItem('${esc(i.id)}')"` : ''} role="group" data-id="${esc(i.id)}" aria-label="${esc(i.id)}: ${esc(i.title)}">
@@ -14820,7 +14839,7 @@ const Agile = (() => {
   function setBoardSprint(v) { boardSprint = v; renderKanban(); }
   // ───────── Personalizar o quadro (colunas, limites e campos do cartão) ─────────
   let boardDraft = null;
-  const CARD_FIELDS = [['id', 'Código'], ['kind', 'Tipo'], ['points', 'Pontos'], ['assignee', 'Responsável'], ['sprint', 'Sprint'], ['due', 'Prazo (até quando)'], ['bugs', 'Bugs ligados'], ['attachments', 'Anexos'], ['checklist', 'Tarefas do cartão']];
+  const CARD_FIELDS = [['id', 'Código'], ['kind', 'Tipo'], ['points', 'Pontos'], ['assignee', 'Responsável'], ['sprint', 'Sprint'], ['due', 'Prazo (até quando)'], ['bugs', 'Bugs ligados'], ['attachments', 'Anexos'], ['checklist', 'Tarefas do cartão'], ['returns', 'Voltas']];
   function openBoardCfg() {
     if(!Auth.guard('manage_backlog')) return;
     load();
@@ -15399,7 +15418,7 @@ const Agile = (() => {
     fillSprintSelect(it ? it.sprintId : presetSprint);
     fillParent(it ? it.parentId : '', it ? it.id : '');
     kindChanged();
-    renderChildren(it); renderFiles(it); renderHistory(it); renderLastNotes(it); autoFixLine(it);
+    renderChildren(it); renderFiles(it); renderFlow(it); renderHistory(it); renderLastNotes(it); autoFixLine(it);
     applyItemMode(it, full);
     if(it && it.kind === 'epico' || (!it && preset === 'epico' && !isBoardNow())) ['ai-work', 'ai-check'].forEach(id => { const e = document.getElementById(id); if(e) e.style.display = 'none'; }); // o épico não tem comentário nem lista de tarefas
     sugRender();
@@ -22255,7 +22274,13 @@ const CardFlow = (() => {
     const stageAge = r.done ? 0 : dd(now - r.curStart), ageDays = dd(r.totalMs);
     const stages = cols.map(c => ({ key: c.key, label: c.label, days: dd(r.stageMs[c.key] || 0), current: c.key === r.cur })).filter((x, i) => i < cols.length - 1 || r.done);
     const returns = r.moves.filter(m => m.backward);
-    let lastReturn = null; returns.forEach(m => { const c = r.comments.find(x => x.at != null && x.at >= m.at - 60000 && x.at <= m.at + 180000); lastReturn = { at: m.at, by: m.by, from: label(m.from), to: label(m.to), reason: c ? c.text : '' }; });
+    // Quem tinha enviado = quem moveu o card PARA a etapa de onde ele voltou (o último movimento para a frente antes da volta)
+    const person = n => /^claude code/i.test(String(n || '')) ? 'Correção automática' : (n || '(não identificado)');
+    const returnList = returns.map(m => { const c = r.comments.find(x => x.at != null && x.at >= m.at - 60000 && x.at <= m.at + 180000), fwd = r.moves.filter(x => !x.backward && x.to === m.from && x.at <= m.at).pop();
+      return { at: m.at, by: m.by, from: label(m.from), to: label(m.to), sent: person(fwd && fwd.by), reason: c ? c.text : '' }; });
+    const lastReturn = returnList.length ? returnList[returnList.length - 1] : null;
+    const byFrom = {}; returnList.forEach(x => { byFrom[x.from] = (byFrom[x.from] || 0) + 1; });
+    const returnsBy = Object.keys(byFrom).map(l => ({ label: l, count: byFrom[l] })).sort((x, y) => y.count - x.count || x.label.localeCompare(y.label, 'pt-BR'));
     const alerts = [], add = (level, text, fix) => alerts.push({ level, text, fix });
     if(!r.done) {
       const ref = bench.stage[r.cur], lim = ref ? Math.max(2, ref * 1.5) : (pos === 0 ? 14 : (pos === cols.length - 2 && cols.length > 2 ? 3 : 7));
@@ -22272,9 +22297,17 @@ const CardFlow = (() => {
     const level = alerts.some(a => a.level === 'high') ? 'red' : alerts.length ? 'amb' : 'grn';
     const why = r.done ? 'Concluído em ' + new Date(r.curStart).toISOString().slice(0, 10) + ' (levou ' + ageDays + ' d)' : 'Em "' + label(r.cur) + '" desde ' + new Date(r.curStart).toISOString().slice(0, 10) + (r.segs.length && r.segs[r.segs.length - 1].by ? ', movido por ' + r.segs[r.segs.length - 1].by : '') + (lastReturn ? '; devolvido de "' + lastReturn.from + '" para "' + lastReturn.to + '"' + (lastReturn.reason ? ': ' + lastReturn.reason : '') : '');
     const timeline = r.segs.map(sg => ({ key: sg.key, label: label(sg.key), from: new Date(sg.from).toISOString().slice(0, 10), to: sg === r.segs[r.segs.length - 1] && !r.done ? '' : new Date(sg.to).toISOString().slice(0, 10), days: dd(Math.max(0, sg.to - sg.from)), by: sg.by }));
-    return { stageKey: r.cur, stageLabel: label(r.cur), stageAge, ageDays, stages, timeline, returns: returns.length, lastReturn, comments: r.comments.slice(-3).reverse(), alerts, level, eta, why, done: r.done };
+    return { stageKey: r.cur, stageLabel: label(r.cur), stageAge, ageDays, stages, timeline, returns: returns.length, returnList, returnsBy, lastReturn, comments: r.comments.slice(-3).reverse(), alerts, level, eta, why, done: r.done };
   }
-  return { replay, benchmarks, analyze, median };
+  // Retrabalho de um conjunto de cards: [{ key, returnList }] -> total, por etapa de origem e por quem tinha enviado (com os cards de cada linha)
+  function rework(list) {
+    const stage = {}, sender = {}; let total = 0; const cards = new Set();
+    const add = (map, name, key) => { const e = map[name] || (map[name] = { name, count: 0, keys: {} }); e.count++; e.keys[key] = (e.keys[key] || 0) + 1; };
+    (list || []).forEach(c => (c.returnList || []).forEach(x => { total++; cards.add(c.key); add(stage, x.from, c.key); add(sender, x.sent, c.key); }));
+    const out = map => Object.keys(map).map(n => map[n]).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'pt-BR'));
+    return { total, cards: cards.size, byStage: out(stage), bySender: out(sender) };
+  }
+  return { replay, benchmarks, analyze, rework, median };
 })();
 </script>
 
@@ -22600,7 +22633,9 @@ const CardControl = (() => {
       evoRender(g, Object.assign(fe, { proj: el('ev-proj').value, who: el('ev-who').value, kind: el('ev-kind').value })); }
     el('cc-kpis').innerHTML = kp('Concluídos', doneTotal, doneSub, doneTotal ? 'var(--grn)' : '') + kp('Cards abertos', open.length, 'em ' + new Set(open.map(r => r.p.id)).size + ' projeto(s) e quadro(s)') + kp('Com alerta', withAl, 'o sistema recomenda agir', withAl ? 'var(--amb)' : 'var(--grn)') + kp('Parados', stalled, 'além do esperado na etapa', stalled ? 'var(--red)' : 'var(--grn)') + kp('Prazo vencido', late, 'ainda abertos', late ? 'var(--red)' : 'var(--grn)') + kp('Devolvidos', ret, 'voltaram de etapa ao menos uma vez', ret ? 'var(--amb)' : 'var(--grn)');
     charts(g, rows);
+    if(!g.rows.length) { const rw = el('cc-rework'); if(rw) rw.innerHTML = ''; }
     if(!g.rows.length) { el('cc-root').innerHTML = '<div class="rk-empty">Nenhum card nos projetos e quadros que você acessa.</div>'; return; }
+    reworkRender(rows);
     const part = rows.slice(0, limit), vis = visible();
     el('cc-root').innerHTML = (rows.length ? '<div class="tbl-wrap"><table class="tbl" data-col-sync="1"><thead><tr>' + vis.map(c => c.th).join('') + '</tr></thead><tbody>'
       + part.map(r => { const key = r.p.id + '|' + r.i.id, on = key === openKey, a = r.a;
@@ -22706,6 +22741,22 @@ const CardControl = (() => {
       + '<div style="margin-bottom:8px">' + read + '</div>' + table + '<div class="set-sub" style="margin-top:6px">' + esc(note) + '</div>';
     const sc = el('ev-scope'); if(sc) sc.innerHTML = '<b>Mostrando:</b> ' + (evoMode === 'sprint' ? 'as últimas 8 sprints' : evoMode === 'week' ? 'as últimas 8 semanas' : 'os últimos 6 meses') + ' · ' + esc(fl.proj || 'todos os projetos e quadros') + ' · ' + esc(fl.who || 'todos os responsáveis') + ' · ' + esc(fl.kind ? (KIND_LBL[fl.kind] || fl.kind) : 'todos os tipos') + ' · ' + base.length + ' card(s) considerados. Independe dos filtros da aba Cards.';
   }
+  // Retrabalho: de qual etapa os cards voltam e de quem era o envio; obedece aos filtros e abre os cards de cada linha
+  let rwSel = '';
+  function reworkPick(k) { rwSel = rwSel === k ? '' : k; render(); const b = [...document.querySelectorAll('#cc-rework button[data-k]')].find(x => x.dataset.k === k); if(b) b.focus(); }
+  function reworkRender(rows) {
+    const box = el('cc-rework'); if(!box) return;
+    const items = rows.map(r => ({ key: r.p.id + '|' + r.i.id, r, returnList: r.a.returnList })), w = CardFlow.rework(items);
+    const title = '<div class="set-sub" style="font-weight:700;text-transform:uppercase;margin-bottom:6px">Retrabalho: de onde os cards voltaram</div>';
+    if(!w.total) { rwSel = ''; box.innerHTML = title + '<div class="set-sub">Nenhuma volta de etapa nos ' + rows.length + ' card(s) mostrados.</div>'; return; }
+    const table = (kind, head, list) => '<div class="tbl-wrap"><table class="tbl" data-nodrag="1"><thead><tr><th scope="col">' + head + '</th><th scope="col" class="num">Voltas</th><th scope="col" class="num">Cards</th></tr></thead><tbody>'
+      + list.map(x => { const k = kind + ':' + x.name, n = Object.keys(x.keys).length; return '<tr><td><button type="button" class="link-a" style="padding:0;text-align:left" data-k="' + esc(k) + '" aria-expanded="' + (rwSel === k) + '" onclick="CardControl.reworkPick(this.dataset.k)">' + esc(x.name) + '</button></td><td class="num"><b>' + x.count + '</b></td><td class="num">' + n + '</td></tr>'
+        + (rwSel === k ? '<tr><td colspan="3" style="background:var(--s2)">' + items.filter(i => x.keys[i.key]).map(i => '<div style="padding:2px 0;font-size:12.5px"><button type="button" class="link-a" style="padding:0" data-pid="' + esc(i.r.p.id) + '" data-id="' + esc(i.r.i.id) + '" onclick="CardControl.openCard(this.dataset.pid, this.dataset.id)">' + esc(i.r.i.id) + ' · ' + esc(i.r.i.title || '') + '</button> <span class="set-sub">' + esc(i.r.p.name) + ' · ' + x.keys[i.key] + ' volta(s)</span></div>').join('') + '</td></tr>' : ''); }).join('') + '</tbody></table></div>';
+    const top = w.byStage[0];
+    box.innerHTML = title + '<div style="font-size:12.5px;line-height:1.6;margin-bottom:8px"><b>' + w.total + ' volta(s) em ' + w.cards + ' card(s).</b> A maior parte vem de <b>' + esc(top.name) + '</b> (' + top.count + ' de ' + w.total + '). <b>Como corrigir:</b> combine antes o que precisa estar pronto para um card entrar na etapa "' + esc(top.name) + '" (use as tarefas do cartão e exija comentário com evidência em Personalizar quadro) e revise com quem testa os últimos motivos.</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">' + table('e', 'Voltou de', w.byStage) + table('p', 'Quem tinha enviado', w.bySender) + '</div>'
+      + '<div class="set-sub" style="margin-top:6px">Segue os filtros acima (para incluir entregues, escolha o Período). "Quem tinha enviado" é quem moveu o card para a etapa de onde ele voltou: serve para apoiar, não para punir. Clique em uma linha para ver os cards.</div>';
+  }
   function clearFilters() { ['cc-proj', 'cc-st', 'cc-who', 'cc-kind'].forEach(id => { if(el(id)) el(id).value = ''; }); if(el('cc-per')) el('cc-per').value = 'now'; if(el('cc-q')) el('cc-q').value = ''; ['cc-alert'].forEach(id => { if(el(id)) el(id).checked = false; }); limit = 150; render(); }
   function pickStatus(l) { const s = el('cc-st'); s.value = s.value === l ? '' : l; limit = 150; render(); }
   function pickCell(w, l) { const a = el('cc-who'), b = el('cc-st'); if(!w) { a.value = ''; } else a.value = w; b.value = l; limit = 150; render(); }
@@ -22718,7 +22769,7 @@ const CardControl = (() => {
     const al = a.alerts.length ? '<ul style="margin:4px 0 0 18px;padding:0;font-size:12.5px;line-height:1.65">' + a.alerts.map(x => '<li><span class="badge ' + (x.level === 'high' ? 'b-red' : 'b-amb') + '">' + (x.level === 'high' ? 'Crítico' : 'Atenção') + '</span> ' + esc(x.text) + '<br><i class="ti ti-bulb" aria-hidden="true" style="color:var(--amb)"></i> <b>Como corrigir:</b> ' + esc(x.fix) + '</li>').join('') + '</ul>' : '<div class="set-sub">Nenhum alerta: o card está dentro do ritmo do projeto.</div>';
     const cm = a.comments.length ? '<ul style="margin:4px 0 0 18px;padding:0;font-size:12.5px">' + a.comments.map(c => '<li><b>' + esc(c.by) + '</b>' + (c.at ? ' em ' + fmt(new Date(c.at).toISOString().slice(0, 10)) : '') + ': ' + esc(c.text) + '</li>').join('') + '</ul>' : '<div class="set-sub">Sem comentários.</div>';
     const eta = a.done ? '' : (a.eta ? '<div style="font-size:12.5px;margin-top:6px"><i class="ti ti-chart-line" aria-hidden="true" style="color:var(--acc)"></i> <b>Previsão:</b> ' + (a.eta.late ? 'já passou do tempo típico dos cards deste projeto; sem ajuste, a conclusão é incerta.' : 'pelo ritmo típico do projeto, termina em ~' + a.eta.days + ' dia(s) (' + fmt(a.eta.date) + ').') + '</div>' : '<div class="set-sub" style="margin-top:6px">Previsão: sem dados (o projeto precisa de 3 cards concluídos para medir o ritmo).</div>');
-    return '<div style="font-size:12.5px;line-height:1.6"><b>Por quê:</b> ' + esc(a.why) + '</div>' + bar + '<div style="display:flex;gap:6px;flex-wrap:wrap">' + legend + '</div>'
+    return '<div style="font-size:12.5px;line-height:1.6"><b>Por quê:</b> ' + esc(a.why) + (a.returns ? '<br><b>Voltas por etapa de origem:</b> ' + a.returnsBy.map(x => 'voltou de ' + esc(x.label) + ': ' + x.count).join(' · ') : '') + '</div>' + bar + '<div style="display:flex;gap:6px;flex-wrap:wrap">' + legend + '</div>'
       + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:10px"><div><div class="set-sub" style="font-weight:700;text-transform:uppercase">Linha do tempo</div>' + tl + '</div><div><div class="set-sub" style="font-weight:700;text-transform:uppercase">O que o sistema recomenda</div>' + al + '<div class="set-sub" style="font-weight:700;text-transform:uppercase;margin-top:10px">Últimos comentários</div>' + cm + eta + '</div></div>'
       + '<div class="btn-row" style="margin-top:10px"><button class="btn btn-sm btn-acc" data-pid="' + esc(r.p.id) + '" data-id="' + esc(r.i.id) + '" onclick="CardControl.openCard(this.dataset.pid, this.dataset.id)"><i class="ti ti-external-link"></i>Abrir o Card</button></div>';
   }
@@ -22728,9 +22779,9 @@ const CardControl = (() => {
     const g = gather(), fl = filt(g);
     const rows = g.rows.filter(r => pass(r, fl));
     const stages = []; rows.forEach(r => r.a.stages.forEach(x => { if(stages.indexOf(x.label) < 0) stages.push(x.label); }));
-    const head = ['Projeto', 'Código', 'Título', 'Tipo', 'Situação', 'Responsável', 'Dias na etapa', 'Dias aberto', 'Prazo', 'Concluído em', 'Devoluções', 'Nível', 'Alertas', 'Como corrigir', 'Previsão'].concat(stages.map(x => 'Dias: ' + x));
+    const head = ['Projeto', 'Código', 'Título', 'Tipo', 'Situação', 'Responsável', 'Dias na etapa', 'Dias aberto', 'Prazo', 'Concluído em', 'Devoluções', 'Voltas por origem', 'Nível', 'Alertas', 'Como corrigir', 'Previsão'].concat(stages.map(x => 'Dias: ' + x));
     const body = rows.map(r => { const a = r.a, by = {}; a.stages.forEach(x => { by[x.label] = x.days; });
-      return [r.p.name, r.i.id, r.i.title || '', KIND_LBL[r.i.kind] || r.i.kind || '', a.stageLabel, r.i.assignee || '', a.done ? '' : a.stageAge, a.ageDays, r.due || '', r.dn || '', a.returns || 0, LV[a.level][1], a.alerts.map(x => x.text).join(' | '), a.alerts.map(x => x.fix).join(' | '), a.eta && !a.done ? a.eta.date : ''].concat(stages.map(x => by[x] == null ? '' : by[x])); });
+      return [r.p.name, r.i.id, r.i.title || '', KIND_LBL[r.i.kind] || r.i.kind || '', a.stageLabel, r.i.assignee || '', a.done ? '' : a.stageAge, a.ageDays, r.due || '', r.dn || '', a.returns || 0, a.returnsBy.map(x => x.label + ': ' + x.count).join('; '), LV[a.level][1], a.alerts.map(x => x.text).join(' | '), a.alerts.map(x => x.fix).join(' | '), a.eta && !a.done ? a.eta.date : ''].concat(stages.map(x => by[x] == null ? '' : by[x])); });
     return [head].concat(body);
   }
   function exportXlsx() { const rows = exportRows(); if(rows.length < 2) { T.show('Nada para exportar com esses filtros.'); return; } XlsxExport.download('controle-de-cards-' + XlsxExport.stamp() + '.xlsx', [{ name: 'Controle de Cards', rows }]); }
@@ -22743,7 +22794,7 @@ const CardControl = (() => {
   }
   function more() { limit += 150; render(); }
   function openCard(pid, id) { try { DB.switchProject(pid); R.go('kanban'); setTimeout(() => { try { Agile.openItem(id); } catch(e) { /* abre o quadro */ } }, 450); } catch(e) { /* sem acesso */ } }
-  return { render, toggle, more, tab, evoClear, evoSet, colsToggle, colsSet, colsMove, colsDragStart, colsDragOver, colsDragLeave, colsDrop, colsKey, colsReset, clearFilters, pickStatus, pickCell, openCard, exportRows, exportXlsx, exportCsv };
+  return { render, toggle, more, reworkPick, tab, evoClear, evoSet, colsToggle, colsSet, colsMove, colsDragStart, colsDragOver, colsDragLeave, colsDrop, colsKey, colsReset, clearFilters, pickStatus, pickCell, openCard, exportRows, exportXlsx, exportCsv };
 })();
 </script>
 

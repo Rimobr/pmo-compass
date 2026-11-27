@@ -194,7 +194,7 @@ test('pessoa única: "quem sou eu" cai no nome do cadastro, administrador entra 
 });
 
 test('a gestão escolhe o que aparece no cartão: código, tipo, pontos, responsável, sprint, prazo, bugs ligados, anexos e tarefas', () => {
-  for (const k of ["const DEFAULT_CARD = { id: true, kind: true, points: true, assignee: true, sprint: true, bugs: true, attachments: true, checklist: true, due: true };", "['due', 'Prazo (até quando)'], ['bugs', 'Bugs ligados'], ['attachments', 'Anexos'], ['checklist', 'Tarefas do cartão']", 'const bottom = [f.bugs && rel, f.attachments && att, f.checklist && chk, f.assignee &&', 'f.due && dueChip']) assert.ok(html.includes(k), k);
+  for (const k of ["const DEFAULT_CARD = { id: true, kind: true, points: true, assignee: true, sprint: true, bugs: true, attachments: true, checklist: true, due: true, returns: true };", "['due', 'Prazo (até quando)'], ['bugs', 'Bugs ligados'], ['attachments', 'Anexos'], ['checklist', 'Tarefas do cartão']", 'const bottom = [f.returns && returnChip(i), f.bugs && rel, f.attachments && att, f.checklist && chk, f.assignee &&', "['returns', 'Voltas']", 'f.due && dueChip']) assert.ok(html.includes(k), k);
   assert.ok(html.includes('data-perm="manage_backlog" onclick="Agile.openBoardCfg()"'));
 });
 

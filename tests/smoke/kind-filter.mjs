@@ -127,6 +127,22 @@ ok(dl.aberto && dl.texto.includes('Entregas de 20/11/2026: 1 card') && /US-1 · 
 await pg.focus('#kb-burn .kbb-day[data-d="2026-11-20"]'); await pg.keyboard.press('Enter'); await pg.waitForTimeout(200);
 ok(await pg.evaluate(`document.getElementById('kb-day').hidden`), 'Entregas por dia: Enter no mesmo dia fecha a lista (funciona no teclado)');
 
+// Voltas e tempo por etapa: dentro do card, no selo do quadro e no Controle de Cards
+await pg.evaluate(`(() => { document.getElementById('modal-session') && document.getElementById('modal-session').remove(); const b = DB.get('backlog'), it = b.find(x => x.id === 'US-4'), mv = (d, by, from, to) => ({ at: '2026-11-' + d + 'T10:00:00Z', by, field: 'Situação', from, to });
+  it.history = [{ at: '2026-11-01T10:00:00Z', by: 'Rita', field: '', from: '', to: 'Card criado' }, mv('02', 'Rita', 'A fazer', 'Em andamento'), mv('03', 'Rita', 'Em andamento', 'Em revisão'), mv('05', 'Bruno', 'Em revisão', 'Em andamento'), { at: '2026-11-05T10:00:30Z', by: 'Bruno', field: '', from: '', to: 'Comentário: faltou evidência' }]; DB.set('backlog', b); Agile.resetCache(); R.go('dashboard'); R.go('kanban'); })()`); await pg.waitForTimeout(400);
+const chipV = await pg.evaluate(`(() => { const c = document.querySelector('.kb-card[data-id="US-4"]'); const chip = c && [...c.querySelectorAll('.chip')].find(x => /voltou/.test(x.textContent)); return chip ? { t: chip.textContent.trim(), d: chip.title } : null; })()`);
+ok(chipV && chipV.t === 'voltou 1×' && chipV.d === 'Voltou de Em revisão: 1', 'Voltas: o card no quadro mostra o selo "voltou 1×" com a etapa de origem', JSON.stringify(chipV));
+await pg.evaluate(`Agile.openItem('US-4')`); await pg.waitForTimeout(250);
+const fl = await pg.evaluate(`({ resumo: document.getElementById('ai-flow-n').textContent, corpo: document.getElementById('ai-flow-body').textContent.replace(/\\s+/g, ' ') })`);
+ok(/voltou 1×/.test(fl.resumo) && /voltou de Em revisão: 1/.test(fl.corpo) && /quem devolveu: Bruno/.test(fl.corpo) && /quem tinha enviado: Rita/.test(fl.corpo) && /motivo: faltou evidência/.test(fl.corpo) && /Em andamento/.test(fl.corpo), 'Voltas: dentro do card aparecem o tempo por etapa, a origem, quem devolveu, quem enviou e o motivo', JSON.stringify(fl));
+await pg.evaluate(`document.getElementById('modal-agile-item').classList.add('hidden'); Cloud.isSignedIn = () => false; R.go('cardcontrol'); CardControl.clearFilters()`); await pg.waitForTimeout(400);
+const rw = await pg.evaluate(`(() => { const b = document.getElementById('cc-rework'); return { t: b.textContent.replace(/\\s+/g, ' '), ordem: !!(document.getElementById('cc-matrix').compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) && !!(b.compareDocumentPosition(document.getElementById('cc-root')) & Node.DOCUMENT_POSITION_FOLLOWING) }; })()`);
+ok(rw.ordem && /Retrabalho: de onde os cards voltaram/.test(rw.t) && /Como corrigir/.test(rw.t) && /Quem tinha enviado/.test(rw.t), 'Controle de Cards: bloco de retrabalho entre o quadro e a lista, com como corrigir', rw.t.slice(0, 200));
+await pg.evaluate(`[...document.querySelectorAll('#cc-rework button[data-k]')].find(b => b.dataset.k === 'e:Em revisão').click()`); await pg.waitForTimeout(200);
+ok(await pg.evaluate(`/US-4 · Cartão|US-4 ·/.test(document.getElementById('cc-rework').textContent) && !!document.querySelector('#cc-rework button[data-k="e:Em revisão"][aria-expanded="true"]')`), 'Controle de Cards: clicar na etapa lista os cards que voltaram dela');
+ok(await pg.evaluate(`(() => { const r = CardControl.exportRows(), i = r[0].indexOf('Voltas por origem'); return i > 0 && r.some(x => /Em revisão: 1/.test(x[i])); })()`), 'Controle de Cards: a exportação traz a coluna "Voltas por origem"');
+await pg.evaluate(`Cloud.isSignedIn = () => true`);
+
 // Controle de Cards
 // sem sessão, a lista de projetos inclui o projeto local deste teste (com sessão ele só mostra o que vem da nuvem)
 await pg.evaluate(`Cloud.isSignedIn = () => false; R.go('cardcontrol')`); await pg.waitForTimeout(400);
